@@ -38,7 +38,7 @@ func NewClient(baseURL, shopID, secretKey string) *Client {
 	}
 }
 
-func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, customerId int64, purchaseId int64) (*Payment, error) {
+func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, customerId int64, purchaseId int64, email string) (*Payment, error) {
 	rub := Amount{
 		Value:    strconv.Itoa(amount),
 		Currency: "RUB",
@@ -57,7 +57,7 @@ func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, custo
 	description := fmt.Sprintf("Подписка на %d %s", month, monthString)
 	receipt := &Receipt{
 		Customer: &Customer{
-			Email: config.YookasaEmail(),
+			Email: email,
 		},
 		Items: []Item{
 			{

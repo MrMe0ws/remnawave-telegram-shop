@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"log/slog"
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -16,6 +17,10 @@ import (
 )
 
 func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	adminID := config.GetAdminTelegramId()
+	if update.Message != nil && update.Message.From.ID != adminID {
+		h.ForwardUserMessageToAdmin(ctx, b, update)
+	}
 	ctxWithTime, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	langCode := update.Message.From.LanguageCode
@@ -134,6 +139,37 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 	}
 }
 
+func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	callback := update.CallbackQuery
+
+	if callback == nil || callback.Message.Message == nil {
+		slog.Error("HelpCallbackHandler: callback.Message.Message is nil")
+		return
+	}
+
+	helpKeyboard := [][]models.InlineKeyboardButton{
+		{{Text: "🌏 Какой сервер выбрать", URL: "https://telegra.ph/Otlichie--i--serverov-07-06"}},
+		{
+			{Text: "🆘 Поддержка", URL: "https://t.me/Meows_support_bot"},
+			{Text: "📄 Публичная оферта", URL: "https://telegra.ph/Publichnaya-oferta-na-ispolzovanie-servisa-Meows-VPN-07-02"},
+		},
+		{{Text: "⬅️ Назад", CallbackData: CallbackStart}},
+	}
+
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    callback.Message.Message.Chat.ID,
+		MessageID: callback.Message.Message.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      "Помощь",
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: helpKeyboard,
+		},
+	})
+	if err != nil {
+		slog.Error("Error sending help message", err)
+	}
+}
+
 func (h Handler) resolveConnectButton(lang string) []models.InlineKeyboardButton {
 	var inlineKeyboard []models.InlineKeyboardButton
 
@@ -164,28 +200,36 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 		inlineKeyboard = append(inlineKeyboard, h.resolveConnectButton(langCode))
 	}
 
+	// Собираем кнопки для 2-в-ряд начиная с "Рефералы"
+	var twoInRow []models.InlineKeyboardButton
+
 	if config.GetReferralDays() > 0 {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "referral_button"), CallbackData: CallbackReferral}})
+		twoInRow = append(twoInRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "referral_button"), CallbackData: CallbackReferral})
 	}
-
 	if config.ServerStatusURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "server_status_button"), URL: config.ServerStatusURL()}})
+		twoInRow = append(twoInRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "server_status_button"), URL: config.ServerStatusURL()})
 	}
-
-	if config.SupportURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "support_button"), URL: config.SupportURL()}})
-	}
-
 	if config.FeedbackURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "feedback_button"), URL: config.FeedbackURL()}})
+		twoInRow = append(twoInRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "feedback_button"), URL: config.FeedbackURL()})
 	}
-
 	if config.ChannelURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "channel_button"), URL: config.ChannelURL()}})
+		twoInRow = append(twoInRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "channel_button"), URL: config.ChannelURL()})
+	}
+	if config.TosURL() != "" {
+		twoInRow = append(twoInRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "tos_button"), URL: config.TosURL()})
 	}
 
-	if config.TosURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "tos_button"), URL: config.TosURL()}})
+	// Добавляем кнопки по 2 в ряд
+	for i := 0; i < len(twoInRow); i += 2 {
+		if i+1 < len(twoInRow) {
+			inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{twoInRow[i], twoInRow[i+1]})
+		} else {
+			inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{twoInRow[i]})
+		}
 	}
+
+	// Добавляем кнопку "Помощь" в конец
+	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: "📚 Помощь", CallbackData: "help"}})
+
 	return inlineKeyboard
 }

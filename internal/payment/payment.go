@@ -3,8 +3,6 @@ package payment
 import (
 	"context"
 	"fmt"
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 	"log/slog"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
@@ -15,6 +13,9 @@ import (
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"remnawave-tg-shop-bot/utils"
 	"time"
+
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 type PaymentService struct {
@@ -80,7 +81,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		}
 	}
 
-	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*config.DaysInMonth())
+	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*30)
 	if err != nil {
 		return err
 	}
@@ -250,7 +251,9 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount int, mo
 		return "", 0, err
 	}
 
-	invoice, err := s.yookasaClient.CreateInvoice(ctx, amount, months, customer.ID, purchaseId)
+	username, _ := ctx.Value("username").(string)
+	email := utils.GenerateRealisticEmail(customer.TelegramID, username)
+	invoice, err := s.yookasaClient.CreateInvoice(ctx, amount, months, customer.ID, purchaseId, email)
 	if err != nil {
 		slog.Error("Error creating invoice", err)
 		return "", 0, err

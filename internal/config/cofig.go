@@ -14,7 +14,7 @@ type config struct {
 	telegramToken                                             string
 	price1, price3, price6, price12                           int
 	starsPrice1, starsPrice3, starsPrice6, starsPrice12       int
-	remnawaveUrl, remnawaveToken, remnawaveMode, remnawaveTag string
+	remnawaveUrl, remnawaveToken, remnawaveMode               string
 	databaseURL                                               string
 	cryptoPayURL, cryptoPayToken                              string
 	botURL                                                    string
@@ -30,7 +30,7 @@ type config struct {
 	isTelegramStarsEnabled                                    bool
 	adminTelegramId                                           int64
 	trialDays                                                 int
-	squadUUIDs                                                map[uuid.UUID]uuid.UUID
+	inboundUUIDs                                              map[uuid.UUID]uuid.UUID
 	referralDays                                              int
 	miniApp                                                   string
 	enableAutoPayment                                         bool
@@ -38,14 +38,10 @@ type config struct {
 	tributeWebhookUrl, tributeAPIKey, tributePaymentUrl       string
 	isWebAppLinkEnabled                                       bool
 	xApiKey                                                   string
-	daysInMonth                                               int
 }
 
 var conf config
 
-func RemnawaveTag() string {
-	return conf.remnawaveTag
-}
 func GetTributeWebHookUrl() string {
 	return conf.tributeWebhookUrl
 }
@@ -65,8 +61,8 @@ func GetMiniAppURL() string {
 	return conf.miniApp
 }
 
-func SquadUUIDs() map[uuid.UUID]uuid.UUID {
-	return conf.squadUUIDs
+func InboundUUIDs() map[uuid.UUID]uuid.UUID {
+	return conf.inboundUUIDs
 }
 
 func TrialTrafficLimit() int {
@@ -114,10 +110,6 @@ func Price6() int {
 
 func Price12() int {
 	return conf.price12
-}
-
-func DaysInMonth() int {
-	return conf.daysInMonth
 }
 
 func Price(month int) int {
@@ -248,14 +240,6 @@ func envIntDefault(key string, def int) int {
 	return i
 }
 
-func envStringDefault(key string, def string) string {
-	v := os.Getenv(key)
-	if v == "" {
-		return def
-	}
-	return v
-}
-
 func envBool(key string) bool {
 	return os.Getenv(key) == "true"
 }
@@ -281,11 +265,14 @@ func InitConfig() {
 		return isWebAppLinkEnabled
 	}()
 
-	conf.miniApp = envStringDefault("MINI_APP_URL", "")
-
-	conf.remnawaveTag = envStringDefault("REMNAWAVE_TAG", "")
-
-	conf.daysInMonth = envIntDefault("DAYS_IN_MONTH", 30)
+	conf.miniApp = func() string {
+		v := os.Getenv("MINI_APP_URL")
+		if v != "" {
+			return v
+		} else {
+			return ""
+		}
+	}()
 
 	conf.trialTrafficLimit = mustEnvInt("TRIAL_TRAFFIC_LIMIT")
 
@@ -351,8 +338,8 @@ func InitConfig() {
 	conf.channelURL = os.Getenv("CHANNEL_URL")
 	conf.tosURL = os.Getenv("TOS_URL")
 
-	conf.squadUUIDs = func() map[uuid.UUID]uuid.UUID {
-		v := os.Getenv("SQUAD_UUIDS")
+	conf.inboundUUIDs = func() map[uuid.UUID]uuid.UUID {
+		v := os.Getenv("INBOUND_UUIDS")
 		if v != "" {
 			uuids := strings.Split(v, ",")
 			var inboundsMap = make(map[uuid.UUID]uuid.UUID)
@@ -363,10 +350,10 @@ func InitConfig() {
 				}
 				inboundsMap[uuid] = uuid
 			}
-			slog.Info("Loaded squad UUIDs", "uuids", uuids)
+			slog.Info("Loaded inbound UUIDs", "uuids", uuids)
 			return inboundsMap
 		} else {
-			slog.Info("No squad UUIDs specified, all will be used")
+			slog.Info("No inbound UUIDs specified, all will be used")
 			return map[uuid.UUID]uuid.UUID{}
 		}
 	}()

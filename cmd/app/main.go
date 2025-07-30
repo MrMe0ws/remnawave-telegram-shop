@@ -3,10 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/robfig/cron/v3"
 	"log"
 	"log/slog"
 	"net/http"
@@ -27,6 +23,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -130,6 +131,20 @@ func main() {
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.Message != nil && update.Message.SuccessfulPayment != nil
 	}, h.SuccessPaymentHandler)
+
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "help", bot.MatchTypeExact, h.HelpCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
+
+	// Добавляем обработчик для всех текстовых сообщений пользователей (не команд)
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil && strings.HasPrefix(update.Message.Text, "/") && update.Message.From.ID != config.GetAdminTelegramId()
+	}, h.ForwardUserMessageToAdmin)
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil && update.Message.Text != "" && !strings.HasPrefix(update.Message.Text, "/") && update.Message.From.ID != config.GetAdminTelegramId()
+	}, h.ForwardUserMessageToAdmin)
+	// Добавляем обработчик для сообщений-ответов от админа (reply)
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil && update.Message.ReplyToMessage != nil && update.Message.From.ID == config.GetAdminTelegramId()
+	}, h.AdminReplyToUser)
 
 	mux := http.NewServeMux()
 	mux.Handle("/healthcheck", fullHealthHandler(pool, remnawaveClient))
@@ -282,7 +297,7 @@ func checkYookasaInvoice(
 		database.PurchaseStatusPending,
 	)
 	if err != nil {
-		log.Printf("Error finding pending purchases: %v", err)
+		slog.Error("Error finding pending purchases", "error", err)
 		return
 	}
 	if len(*pendingPurchases) == 0 {
@@ -294,14 +309,14 @@ func checkYookasaInvoice(
 		invoice, err := yookasaClient.GetPayment(ctx, *purchase.YookasaID)
 
 		if err != nil {
-			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, err)
+			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, "error", err)
 			continue
 		}
 
 		if invoice.IsCancelled() {
 			err := paymentService.CancelPayment(purchase.ID)
 			if err != nil {
-				slog.Error("Error canceling invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, err)
+				slog.Error("Error canceling invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, "error", err)
 			}
 			continue
 		}
@@ -312,12 +327,12 @@ func checkYookasaInvoice(
 
 		purchaseId, err := strconv.Atoi(invoice.Metadata["purchaseId"])
 		if err != nil {
-			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, err)
+			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, "error", err)
 		}
 		ctxWithValue := context.WithValue(ctx, "username", invoice.Metadata["username"])
 		err = paymentService.ProcessPurchaseById(ctxWithValue, int64(purchaseId))
 		if err != nil {
-			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, err)
+			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, "error", err)
 		} else {
 			slog.Info("Invoice processed", "invoiceId", invoice.ID, "purchaseId", purchaseId)
 		}
@@ -337,7 +352,7 @@ func checkCryptoPayInvoice(
 		database.PurchaseStatusPending,
 	)
 	if err != nil {
-		log.Printf("Error finding pending purchases: %v", err)
+		slog.Error("Error finding pending purchases", "error", err)
 		return
 	}
 	if len(*pendingPurchases) == 0 {
@@ -359,7 +374,7 @@ func checkCryptoPayInvoice(
 	stringInvoiceIDs := strings.Join(invoiceIDs, ",")
 	invoices, err := cryptoPayClient.GetInvoices("", "", "", stringInvoiceIDs, 0, 0)
 	if err != nil {
-		log.Printf("Error getting invoices: %v", err)
+		slog.Error("Error getting invoices", "error", err)
 		return
 	}
 
@@ -371,7 +386,7 @@ func checkCryptoPayInvoice(
 			ctxWithUsername := context.WithValue(ctx, "username", username)
 			err = paymentService.ProcessPurchaseById(ctxWithUsername, int64(purchaseID))
 			if err != nil {
-				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, err)
+				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, "error", err)
 			} else {
 				slog.Info("Invoice processed", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID)
 			}
