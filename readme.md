@@ -6,6 +6,8 @@
 
 ## Description
 
+ЭТО ФОРК ТГ ШОП БОТА РЕМНЫ, делал для себя, с небольшими изменениями в дизайне и кнопках, добавлена поддержка 2.0 ремны
+
 A Telegram bot for selling subscriptions with integration to Remnawave (https://remna.st/). This service allows users to
 purchase and manage subscriptions through Telegram with multiple payment system options.
 
