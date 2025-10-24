@@ -9,4 +9,6 @@ const (
 	CallbackTrial         = "trial"
 	CallbackActivateTrial = "activate_trial"
 	CallbackReferral      = "referral"
+	CallbackDevices       = "devices"
+	CallbackDeleteDevice  = "delete_device_"
 )

@@ -67,6 +67,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	var markup [][]models.InlineKeyboardButton
 	if customer.SubscriptionLink != nil && customer.ExpireAt.After(time.Now()) {
 		markup = append(markup, []models.InlineKeyboardButton{{Text: "🔌 Подключиться", WebApp: &models.WebAppInfo{URL: *customer.SubscriptionLink}}})
+		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
 		// markup = append(markup, []models.InlineKeyboardButton{
 		// 	{
 		// 		Text: "🔌 Подключиться",

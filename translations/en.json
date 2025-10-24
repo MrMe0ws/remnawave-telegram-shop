@@ -35,5 +35,16 @@
   "stars_button": " ⭐Telegram Stars",
   "share_referral_button": "Share!",
   "web_app_button_text": "Connect",
-  "tribute_button": "Tribute"
+  "tribute_button": "Tribute",
+  "devices_button": "📱 My Devices",
+  "devices_title": "📱 <b>Your Devices</b>\n\n",
+  "device_limit": "Device limit %d/%d\n\n",
+  "device_info": "🖥️ <b>%s</b>\nID: <code>%s</code>\nAdded: %s\n\n",
+  "device_info_new": "🖥️ <b>%s (%s)</b>\nAdded: %s\n\n",
+  "no_devices": "You don't have any connected devices yet",
+  "delete_device_button": "🗑️ Delete",
+  "device_deleted": "✅ Device successfully deleted",
+  "device_delete_error": "❌ Error deleting device",
+  "devices_error": "❌ Error getting devices list",
+  "device_delete_info": "<i>Remove a device if you've reached the limit or can't add a new one. If you remove a device by mistake, you can add it again.</i>\n\nBy clicking on a device, you will remove it from your subscription"
 }

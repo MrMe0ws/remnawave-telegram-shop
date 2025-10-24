@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	remapi "github.com/Jolymmiles/remnawave-api-go/v2/api"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"remnawave-tg-shop-bot/internal/config"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	remapi "github.com/Jolymmiles/remnawave-api-go/v2/api"
+	"github.com/google/uuid"
 )
 
 type Client struct {
@@ -220,4 +221,89 @@ func getNewExpire(daysToAdd int, currentExpire time.Time) time.Time {
 	}
 
 	return currentExpire.AddDate(0, 0, daysToAdd)
+}
+
+// GetUserInfo получает информацию о пользователе по Telegram ID
+func (r *Client) GetUserInfo(ctx context.Context, telegramId int64) (string, int, error) {
+	resp, err := r.client.UsersControllerGetUserByTelegramId(ctx, remapi.UsersControllerGetUserByTelegramIdParams{TelegramId: strconv.FormatInt(telegramId, 10)})
+	if err != nil {
+		return "", 0, err
+	}
+
+	switch v := resp.(type) {
+	case *remapi.UsersControllerGetUserByTelegramIdNotFound:
+		return "", 0, errors.New("user not found")
+	case *remapi.UsersDto:
+		response := v.GetResponse()
+
+		var userUuid *uuid.UUID
+		var deviceLimit int
+		for _, panelUser := range response {
+			userUuid = &panelUser.UUID
+			deviceLimit = panelUser.HwidDeviceLimit.Value
+		}
+
+		return userUuid.String(), deviceLimit, nil
+	default:
+		return "", 0, errors.New("unknown response type")
+	}
+}
+
+// GetUserDevices получает список устройств пользователя
+func (r *Client) GetUserDevices(ctx context.Context, telegramId int64) ([]remapi.GetUserHwidDevicesResponseDtoResponseDevicesItem, error) {
+	uuid, _, err := r.GetUserInfo(ctx, telegramId)
+	if err != nil {
+		return nil, err
+	}
+
+	hwidResp, err := r.client.HwidUserDevicesControllerGetUserHwidDevices(
+		ctx, remapi.HwidUserDevicesControllerGetUserHwidDevicesParams{UserUuid: uuid},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	hwidResponse := hwidResp.(*remapi.GetUserHwidDevicesResponseDto).GetResponse()
+
+	devices := hwidResponse.GetDevices()
+
+	return devices, nil
+}
+
+// GetUserDevicesByUuid получает список устройств пользователя по UUID
+func (r *Client) GetUserDevicesByUuid(ctx context.Context, userUuid string) ([]remapi.GetUserHwidDevicesResponseDtoResponseDevicesItem, error) {
+	hwidResp, err := r.client.HwidUserDevicesControllerGetUserHwidDevices(
+		ctx, remapi.HwidUserDevicesControllerGetUserHwidDevicesParams{UserUuid: userUuid},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	hwidResponse := hwidResp.(*remapi.GetUserHwidDevicesResponseDto).GetResponse()
+
+	devices := hwidResponse.GetDevices()
+
+	return devices, nil
+}
+
+// DeleteUserDevice удаляет устройство пользователя
+func (r *Client) DeleteUserDevice(ctx context.Context, userUuidStr string, hwid string) error {
+	userUuid, err := uuid.Parse(userUuidStr)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+
+	req := &remapi.DeleteUserHwidDeviceRequestDto{
+		Hwid:     hwid,
+		UserUuid: userUuid,
+	}
+
+	_, err = r.client.HwidUserDevicesControllerDeleteUserHwidDevice(ctx, req)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
+
+	return nil
 }

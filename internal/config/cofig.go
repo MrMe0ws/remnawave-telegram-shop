@@ -1,13 +1,14 @@
 package config
 
 import (
-	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	"log"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 )
 
 type config struct {
@@ -39,6 +40,7 @@ type config struct {
 	isWebAppLinkEnabled                                       bool
 	xApiKey                                                   string
 	daysInMonth                                               int
+	hwidFallbackDeviceLimit                                   int
 }
 
 var conf config
@@ -55,6 +57,10 @@ func GetTributeAPIKey() string {
 
 func GetTributePaymentUrl() string {
 	return conf.tributePaymentUrl
+}
+
+func GetHwidFallbackDeviceLimit() int {
+	return conf.hwidFallbackDeviceLimit
 }
 
 func GetReferralDays() int {
@@ -376,4 +382,7 @@ func InitConfig() {
 		conf.tributeAPIKey = mustEnv("TRIBUTE_API_KEY")
 		conf.tributePaymentUrl = mustEnv("TRIBUTE_PAYMENT_URL")
 	}
+
+	// HWID Fallback Device Limit
+	conf.hwidFallbackDeviceLimit = envIntDefault("HWID_FALLBACK_DEVICE_LIMIT", 2)
 }

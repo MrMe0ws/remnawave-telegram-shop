@@ -13,6 +13,11 @@ type SyncService struct {
 	customerRepository *database.CustomerRepository
 }
 
+// GetRemnawaveClient возвращает клиент remnawave
+func (s SyncService) GetRemnawaveClient() *remnawave.Client {
+	return s.client
+}
+
 func NewSyncService(client *remnawave.Client, customerRepository *database.CustomerRepository) *SyncService {
 	return &SyncService{
 		client: client, customerRepository: customerRepository,
