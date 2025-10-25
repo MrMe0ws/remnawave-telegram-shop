@@ -3,11 +3,13 @@ package handler
 import (
 	"context"
 
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 	"log/slog"
 
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
+
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/utils"
 )
 
 func (h Handler) CreateCustomerIfNotExistMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
@@ -46,6 +48,46 @@ func (h Handler) CreateCustomerIfNotExistMiddleware(next bot.HandlerFunc) bot.Ha
 				slog.Error("Error updating customer", err)
 				return
 			}
+		}
+
+		next(ctx, b, update)
+	}
+}
+
+func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
+		var username, firstName, lastName *string
+		var userID int64
+		var chatID int64
+
+		if update.Message != nil {
+			username = &update.Message.From.Username
+			firstName = &update.Message.From.FirstName
+			lastName = &update.Message.From.LastName
+			userID = update.Message.From.ID
+			chatID = update.Message.Chat.ID
+		} else if update.CallbackQuery != nil {
+			username = &update.CallbackQuery.From.Username
+			firstName = &update.CallbackQuery.From.FirstName
+			lastName = &update.CallbackQuery.From.LastName
+			userID = update.CallbackQuery.From.ID
+			chatID = update.CallbackQuery.Message.Message.Chat.ID
+		} else {
+			next(ctx, b, update)
+			return
+		}
+
+		if utils.IsSuspiciousUser(username, firstName, lastName) {
+			slog.Warn("suspicious user blocked", "userId", utils.MaskHalfInt64(userID))
+			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID:    chatID,
+				Text:      "⚠️ Access denied. Please update your profile information.",
+				ParseMode: models.ParseModeHTML,
+			})
+			if err != nil {
+				slog.Error("error sending suspicious user message", err)
+			}
+			return
 		}
 
 		next(ctx, b, update)

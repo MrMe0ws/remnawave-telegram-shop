@@ -16,6 +16,7 @@ type config struct {
 	price1, price3, price6, price12                           int
 	starsPrice1, starsPrice3, starsPrice6, starsPrice12       int
 	remnawaveUrl, remnawaveToken, remnawaveMode, remnawaveTag string
+	defaultLanguage                                           string
 	databaseURL                                               string
 	cryptoPayURL, cryptoPayToken                              string
 	botURL                                                    string
@@ -47,6 +48,10 @@ var conf config
 
 func RemnawaveTag() string {
 	return conf.remnawaveTag
+}
+
+func DefaultLanguage() string {
+	return conf.defaultLanguage
 }
 func GetTributeWebHookUrl() string {
 	return conf.tributeWebhookUrl
@@ -290,6 +295,8 @@ func InitConfig() {
 	conf.miniApp = envStringDefault("MINI_APP_URL", "")
 
 	conf.remnawaveTag = envStringDefault("REMNAWAVE_TAG", "")
+
+	conf.defaultLanguage = envStringDefault("DEFAULT_LANGUAGE", "ru")
 
 	conf.daysInMonth = envIntDefault("DAYS_IN_MONTH", 30)
 

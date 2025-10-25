@@ -32,9 +32,13 @@ func GetInstance() *Manager {
 	return instance
 }
 
-func (tm *Manager) InitTranslations(translationsDir string) error {
+func (tm *Manager) InitTranslations(translationsDir string, defaultLanguage string) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
+
+	if defaultLanguage != "" {
+		tm.defaultLanguage = defaultLanguage
+	}
 
 	files, err := os.ReadDir(translationsDir)
 	if err != nil {

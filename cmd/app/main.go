@@ -37,7 +37,7 @@ func main() {
 	config.InitConfig()
 
 	tm := translation.GetInstance()
-	err := tm.InitTranslations("./translations")
+	err := tm.InitTranslations("./translations", config.DefaultLanguage())
 	if err != nil {
 		panic(err)
 	}
@@ -72,9 +72,9 @@ func main() {
 		defer cronScheduler.Stop()
 	}
 
-	subService := notification.NewSubscriptionService(customerRepository, b, tm)
+	subService := notification.NewSubscriptionService(customerRepository, purchaseRepository, paymentService, b, tm)
 
-	subscriptionNotificationCronScheduler := setupSubscriptionNotifier(subService)
+	subscriptionNotificationCronScheduler := subscriptionChecker(subService)
 	subscriptionNotificationCronScheduler.Start()
 	defer subscriptionNotificationCronScheduler.Stop()
 
@@ -112,34 +112,30 @@ func main() {
 
 	config.SetBotURL(fmt.Sprintf("https://t.me/%s", me.Username))
 
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypePrefix, h.StartCommandHandler)
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/connect", bot.MatchTypeExact, h.ConnectCommandHandler, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypePrefix, h.StartCommandHandler, h.SuspiciousUserFilterMiddleware, h.ForwardUserMessageToAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "/connect", bot.MatchTypeExact, h.ConnectCommandHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.ForwardUserMessageToAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/sync", bot.MatchTypeExact, h.SyncUsersCommandHandler, isAdminMiddleware)
 
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypeExact, h.BuyCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackTrial, bot.MatchTypeExact, h.TrialCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackActivateTrial, bot.MatchTypeExact, h.ActivateTrialCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackStart, bot.MatchTypeExact, h.StartCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackSell, bot.MatchTypePrefix, h.SellCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypeExact, h.ConnectCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPayment, bot.MatchTypePrefix, h.PaymentCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDevices, bot.MatchTypeExact, h.DevicesCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDeleteDevice, bot.MatchTypePrefix, h.DeleteDeviceCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypeExact, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackTrial, bot.MatchTypeExact, h.TrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackActivateTrial, bot.MatchTypeExact, h.ActivateTrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackStart, bot.MatchTypeExact, h.StartCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackSell, bot.MatchTypePrefix, h.SellCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypeExact, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPayment, bot.MatchTypePrefix, h.PaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "help", bot.MatchTypeExact, h.HelpCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDevices, bot.MatchTypeExact, h.DevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDeleteDevice, bot.MatchTypePrefix, h.DeleteDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.PreCheckoutQuery != nil
-	}, h.PreCheckoutCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
+	}, h.PreCheckoutCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.Message != nil && update.Message.SuccessfulPayment != nil
-	}, h.SuccessPaymentHandler)
+	}, h.SuccessPaymentHandler, h.SuspiciousUserFilterMiddleware)
 
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "help", bot.MatchTypeExact, h.HelpCallbackHandler, h.CreateCustomerIfNotExistMiddleware)
-
-	// Добавляем обработчик для всех текстовых сообщений пользователей (не команд)
-	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
-		return update.Message != nil && strings.HasPrefix(update.Message.Text, "/") && update.Message.From.ID != config.GetAdminTelegramId()
-	}, h.ForwardUserMessageToAdmin)
+	// Добавляем обработчик для обычных текстовых сообщений (не команд)
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.Message != nil && update.Message.Text != "" && !strings.HasPrefix(update.Message.Text, "/") && update.Message.From.ID != config.GetAdminTelegramId()
 	}, h.ForwardUserMessageToAdmin)
@@ -222,13 +218,11 @@ func isAdminMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 	}
 }
 
-func setupSubscriptionNotifier(subService *notification.SubscriptionService) *cron.Cron {
+func subscriptionChecker(subService *notification.SubscriptionService) *cron.Cron {
 	c := cron.New()
 
 	_, err := c.AddFunc("0 16 * * *", func() {
-		slog.Info("Running subscription notification check")
-
-		err := subService.SendSubscriptionNotifications(context.Background())
+		err := subService.ProcessSubscriptionExpiration()
 		if err != nil {
 			slog.Error("Error sending subscription notifications", "error", err)
 		}
@@ -299,7 +293,7 @@ func checkYookasaInvoice(
 		database.PurchaseStatusPending,
 	)
 	if err != nil {
-		slog.Error("Error finding pending purchases", "error", err)
+		log.Printf("Error finding pending purchases: %v", err)
 		return
 	}
 	if len(*pendingPurchases) == 0 {
@@ -311,14 +305,14 @@ func checkYookasaInvoice(
 		invoice, err := yookasaClient.GetPayment(ctx, *purchase.YookasaID)
 
 		if err != nil {
-			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, "error", err)
+			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, err)
 			continue
 		}
 
 		if invoice.IsCancelled() {
-			err := paymentService.CancelPayment(purchase.ID)
+			err := paymentService.CancelYookassaPayment(purchase.ID)
 			if err != nil {
-				slog.Error("Error canceling invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, "error", err)
+				slog.Error("Error canceling invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, err)
 			}
 			continue
 		}
@@ -329,12 +323,12 @@ func checkYookasaInvoice(
 
 		purchaseId, err := strconv.Atoi(invoice.Metadata["purchaseId"])
 		if err != nil {
-			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, "error", err)
+			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, err)
 		}
 		ctxWithValue := context.WithValue(ctx, "username", invoice.Metadata["username"])
 		err = paymentService.ProcessPurchaseById(ctxWithValue, int64(purchaseId))
 		if err != nil {
-			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, "error", err)
+			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, err)
 		} else {
 			slog.Info("Invoice processed", "invoiceId", invoice.ID, "purchaseId", purchaseId)
 		}
@@ -354,7 +348,7 @@ func checkCryptoPayInvoice(
 		database.PurchaseStatusPending,
 	)
 	if err != nil {
-		slog.Error("Error finding pending purchases", "error", err)
+		log.Printf("Error finding pending purchases: %v", err)
 		return
 	}
 	if len(*pendingPurchases) == 0 {
@@ -376,7 +370,7 @@ func checkCryptoPayInvoice(
 	stringInvoiceIDs := strings.Join(invoiceIDs, ",")
 	invoices, err := cryptoPayClient.GetInvoices("", "", "", stringInvoiceIDs, 0, 0)
 	if err != nil {
-		slog.Error("Error getting invoices", "error", err)
+		log.Printf("Error getting invoices: %v", err)
 		return
 	}
 
@@ -388,7 +382,7 @@ func checkCryptoPayInvoice(
 			ctxWithUsername := context.WithValue(ctx, "username", username)
 			err = paymentService.ProcessPurchaseById(ctxWithUsername, int64(purchaseID))
 			if err != nil {
-				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, "error", err)
+				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, err)
 			} else {
 				slog.Info("Invoice processed", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID)
 			}

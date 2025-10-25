@@ -36,6 +36,8 @@
   "share_referral_button": "Share!",
   "web_app_button_text": "Connect",
   "tribute_button": "Tribute",
+  "tribute_cancelled" : "Tribute cancelled",
+  "help_button": "📚 Help",
   "devices_button": "📱 My Devices",
   "devices_title": "📱 <b>Your Devices</b>\n\n",
   "device_limit": "Device limit %d/%d\n\n",

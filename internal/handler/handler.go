@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"remnawave-tg-shop-bot/internal/cache"
-	"remnawave-tg-shop-bot/internal/cryptopay"
-	"remnawave-tg-shop-bot/internal/database"
-	"remnawave-tg-shop-bot/internal/payment"
-	"remnawave-tg-shop-bot/internal/sync"
-	"remnawave-tg-shop-bot/internal/translation"
-	"remnawave-tg-shop-bot/internal/yookasa"
 	"strconv"
 	"strings"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
+	"remnawave-tg-shop-bot/internal/cryptopay"
+	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/payment"
+	"remnawave-tg-shop-bot/internal/sync"
+	"remnawave-tg-shop-bot/internal/translation"
+	"remnawave-tg-shop-bot/internal/yookasa"
 )
 
 type Handler struct {
@@ -76,6 +76,16 @@ func (h Handler) ForwardUserMessageToAdmin(ctx context.Context, b *bot.Bot, upda
 	})
 	if err != nil {
 		// Можно добавить обработку ошибки, если нужно
+	}
+}
+
+// ForwardUserMessageToAdminMiddleware - middleware версия для отслеживания сообщений
+func (h Handler) ForwardUserMessageToAdminMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
+		// Сначала пересылаем сообщение админу
+		h.ForwardUserMessageToAdmin(ctx, b, update)
+		// Затем вызываем следующий обработчик
+		next(ctx, b, update)
 	}
 }
 

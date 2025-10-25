@@ -1,242 +1,272 @@
-# Remnawave Telegram Shop
+# Remnawave Telegram Shop - Улучшенный Форк
 
+## 🚀 Улучшенные Возможности
+
+Это **улучшенный форк** оригинального бота Remnawave Telegram Shop с дополнительным функционалом:
+
+### ✨ Добавленные Новые Функции:
+
+- **📱 Управление Устройствами**: Пользователи могут просматривать и удалять свои подключенные HWID устройства через кнопку "Мои устройства"
+- **👁️ Отслеживание Сообщений Админом**: Админ может видеть все сообщения и команды, отправленные пользователями боту
+- **💬 Система Ответов Админа**: Админ может отвечать на пересланные сообщения пользователей напрямую из админского интерфейса
+- **📚 Улучшенная Секция Помощи**: Реорганизованное главное меню с выделенной секцией Помощи, содержащей руководство по выбору сервера, поддержку и условия использования
+- **🔧 Лимит Устройств HWID по Умолчанию**: Настраиваемый лимит устройств по умолчанию, когда лимит устройств пользователя не установлен в Remnawave
+
+### 📋 Совместимость Версий:
+
+- **Версия Бота**: 3.2.3
+- **Поддержка Remnawave**: Последняя версия 2.1.19
+- **Функция HWID**: Совместимость с Remnawave 2.1.4+ скрытыми зашифрованными подписками (подписки не видны для каждой страновой ноды при включенном лимите HWID)
+
+
+
+
+
+-------------------------------------
 [![Stars](https://img.shields.io/github/stars/Jolymmiels/remnawave-telegram-shop.svg?style=social)](https://github.com/Jolymmiels/remnawave-telegram-shop/stargazers)
 [![Forks](https://img.shields.io/github/forks/Jolymmiels/remnawave-telegram-shop.svg?style=social)](https://github.com/Jolymmiels/remnawave-telegram-shop/network/members)
 [![Issues](https://img.shields.io/github/issues/Jolymmiels/remnawave-telegram-shop.svg)](https://github.com/Jolymmiels/remnawave-telegram-shop/issues)
+## Описание
 
-## Description
-
-ЭТО ФОРК ТГ ШОП БОТА РЕМНЫ, делал для себя, с небольшими изменениями в дизайне и кнопках, добавлена поддержка 2.0 ремны
-
-A Telegram bot for selling subscriptions with integration to Remnawave (https://remna.st/). This service allows users to
-purchase and manage subscriptions through Telegram with multiple payment system options.
+Telegram бот для продажи подписок с интеграцией в Remnawave (https://remna.st/). Этот сервис позволяет пользователям
+покупать и управлять подписками через Telegram с множественными вариантами платежных систем.
 
 - [remnawave-api-go](https://github.com/Jolymmiles/remnawave-api-go)
 
-## Admin commands
+## Команды Администратора
 
-- `/sync` - Poll users from remnawave and synchronize them with the database. Remove all users which not present in
-  remnawave.
+- `/sync` - Получить пользователей из remnawave и синхронизировать их с базой данных. Удалить всех пользователей, которых нет в remnawave.
 
-### Payment Systems
+### Платежные Системы
 
 - [YooKassa API](https://yookassa.ru/developers/api)
 - [CryptoPay API](https://help.crypt.bot/crypto-pay-api)
 - Telegram Stars
 - Tribute
 
-## Features
+## Возможности
 
-- Purchase VPN subscriptions with different payment methods (bank cards, cryptocurrency)
-- Multiple subscription plans (1, 3, 6, 12 months)
-- Automated subscription management
-- **Subscription Notifications**: The bot automatically sends notifications to users 3 days before their subscription
-  expires, helping them avoid service interruption
-- Multi-language support (Russian and English)
-- **Selective Inbound Assignment**: Configure specific inbounds to assign to users via UUID filtering
-- All telegram message support HTML formatting https://core.telegram.org/bots/api#html-style
-- Healthcheck - bot checking availability of db, panel.
+- Покупка VPN подписок с различными способами оплаты (банковские карты, криптовалюта)
+- Множественные планы подписок (1, 3, 6, 12 месяцев)
+- Автоматизированное управление подписками
+- **Уведомления о Подписках**: Бот автоматически отправляет уведомления пользователям за 3 дня до истечения их подписки,
+  помогая им избежать прерывания сервиса
+- Поддержка нескольких языков (русский и английский)
+- **Селективное Назначение Inbound**: Настройка конкретных inbounds для назначения пользователям через фильтрацию UUID
+- Все сообщения telegram поддерживают HTML форматирование https://core.telegram.org/bots/api#html-style
+- Healthcheck - бот проверяет доступность базы данных и панели.
 
-## Version Support
+### 🆕 Улучшенные Возможности (специфичные для форка):
 
-| Remnawave | Bot   |
-|-----------|-------|
-| 1.6       | 2.3.6 |
-| 2.0.0     | 3.0.0 |
+- **Управление Устройствами**: Пользователи могут просматривать и управлять своими подключенными HWID устройствами
+- **Мониторинг Админа**: Полная система отслеживания сообщений и ответов для администраторов
+- **Улучшенный UI**: Реорганизованное главное меню с улучшенной секцией Помощи
+- **Поддержка HWID**: Полная совместимость с Remnawave 2.1.4+ скрытыми зашифрованными подписками
+
+## Поддержка Версий
+
+| Remnawave | Бот   | Примечания                                                                                  |
+| --------- | ----- | ------------------------------------------------------------------------------------------- |
+| 1.6       | 2.3.6 | Оригинальная версия                                                                         |
+| 2._._     | 3._._ | Улучшенный форк с дополнительными функциями                                                 |
+| 2.1.19    | 3.2.3 | **Текущая улучшенная версия** - Полная поддержка HWID со скрытыми зашифрованными подписками |
 
 ## API
 
-Web server start on port defined in .env via HEALTH_CHECK_PORT
+Веб-сервер запускается на порту, определенном в .env через HEALTH_CHECK_PORT
 
 - /healthcheck
-- /${TRIBUTE_PAYMENT_URL} - webhook for tribute
+- /${TRIBUTE_PAYMENT_URL} - webhook для tribute
 
-## Environment Variables
+## Переменные Окружения
 
-The application requires the following environment variables to be set:
+Приложение требует установки следующих переменных окружения:
 
-| Variable                 | Description                                                                                                                                |
-|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------| 
-| `PRICE_1`                | Price for 1 month                                                                                                                          |
-| `PRICE_3`                | Price for 3 month                                                                                                                          |
-| `PRICE_6`                | Price for 6 month                                                                                                                          |
-| `PRICE_12`               | Price for 12 month                                                                                                                         |
-| `DAYS_IN_MONTH`          | Days in month                                                                                                                              |
-| `REMNAWAVE_TAG`          | Tag in remnawave                                                                                                                           |
-| `HEALTH_CHECK_PORT`      | Server port                                                                                                                                |
-| `IS_WEB_APP_LINK`        | If true, then sublink will be showed as webapp..                                                                                           |
-| `X_API_KEY`              | https://remna.st/docs/security/tinyauth-for-nginx#issuing-api-keys                                                                         |
-| `MINI_APP_URL`           | tg WEB APP URL. if empty not be used.                                                                                                      |
-| `PRICE_12`               | Price for 12 month                                                                                                                         |
-| `STARS_PRICE_1`          | Price in Stars for 1 month                                                                                                                 
-| `STARS_PRICE_3`          | Price in Stars for 3 month                                                                                                                 
-| `STARS_PRICE_6`          | Price in Stars for 6 month                                                                                                                 
-| `STARS_PRICE_12`         | Price in Stars for 12 month                                                                                                                
-| `REFERRAL_DAYS`          | Refferal days. if 0, then disabled.                                                                                                        |
-| `TELEGRAM_TOKEN`         | Telegram Bot API token for bot functionality                                                                                               |
-| `DATABASE_URL`           | PostgreSQL connection string                                                                                                               |
-| `POSTGRES_USER`          | PostgreSQL username                                                                                                                        |
-| `POSTGRES_PASSWORD`      | PostgreSQL password                                                                                                                        |
-| `POSTGRES_DB`            | PostgreSQL database name                                                                                                                   |
-| `REMNAWAVE_URL`          | Remnawave API URL                                                                                                                          |
-| `REMNAWAVE_MODE`         | Remnawave mode (remote/local), default is remote. If local set – you can pass http://remnawave:3000 to REMNAWAVE_URL                       |
-| `REMNAWAVE_TOKEN`        | Authentication token for Remnawave API                                                                                                     |
-| `CRYPTO_PAY_ENABLED`     | Enable/disable CryptoPay payment method (true/false)                                                                                       |
-| `CRYPTO_PAY_TOKEN`       | CryptoPay API token                                                                                                                        |
-| `CRYPTO_PAY_URL`         | CryptoPay API URL                                                                                                                          |
-| `YOOKASA_ENABLED`        | Enable/disable YooKassa payment method (true/false)                                                                                        |
-| `YOOKASA_SECRET_KEY`     | YooKassa API secret key                                                                                                                    |
-| `YOOKASA_SHOP_ID`        | YooKassa shop identifier                                                                                                                   |
-| `YOOKASA_URL`            | YooKassa API URL                                                                                                                           |
-| `YOOKASA_EMAIL`          | Email address associated with YooKassa account                                                                                             |
-| `TRAFFIC_LIMIT`          | Maximum allowed traffic in gb (0 to set unlimited)                                                                                         |
-| `TELEGRAM_STARS_ENABLED` | Enable/disable Telegram Stars payment method (true/false)                                                                                  |
-| `SERVER_STATUS_URL`      | URL to server status page (optional) - if not set, button will not be displayed                                                            |
-| `SUPPORT_URL`            | URL to support chat or page (optional) - if not set, button will not be displayed                                                          |
-| `FEEDBACK_URL`           | URL to feedback/reviews page (optional) - if not set, button will not be displayed                                                         |
-| `CHANNEL_URL`            | URL to Telegram channel (optional) - if not set, button will not be displayed                                                              |
-| `ADMIN_TELEGRAM_ID`      | Admin telegram id                                                                                                                          |
-| `TRIAL_TRAFFIC_LIMIT`    | Maximum allowed traffic in gb for trial subscriptions                                                                                      |     
-| `TRIAL_DAYS`             | Number of days for trial subscriptions. if 0 = disabled.                                                                                   |
-| `SQUAD_UUIDS`            | Comma-separated list of squad UUIDs to assign to users (e.g., "773db654-a8b2-413a-a50b-75c3536238fd,bc979bdd-f1fa-4d94-8a51-38a0f518a2a2") |
-| `TRIBUTE_WEBHOOK_URL`    | Path for webhook handler. Example: /example (https://www.uuidgenerator.net/version4)                                                       |
-| `TRIBUTE_API_KEY`        | Api key, which can be obtained via settings in Tribute app.                                                                                |
-| `TRIBUTE_PAYMENT_URL`    | You payment url for Tribute. (Subscription telegram link)                                                                                  |
+| Переменная                   | Описание                                                                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PRICE_1`                    | Цена за 1 месяц                                                                                                                                               |
+| `PRICE_3`                    | Цена за 3 месяца                                                                                                                                              |
+| `PRICE_6`                    | Цена за 6 месяцев                                                                                                                                             |
+| `PRICE_12`                   | Цена за 12 месяцев                                                                                                                                            |
+| `DAYS_IN_MONTH`              | Дней в месяце                                                                                                                                                 |
+| `DEFAULT_LANGUAGE`           | Язык по умолчанию для сообщений бота (en или ru). По умолчанию: ru                                                                                            |
+| `REMNAWAVE_TAG`              | Тег в remnawave                                                                                                                                               |
+| `HEALTH_CHECK_PORT`          | Порт сервера                                                                                                                                                  |
+| `IS_WEB_APP_LINK`            | Если true, то ссылка подписки будет показана как webapp..                                                                                                     |
+| `X_API_KEY`                  | https://remna.st/docs/security/tinyauth-for-nginx#issuing-api-keys                                                                                            |
+| `MINI_APP_URL`               | URL tg WEB APP. если пустой, не используется.                                                                                                                 |
+| `PRICE_12`                   | Цена за 12 месяцев                                                                                                                                            |
+| `STARS_PRICE_1`              | Цена в Stars за 1 месяц                                                                                                                                       |
+| `STARS_PRICE_3`              | Цена в Stars за 3 месяца                                                                                                                                      |
+| `STARS_PRICE_6`              | Цена в Stars за 6 месяцев                                                                                                                                     |
+| `STARS_PRICE_12`             | Цена в Stars за 12 месяцев                                                                                                                                    |
+| `REFERRAL_DAYS`              | Дни рефералов. если 0, то отключено.                                                                                                                          |
+| `TELEGRAM_TOKEN`             | Telegram Bot API токен для функциональности бота                                                                                                              |
+| `DATABASE_URL`               | Строка подключения PostgreSQL                                                                                                                                 |
+| `POSTGRES_USER`              | Имя пользователя PostgreSQL                                                                                                                                   |
+| `POSTGRES_PASSWORD`          | Пароль PostgreSQL                                                                                                                                             |
+| `POSTGRES_DB`                | Имя базы данных PostgreSQL                                                                                                                                    |
+| `REMNAWAVE_URL`              | URL API Remnawave                                                                                                                                             |
+| `REMNAWAVE_MODE`             | Режим Remnawave (remote/local), по умолчанию remote. Если local установлен – можно передать http://remnawave:3000 в REMNAWAVE_URL                             |
+| `REMNAWAVE_TOKEN`            | Токен аутентификации для Remnawave API                                                                                                                        |
+| `CRYPTO_PAY_ENABLED`         | Включить/отключить способ оплаты CryptoPay (true/false)                                                                                                       |
+| `CRYPTO_PAY_TOKEN`           | Токен API CryptoPay                                                                                                                                           |
+| `CRYPTO_PAY_URL`             | URL API CryptoPay                                                                                                                                             |
+| `YOOKASA_ENABLED`            | Включить/отключить способ оплаты YooKassa (true/false)                                                                                                        |
+| `YOOKASA_SECRET_KEY`         | Секретный ключ API YooKassa                                                                                                                                   |
+| `YOOKASA_SHOP_ID`            | Идентификатор магазина YooKassa                                                                                                                               |
+| `YOOKASA_URL`                | URL API YooKassa                                                                                                                                              |
+| `YOOKASA_EMAIL`              | Email адрес, связанный с аккаунтом YooKassa                                                                                                                   |
+| `TRAFFIC_LIMIT`              | Максимально разрешенный трафик в гб (0 для неограниченного)                                                                                                   |
+| `TELEGRAM_STARS_ENABLED`     | Включить/отключить способ оплаты Telegram Stars (true/false)                                                                                                  |
+| `SERVER_STATUS_URL`          | URL страницы статуса сервера (опционально) - если не установлен, кнопка не отображается                                                                       |
+| `SUPPORT_URL`                | URL чата поддержки или страницы (опционально) - если не установлен, кнопка не отображается                                                                    |
+| `FEEDBACK_URL`               | URL страницы отзывов/обратной связи (опционально) - если не установлен, кнопка не отображается                                                                |
+| `CHANNEL_URL`                | URL Telegram канала (опционально) - если не установлен, кнопка не отображается                                                                                |
+| `TOS_URL`                    | URL условий использования (опционально) - если не установлен, кнопка не отображается                                                                          |
+| `ADMIN_TELEGRAM_ID`          | ID telegram админа                                                                                                                                            |
+| `TRIAL_TRAFFIC_LIMIT`        | Максимально разрешенный трафик в гб для пробных подписок                                                                                                      |
+| `TRIAL_DAYS`                 | Количество дней для пробных подписок. если 0 = отключено.                                                                                                     |
+| `SQUAD_UUIDS`                | Список UUID squad, разделенных запятыми, для назначения пользователям (например, "773db654-a8b2-413a-a50b-75c3536238fd,bc979bdd-f1fa-4d94-8a51-38a0f518a2a2") |
+| `TRIBUTE_WEBHOOK_URL`        | Путь для обработчика webhook. Пример: /example (https://www.uuidgenerator.net/version4)                                                                       |
+| `TRIBUTE_API_KEY`            | API ключ, который можно получить через настройки в приложении Tribute.                                                                                        |
+| `TRIBUTE_PAYMENT_URL`        | Ваш URL оплаты для Tribute. (Ссылка подписки telegram)                                                                                                        |
+| `HWID_FALLBACK_DEVICE_LIMIT` | Лимит устройств по умолчанию, когда лимит устройств пользователя не установлен в Remnawave (по умолчанию: 2)                                                  |
 
-## User Interface
+## Пользовательский Интерфейс
 
-The bot dynamically creates buttons based on available environment variables:
+Бот динамически создает кнопки на основе доступных переменных окружения:
 
-- Main buttons for purchasing and connecting to the VPN are always shown
-- Additional buttons for Server Status, Support, Feedback, and Channel are only displayed if their corresponding URL
-  environment variables are set
+- Основные кнопки для покупки и подключения к VPN всегда отображаются
+- Дополнительные кнопки для Статуса Сервера, Поддержки, Отзывов и Канала отображаются только если установлены соответствующие URL переменные окружения
 
-## Automated Notifications
+## Автоматизированные Уведомления
 
-The bot includes a notification system that runs daily at 16:00 UTC to check for expiring subscriptions:
+Бот включает систему уведомлений, которая запускается ежедневно в 16:00 UTC для проверки истекающих подписок:
 
-- Users receive a notification 3 days before their subscription expires
-- The notification includes the exact expiration date and a convenient button to renew the subscription
-- Notifications are sent in the user's preferred language
+- Пользователи получают уведомление за 3 дня до истечения их подписки
+- Уведомление включает точную дату истечения и удобную кнопку для продления подписки
+- Уведомления отправляются на предпочитаемом языке пользователя
 
-## Inbound Configuration
+## Конфигурация Inbound
 
-The bot supports selective inbound assignment to users:
+Бот поддерживает селективное назначение inbound пользователям:
 
-- Configure specific inbound UUIDs in the `INBOUND_UUIDS` environment variable (comma-separated)
-- If specified, only inbounds with matching UUIDs will be assigned to new users
-- If no inbounds match the specified UUIDs or the variable is empty, all available inbounds will be assigned
-- This feature allows fine-grained control over which connection methods are available to users
+- Настройте конкретные UUID inbound в переменной окружения `INBOUND_UUIDS` (разделенные запятыми)
+- Если указано, только inbound с соответствующими UUID будут назначены новым пользователям
+- Если ни один inbound не соответствует указанным UUID или переменная пуста, все доступные inbound будут назначены
+- Эта функция позволяет детальный контроль над тем, какие методы подключения доступны пользователям
 
-## Plugins and Dependencies
+## Плагины и Зависимости
 
 ### Telegram Bot
 
 - [Telegram Bot API](https://core.telegram.org/bots/api)
 - [Go Telegram Bot API](https://github.com/go-telegram/bot)
 
-### Database
+### База Данных
 
 - [PostgreSQL](https://www.postgresql.org/)
 - [pgx - PostgreSQL Driver](https://github.com/jackc/pgx)
 
-## Setup Instructions
+## Инструкции по Установке
 
-1. Clone the repository
+1. Клонируйте репозиторий
 
 ```bash
-git clone https://github.com/Jolymmiels/remnawave-telegram-shop && cd remnawave-telegram-shop
+git clone 
 ```
 
-2. Create a `.env` file in the root directory with all the environment variables listed above
+2. Создайте файл `.env` в корневой директории со всеми переменными окружения, перечисленными выше
 
 ```bash
 mv .env.sample .env
 ```
 
-3. Run the bot:
+3. Запустите бота:
 
 ```bash
 docker compose up -d
 ```
 
-## Tribute payment setup instructions
+## Инструкции по Настройке Платежей Tribute
 
 > [!WARNING]
-> To integrate with Tribute, you must have a public domain (e.g., `bot.example.com`) that points to your bot server.  
-> Webhook and subscription setup will not work on a local address or IP — only via a domain with a valid SSL
-> certificate.
+> Для интеграции с Tribute у вас должен быть публичный домен (например, `bot.example.com`), который указывает на ваш сервер бота.  
+> Настройка webhook и подписки не будет работать на локальном адресе или IP — только через домен с действительным SSL
+> сертификатом.
 
-### How the integration works
+### Как работает интеграция
 
-The bot supports subscription management via the Tribute service. When a user clicks the payment button, they are
-redirected to the Tribute bot or payment page to complete the subscription. After successful payment, Tribute sends a
-webhook to your server, and the bot activates the subscription for the user.
+Бот поддерживает управление подписками через сервис Tribute. Когда пользователь нажимает кнопку оплаты, он перенаправляется
+в бота Tribute или на страницу оплаты для завершения подписки. После успешной оплаты Tribute отправляет webhook
+на ваш сервер, и бот активирует подписку для пользователя.
 
-### Step-by-step setup guide
+### Пошаговое руководство по настройке
 
-1. Getting started
+1. Начало работы
 
-* Create a channel;
-* In the Tribute app, open "Channels and Groups" and add your channel;
-* Create a new subscription;
-* Obtain the subscription link (Subscription -> Links -> Telegram Link).
+- Создайте канал;
+- В приложении Tribute откройте "Channels and Groups" и добавьте ваш канал;
+- Создайте новую подписку;
+- Получите ссылку на подписку (Subscription -> Links -> Telegram Link).
 
-2. Configure environment variables in `.env`
-    * Set the webhook path (e.g., `/tribute/webhook`):
+2. Настройте переменные окружения в `.env`
 
-    ```
-    TRIBUTE_WEBHOOK_URL=/tribute/webhook
-    ```
+   - Установите путь webhook (например, `/tribute/webhook`):
 
-    * Set the API key from your Tribute settings:
+   ```
+   TRIBUTE_WEBHOOK_URL=/tribute/webhook
+   ```
 
-    ```
-    TRIBUTE_API_KEY=your_tribute_api_key
-    ```
+   - Установите API ключ из ваших настроек Tribute:
 
-    * Paste the subscription link you got from Tribute:
+   ```
+   TRIBUTE_API_KEY=your_tribute_api_key
+   ```
 
-    ```
-    TRIBUTE_PAYMENT_URL=https://t.me/tribute/app?startapp=...
-    ```
+   - Вставьте ссылку на подписку, которую вы получили от Tribute:
 
-    * Specify the port the app will use:
+   ```
+   TRIBUTE_PAYMENT_URL=https://t.me/tribute/app?startapp=...
+   ```
 
-    ```
-    HEALTH_CHECK_PORT=82251
-    ```
+   - Укажите порт, который будет использовать приложение:
 
-3. Restart bot
+   ```
+   HEALTH_CHECK_PORT=82251
+   ```
+
+3. Перезапустите бота
 
 ```bash
 docker compose down && docker compose up -d
 ```
 
-## How to change bot messages
+## Как Изменить Сообщения Бота
 
-Go to folder translations inside bot folder and change needed language.
+Перейдите в папку translations внутри папки бота и измените нужный язык.
 
-## Update Instructions
+## Инструкции по Обновлению
 
-1. Pull the latest Docker image:
+1. Получите последний Docker образ:
 
 ```bash
 docker compose pull
 ```
 
-2. Restart the containers:
+2. Перезапустите контейнеры:
 
 ```bash
 docker compose down && docker compose up -d
 ```
 
-## Reverse Proxy Configuration
+## Конфигурация Обратного Прокси
 
-If you are not using ngrok from `docker-compose.yml`, you need to set up a reverse proxy to forward requests to the bot.
+Если вы не используете ngrok из `docker-compose.yml`, вам нужно настроить обратный прокси для пересылки запросов к боту.
 
 <details>
-<summary>Traefik Configuration</summary>
+<summary>Конфигурация Traefik</summary>
 
 ```yaml
 http:
@@ -271,12 +301,12 @@ http:
 
 </details>
 
-## Donations
+## Пожертвования
 
-If you appreciate this project and want to help keep it running (and fuel those caffeine-fueled coding marathons),
-consider donating. Your support helps drive future updates and improvements.
+Если вы цените этот проект и хотите помочь поддерживать его работу (и подпитывать эти марафоны кодирования на кофеине),
+рассмотрите возможность пожертвования. Ваша поддержка помогает стимулировать будущие обновления и улучшения.
 
-**Donation Methods:**
+**Способы Пожертвования:**
 
 - **Bep20 USDT:** `0x4D1ee2445fdC88fA49B9d02FB8ee3633f45Bef48`
 

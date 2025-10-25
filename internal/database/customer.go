@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"remnawave-tg-shop-bot/utils"
-	"time"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"log/slog"
+	"remnawave-tg-shop-bot/utils"
+	"time"
 )
 
 type CustomerRepository struct {

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"log/slog"
@@ -21,6 +22,11 @@ type Client struct {
 	paymentService     *payment.PaymentService
 	customerRepository *database.CustomerRepository
 }
+
+const (
+	CancelledSubscription = "cancelled_subscription"
+	NewSubscription       = "new_subscription"
+)
 
 func NewClient(paymentService *payment.PaymentService, customerRepository *database.CustomerRepository) *Client {
 	return &Client{
@@ -65,31 +71,50 @@ func (c *Client) WebHookHandler() http.Handler {
 			return
 		}
 
-		if wh.Name != "new_subscription" {
-			w.WriteHeader(http.StatusOK)
-			return
+		switch wh.Name {
+		case NewSubscription:
+			err := c.newSubscriptionHandler(ctx, wh)
+			if err != nil {
+				slog.Error("webhook: new subscription error", "error", err, "payload", string(body))
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
+		case CancelledSubscription:
+			err := c.cancelSubscriptionHandler(ctx, wh)
+			if errors.Is(err, payment.ErrCustomerNotFound) {
+				slog.Warn("webhook: customer not found", "telegram_id", wh.Payload.TelegramUserID)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			if err != nil {
+				slog.Error("webhook: cancel subscription error", "error", err, "payload", string(body))
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+				return
+			}
 		}
-
-		months := convertPeriodToMonths(wh.Payload.Period)
-
-		customer, err := c.customerRepository.FindByTelegramId(ctx, wh.Payload.TelegramUserID)
-		_, purchaseId, err := c.paymentService.CreatePurchase(ctx, wh.Payload.Amount, months, customer, database.InvoiceTypeTribute)
-
-		if err != nil {
-			slog.Error("webhook: create purchase error", "error", err, "payload", string(body))
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		err = c.paymentService.ProcessPurchaseById(ctx, purchaseId)
-		if err != nil {
-			slog.Error("webhook: process purchase error", "error", err, "payload", string(body))
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-
 		w.WriteHeader(http.StatusOK)
 	})
+}
+
+func (c *Client) cancelSubscriptionHandler(ctx context.Context, wh SubscriptionWebhook) error {
+	return c.paymentService.CancelTributePurchase(ctx, wh.Payload.TelegramUserID)
+}
+
+func (c *Client) newSubscriptionHandler(ctx context.Context, wh SubscriptionWebhook) error {
+	months := convertPeriodToMonths(wh.Payload.Period)
+
+	customer, err := c.customerRepository.FindByTelegramId(ctx, wh.Payload.TelegramUserID)
+	_, purchaseId, err := c.paymentService.CreatePurchase(ctx, float64(wh.Payload.Amount), months, customer, database.InvoiceTypeTribute)
+
+	if err != nil {
+		return err
+	}
+
+	err = c.paymentService.ProcessPurchaseById(ctx, purchaseId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func convertPeriodToMonths(period string) int {

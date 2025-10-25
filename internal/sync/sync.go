@@ -13,15 +13,14 @@ type SyncService struct {
 	customerRepository *database.CustomerRepository
 }
 
-// GetRemnawaveClient возвращает клиент remnawave
-func (s SyncService) GetRemnawaveClient() *remnawave.Client {
-	return s.client
-}
-
 func NewSyncService(client *remnawave.Client, customerRepository *database.CustomerRepository) *SyncService {
 	return &SyncService{
 		client: client, customerRepository: customerRepository,
 	}
+}
+
+func (s SyncService) GetRemnawaveClient() *remnawave.Client {
+	return s.client
 }
 
 func (s SyncService) Sync() {
@@ -32,7 +31,7 @@ func (s SyncService) Sync() {
 	var mappedUsers []database.Customer
 	users, err := s.client.GetUsers(ctx)
 	if err != nil {
-		slog.Error("Error while getting users from remnawave")
+		slog.Error("Error while getting users from remnawave", err)
 		return
 	}
 	if users == nil || len(*users) == 0 {
