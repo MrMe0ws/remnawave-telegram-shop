@@ -112,8 +112,10 @@ func main() {
 
 	config.SetBotURL(fmt.Sprintf("https://t.me/%s", me.Username))
 
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypePrefix, h.StartCommandHandler, h.SuspiciousUserFilterMiddleware, h.ForwardUserMessageToAdminMiddleware)
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/connect", bot.MatchTypeExact, h.ConnectCommandHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.ForwardUserMessageToAdminMiddleware)
+	// СНАЧАЛА регистрируем основные обработчики команд
+	// Добавляем middleware для отслеживания /start команды
+	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypePrefix, h.StartCommandHandler, h.ForwardUserMessageToAdminMiddleware, h.SuspiciousUserFilterMiddleware)
+	b.RegisterHandler(bot.HandlerTypeMessageText, "/connect", bot.MatchTypeExact, h.ConnectCommandHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/sync", bot.MatchTypeExact, h.SyncUsersCommandHandler, isAdminMiddleware)
 
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
@@ -135,13 +137,28 @@ func main() {
 		return update.Message != nil && update.Message.SuccessfulPayment != nil
 	}, h.SuccessPaymentHandler, h.SuspiciousUserFilterMiddleware)
 
-	// Добавляем обработчик для обычных текстовых сообщений (не команд)
+	// Добавляем обработчики отслеживания ПОСЛЕ всех основных команд
+	// Обработчик для ВСЕХ команд пользователей (включая неизвестные)
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
-		return update.Message != nil && update.Message.Text != "" && !strings.HasPrefix(update.Message.Text, "/") && update.Message.From.ID != config.GetAdminTelegramId()
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID != config.GetAdminTelegramId()
 	}, h.ForwardUserMessageToAdmin)
-	// Добавляем обработчик для сообщений-ответов от админа (reply)
+
+	// Обработчик для обычных текстовых сообщений (не команд)
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
-		return update.Message != nil && update.Message.ReplyToMessage != nil && update.Message.From.ID == config.GetAdminTelegramId()
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID != config.GetAdminTelegramId()
+	}, h.ForwardUserMessageToAdmin)
+
+	// Обработчик для reply от админа
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.ReplyToMessage != nil &&
+			update.Message.From.ID == config.GetAdminTelegramId()
 	}, h.AdminReplyToUser)
 
 	mux := http.NewServeMux()

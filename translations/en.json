@@ -30,7 +30,7 @@
   "trial_text": "Your trial version is active",
   "activate_trial_button": "Activate trial version",
   "referral_button": "🤝 Referrals",
-  "referral_text": "Invited: %d",
+  "referral_text": "🚩 For each successful payment\nof subscription via your link\nyou get +15 days to subscription\n\n👫 Invited: %d\n💳 Paid via your link: %d\n📅 Days earned: %d",
   "referral_bonus_granted": "You have received a referral bonus!",
   "stars_button": " ⭐Telegram Stars",
   "share_referral_button": "Share!",
