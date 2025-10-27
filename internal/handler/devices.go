@@ -235,17 +235,17 @@ func (h Handler) getDeviceDisplayName(device remapi.GetUserHwidDevicesResponseDt
 	var deviceInfo []string
 
 	// Добавляем модель устройства, если доступна
-	if device.DeviceModel.Value != "" {
+	if !device.DeviceModel.Null {
 		deviceInfo = append(deviceInfo, device.DeviceModel.Value)
 	}
 
 	// Добавляем платформу, если доступна
-	if device.Platform.Value != "" {
+	if !device.Platform.Null {
 		deviceInfo = append(deviceInfo, device.Platform.Value)
 	}
 
 	// Добавляем версию ОС, если доступна
-	if device.OsVersion.Value != "" {
+	if !device.OsVersion.Null {
 		deviceInfo = append(deviceInfo, device.OsVersion.Value)
 	}
 
