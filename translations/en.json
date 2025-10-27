@@ -37,6 +37,7 @@
   "web_app_button_text": "Connect",
   "tribute_button": "Tribute",
   "tribute_cancelled" : "Tribute cancelled",
+  "access_denied": "⚠️ Access Denied\nSuspicious nickname\n Change it or contact @Meows_support_bot",
   "help_button": "📚 Help",
   "devices_button": "📱 My Devices",
   "devices_title": "📱 <b>Your Devices</b>\n\n",

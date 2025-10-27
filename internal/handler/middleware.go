@@ -59,6 +59,7 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 		var username, firstName, lastName *string
 		var userID int64
 		var chatID int64
+		var langCode string
 
 		if update.Message != nil {
 			username = &update.Message.From.Username
@@ -66,12 +67,14 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 			lastName = &update.Message.From.LastName
 			userID = update.Message.From.ID
 			chatID = update.Message.Chat.ID
+			langCode = update.Message.From.LanguageCode			
 		} else if update.CallbackQuery != nil {
 			username = &update.CallbackQuery.From.Username
 			firstName = &update.CallbackQuery.From.FirstName
 			lastName = &update.CallbackQuery.From.LastName
 			userID = update.CallbackQuery.From.ID
 			chatID = update.CallbackQuery.Message.Message.Chat.ID
+			langCode = update.CallbackQuery.From.LanguageCode			
 		} else {
 			next(ctx, b, update)
 			return
@@ -81,7 +84,7 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 			slog.Warn("suspicious user blocked", "userId", utils.MaskHalfInt64(userID))
 			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID:    chatID,
-				Text:      "⚠️ Access denied. Please update your profile information.",
+				Text:      h.translation.GetText(langCode, "access_denied"),
 				ParseMode: models.ParseModeHTML,
 			})
 			if err != nil {
