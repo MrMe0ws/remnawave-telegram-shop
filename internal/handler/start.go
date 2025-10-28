@@ -194,8 +194,8 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 	// 2. Купить (всегда показывается)
 	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
 
-	// 3. Подключиться (если есть активная подписка)
-	if existingCustomer.SubscriptionLink != nil && existingCustomer.ExpireAt.After(time.Now()) {
+	// 3. Подключиться (если есть подписка)
+	if existingCustomer.SubscriptionLink != nil {
 		inlineKeyboard = append(inlineKeyboard, h.resolveConnectButton(langCode))
 	}
 

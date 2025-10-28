@@ -10,7 +10,9 @@ services:
       - ./translations:/translations
     networks:
       - remnawave-network
-
+    ports:
+      - "3002:3002" 
+      
   db:
     image: postgres:17
     container_name: "remnawave-telegram-shop-db"
@@ -32,7 +34,9 @@ services:
       interval: 3s
       timeout: 10s
       retries: 3
-
+    networks:
+      - remnawave-network
+      
 #  ngrok:
 #    image: ngrok/ngrok:latest
 #    command:
