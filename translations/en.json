@@ -12,7 +12,7 @@
   "card_button": "💳 Bank card",
   "pay_button": "💸 Pay",
   "subscription_active": "Your subscription is valid until: %s",
-  "subscription_link": "\n\nSubscription link: %s",
+  "subscription_link": "\n\n<a href=\"%s\">🔗 Subscription link</a>",
   "no_subscription": "You don't have an active subscription",
   "subscription_activated": "Your subscription has been activated!",
   "feedback_button": "⭐ Feedback",

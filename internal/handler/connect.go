@@ -107,14 +107,11 @@ func buildConnectText(customer *database.Customer, langCode string) string {
 			subscriptionActiveText := tm.GetText(langCode, "subscription_active")
 			info.WriteString(fmt.Sprintf(subscriptionActiveText, formattedDate))
 
-			// Удаляю вывод ссылки для доступа, чтобы был только срок действия подписки
-			// if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
-			// 	if config.IsWepAppLinkEnabled() {
-			// 	} else {
-			// 		subscriptionLinkText := tm.GetText(langCode, "subscription_link")
-			// 		info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
-			// 	}
-			// }
+			// Добавляем ссылку на подписку
+			if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
+				subscriptionLinkText := tm.GetText(langCode, "subscription_link")
+				info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
+			}
 		} else {
 			noSubscriptionText := tm.GetText(langCode, "no_subscription")
 			info.WriteString(noSubscriptionText)
