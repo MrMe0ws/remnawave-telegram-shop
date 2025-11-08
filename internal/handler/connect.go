@@ -32,7 +32,7 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 	isDisabled := true
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
-		Text:      buildConnectText(customer, langCode),
+		Text:      h.buildConnectText(ctx, customer, langCode),
 		ParseMode: models.ParseModeHTML,
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &isDisabled,
@@ -79,7 +79,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
 		ParseMode: models.ParseModeHTML,
-		Text:      buildConnectText(customer, langCode),
+		Text:      h.buildConnectText(ctx, customer, langCode),
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &isDisabled,
 		},
@@ -93,7 +93,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 }
 
-func buildConnectText(customer *database.Customer, langCode string) string {
+func (h Handler) buildConnectText(ctx context.Context, customer *database.Customer, langCode string) string {
 	var info strings.Builder
 
 	tm := translation.GetInstance()
@@ -106,6 +106,30 @@ func buildConnectText(customer *database.Customer, langCode string) string {
 
 			subscriptionActiveText := tm.GetText(langCode, "subscription_active")
 			info.WriteString(fmt.Sprintf(subscriptionActiveText, formattedDate))
+
+			// Получаем информацию о лимите трафика
+			userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
+			if err == nil && userInfo != nil {
+				// Проверяем, есть ли лимит трафика
+				if userInfo.TrafficLimitBytes.IsSet() && userInfo.TrafficLimitBytes.Value > 0 {
+					trafficLimitBytes := userInfo.TrafficLimitBytes.Value
+
+					// Получаем использованный трафик
+					usedTrafficBytes := int64(userInfo.UsedTrafficBytes)
+
+					// Конвертируем байты в гигабайты (1 GB = 1073741824 байт)
+					bytesInGigabyte := float64(1073741824)
+					usedGB := float64(usedTrafficBytes) / bytesInGigabyte
+					limitGB := float64(trafficLimitBytes) / bytesInGigabyte
+
+					// Форматируем с одним знаком после запятой
+					usedGBStr := fmt.Sprintf("%.1f", usedGB)
+					limitGBStr := fmt.Sprintf("%.1f", limitGB)
+
+					trafficLimitText := tm.GetText(langCode, "traffic_limit")
+					info.WriteString(fmt.Sprintf(trafficLimitText, usedGBStr, limitGBStr))
+				}
+			}
 
 			// Добавляем ссылку на подписку
 			if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {

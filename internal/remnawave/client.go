@@ -124,6 +124,10 @@ func (r *Client) DecreaseSubscription(ctx context.Context, telegramId int64, tra
 }
 
 func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int) (*remapi.UserDto, error) {
+	return r.CreateOrUpdateUserWithStrategy(ctx, customerId, telegramId, trafficLimit, days, "month")
+}
+
+func (r *Client) CreateOrUpdateUserWithStrategy(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, strategy string) (*remapi.UserDto, error) {
 	resp, err := r.client.UsersControllerGetUserByTelegramId(ctx, remapi.UsersControllerGetUserByTelegramIdParams{TelegramId: strconv.FormatInt(telegramId, 10)})
 	if err != nil {
 		return nil, err
@@ -132,7 +136,7 @@ func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, teleg
 	switch v := resp.(type) {
 
 	case *remapi.UsersControllerGetUserByTelegramIdNotFound:
-		return r.createUser(ctx, customerId, telegramId, trafficLimit, days)
+		return r.createUserWithStrategy(ctx, customerId, telegramId, trafficLimit, days, strategy)
 	case *remapi.UsersDto:
 		var existingUser *remapi.UserDto
 		for _, panelUser := range v.GetResponse() {
@@ -143,13 +147,19 @@ func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, teleg
 		if existingUser == nil {
 			existingUser = &v.GetResponse()[0]
 		}
-		return r.updateUser(ctx, existingUser, trafficLimit, days)
+		// При обновлении передаем стратегию для изменения стратегии сброса трафика
+		return r.updateUserWithStrategy(ctx, existingUser, trafficLimit, days, strategy)
 	default:
 		return nil, errors.New("unknown response type")
 	}
 }
 
 func (r *Client) updateUser(ctx context.Context, existingUser *remapi.UserDto, trafficLimit int, days int) (*remapi.UserDto, error) {
+	// По умолчанию используем стратегию "month" для платных подписок
+	return r.updateUserWithStrategy(ctx, existingUser, trafficLimit, days, "month")
+}
+
+func (r *Client) updateUserWithStrategy(ctx context.Context, existingUser *remapi.UserDto, trafficLimit int, days int, strategy string) (*remapi.UserDto, error) {
 
 	newExpire := getNewExpire(days, existingUser.ExpireAt)
 
@@ -159,6 +169,11 @@ func (r *Client) updateUser(ctx context.Context, existingUser *remapi.UserDto, t
 		Status:            remapi.NewOptUpdateUserRequestDtoStatus(remapi.UpdateUserRequestDtoStatusACTIVE),
 		TrafficLimitBytes: remapi.NewOptInt(trafficLimit),
 	}
+
+	// Обновляем стратегию сброса трафика
+	// Преобразуем строковую стратегию в значение для UpdateUserRequestDto
+	strategyValue := getUpdateTrafficLimitStrategy(strategy)
+	userUpdate.TrafficLimitStrategy = remapi.NewOptUpdateUserRequestDtoTrafficLimitStrategy(strategyValue)
 
 	if config.RemnawaveTag() != "" && (existingUser.Tag.IsNull()) {
 		userUpdate.Tag = remapi.NewOptNilString(config.RemnawaveTag())
@@ -177,11 +192,15 @@ func (r *Client) updateUser(ctx context.Context, existingUser *remapi.UserDto, t
 		return nil, err
 	}
 	tgid, _ := existingUser.TelegramId.Get()
-	slog.Info("updated user", "telegramId", utils.MaskHalf(strconv.Itoa(tgid)), "username", utils.MaskHalf(username), "days", days)
+	slog.Info("updated user", "telegramId", utils.MaskHalf(strconv.Itoa(tgid)), "username", utils.MaskHalf(username), "days", days, "strategy", strategy)
 	return &updateUser.(*remapi.UserResponseDto).Response, nil
 }
 
 func (r *Client) createUser(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int) (*remapi.UserDto, error) {
+	return r.createUserWithStrategy(ctx, customerId, telegramId, trafficLimit, days, "month")
+}
+
+func (r *Client) createUserWithStrategy(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, strategy string) (*remapi.UserDto, error) {
 	expireAt := time.Now().UTC().AddDate(0, 0, days)
 	username := generateUsername(customerId, telegramId)
 
@@ -210,7 +229,7 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		Status:               remapi.NewOptCreateUserRequestDtoStatus(remapi.CreateUserRequestDtoStatusACTIVE),
 		TelegramId:           remapi.NewOptNilInt(int(telegramId)),
 		ExpireAt:             expireAt,
-		TrafficLimitStrategy: remapi.NewOptCreateUserRequestDtoTrafficLimitStrategy(remapi.CreateUserRequestDtoTrafficLimitStrategyMONTH),
+		TrafficLimitStrategy: remapi.NewOptCreateUserRequestDtoTrafficLimitStrategy(getTrafficLimitStrategy(strategy)),
 		TrafficLimitBytes:    remapi.NewOptInt(trafficLimit),
 	}
 	if config.RemnawaveTag() != "" {
@@ -229,12 +248,47 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("created user", "telegramId", utils.MaskHalf(strconv.FormatInt(telegramId, 10)), "username", utils.MaskHalf(tgUsername), "days", days)
+	slog.Info("created user", "telegramId", utils.MaskHalf(strconv.FormatInt(telegramId, 10)), "username", utils.MaskHalf(tgUsername), "days", days, "strategy", strategy)
 	return &userCreate.(*remapi.UserResponseDto).Response, nil
 }
 
 func generateUsername(customerId int64, telegramId int64) string {
 	return fmt.Sprintf("%d_%d", customerId, telegramId)
+}
+
+// getTrafficLimitStrategy преобразует строку в значение TrafficLimitStrategy для remnawave API (CreateUserRequestDto)
+func getTrafficLimitStrategy(strategy string) remapi.CreateUserRequestDtoTrafficLimitStrategy {
+	switch strings.ToLower(strategy) {
+	case "day":
+		return remapi.CreateUserRequestDtoTrafficLimitStrategyDAY
+	case "week":
+		return remapi.CreateUserRequestDtoTrafficLimitStrategyWEEK
+	case "month":
+		return remapi.CreateUserRequestDtoTrafficLimitStrategyMONTH
+	case "never":
+		// Для "never" используем MONTH, так как NEVER может быть недоступен в CreateUserRequestDto
+		// В этом случае лимит не будет сбрасываться автоматически
+		return remapi.CreateUserRequestDtoTrafficLimitStrategyMONTH
+	default:
+		return remapi.CreateUserRequestDtoTrafficLimitStrategyMONTH
+	}
+}
+
+// getUpdateTrafficLimitStrategy преобразует строку в значение TrafficLimitStrategy для remnawave API (UpdateUserRequestDto)
+func getUpdateTrafficLimitStrategy(strategy string) remapi.UpdateUserRequestDtoTrafficLimitStrategy {
+	switch strings.ToLower(strategy) {
+	case "day":
+		return remapi.UpdateUserRequestDtoTrafficLimitStrategyDAY
+	case "week":
+		return remapi.UpdateUserRequestDtoTrafficLimitStrategyWEEK
+	case "month":
+		return remapi.UpdateUserRequestDtoTrafficLimitStrategyMONTH
+	case "never":
+		// Для "never" используем NO_RESET (без сброса)
+		return remapi.UpdateUserRequestDtoTrafficLimitStrategyNORESET
+	default:
+		return remapi.UpdateUserRequestDtoTrafficLimitStrategyMONTH
+	}
 }
 
 func getNewExpire(daysToAdd int, currentExpire time.Time) time.Time {
@@ -275,6 +329,39 @@ func (r *Client) GetUserInfo(ctx context.Context, telegramId int64) (string, int
 		return userUuid.String(), deviceLimit, nil
 	default:
 		return "", 0, errors.New("unknown response type")
+	}
+}
+
+// GetUserTrafficInfo получает информацию о пользователе с лимитом трафика по Telegram ID
+func (r *Client) GetUserTrafficInfo(ctx context.Context, telegramId int64) (*remapi.UserDto, error) {
+	resp, err := r.client.UsersControllerGetUserByTelegramId(ctx, remapi.UsersControllerGetUserByTelegramIdParams{TelegramId: strconv.FormatInt(telegramId, 10)})
+	if err != nil {
+		return nil, err
+	}
+
+	switch v := resp.(type) {
+	case *remapi.UsersControllerGetUserByTelegramIdNotFound:
+		return nil, errors.New("user not found")
+	case *remapi.UsersDto:
+		response := v.GetResponse()
+
+		var user *remapi.UserDto
+		for _, panelUser := range response {
+			if strings.Contains(panelUser.Username, fmt.Sprintf("_%d", telegramId)) {
+				user = &panelUser
+				break
+			}
+		}
+		if user == nil && len(response) > 0 {
+			user = &response[0]
+		}
+		if user == nil {
+			return nil, errors.New("user not found")
+		}
+
+		return user, nil
+	default:
+		return nil, errors.New("unknown response type")
 	}
 }
 

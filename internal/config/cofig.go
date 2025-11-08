@@ -42,6 +42,7 @@ type config struct {
 	xApiKey                                                   string
 	daysInMonth                                               int
 	hwidFallbackDeviceLimit                                   int
+	trialTrafficLimitResetStrategy                            string
 }
 
 var conf config
@@ -86,6 +87,10 @@ func TrialTrafficLimit() int {
 
 func TrialDays() int {
 	return conf.trialDays
+}
+
+func TrialTrafficLimitResetStrategy() string {
+	return conf.trialTrafficLimitResetStrategy
 }
 func FeedbackURL() string {
 	return conf.feedbackURL
@@ -305,6 +310,18 @@ func InitConfig() {
 	conf.healthCheckPort = envIntDefault("HEALTH_CHECK_PORT", 8080)
 
 	conf.trialDays = mustEnvInt("TRIAL_DAYS")
+
+	conf.trialTrafficLimitResetStrategy = func() string {
+		v := os.Getenv("TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY")
+		if v == "" {
+			return "month" // По умолчанию месяц
+		}
+		v = strings.ToLower(v)
+		if v != "day" && v != "week" && v != "month" && v != "never" {
+			panic("TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY must be one of: day, week, month, never")
+		}
+		return v
+	}()
 
 	conf.enableAutoPayment = envBool("ENABLE_AUTO_PAYMENT")
 
