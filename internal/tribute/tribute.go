@@ -26,6 +26,7 @@ type Client struct {
 const (
 	CancelledSubscription = "cancelled_subscription"
 	NewSubscription       = "new_subscription"
+	TestHook              = ""
 )
 
 func NewClient(paymentService *payment.PaymentService, customerRepository *database.CustomerRepository) *Client {
@@ -91,6 +92,8 @@ func (c *Client) WebHookHandler() http.Handler {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 				return
 			}
+		case TestHook:
+			slog.Info("Tribute webhook working")
 		}
 		w.WriteHeader(http.StatusOK)
 	})
