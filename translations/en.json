@@ -2,7 +2,8 @@
   "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\n+14 days subscription (“🤝 Referrals”)",
 
   "buy_button": "💰 Buy",
-  "connect_button": "🔌 Connect",
+  "connect_button": "🔌 My VPN",
+  "connect_device_button": "🔌 Connect Device",
   "back_button": "🔙 Back",
 
   "pricing_info": "Subscription works on 2 devices\n\n🌐 After payment you get full access to all locations\n\nPayment methods:\n💸 Bank card\n₿ Crypto\n⭐ Telegram Stars",
@@ -61,7 +62,7 @@
   "device_limit": "Device limit %d/%d\n\n",
 
   "device_info": "🖥️ <b>%s</b>\nID: <code>%s</code>\nAdded: %s\n\n",
-  "device_info_new": "🖥️ <b>%s (%s)</b>\nAdded: %s\n\n",
+  "device_info_new": "<b>%s %s</b>\nAdded: %s\n\n",
 
   "no_devices": "You have no connected devices yet",
   "delete_device_button": "🗑️ Remove",

@@ -113,14 +113,25 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			// Создаем более информативное название устройства
 			deviceName := h.getDeviceDisplayName(device, i+1)
 
+			// Определяем эмодзи для устройства
+			deviceEmoji := h.getDeviceEmoji(deviceName)
+
 			// Форматируем дату добавления
 			addedAt := device.CreatedAt.Format("02.01.2006 15:04")
 
-			// Новый формат без ID
-			messageText += fmt.Sprintf(h.translation.GetText(langCode, "device_info_new"),
+			// Новый формат без ID с динамическим эмодзи
+			deviceInfoTemplate := h.translation.GetText(langCode, "device_info_new")
+			formattedDeviceInfo := fmt.Sprintf(deviceInfoTemplate,
 				fmt.Sprintf("№%d", i+1),
 				deviceName,
 				addedAt)
+
+			// Добавляем эмодзи в начало, если он определен
+			if deviceEmoji != "" {
+				messageText += deviceEmoji + " " + formattedDeviceInfo
+			} else {
+				messageText += formattedDeviceInfo
+			}
 
 			// Добавляем кнопку удаления для каждого устройства
 			keyboard = append(keyboard, []models.InlineKeyboardButton{
@@ -256,4 +267,28 @@ func (h Handler) getDeviceDisplayName(device remapi.GetUserHwidDevicesResponseDt
 
 	// Если информации нет, возвращаем базовое название
 	return fmt.Sprintf("Device %d", deviceNumber)
+}
+
+// getDeviceEmoji определяет эмодзи для устройства на основе его названия
+func (h Handler) getDeviceEmoji(deviceName string) string {
+	deviceNameLower := strings.ToLower(deviceName)
+
+	// Проверяем на десктопные ОС
+	desktopKeywords := []string{"windows", "linux", "macos"}
+	for _, keyword := range desktopKeywords {
+		if strings.Contains(deviceNameLower, keyword) {
+			return "🖥️"
+		}
+	}
+
+	// Проверяем на мобильные ОС
+	mobileKeywords := []string{"android", "ios", "apple", "iphone", "samsung", "google", "pixel", "xiaomi", "honor", "huawei", }
+	for _, keyword := range mobileKeywords {
+		if strings.Contains(deviceNameLower, keyword) {
+			return "📱"
+		}
+	}
+
+	// Если не найдено совпадений, возвращаем пустую строку
+	return ""
 }
