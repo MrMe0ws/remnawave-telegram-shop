@@ -18,14 +18,12 @@
 - **Поддержка Remnawave**: Последняя версия 2.1.19
 - **Функция HWID**: Совместимость с Remnawave 2.1.4+ скрытыми зашифрованными подписками (подписки не видны для каждой страновой ноды при включенном лимите HWID)
 
+---
 
-
-
-
--------------------------------------
 [![Stars](https://img.shields.io/github/stars/Jolymmiels/remnawave-telegram-shop.svg?style=social)](https://github.com/Jolymmiels/remnawave-telegram-shop/stargazers)
 [![Forks](https://img.shields.io/github/forks/Jolymmiels/remnawave-telegram-shop.svg?style=social)](https://github.com/Jolymmiels/remnawave-telegram-shop/network/members)
 [![Issues](https://img.shields.io/github/issues/Jolymmiels/remnawave-telegram-shop.svg)](https://github.com/Jolymmiels/remnawave-telegram-shop/issues)
+
 ## Описание
 
 Telegram бот для продажи подписок с интеграцией в Remnawave (https://remna.st/). Этот сервис позволяет пользователям
@@ -125,6 +123,8 @@ Telegram бот для продажи подписок с интеграцией
 | `CHANNEL_URL`                | URL Telegram канала (опционально) - если не установлен, кнопка не отображается                                                                                |
 | `TOS_URL`                    | URL условий использования (опционально) - если не установлен, кнопка не отображается                                                                          |
 | `ADMIN_TELEGRAM_ID`          | ID telegram админа                                                                                                                                            |
+| `BLOCKED_TELEGRAM_IDS`       | Список Telegram ID, разделенных запятыми, для блокировки доступа к боту (например, "123456789,987654321")                                                     |
+| `WHITELISTED_TELEGRAM_IDS`   | Список Telegram ID, разделенных запятыми, которые обходят все проверки на подозрительных пользователей (например, "111111111,222222222,333333333")            |
 | `TRIAL_TRAFFIC_LIMIT`        | Максимально разрешенный трафик в гб для пробных подписок                                                                                                      |
 | `TRIAL_DAYS`                 | Количество дней для пробных подписок. если 0 = отключено.                                                                                                     |
 | `SQUAD_UUIDS`                | Список UUID squad, разделенных запятыми, для назначения пользователям (например, "773db654-a8b2-413a-a50b-75c3536238fd,bc979bdd-f1fa-4d94-8a51-38a0f518a2a2") |
@@ -174,7 +174,7 @@ Telegram бот для продажи подписок с интеграцией
 1. Клонируйте репозиторий
 
 ```bash
-git clone 
+git clone
 ```
 
 2. Создайте файл `.env` в корневой директории со всеми переменными окружения, перечисленными выше

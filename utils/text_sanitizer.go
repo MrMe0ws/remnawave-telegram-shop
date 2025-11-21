@@ -68,18 +68,30 @@ var (
 		"teieqram":     true,
 		"telegrarn":    true,
 		"joinchat":     true,
-		"service":      true,
 		"notification": true,
-		"system":       true,
-		"security":     true,
-		"safety":       true,
-		"support":      true,
 		"moderation":   true,
 		"review":       true,
 		"compliance":   true,
 		"abuse":        true,
 		"spam":         true,
 		"report":       true,
+	}
+
+	dangerousKeywords = map[string]bool{
+		"telegram": true,
+		"service":  true,
+		"system":   true,
+		"security": true,
+		"safety":   true,
+		"support":  true,
+	}
+
+	dangerousCombinations = [][]string{
+		{"telegram", "support"},
+		{"telegram", "admin"},
+		{"service", "support"},
+		{"system", "admin"},
+		{"security", "admin"},
 	}
 
 	preLowerTranslation = map[rune]rune{
@@ -99,6 +111,15 @@ var (
 		'ь': "", 'э': "e", 'ю': "yu", 'я': "ya", '＿': "_",
 	}
 )
+
+func containsDangerousCombination(normalized string) bool {
+	for _, combo := range dangerousCombinations {
+		if strings.Contains(normalized, combo[0]) && strings.Contains(normalized, combo[1]) {
+			return true
+		}
+	}
+	return false
+}
 
 func normalizeForDetection(value string) string {
 	if value == "" {
@@ -171,12 +192,21 @@ func finalize(value string, originalValue string) *string {
 		}
 	}
 
+	if containsDangerousCombination(normalizedOriginal) {
+		return nil
+	}
+
 	normalized := normalizeForDetection(compacted)
 	for token := range normalizedBannedTokens {
 		if strings.Contains(normalized, token) {
 			return nil
 		}
 	}
+
+	if containsDangerousCombination(normalized) {
+		return nil
+	}
+
 	return &compacted
 }
 
@@ -231,9 +261,9 @@ func DisplayNameOrFallback(firstName *string, fallback string) string {
 // containsAlphanumeric checks if string contains any letter or digit
 func containsAlphanumeric(s string) bool {
 	for _, r := range s {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || 
-		   (r >= '0' && r <= '9') || (r >= 'а' && r <= 'я') || 
-		   (r >= 'А' && r <= 'Я') {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || (r >= 'а' && r <= 'я') ||
+			(r >= 'А' && r <= 'Я') {
 			return true
 		}
 	}

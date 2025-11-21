@@ -8,6 +8,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/utils"
 )
@@ -67,15 +68,36 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 			lastName = &update.Message.From.LastName
 			userID = update.Message.From.ID
 			chatID = update.Message.Chat.ID
-			langCode = update.Message.From.LanguageCode			
+			langCode = update.Message.From.LanguageCode
 		} else if update.CallbackQuery != nil {
 			username = &update.CallbackQuery.From.Username
 			firstName = &update.CallbackQuery.From.FirstName
 			lastName = &update.CallbackQuery.From.LastName
 			userID = update.CallbackQuery.From.ID
 			chatID = update.CallbackQuery.Message.Message.Chat.ID
-			langCode = update.CallbackQuery.From.LanguageCode			
+			langCode = update.CallbackQuery.From.LanguageCode
 		} else {
+			next(ctx, b, update)
+			return
+		}
+
+		// Проверка на заблокированных пользователей (проверяется перед проверкой подозрительных имен)
+		if config.GetBlockedTelegramIds()[userID] {
+			slog.Warn("blocked user by telegram id", "userId", utils.MaskHalfInt64(userID))
+			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID:    chatID,
+				Text:      h.translation.GetText(langCode, "access_denied"),
+				ParseMode: models.ParseModeHTML,
+			})
+			if err != nil {
+				slog.Error("error sending blocked user message", "error", err)
+			}
+			return
+		}
+
+		// Проверка на пользователей из белого списка (пропускают проверку на подозрительных пользователей)
+		if config.GetWhitelistedTelegramIds()[userID] {
+			slog.Info("whitelisted user allowed", "userId", utils.MaskHalfInt64(userID))
 			next(ctx, b, update)
 			return
 		}

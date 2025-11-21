@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -43,6 +44,8 @@ type config struct {
 	daysInMonth                                               int
 	hwidFallbackDeviceLimit                                   int
 	trialTrafficLimitResetStrategy                            string
+	blockedTelegramIds                                        map[int64]bool
+	whitelistedTelegramIds                                    map[int64]bool
 }
 
 var conf config
@@ -79,6 +82,14 @@ func GetMiniAppURL() string {
 
 func SquadUUIDs() map[uuid.UUID]uuid.UUID {
 	return conf.squadUUIDs
+}
+
+func GetBlockedTelegramIds() map[int64]bool {
+	return conf.blockedTelegramIds
+}
+
+func GetWhitelistedTelegramIds() map[int64]bool {
+	return conf.whitelistedTelegramIds
 }
 
 func TrialTrafficLimit() int {
@@ -409,4 +420,46 @@ func InitConfig() {
 
 	// HWID Fallback Device Limit
 	conf.hwidFallbackDeviceLimit = envIntDefault("HWID_FALLBACK_DEVICE_LIMIT", 2)
+
+	// Blocked Telegram IDs
+	conf.blockedTelegramIds = func() map[int64]bool {
+		v := os.Getenv("BLOCKED_TELEGRAM_IDS")
+		if v != "" {
+			ids := strings.Split(v, ",")
+			var blockedMap = make(map[int64]bool)
+			for _, idStr := range ids {
+				id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+				if err != nil {
+					panic(fmt.Sprintf("invalid telegram ID in BLOCKED_TELEGRAM_IDS: %v", err))
+				}
+				blockedMap[id] = true
+			}
+			slog.Info("Loaded blocked telegram IDs", "count", len(blockedMap))
+			return blockedMap
+		} else {
+			slog.Info("No blocked telegram IDs specified")
+			return map[int64]bool{}
+		}
+	}()
+
+	// Whitelisted Telegram IDs
+	conf.whitelistedTelegramIds = func() map[int64]bool {
+		v := os.Getenv("WHITELISTED_TELEGRAM_IDS")
+		if v != "" {
+			ids := strings.Split(v, ",")
+			var whitelistedMap = make(map[int64]bool)
+			for _, idStr := range ids {
+				id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+				if err != nil {
+					panic(fmt.Sprintf("invalid telegram ID in WHITELISTED_TELEGRAM_IDS: %v", err))
+				}
+				whitelistedMap[id] = true
+			}
+			slog.Info("Loaded whitelisted telegram IDs", "count", len(whitelistedMap))
+			return whitelistedMap
+		} else {
+			slog.Info("No whitelisted telegram IDs specified")
+			return map[int64]bool{}
+		}
+	}()
 }

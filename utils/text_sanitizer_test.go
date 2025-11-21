@@ -224,6 +224,20 @@ func TestIsSuspiciousUser(t *testing.T) {
 			lastName:  nil,
 			expected:  false,
 		},
+		{
+			name:      "valid user @CompanySupportAdmin - support alone is not suspicious",
+			username:  stringPtr("CompanySupportAdmin"),
+			firstName: stringPtr("Company"),
+			lastName:  stringPtr("Admin"),
+			expected:  false,
+		},
+		{
+			name:      "suspicious user with telegram and support combination",
+			username:  stringPtr("TelegramSupport"),
+			firstName: stringPtr("Support"),
+			lastName:  nil,
+			expected:  true,
+		},
 	}
 
 	for _, tt := range tests {
