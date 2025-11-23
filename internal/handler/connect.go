@@ -29,6 +29,16 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 
 	langCode := update.Message.From.LanguageCode
 
+	var markup [][]models.InlineKeyboardButton
+	if customer.SubscriptionLink != nil {
+		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "connect_device_button"),
+			WebApp: &models.WebAppInfo{
+				URL: *customer.SubscriptionLink,
+			}}})
+		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+	}
+	markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}})
+
 	isDisabled := true
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
@@ -38,9 +48,7 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 			IsDisabled: &isDisabled,
 		},
 		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
-			},
+			InlineKeyboard: markup,
 		},
 	})
 
