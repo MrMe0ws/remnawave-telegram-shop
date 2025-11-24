@@ -265,6 +265,54 @@ func (pr *PurchaseRepository) FindLatestActiveTributesByCustomerIDs(
 	return &purchases, nil
 }
 
+func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.Context, customerID int64) (*Purchase, error) {
+	buildSelect := sq.Select("*").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"customer_id": customerID},
+			sq.Eq{"status": PurchaseStatusPaid},
+			sq.Or{
+				sq.Eq{"invoice_type": InvoiceTypeCrypto},
+				sq.Eq{"invoice_type": InvoiceTypeYookasa},
+			},
+		}).
+		OrderBy("paid_at DESC").
+		Limit(1).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	purchase := &Purchase{}
+	err = pr.pool.QueryRow(ctx, sql, args...).Scan(
+		&purchase.ID,
+		&purchase.Amount,
+		&purchase.CustomerID,
+		&purchase.CreatedAt,
+		&purchase.Month,
+		&purchase.PaidAt,
+		&purchase.Currency,
+		&purchase.ExpireAt,
+		&purchase.Status,
+		&purchase.InvoiceType,
+		&purchase.CryptoInvoiceID,
+		&purchase.CryptoInvoiceLink,
+		&purchase.YookasaURL,
+		&purchase.YookasaID,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil // Нет успешных оплат
+		}
+		return nil, fmt.Errorf("failed to scan purchase: %w", err)
+	}
+
+	return purchase, nil
+}
+
 func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(
 	ctx context.Context,
 	customerID int64,

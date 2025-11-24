@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 	"log/slog"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
@@ -16,6 +14,9 @@ import (
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"remnawave-tg-shop-bot/utils"
 	"time"
+
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 type PaymentService struct {
@@ -81,7 +82,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		}
 	}
 
-	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*config.DaysInMonth())
+	user, err := s.remnawaveClient.CreateOrUpdateUserWithStrategyAndTrial(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*config.DaysInMonth(), config.TrafficLimitResetStrategy(), false)
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if err != nil {
 		return err
 	}
-	refereeUser, err := s.remnawaveClient.CreateOrUpdateUser(ctxReferee, refereeCustomer.ID, refereeCustomer.TelegramID, config.TrafficLimit(), config.GetReferralDays())
+	refereeUser, err := s.remnawaveClient.CreateOrUpdateUserWithStrategyAndTrial(ctxReferee, refereeCustomer.ID, refereeCustomer.TelegramID, config.TrafficLimit(), config.GetReferralDays(), config.TrafficLimitResetStrategy(), false)
 	if err != nil {
 		return err
 	}
@@ -370,7 +371,7 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	if customer == nil {
 		return "", fmt.Errorf("customer %d not found", telegramId)
 	}
-	user, err := s.remnawaveClient.CreateOrUpdateUserWithStrategy(ctx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), config.TrialTrafficLimitResetStrategy())
+	user, err := s.remnawaveClient.CreateOrUpdateUserWithStrategyAndTrial(ctx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), config.TrialTrafficLimitResetStrategy(), true)
 	if err != nil {
 		slog.Error("Error creating user", err)
 		return "", err

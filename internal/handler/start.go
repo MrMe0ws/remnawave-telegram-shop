@@ -162,12 +162,22 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 
 	helpKeyboard := [][]models.InlineKeyboardButton{
 		{{Text: "🌏 Какой сервер выбрать", URL: "https://telegra.ph/Otlichie--i--serverov-07-06"}},
-		{
-			{Text: "🆘 Поддержка", URL: "https://t.me/Meows_support_bot"},
-			{Text: "📄 Публичная оферта", URL: "https://telegra.ph/Publichnaya-oferta-na-ispolzovanie-servisa-Meows-VPN-07-02"},
-		},
-		{{Text: "⬅️ Назад", CallbackData: CallbackStart}},
 	}
+
+	// Добавляем кнопку "📺 Видеоинструкция" если ссылка установлена
+	if config.VideoGuideURL() != "" {
+		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+			{Text: "📺 Видеоинструкция", URL: config.VideoGuideURL()},
+		})
+	}
+
+	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+		{Text: "🆘 Поддержка", URL: "https://t.me/Meows_support_bot"},
+		{Text: "📄 Публичная оферта", URL: "https://telegra.ph/Publichnaya-oferta-na-ispolzovanie-servisa-Meows-VPN-07-02"},
+	})
+	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+		{Text: "⬅️ Назад", CallbackData: CallbackStart},
+	})
 
 	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Message.Message.Chat.ID,

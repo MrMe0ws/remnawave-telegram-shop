@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -27,6 +28,7 @@ type config struct {
 	serverStatusURL                                           string
 	supportURL                                                string
 	tosURL                                                    string
+	videoGuideURL                                             string
 	isYookasaEnabled                                          bool
 	isCryptoEnabled                                           bool
 	isTelegramStarsEnabled                                    bool
@@ -39,15 +41,30 @@ type config struct {
 	healthCheckPort                                           int
 	tributeWebhookUrl, tributeAPIKey, tributePaymentUrl       string
 	isWebAppLinkEnabled                                       bool
-	xApiKey                                                   string
 	daysInMonth                                               int
+	externalSquadUUID                                         uuid.UUID
 	hwidFallbackDeviceLimit                                   int
 	trialTrafficLimitResetStrategy                            string
+	blockedTelegramIds                                        map[int64]bool
+	whitelistedTelegramIds                                    map[int64]bool
+	requirePaidPurchaseForStars                               bool
+	trialInternalSquads                                       map[uuid.UUID]uuid.UUID
+	trialExternalSquadUUID                                    uuid.UUID
+	trialRemnawaveTag                                         string
+	remnawaveHeaders                                          map[string]string
+	trafficLimitResetStrategy                                 string
 }
 
 var conf config
 
 func RemnawaveTag() string {
+	return conf.remnawaveTag
+}
+
+func TrialRemnawaveTag() string {
+	if conf.trialRemnawaveTag != "" {
+		return conf.trialRemnawaveTag
+	}
 	return conf.remnawaveTag
 }
 
@@ -81,6 +98,28 @@ func SquadUUIDs() map[uuid.UUID]uuid.UUID {
 	return conf.squadUUIDs
 }
 
+func GetBlockedTelegramIds() map[int64]bool {
+	return conf.blockedTelegramIds
+}
+
+func GetWhitelistedTelegramIds() map[int64]bool {
+	return conf.whitelistedTelegramIds
+}
+
+func TrialInternalSquads() map[uuid.UUID]uuid.UUID {
+	if conf.trialInternalSquads != nil && len(conf.trialInternalSquads) > 0 {
+		return conf.trialInternalSquads
+	}
+	return conf.squadUUIDs
+}
+
+func TrialExternalSquadUUID() uuid.UUID {
+	if conf.trialExternalSquadUUID != uuid.Nil {
+		return conf.trialExternalSquadUUID
+	}
+	return conf.externalSquadUUID
+}
+
 func TrialTrafficLimit() int {
 	return conf.trialTrafficLimit * bytesInGigabyte
 }
@@ -91,6 +130,10 @@ func TrialDays() int {
 
 func TrialTrafficLimitResetStrategy() string {
 	return conf.trialTrafficLimitResetStrategy
+}
+
+func TrafficLimitResetStrategy() string {
+	return conf.trafficLimitResetStrategy
 }
 func FeedbackURL() string {
 	return conf.feedbackURL
@@ -110,6 +153,10 @@ func SupportURL() string {
 
 func TosURL() string {
 	return conf.tosURL
+}
+
+func VideoGuideURL() string {
+	return conf.videoGuideURL
 }
 
 func YookasaEmail() string {
@@ -134,6 +181,10 @@ func Price12() int {
 
 func DaysInMonth() int {
 	return conf.daysInMonth
+}
+
+func ExternalSquadUUID() uuid.UUID {
+	return conf.externalSquadUUID
 }
 
 func Price(month int) int {
@@ -217,6 +268,10 @@ func IsTelegramStarsEnabled() bool {
 	return conf.isTelegramStarsEnabled
 }
 
+func RequirePaidPurchaseForStars() bool {
+	return conf.requirePaidPurchaseForStars
+}
+
 func GetAdminTelegramId() int64 {
 	return conf.adminTelegramId
 }
@@ -229,8 +284,8 @@ func IsWepAppLinkEnabled() bool {
 	return conf.isWebAppLinkEnabled
 }
 
-func GetXApiKey() string {
-	return conf.xApiKey
+func RemnawaveHeaders() map[string]string {
+	return conf.remnawaveHeaders
 }
 
 const bytesInGigabyte = 1073741824
@@ -290,8 +345,6 @@ func InitConfig() {
 
 	conf.telegramToken = mustEnv("TELEGRAM_TOKEN")
 
-	conf.xApiKey = os.Getenv("X_API_KEY")
-
 	conf.isWebAppLinkEnabled = func() bool {
 		isWebAppLinkEnabled := os.Getenv("IS_WEB_APP_LINK") == "true"
 		return isWebAppLinkEnabled
@@ -301,9 +354,22 @@ func InitConfig() {
 
 	conf.remnawaveTag = envStringDefault("REMNAWAVE_TAG", "")
 
+	conf.trialRemnawaveTag = envStringDefault("TRIAL_REMNAWAVE_TAG", "")
+
 	conf.defaultLanguage = envStringDefault("DEFAULT_LANGUAGE", "ru")
 
 	conf.daysInMonth = envIntDefault("DAYS_IN_MONTH", 30)
+
+	externalSquadUUIDStr := os.Getenv("EXTERNAL_SQUAD_UUID")
+	if externalSquadUUIDStr != "" {
+		parsedUUID, err := uuid.Parse(externalSquadUUIDStr)
+		if err != nil {
+			panic(fmt.Sprintf("invalid EXTERNAL_SQUAD_UUID format: %v", err))
+		}
+		conf.externalSquadUUID = parsedUUID
+	} else {
+		conf.externalSquadUUID = uuid.Nil
+	}
 
 	conf.trialTrafficLimit = mustEnvInt("TRIAL_TRAFFIC_LIMIT")
 
@@ -323,6 +389,18 @@ func InitConfig() {
 		return v
 	}()
 
+	conf.trafficLimitResetStrategy = func() string {
+		v := os.Getenv("TRAFFIC_LIMIT_RESET_STRATEGY")
+		if v == "" {
+			return "month" // По умолчанию месяц
+		}
+		v = strings.ToLower(v)
+		if v != "day" && v != "week" && v != "month" && v != "never" {
+			panic("TRAFFIC_LIMIT_RESET_STRATEGY must be one of: day, week, month, never")
+		}
+		return v
+	}()
+
 	conf.enableAutoPayment = envBool("ENABLE_AUTO_PAYMENT")
 
 	conf.price1 = mustEnvInt("PRICE_1")
@@ -338,6 +416,7 @@ func InitConfig() {
 		conf.starsPrice12 = envIntDefault("STARS_PRICE_12", conf.price12)
 
 	}
+	conf.requirePaidPurchaseForStars = envBool("REQUIRE_PAID_PURCHASE_FOR_STARS")
 
 	conf.remnawaveUrl = mustEnv("REMNAWAVE_URL")
 
@@ -380,6 +459,7 @@ func InitConfig() {
 	conf.feedbackURL = os.Getenv("FEEDBACK_URL")
 	conf.channelURL = os.Getenv("CHANNEL_URL")
 	conf.tosURL = os.Getenv("TOS_URL")
+	conf.videoGuideURL = os.Getenv("VIDEO_GUIDE_URL")
 
 	conf.squadUUIDs = func() map[uuid.UUID]uuid.UUID {
 		v := os.Getenv("SQUAD_UUIDS")
@@ -401,6 +481,41 @@ func InitConfig() {
 		}
 	}()
 
+	// Trial Internal Squads
+	conf.trialInternalSquads = func() map[uuid.UUID]uuid.UUID {
+		v := os.Getenv("TRIAL_INTERNAL_SQUADS")
+		if v != "" {
+			uuids := strings.Split(v, ",")
+			var trialSquadsMap = make(map[uuid.UUID]uuid.UUID)
+			for _, value := range uuids {
+				uuid, err := uuid.Parse(strings.TrimSpace(value))
+				if err != nil {
+					panic(fmt.Sprintf("invalid UUID in TRIAL_INTERNAL_SQUADS: %v", err))
+				}
+				trialSquadsMap[uuid] = uuid
+			}
+			slog.Info("Loaded trial internal squad UUIDs", "uuids", uuids)
+			return trialSquadsMap
+		} else {
+			slog.Info("No trial internal squad UUIDs specified, will use regular SQUAD_UUIDS")
+			return map[uuid.UUID]uuid.UUID{}
+		}
+	}()
+
+	// Trial External Squad UUID
+	trialExternalSquadUUIDStr := os.Getenv("TRIAL_EXTERNAL_SQUAD_UUID")
+	if trialExternalSquadUUIDStr != "" {
+		parsedUUID, err := uuid.Parse(trialExternalSquadUUIDStr)
+		if err != nil {
+			panic(fmt.Sprintf("invalid TRIAL_EXTERNAL_SQUAD_UUID format: %v", err))
+		}
+		conf.trialExternalSquadUUID = parsedUUID
+		slog.Info("Loaded trial external squad UUID", "uuid", parsedUUID)
+	} else {
+		conf.trialExternalSquadUUID = uuid.Nil
+		slog.Info("No trial external squad UUID specified, will use regular EXTERNAL_SQUAD_UUID")
+	}
+
 	conf.tributeWebhookUrl = os.Getenv("TRIBUTE_WEBHOOK_URL")
 	if conf.tributeWebhookUrl != "" {
 		conf.tributeAPIKey = mustEnv("TRIBUTE_API_KEY")
@@ -409,4 +524,69 @@ func InitConfig() {
 
 	// HWID Fallback Device Limit
 	conf.hwidFallbackDeviceLimit = envIntDefault("HWID_FALLBACK_DEVICE_LIMIT", 2)
+
+	// Blocked Telegram IDs
+	conf.blockedTelegramIds = func() map[int64]bool {
+		v := os.Getenv("BLOCKED_TELEGRAM_IDS")
+		if v != "" {
+			ids := strings.Split(v, ",")
+			var blockedMap = make(map[int64]bool)
+			for _, idStr := range ids {
+				id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+				if err != nil {
+					panic(fmt.Sprintf("invalid telegram ID in BLOCKED_TELEGRAM_IDS: %v", err))
+				}
+				blockedMap[id] = true
+			}
+			slog.Info("Loaded blocked telegram IDs", "count", len(blockedMap))
+			return blockedMap
+		} else {
+			slog.Info("No blocked telegram IDs specified")
+			return map[int64]bool{}
+		}
+	}()
+
+	// Whitelisted Telegram IDs
+	conf.whitelistedTelegramIds = func() map[int64]bool {
+		v := os.Getenv("WHITELISTED_TELEGRAM_IDS")
+		if v != "" {
+			ids := strings.Split(v, ",")
+			var whitelistedMap = make(map[int64]bool)
+			for _, idStr := range ids {
+				id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+				if err != nil {
+					panic(fmt.Sprintf("invalid telegram ID in WHITELISTED_TELEGRAM_IDS: %v", err))
+				}
+				whitelistedMap[id] = true
+			}
+			slog.Info("Loaded whitelisted telegram IDs", "count", len(whitelistedMap))
+			return whitelistedMap
+		} else {
+			slog.Info("No whitelisted telegram IDs specified")
+			return map[int64]bool{}
+		}
+	}()
+
+	conf.remnawaveHeaders = func() map[string]string {
+		v := os.Getenv("REMNAWAVE_HEADERS")
+		if v != "" {
+			headers := make(map[string]string)
+			pairs := strings.Split(v, ";")
+			for _, pair := range pairs {
+				parts := strings.SplitN(strings.TrimSpace(pair), ":", 2)
+				if len(parts) == 2 {
+					key := strings.TrimSpace(parts[0])
+					value := strings.TrimSpace(parts[1])
+					if key != "" && value != "" {
+						headers[key] = value
+					}
+				}
+			}
+			if len(headers) > 0 {
+				slog.Info("Loaded remnawave headers", "count", len(headers))
+				return headers
+			}
+		}
+		return map[string]string{}
+	}()
 }

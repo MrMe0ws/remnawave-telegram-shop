@@ -1,9 +1,9 @@
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS modules
+FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine AS modules
 WORKDIR /modules
 COPY go.mod go.sum ./
 RUN go mod download
 
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine AS builder
 WORKDIR /app
 
 COPY --from=modules /go/pkg /go/pkg
@@ -16,9 +16,10 @@ RUN update-ca-certificates
 ARG TARGETOS
 ARG TARGETOS
 ARG VERSION
+ARG COMMIT=none
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags="-w -s -X main.Version=${VERSION:-dev} -X main.BuildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+    -ldflags="-w -s -X main.Version=${VERSION:-dev} -X main.Commit=${COMMIT:-none} -X main.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
     -o /bin/app ./cmd/app
 
 FROM scratch

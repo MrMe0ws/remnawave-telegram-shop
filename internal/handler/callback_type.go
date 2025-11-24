@@ -11,4 +11,6 @@ const (
 	CallbackReferral      = "referral"
 	CallbackDevices       = "devices"
 	CallbackDeleteDevice  = "delete_device_"
+	CallbackBroadcastConfirm = "broadcast_confirm"
+	CallbackBroadcastCancel  = "broadcast_cancel"
 )

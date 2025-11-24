@@ -27,13 +27,19 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 
 	if customer == nil || customer.SubscriptionLink == nil || customer.ExpireAt == nil || customer.ExpireAt.Before(time.Now()) {
-		_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-			CallbackQueryID: callback.ID,
-			Text:            h.translation.GetText(langCode, "no_subscription"),
-			ShowAlert:       true,
+		_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+			ChatID:    callback.Message.Message.Chat.ID,
+			MessageID: callback.Message.Message.ID,
+			Text:      h.translation.GetText(langCode, "no_subscription"),
+			ReplyMarkup: models.InlineKeyboardMarkup{
+				InlineKeyboard: [][]models.InlineKeyboardButton{
+					{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}},
+					{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+				},
+			},
 		})
 		if err != nil {
-			slog.Error("Error answering callback query", err)
+			slog.Error("Error editing message", err)
 		}
 		return
 	}
@@ -185,13 +191,19 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 	}
 
 	if customer == nil || customer.SubscriptionLink == nil || customer.ExpireAt == nil || customer.ExpireAt.Before(time.Now()) {
-		_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-			CallbackQueryID: callback.ID,
-			Text:            h.translation.GetText(langCode, "no_subscription"),
-			ShowAlert:       true,
+		_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+			ChatID:    callback.Message.Message.Chat.ID,
+			MessageID: callback.Message.Message.ID,
+			Text:      h.translation.GetText(langCode, "no_subscription"),
+			ReplyMarkup: models.InlineKeyboardMarkup{
+				InlineKeyboard: [][]models.InlineKeyboardButton{
+					{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}},
+					{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+				},
+			},
 		})
 		if err != nil {
-			slog.Error("Error answering callback query", err)
+			slog.Error("Error editing message", err)
 		}
 		return
 	}
@@ -241,7 +253,7 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 }
 
 // getDeviceDisplayName создает информативное название устройства
-func (h Handler) getDeviceDisplayName(device remapi.GetUserHwidDevicesResponseDtoResponseDevicesItem, deviceNumber int) string {
+func (h Handler) getDeviceDisplayName(device remapi.HwidDevicesResponseResponseDevicesItem, deviceNumber int) string {
 	// Собираем доступную информацию об устройстве
 	var deviceInfo []string
 
@@ -282,7 +294,7 @@ func (h Handler) getDeviceEmoji(deviceName string) string {
 	}
 
 	// Проверяем на мобильные ОС
-	mobileKeywords := []string{"android", "ios", "apple", "iphone", "samsung", "google", "pixel", "xiaomi", "honor", "huawei", }
+	mobileKeywords := []string{"android", "ios", "apple", "iphone", "samsung", "google", "pixel", "xiaomi", "honor", "huawei"}
 	for _, keyword := range mobileKeywords {
 		if strings.Contains(deviceNameLower, keyword) {
 			return "📱"
