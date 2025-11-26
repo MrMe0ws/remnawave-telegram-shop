@@ -171,6 +171,11 @@ func main() {
 
 	// --- Обработчики callback-кнопок (inline кнопки) ---
 
+	// Callback для выбора типа рассылки (только для админа)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastAll, bot.MatchTypeExact, h.BroadcastTypeSelectHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastActive, bot.MatchTypeExact, h.BroadcastTypeSelectHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastInactive, bot.MatchTypeExact, h.BroadcastTypeSelectHandler, isAdminMiddleware)
+
 	// Callback для подтверждения рассылки (только для админа)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastConfirm, bot.MatchTypeExact, h.BroadcastConfirmHandler, isAdminMiddleware)
 

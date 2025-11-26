@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	sq "github.com/Masterminds/squirrel"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"log/slog"
 	"remnawave-tg-shop-bot/utils"
 	"time"
+
+	sq "github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type CustomerRepository struct {
@@ -291,7 +292,6 @@ func (cr *CustomerRepository) UpdateBatch(ctx context.Context, customers []Custo
 	}
 	query += ") AS c(telegram_id, expire_at, subscription_link) WHERE customer.telegram_id = c.telegram_id"
 
-
 	tx, err := cr.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -347,6 +347,86 @@ func (cr *CustomerRepository) GetAllTelegramIds(ctx context.Context) ([]int64, e
 	rows, err := cr.pool.Query(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query telegram ids: %w", err)
+	}
+	defer rows.Close()
+
+	var telegramIDs []int64
+	for rows.Next() {
+		var telegramID int64
+		err := rows.Scan(&telegramID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan telegram id row: %w", err)
+		}
+		telegramIDs = append(telegramIDs, telegramID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over telegram id rows: %w", err)
+	}
+
+	return telegramIDs, nil
+}
+
+func (cr *CustomerRepository) GetActiveTelegramIds(ctx context.Context) ([]int64, error) {
+	now := time.Now()
+	buildSelect := sq.Select("telegram_id").
+		From("customer").
+		Where(
+			sq.And{
+				sq.NotEq{"expire_at": nil},
+				sq.Gt{"expire_at": now},
+			},
+		).
+		PlaceholderFormat(sq.Dollar)
+
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build select query: %w", err)
+	}
+
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active telegram ids: %w", err)
+	}
+	defer rows.Close()
+
+	var telegramIDs []int64
+	for rows.Next() {
+		var telegramID int64
+		err := rows.Scan(&telegramID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan telegram id row: %w", err)
+		}
+		telegramIDs = append(telegramIDs, telegramID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over telegram id rows: %w", err)
+	}
+
+	return telegramIDs, nil
+}
+
+func (cr *CustomerRepository) GetInactiveTelegramIds(ctx context.Context) ([]int64, error) {
+	now := time.Now()
+	buildSelect := sq.Select("telegram_id").
+		From("customer").
+		Where(
+			sq.Or{
+				sq.Eq{"expire_at": nil},
+				sq.LtOrEq{"expire_at": now},
+			},
+		).
+		PlaceholderFormat(sq.Dollar)
+
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build select query: %w", err)
+	}
+
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query inactive telegram ids: %w", err)
 	}
 	defer rows.Close()
 
