@@ -3,12 +3,16 @@ name: Build docker image
 on:
   push:
     tags:
-      - '*'
+      - "*"
+    branches:
+      - main
+      - "3.3.*"
   workflow_dispatch:
+    # Можно запустить вручную из любой ветки
 
 jobs:
   build-docker-image:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest # Изменено с self-hosted на ubuntu-latest для надежности
     permissions:
       packages: write
     steps:
@@ -23,23 +27,35 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract version and commit
+        id: vars
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            # Для коммитов используем short SHA
+            VERSION="dev-$(echo ${{ github.sha }} | cut -c1-7)"
+          fi
+          COMMIT="$(echo ${{ github.sha }} | cut -c1-7)"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "COMMIT=$COMMIT" >> $GITHUB_OUTPUT
+          echo "📦 Версия: $VERSION, Коммит: $COMMIT"
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/remnawave-telegram-shop-bot
-          # Set up proper tagging strategy
           tags: |
-            # Always include latest tag
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
-            # Use semver tags when Git tag is in semver format
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            # Use the short SHA for non-tag builds
-            type=sha,format=short,prefix=
-            # Include the tag name if it's a tag-triggered build
-            type=ref,event=tag
+            # latest только для main ветки и тегов
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref_type == 'tag' }}
+            # Версия из переменной (для всех веток)
+            type=raw,value=${{ steps.vars.outputs.VERSION }}
+            # Для ветки 3.3.* создаем тег с префиксом ветки
+            type=raw,value=3.3.x-${{ steps.vars.outputs.VERSION }},enable=${{ startsWith(github.ref, 'refs/heads/3.3.') }}
+            # Semver теги только для git тегов
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,11 +63,13 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
+          context: .
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VERSION=${{ steps.meta.outputs.version }}
-            COMMIT=${{ github.sha }}
+            VERSION=${{ steps.vars.outputs.VERSION }}
+            COMMIT=${{ steps.vars.outputs.COMMIT }}

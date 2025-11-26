@@ -1,14 +1,9 @@
-# Production docker-compose - использует готовый образ из GitHub Packages
-# Для локальной разработки используйте: docker compose -f docker-compose.dev.yaml up -d
-#
-# Для использования конкретной версии замените :latest на нужную версию, например:
-# image: ghcr.io/mrmeows/remnawave-telegram-shop-bot:3.4.0
+# Development docker-compose - для локальной разработки с локальной сборкой
+# Использование: docker compose -f docker-compose.dev.yaml up -d
 
 services:
   bot:
-    image: ghcr.io/mrmeows/remnawave-telegram-shop-bot:latest
-    container_name: remnawave-telegram-shop-bot
-    restart: unless-stopped
+    build: .
     env_file:
       - .env
     depends_on:
@@ -20,7 +15,7 @@ services:
       - remnawave-network
     ports:
       - "3002:3002"
-
+      
   db:
     image: postgres:17
     container_name: "remnawave-telegram-shop-db"
@@ -45,16 +40,6 @@ services:
     networks:
       - remnawave-network
 
-#  ngrok:
-#    image: ngrok/ngrok:latest
-#    command:
-#      - "http"
-#      - "http://bot:8080"
-#    environment:
-#      NGROK_AUTHTOKEN: TOKEN
-#    ports:
-#      - 4040:4040
-
 volumes:
   remnawave-telegram-shop-db-data:
     driver: local
@@ -66,3 +51,4 @@ networks:
     name: remnawave-network
     driver: bridge
     external: true
+

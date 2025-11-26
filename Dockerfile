@@ -13,13 +13,13 @@ COPY . .
 RUN apk update && apk add --no-cache ca-certificates tzdata
 RUN update-ca-certificates
 
-ARG TARGETOS
-ARG TARGETOS
-ARG VERSION
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ARG VERSION=dev
 ARG COMMIT=none
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-    -ldflags="-w -s -X main.Version=${VERSION:-dev} -X main.Commit=${COMMIT:-none} -X main.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+    -ldflags="-w -s -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
     -o /bin/app ./cmd/app
 
 FROM scratch
