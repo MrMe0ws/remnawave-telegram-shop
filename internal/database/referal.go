@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"remnawave-tg-shop-bot/internal/config"
+	"time"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"time"
 )
 
 type Referral struct {
@@ -94,6 +96,38 @@ func (r *ReferralRepository) CountByReferrer(ctx context.Context, referrerID int
 		return 0, fmt.Errorf("failed to scan count of referrals: %w", err)
 	}
 	return count, nil
+}
+
+// CountPaidReferralsByReferrer подсчитывает количество рефералов, которые оплатили подписку
+func (r *ReferralRepository) CountPaidReferralsByReferrer(ctx context.Context, referrerID int64) (int, error) {
+	query := sq.Select("COUNT(*)").
+		From("referral").
+		Where(sq.Eq{"referrer_id": referrerID, "bonus_granted": true}).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("failed to build count paid referrals by referrer query: %w", err)
+	}
+
+	var count int
+	if err := r.pool.QueryRow(ctx, sql, args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to scan count of paid referrals: %w", err)
+	}
+	return count, nil
+}
+
+// CalculateEarnedDays рассчитывает количество заработанных дней по рефералам
+func (r *ReferralRepository) CalculateEarnedDays(ctx context.Context, referrerID int64) (int, error) {
+	paidCount, err := r.CountPaidReferralsByReferrer(ctx, referrerID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Каждый оплативший реферал дает дни из конфигурации
+	referralDays := config.GetReferralDays()
+	earnedDays := paidCount * referralDays
+	return earnedDays, nil
 }
 
 func (r *ReferralRepository) FindByReferee(ctx context.Context, refereeID int64) (*Referral, error) {

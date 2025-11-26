@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"time"
 )
 
 type SyncService struct {
@@ -16,6 +17,10 @@ func NewSyncService(client *remnawave.Client, customerRepository *database.Custo
 	return &SyncService{
 		client: client, customerRepository: customerRepository,
 	}
+}
+
+func (s SyncService) GetRemnawaveClient() *remnawave.Client {
+	return s.client
 }
 
 func (s SyncService) Sync() {
@@ -67,10 +72,8 @@ func (s SyncService) Sync() {
 	var toUpdate []database.Customer
 
 	for _, cust := range mappedUsers {
-		if existing, found := existingMap[cust.TelegramID]; found {
-			cust.ID = existing.ID
-			cust.CreatedAt = existing.CreatedAt
-			cust.Language = existing.Language
+		if _, found := existingMap[cust.TelegramID]; found {
+			cust.CreatedAt = time.Now()
 			toUpdate = append(toUpdate, cust)
 		} else {
 			toCreate = append(toCreate, cust)

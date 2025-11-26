@@ -99,31 +99,9 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	}
 
 	if config.IsTelegramStarsEnabled() {
-		shouldShowStarsButton := true
-		
-		if config.RequirePaidPurchaseForStars() {
-			customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
-			if err != nil {
-				slog.Error("Error finding customer for stars check", err)
-				shouldShowStarsButton = false
-			} else if customer != nil {
-				paidPurchase, err := h.purchaseRepository.FindSuccessfulPaidPurchaseByCustomer(ctx, customer.ID)
-				if err != nil {
-					slog.Error("Error checking paid purchase", err)
-					shouldShowStarsButton = false
-				} else if paidPurchase == nil {
-					shouldShowStarsButton = false
-				}
-			} else {
-				shouldShowStarsButton = false
-			}
-		}
-		
-		if shouldShowStarsButton {
-			keyboard = append(keyboard, []models.InlineKeyboardButton{
-				{Text: h.translation.GetText(langCode, "stars_button"), CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s", CallbackPayment, month, database.InvoiceTypeTelegram, amount)},
-			})
-		}
+		keyboard = append(keyboard, []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(langCode, "stars_button"), CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s", CallbackPayment, month, database.InvoiceTypeTelegram, amount)},
+		})
 	}
 
 	if config.GetTributeWebHookUrl() != "" {

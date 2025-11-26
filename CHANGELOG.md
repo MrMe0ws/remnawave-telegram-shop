@@ -1,157 +1,218 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [3.4.1] - 2025-11-08
+## [3.4.0] - 2025-11-24
 
 ### Added
-- `TRIAL_REMNAWAVE_TAG` environment variable to assign different tags to trial users in Remnawave
-- Trial users can now be tagged separately from paying customers for better tracking and resource management
+
+- **Управление версиями через ldflags**: Добавлены переменные `Version`, `Commit`, `BuildDate` для отслеживания версий приложения
+- **Метаданные версии в healthcheck**: Информация о версии доступна в ответе endpoint `/healthcheck`
+- **EXTERNAL_SQUAD_UUID**: Параметр конфигурации для назначения внешнего отряда при создании и обновлении пользователей
+- **Конфигурация Trial Squads**: Добавлены переменные `TRIAL_INTERNAL_SQUADS` и `TRIAL_EXTERNAL_SQUAD_UUID` для изоляции пробных пользователей в отдельных отрядах
+- **Trial Remnawave Tag**: Добавлена переменная `TRIAL_REMNAWAVE_TAG` для назначения отдельного тега пробным пользователям
+- **Унифицированные заголовки Remnawave**: Заменен `X_API_KEY` на `REMNAWAVE_HEADERS` с поддержкой множественных заголовков (формат: `key1:value1;key2:value2`)
+- **Стратегия сброса трафика**: Добавлены переменные `TRAFFIC_LIMIT_RESET_STRATEGY` и `TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY` для настройки сброса трафика (day/week/month/never)
+- **Telegram Stars Payment Gatekeeping**: Добавлена переменная `REQUIRE_PAID_PURCHASE_FOR_STARS` для ограничения доступа к оплате через Telegram Stars только для пользователей с успешными платежами
+- **TestHook для Tribute webhook**: Добавлена константа и обработчик для тестирования webhook endpoint без активации реальных событий
 
 ### Changed
-- User tag assignment now always applies trial-specific or regular tags based on user type
-- Trial users get assigned `TRIAL_REMNAWAVE_TAG` (or fallback to `REMNAWAVE_TAG`) when created or updated
-- Regular paying users continue to receive `REMNAWAVE_TAG` on all operations
 
-### Documentation
-- Added `TRIAL_REMNAWAVE_TAG` to environment variables table in README
-- Updated `.env.sample` with trial tag configuration example
-## [3.4.0] - 2025-11-08
-
-### Added
-- `TRIAL_INTERNAL_SQUADS` environment variable for configuring separate internal squads for trial users
-- `TRIAL_EXTERNAL_SQUAD_UUID` environment variable for configuring separate external squad for trial users
-- Trial user squad configuration with automatic fallback to regular squad settings when trial-specific settings are not provided
-- Support for isolated squad assignment of trial users from regular paid users
-
-### Changed
-- Trial user creation now supports isolated squad assignment from regular paid users
-- `CreateOrUpdateUser()`, `createUser()`, and `updateUser()` methods now accept `isTrialUser` parameter to determine squad selection
-- Payment service now passes trial user flag when activating trial subscriptions
-
-### Documentation
-- Added comprehensive Trial Squad Configuration section in README explaining use cases and behavior
-- Updated environment variables table with new trial squad configuration parameters
-- Added examples for trial squad UUID configuration
-
-## [3.3.3] - 2025-11-07
-
-### Added
-- `REQUIRE_PAID_PURCHASE_FOR_STARS` environment variable to gate-keep Telegram Stars payment method
-- Telegram Stars payment option now requires at least one successful cryptocurrency or card payment to be available
-- New database repository method `FindSuccessfulPaidPurchaseByCustomer()` to check user payment history
-
-### Changed
-- Telegram Stars button is now conditionally displayed in payment method selection based on user's payment history
-- Users without prior crypto or card payments will only see available payment methods
-
-### Security
-- Enhanced payment flow to prevent Telegram Stars abuse by new unverified users
-
-## [3.3.2] - 2025-11-05
-
-### Added
-- `WHITELISTED_TELEGRAM_IDS` environment variable to whitelist users by Telegram ID (comma-separated list)
-- Whitelisted users bypass all suspicious user checks
-
-### Changed
-- Improved suspicious user detection: now checks for dangerous keyword combinations instead of individual keywords
-  - Allows legitimate project accounts like @CompanySupportAdmin to pass validation
-  - Maintains detection of actual phishing accounts (e.g., @TelegramSupport, @ServiceSupport)
-  - Detects combinations: telegram+support, telegram+admin, service+support, system+admin, security+admin
+- **Терминология**: Изменена с "входящего" на "отряд" в настройках и интеграции API
+- **Версия Go**: Обновлена с 1.24 до 1.25.3
+- **Remnawave API**: Миграция на `remnawave-api-go v2.2.3` с улучшенной поддержкой пагинации
+- **Поддержка версий Remnawave**: С версии 3.4.0 бот поддерживает только Remnawave 2.2.\*
+- При оплате платной подписки пользователи автоматически переводятся из trial squads в обычные squads
+- Обновление пользователей теперь включает изменение внутренних и внешних squads в зависимости от типа подписки
+- Все методы создания и обновления пользователей используют соответствующие стратегии сброса трафика (trial или платная)
+- Система сборки улучшена за счет явного захвата хеша коммита git в сборках Docker
+- Переменные среды `.env.sample` обновлены с добавлением новых параметров конфигурации и документации
 
 ### Fixed
-- False positives in suspicious user detection for project accounts with service-related names
 
-## [3.3.1] - 2025-11-05
-
-### Added
-- `BLOCKED_TELEGRAM_IDS` environment variable for blocking users by Telegram ID (comma-separated list)
-- User blacklist functionality in suspicious user filter middleware
-
-### Changed
-- SuspiciousUserFilterMiddleware now checks blacklist before suspicious name pattern validation for better security control
+- Исправлена ошибка валидации тегов: теги проверяются на соответствие формату `^[A-Z0-9_]+$` перед установкой
+- Исправлено отсутствие обновления squads при переходе пользователя с trial на платную подписку
+- Сохранение поля языка пользователя во время обновления патча синхронизации
+- Улучшена фильтрация проверки имени пользователя для уменьшения ложных срабатываний при сохранении безопасности
 
 ### Documentation
-- Added `BLOCKED_TELEGRAM_IDS` to environment variables table in README
-- Updated `.env.sample` with blocked telegram IDs configuration example
 
-## [3.3.0] - 2025-10-31
+- Добавлена подробная документация по `EXTERNAL_SQUAD_UUID` параметрам конфигурации в README
+- Обновлен файл README с новыми скриптами сборки и информацией об управлении версиями
+- Добавлено описание изменений терминологии в отрядах
+- Обновлена таблица совместимости версий Remnawave и бота
 
-### Added
-- Application version management via ldflags (`Version`, `Commit`, `BuildDate` variables)
-- Version information logging at application startup
-- Version metadata in healthcheck endpoint response
-- `EXTERNAL_SQUAD_UUID` configuration parameter for user creation and updates
-- Development Docker build script (`build-dev.sh`) for easier local image creation
-- Pagination helper support through remnawave-api-go v2.2.3
+### Technical
 
-### Changed
-- **Breaking:** Terminology refactored from "inbound" to "squad" throughout configuration and API integration
-- Go version updated from 1.24 to 1.25.3
-- Migrated to remnawave-api-go v2.2.3 with enhanced pagination support
-- Build system improved with explicit git commit hash capture in Docker builds
-- Environment variables `.env.sample` updated with new configuration options and documentation
+- Добавлены методы `TrialInternalSquads()`, `TrialExternalSquadUUID()`, `TrialRemnawaveTag()` в `internal/config/cofig.go`
+- Добавлен метод `TrafficLimitResetStrategy()` для обычных пользователей
+- Обновлены методы `updateUserWithStrategy()` и `createUserWithStrategy()` для поддержки trial конфигурации
+- Добавлена функция `isValidTag()` для валидации тегов Remnawave
+- Рефакторинг `headerTransport` для поддержки множественных заголовков через `REMNAWAVE_HEADERS`
+- Поддержка помощника пагинации через `remnawave-api-go v2.2.3`
+- Разработка скрипта сборки Docker (`build-dev.sh`) для упрощения создания локального образа
 
-### Fixed
-- User language field preservation during sync patch update
-- False positives in username filtering for better accuracy
+### Removed
 
-### Documentation
-- Added comprehensive documentation for `EXTERNAL_SQUAD_UUID` configuration parameter in README
-- Updated README with new build scripts and version management information
-- Added description of squad-based terminology changes
+- `X_API_KEY` переменная окружения (заменена на `REMNAWAVE_HEADERS`)
 
-### Security
-- Improved username validation filtering to reduce false positives while maintaining security
-
-## [3.2.0] - 2025-01-08
+## [3.3.0] - 2025-11-21
 
 ### Added
-- `DEFAULT_LANGUAGE` environment variable for configurable default bot language
-- Support for setting default language to `en` (English) or `ru` (Russian)
-- `build-release.sh` script for multi-platform Docker image building
-- `purchase_test.go` test file for database purchase operations
 
-### Fixed
-- Dockerfile ARG duplication - replaced second `TARGETOS` with correct `TARGETARCH`
-- Docker Compose restart policy improved from `always` to `unless-stopped`
+- **Рассылка сообщений для юзеров**: Админ пишет сообщение, отправляет его боту - бот рассылает всем клиентам. 29 сообщений в 1 секунду в порядке очереди. Ограничение телеграм апи - 30 сообщений в 1 сек.
+- **Черный список пользователей**: Добавлена переменная окружения `BLOCKED_TELEGRAM_IDS` для блокировки доступа к боту по Telegram ID
+- **Белый список пользователей**: Добавлена переменная окружения `WHITELISTED_TELEGRAM_IDS` для обхода проверок на подозрительных пользователей
+- **Улучшенная фильтрация подозрительных пользователей**: Теперь проверяются комбинации опасных ключевых слов вместо отдельных слов
 
 ### Changed
-- Translation manager now accepts default language parameter during initialization
-- Config initialization includes default language from environment variable
 
-### Documentation
-- Updated README.md with `DEFAULT_LANGUAGE` environment variable description
-- Added usage examples for language configuration
-
-## [3.1.4] - Previous Release
+- Улучшена детекция подозрительных пользователей: проверка комбинаций опасных ключевых слов (telegram+support, telegram+admin, service+support, system+admin, security+admin)
+- Легитимные аккаунты проектов (например, @CompanySupportAdmin) теперь проходят проверку
+- Сохранена детекция реальных фишинговых аккаунтов (например, @TelegramSupport, @ServiceSupport)
 
 ### Fixed
-- Tribute payment processing issues
 
-## [3.1.3] - Previous Release
+- Исправлены ложные срабатывания для аккаунтов проектов с сервисными именами
+
+### Technical
+
+- Добавлены методы `GetBlockedTelegramIds()` и `GetWhitelistedTelegramIds()` в `internal/config/cofig.go`
+- Обновлен `internal/handler/middleware.go` с проверками черного и белого списков
+- Добавлены тесты для валидных и подозрительных аккаунтов
+
+## [3.2.9] - 2024-11-08
+
+### Added
+
+- Добавлена новая переменная в `.env` `TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY=day` для управления сбросом трафика триал юзеров (day/week/month/never)
+- Для триал юзеров в "подключиться" добавлена информация о лимите трафика подписки
+
+### Changed
+
+- Для платных подписок сброс трафика каждый месяц
+- Обновлены переводы
+
+## [3.2.8] - 2024-10-28
+
+### Added
+
+- Добавлена текстовая ссылка на странице "подключиться" для web.telegram юзеров (у них не работает WebApp переход)
+
+## [3.2.7] - 2024-10-28
 
 ### Fixed
-- CryptoPay bot error in payment request handling
 
----
+- Исправлено: кнопка "подключиться" отсутствовала у клиентов с истекшей подпиской
 
-## Release Types
+## [3.2.6] - 2024-10-27
 
-- **Added** for new features
-- **Changed** for changes in existing functionality
-- **Deprecated** for soon-to-be removed features
-- **Removed** for now removed features
-- **Fixed** for any bug fixes
-- **Security** for vulnerability fixes
+### Fixed
 
-## Versioning
+- Исправлен баг с `"deviceModel": null` в `devices.go` - бот мог ловить ошибки, когда в HWID прилетает `"deviceModel": null`
 
-This project follows [Semantic Versioning](https://semver.org/):
-- **MAJOR** version for incompatible API changes
-- **MINOR** version for backwards-compatible functionality additions
-- **PATCH** version for backwards-compatible bug fixes
+### Added
+
+- Добавлена переменная окружения `HEALTH_CHECK_PORT` в `.env` (по умолчанию: 3) для проверки состояния бота и БД
+
+## [3.2.5] - 2024-10-27
+
+### Added
+
+- Добавлены переводы для сообщения заблокированных юзеров с подозрительным ником (можно отредактировать в `en.json` и `ru.json`)
+
+## [3.2.4] - 2024-10-26
+
+### Fixed
+
+- Исправлены баги по отслеживанию команд и сообщений юзеров
+- Протестирована обратная совместимость с версиями Remnawave 2.0.0 - 2.0.8
+
+### Changed
+
+- Расширены возможности статистики реферальной системы:
+  - **Приглашено**: общее количество рефералов
+  - **Оплатили по вашей ссылке**: количество оплативших
+  - **Дней заработано**: расчет из базы данных в реальном времени
+  - Все данные сохраняются после перезапуска Docker
+
+## [3.2.3 Enhanced] - 2024
+
+### ✨ Новые возможности
+
+#### 📱 Управление устройствами (My Devices)
+
+- Добавлена кнопка "📱 Мои устройства" в меню подключения
+- Просмотр списка всех HWID устройств в подписке
+- Удаление устройств по клику
+- Показ информации: номер, ID устройства, дата добавления
+- Конфигурируемый лимит устройств через `HWID_FALLBACK_DEVICE_LIMIT`
+
+#### 🎯 Расширенная реферальная статистика
+
+- **Приглашено**: X — общее количество рефералов
+- **Оплатили по вашей ссылке**: X — количество оплативших
+- **Дней заработано**: X — расчет из базы данных в реальном времени
+- Данные сохраняются после перезапуска Docker
+
+#### 👨‍💼 Отслеживание пользователей для админа
+
+- Глобальное отслеживание ВСЕХ команд (`/start`, `/panel`, `/admin` и т.д.)
+- Пересылка всех сообщений админу без блокировки основного функционала
+- Система ответов админа через Reply на пересланные сообщения
+
+#### 🆘 Расширенная секция "Помощь"
+
+- Новая кнопка "❓ Помощь" в главном меню
+- Подменю с кнопками:
+  - "🌏 Какой сервер выбрать"
+  - "🆘 Поддержка"
+  - "📄 Публичная оферта"
+  - "⬅️ Назад" (возврат в главное меню)
+
+### 🐛 Исправления
+
+- **Исправлен баг**: команда `/start` теперь корректно отслеживается админом
+- **Исправлен порядок регистрации обработчиков**: устранены конфликты между основной логикой и отслеживанием
+- **Обновлены переводы**: корректно работают все 3 параметра в реферальной статистике
+
+### 📋 Технические изменения
+
+- Добавлен файл `internal/handler/devices.go` для управления устройствами
+- Обновлен `internal/handler/referral.go` с расширенной статистикой
+- Добавлены методы API: `GetUserInfo`, `GetUserDevicesByUuid`, `DeleteUserDevice`
+- Добавлены методы БД: `CountPaidReferralsByReferrer`, `CalculateEarnedDays`
+- Новые конфигурационные параметры: `HWID_FALLBACK_DEVICE_LIMIT`, `REFERRAL_DAYS`
+
+### ⚙️ Обновленная главная клавиатура
+
+```
+[🔥 Попробовать бесплатно] (если новый пользователь)
+[💰 Купить]
+[🔌 Подключиться]
+[🤝 Рефералы] [📊 Статус серверов]
+[💬 Отзывы] [📢 Канал]
+[❓ Помощь]
+```
+
+### 📚 Версии
+
+- **Bot API**: 3.2.3
+- **Remnawave API**: 2.1.19
+
+### ⚠️ Важные примечания
+
+- При обновлении проверьте переменную `REFERRAL_DAYS` в `.env` файле
+- Значение по умолчанию для `REFERRAL_DAYS`: 15 дней
+- При необходимости обновите `HWID_FALLBACK_DEVICE_LIMIT` в конфигурации
+
+### 🔄 Измененные файлы
+
+- `internal/handler/devices.go` (новый)
+- `internal/handler/referral.go` (расширено)
+- `internal/handler/start.go` (новое меню)
+- `internal/handler/connect.go` (кнопка "Мои устройства")
+- `internal/handler/handler.go` (отслеживание)
+- `internal/remnawave/client.go` (API методы)
+- `internal/database/referal.go` (статистика)
+- `internal/config/cofig.go` (конфигурация)
+- `cmd/app/main.go` (регистрация обработчиков)
+- `translations/ru.json` и `translations/en.json` (переводы)
