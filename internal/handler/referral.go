@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"log/slog"
+
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"log/slog"
 )
 
 func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -15,12 +16,30 @@ func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update
 	refCode := customer.TelegramID
 
 	refLink := fmt.Sprintf("https://telegram.me/share/url?url=https://t.me/%s?start=ref_%d", update.CallbackQuery.Message.Message.From.Username, refCode)
-	count, err := h.referralRepository.CountByReferrer(ctx, customer.TelegramID)
+
+	// Получаем общее количество приглашенных
+	totalCount, err := h.referralRepository.CountByReferrer(ctx, customer.TelegramID)
 	if err != nil {
 		slog.Error("error counting referrals", err)
 		return
 	}
-	text := fmt.Sprintf(h.translation.GetText(langCode, "referral_text"), count)
+
+	// Получаем количество оплативших рефералов
+	paidCount, err := h.referralRepository.CountPaidReferralsByReferrer(ctx, customer.TelegramID)
+	if err != nil {
+		slog.Error("error counting paid referrals", err)
+		return
+	}
+
+	// Получаем количество заработанных дней
+	earnedDays, err := h.referralRepository.CalculateEarnedDays(ctx, customer.TelegramID)
+	if err != nil {
+		slog.Error("error calculating earned days", err)
+		return
+	}
+
+	// Форматируем текст с тремя аргументами
+	text := fmt.Sprintf(h.translation.GetText(langCode, "referral_text"), totalCount, paidCount, earnedDays)
 	callbackMessage := update.CallbackQuery.Message.Message
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callbackMessage.Chat.ID,

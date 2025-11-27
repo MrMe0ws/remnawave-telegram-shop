@@ -81,6 +81,7 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 			return
 		}
 
+		// Проверка на заблокированных пользователей (проверяется перед проверкой подозрительных имен)
 		if config.GetBlockedTelegramIds()[userID] {
 			slog.Warn("blocked user by telegram id", "userId", utils.MaskHalfInt64(userID))
 			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
@@ -89,11 +90,12 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 				ParseMode: models.ParseModeHTML,
 			})
 			if err != nil {
-				slog.Error("error sending blocked user message", err)
+				slog.Error("error sending blocked user message", "error", err)
 			}
 			return
 		}
 
+		// Проверка на пользователей из белого списка (пропускают проверку на подозрительных пользователей)
 		if config.GetWhitelistedTelegramIds()[userID] {
 			slog.Info("whitelisted user allowed", "userId", utils.MaskHalfInt64(userID))
 			next(ctx, b, update)

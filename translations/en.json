@@ -1,41 +1,78 @@
 {
-  "greeting": "👋🏻 <b>Hello</b>\nThis is a bot for connecting to <b>VPN</b>🛡️\n\nAvailable locations:\n Location 1\n Location 2\n\n<b>How to connect:</b>\n• click the <b>Connect</b> button\n• follow the short instructions",
+  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\n+14 days subscription (“🤝 Referrals”)",
+
   "buy_button": "💰 Buy",
-  "connect_button": "🔌 Connect",
+  "connect_button": "🔌 My VPN",
+  "connect_device_button": "🔌 Connect Device",
   "back_button": "🔙 Back",
-  "pricing_info": "Russian bank cards and cryptocurrency are accepted for payment",
-  "month_1": "1 month",
-  "month_3": "3 months",
-  "month_6": "6 months",
-  "month_12": "12 months",
-  "crypto_button": "₿ Cryptocurrency",
-  "card_button": "💳 Bank card",
+
+  "pricing_info": "Subscription works on 2 devices\n\n🌐 After payment you get full access to all locations\n\nPayment methods:\n💸 Bank card\n₿ Crypto\n⭐ Telegram Stars",
+
+  "month_1": "1 month – $?",
+  "month_3": "3 months – $?",
+  "month_6": "6 months – $?",
+  "month_12": "12 months – $?",
+
+  "crypto_button": "₿ Crypto",
+  "card_button": "💳 Bank Card",
   "pay_button": "💸 Pay",
-  "subscription_active": "Your subscription is valid until: %s",
-  "subscription_link": "\n\nSubscription link: %s",
-  "no_subscription": "You don't have an active subscription",
-  "subscription_activated": "Your subscription has been activated!",
-  "feedback_button": "⭐ Feedback",
+
+  "subscription_active": "📅 Subscription active until <b><i>%s</i></b>",
+  "traffic_limit": "\n\nLimit - %s/%s gb",
+  "subscription_link": "\n\n🔗 <a href=\"%s\">Subscription link</a>",
+  "no_subscription": "❌ You don't have an active subscription",
+  "subscription_activated": "✅ Subscription activated",
+
+  "feedback_button": "⭐ Reviews",
   "server_status_button": "🟢 Server Status",
   "support_button": "🆘 Support",
   "channel_button": "📢 Channel",
-  "tos_button": "Terms Of Service",
-  "subscription_expiring": "⚠️ <b>Subscription Alert</b> ⚠️\n\nYour subscription expires on %s\nTo continue using the service, please renew your subscription",
-  "renew_subscription_button": "🔄 Renew Subscription",
-  "invoice_description" : "Subscription",
-  "invoice_label" : "Subscription",
-  "invoice_title" : "Subscription",
-  "trial_button": "🔥 Try for free",
-  "trial_activated": "Trial period activated",
-  "trial_text": "Your trial version is active",
-  "activate_trial_button": "Activate trial version",
+  "tos_button": "Terms of Service",
+
+  "subscription_expiring": "⚠️ <b>Subscription reminder</b> ⚠️\n\nYour subscription expires on <b>%s</b>\nPlease renew to keep access",
+
+  "renew_subscription_button": "🔄 Renew subscription",
+
+  "invoice_description": "Subscription",
+  "invoice_label": "Subscription",
+  "invoice_title": "Subscription",
+
+  "trial_button": "🔥 Try free",
+  "trial_activated": "🔥 Trial activated",
+  "trial_text": "🎁 14-day free trial!\n📶 Traffic day limit — 3 GB\n\n🔑 Starts immediately after confirmation",
+  "activate_trial_button": "🔥 Activate trial",
+
   "referral_button": "🤝 Referrals",
-  "referral_text": "Invited: %d",
-  "referral_bonus_granted": "You have received a referral bonus!",
-  "stars_button": " ⭐Telegram Stars",
-  "share_referral_button": "Share!",
-  "web_app_button_text": "Connect",
+  "referral_text": "🚩 For the first successful payment\nmade via your referral link\nyou receive +14 days\n\n👫 Invited: %d\n💳 Paid via your link: %d\n📅 Days earned: %d",
+  "referral_bonus_granted": "🎁 Referral bonus received!",
+  "stars_button": "⭐ Telegram Stars",
+  "share_referral_button": "Share",
+
+  "web_app_button_text": "🔌 Connect",
+
   "tribute_button": "Tribute",
-  "tribute_cancelled" : "Tribute cancelled",
-  "access_denied": "⚠️ Access denied. Please update your profile information."
+  "tribute_cancelled": "Tribute cancelled",
+
+  "access_denied": "⚠️ Access denied\nSuspicious nickname\nChange it or contact @Meows_support_bot",
+
+  "help_button": "📚 Help",
+  "help_title": "Help",
+  "server_selection_button": "🌏 Which server to choose",
+  "video_guide_button": "📺 Video guide",
+  "public_offer_button": "📄 Public offer",
+
+  "devices_button": "📱 My Devices",
+  "devices_title": "📱 <b>Your devices:</b>\n\n",
+  "device_limit": "Device limit %d/%d\n\n",
+
+  "device_info": "🖥️ <b>%s</b>\nID: <code>%s</code>\nAdded: %s\n\n",
+  "device_info_new": "<b>%s %s</b>\nAdded: %s\n\n",
+
+  "no_devices": "You have no connected devices yet",
+  "delete_device_button": "🗑️ Remove",
+  "device_deleted": "✅ Device removed",
+  "device_delete_error": "❌ Error removing device",
+  "devices_error": "❌ Error loading device list",
+
+  "device_delete_info": "<i>Remove a device if you reached the limit or can't add a new one. If removed by mistake — you can add it again.</i>\n\nTap a device to remove it from your subscription"
 }

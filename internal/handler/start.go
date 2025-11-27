@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"log/slog"
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -151,41 +152,110 @@ func (h Handler) resolveConnectButton(lang string) []models.InlineKeyboardButton
 	return inlineKeyboard
 }
 
+func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	callback := update.CallbackQuery
+
+	if callback == nil || callback.Message.Message == nil {
+		slog.Error("HelpCallbackHandler: callback.Message.Message is nil")
+		return
+	}
+
+	langCode := callback.From.LanguageCode
+	var helpKeyboard [][]models.InlineKeyboardButton
+
+	// Кнопка "Какой сервер выбрать" если ссылка установлена
+	if config.ServerSelectionURL() != "" {
+		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(langCode, "server_selection_button"), URL: config.ServerSelectionURL()},
+		})
+	}
+
+	// Кнопка "Видеоинструкция" если ссылка установлена
+	if config.VideoGuideURL() != "" {
+		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(langCode, "video_guide_button"), URL: config.VideoGuideURL()},
+		})
+	}
+
+	// Кнопки "Поддержка" и "Публичная оферта"
+	var supportAndOfferRow []models.InlineKeyboardButton
+	if config.SupportURL() != "" {
+		supportAndOfferRow = append(supportAndOfferRow, models.InlineKeyboardButton{
+			Text: h.translation.GetText(langCode, "support_button"),
+			URL:  config.SupportURL(),
+		})
+	}
+	if config.PublicOfferURL() != "" {
+		supportAndOfferRow = append(supportAndOfferRow, models.InlineKeyboardButton{
+			Text: h.translation.GetText(langCode, "public_offer_button"),
+			URL:  config.PublicOfferURL(),
+		})
+	}
+	if len(supportAndOfferRow) > 0 {
+		helpKeyboard = append(helpKeyboard, supportAndOfferRow)
+	}
+
+	// Кнопка "Назад"
+	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+		{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart},
+	})
+
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    callback.Message.Message.Chat.ID,
+		MessageID: callback.Message.Message.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      h.translation.GetText(langCode, "help_title"),
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: helpKeyboard,
+		},
+	})
+	if err != nil {
+		slog.Error("Error sending help message", err)
+	}
+}
+
 func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCode string) [][]models.InlineKeyboardButton {
 	var inlineKeyboard [][]models.InlineKeyboardButton
 
+	// 1. Попробовать бесплатно (если юзер новый)
 	if existingCustomer.SubscriptionLink == nil && config.TrialDays() > 0 {
 		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "trial_button"), CallbackData: CallbackTrial}})
 	}
 
-	inlineKeyboard = append(inlineKeyboard, [][]models.InlineKeyboardButton{{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}}}...)
+	// 2. Купить (всегда показывается)
+	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
 
-	if existingCustomer.SubscriptionLink != nil && existingCustomer.ExpireAt.After(time.Now()) {
+	// 3. Подключиться (если есть подписка)
+	if existingCustomer.SubscriptionLink != nil {
 		inlineKeyboard = append(inlineKeyboard, h.resolveConnectButton(langCode))
 	}
 
+	// 4. Собираем кнопки для 2-в-ряд: рефералы, статус серверов
+	var firstRow []models.InlineKeyboardButton
 	if config.GetReferralDays() > 0 {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "referral_button"), CallbackData: CallbackReferral}})
+		firstRow = append(firstRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "referral_button"), CallbackData: CallbackReferral})
 	}
-
 	if config.ServerStatusURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "server_status_button"), URL: config.ServerStatusURL()}})
+		firstRow = append(firstRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "server_status_button"), URL: config.ServerStatusURL()})
+	}
+	if len(firstRow) > 0 {
+		inlineKeyboard = append(inlineKeyboard, firstRow)
 	}
 
-	if config.SupportURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "support_button"), URL: config.SupportURL()}})
-	}
-
+	// 5. Собираем кнопки для 2-в-ряд: отзывы, канал
+	var secondRow []models.InlineKeyboardButton
 	if config.FeedbackURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "feedback_button"), URL: config.FeedbackURL()}})
+		secondRow = append(secondRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "feedback_button"), URL: config.FeedbackURL()})
 	}
-
 	if config.ChannelURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "channel_button"), URL: config.ChannelURL()}})
+		secondRow = append(secondRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "channel_button"), URL: config.ChannelURL()})
+	}
+	if len(secondRow) > 0 {
+		inlineKeyboard = append(inlineKeyboard, secondRow)
 	}
 
-	if config.TosURL() != "" {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "tos_button"), URL: config.TosURL()}})
-	}
+	// 6. Кнопка "Помощь"
+	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "help_button"), CallbackData: "help"}})
+
 	return inlineKeyboard
 }
