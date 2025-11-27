@@ -29,6 +29,8 @@ type config struct {
 	supportURL                                                string
 	tosURL                                                    string
 	videoGuideURL                                             string
+	serverSelectionURL                                        string
+	publicOfferURL                                            string
 	isYookasaEnabled                                          bool
 	isCryptoEnabled                                           bool
 	isTelegramStarsEnabled                                    bool
@@ -157,6 +159,14 @@ func TosURL() string {
 
 func VideoGuideURL() string {
 	return conf.videoGuideURL
+}
+
+func ServerSelectionURL() string {
+	return conf.serverSelectionURL
+}
+
+func PublicOfferURL() string {
+	return conf.publicOfferURL
 }
 
 func YookasaEmail() string {
@@ -460,6 +470,8 @@ func InitConfig() {
 	conf.channelURL = os.Getenv("CHANNEL_URL")
 	conf.tosURL = os.Getenv("TOS_URL")
 	conf.videoGuideURL = os.Getenv("VIDEO_GUIDE_URL")
+	conf.serverSelectionURL = os.Getenv("SERVER_SELECTION_URL")
+	conf.publicOfferURL = os.Getenv("PUBLIC_OFFER_URL")
 
 	conf.squadUUIDs = func() map[uuid.UUID]uuid.UUID {
 		v := os.Getenv("SQUAD_UUIDS")

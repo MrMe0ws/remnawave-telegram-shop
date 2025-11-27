@@ -160,30 +160,51 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		return
 	}
 
-	helpKeyboard := [][]models.InlineKeyboardButton{
-		{{Text: "🌏 Какой сервер выбрать", URL: "https://telegra.ph/Otlichie--i--serverov-07-06"}},
-	}
+	langCode := callback.From.LanguageCode
+	var helpKeyboard [][]models.InlineKeyboardButton
 
-	// Добавляем кнопку "📺 Видеоинструкция" если ссылка установлена
-	if config.VideoGuideURL() != "" {
+	// Добавляем кнопку "Какой сервер выбрать" если ссылка установлена
+	if config.ServerSelectionURL() != "" {
 		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-			{Text: "📺 Видеоинструкция", URL: config.VideoGuideURL()},
+			{Text: h.translation.GetText(langCode, "server_selection_button"), URL: config.ServerSelectionURL()},
 		})
 	}
 
+	// Добавляем кнопку "Видеоинструкция" если ссылка установлена
+	if config.VideoGuideURL() != "" {
+		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(langCode, "video_guide_button"), URL: config.VideoGuideURL()},
+		})
+	}
+
+	// Добавляем кнопки "Поддержка" и "Публичная оферта" если ссылки установлены
+	var supportAndOfferRow []models.InlineKeyboardButton
+	if config.SupportURL() != "" {
+		supportAndOfferRow = append(supportAndOfferRow, models.InlineKeyboardButton{
+			Text: h.translation.GetText(langCode, "support_button"),
+			URL:  config.SupportURL(),
+		})
+	}
+	if config.PublicOfferURL() != "" {
+		supportAndOfferRow = append(supportAndOfferRow, models.InlineKeyboardButton{
+			Text: h.translation.GetText(langCode, "public_offer_button"),
+			URL:  config.PublicOfferURL(),
+		})
+	}
+	if len(supportAndOfferRow) > 0 {
+		helpKeyboard = append(helpKeyboard, supportAndOfferRow)
+	}
+
+	// Кнопка "Назад"
 	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-			{Text: "🆘 Поддержка", URL: "https://t.me/Meows_support_bot"},
-			{Text: "📄 Публичная оферта", URL: "https://telegra.ph/Publichnaya-oferta-na-ispolzovanie-servisa-Meows-VPN-07-02"},
-	})
-	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-		{Text: "⬅️ Назад", CallbackData: CallbackStart},
+		{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart},
 	})
 
 	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Message.Message.Chat.ID,
 		MessageID: callback.Message.Message.ID,
 		ParseMode: models.ParseModeHTML,
-		Text:      "Помощь",
+		Text:      h.translation.GetText(langCode, "help_title"),
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: helpKeyboard,
 		},
