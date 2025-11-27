@@ -47,15 +47,15 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/remnawave-telegram-shop-bot
           tags: |
-            # latest только для main ветки и тегов
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref_type == 'tag' }}
-            # Версия из переменной (для всех веток)
+            # latest только для main ветки и тегов (но НЕ для тегов 3.3.*)
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && !startsWith(github.ref_name, '3.3.')) }}
+            # Версия из переменной (для всех веток и тегов)
             type=raw,value=${{ steps.vars.outputs.VERSION }}
-            # Для ветки 3.3.* создаем тег с префиксом ветки
+            # Для ветки 3.3.* (НЕ тегов) создаем тег с префиксом ветки
             type=raw,value=3.3.x-${{ steps.vars.outputs.VERSION }},enable=${{ startsWith(github.ref, 'refs/heads/3.3.') }}
-            # Semver теги только для git тегов
-            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' }}
+            # Semver теги только для git тегов (но НЕ для тегов 3.3.*)
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' && !startsWith(github.ref_name, '3.3.') }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' && !startsWith(github.ref_name, '3.3.') }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
