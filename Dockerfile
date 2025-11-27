@@ -25,6 +25,7 @@ FROM scratch
 
 ARG VERSION
 ARG COMMIT
+ARG GITHUB_REPOSITORY
 
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${COMMIT}"
