@@ -47,8 +47,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/remnawave-telegram-shop-bot
           tags: |
-            # latest только для main ветки и тегов (но НЕ для тегов 3.3.*)
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || (github.ref_type == 'tag' && !startsWith(github.ref_name, '3.3.')) }}
+            # latest только для git тегов (production версий), но НЕ для тегов 3.3.* и НЕ для коммитов в main
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !startsWith(github.ref_name, '3.3.') }}
             # Версия из переменной (для всех веток и тегов)
             type=raw,value=${{ steps.vars.outputs.VERSION }}
             # Для ветки 3.3.* (НЕ тегов) создаем тег с префиксом ветки

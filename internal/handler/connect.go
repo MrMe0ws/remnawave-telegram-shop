@@ -131,7 +131,7 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 					trafficLimitBytes := userInfo.TrafficLimitBytes.Value
 
 					// Получаем использованный трафик
-					usedTrafficBytes := int64(userInfo.UsedTrafficBytes)
+					usedTrafficBytes := int64(userInfo.UserTraffic.UsedTrafficBytes)
 
 					// Конвертируем байты в гигабайты (1 GB = 1073741824 байт)
 					bytesInGigabyte := float64(1073741824)

@@ -253,7 +253,7 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 }
 
 // getDeviceDisplayName создает информативное название устройства
-func (h Handler) getDeviceDisplayName(device remapi.HwidDevicesResponseResponseDevicesItem, deviceNumber int) string {
+func (h Handler) getDeviceDisplayName(device remapi.Device, deviceNumber int) string {
 	// Собираем доступную информацию об устройстве
 	var deviceInfo []string
 

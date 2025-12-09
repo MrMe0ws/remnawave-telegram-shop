@@ -1,5 +1,54 @@
 # Changelog
 
+## [3.5.0] - 2025-01-XX
+
+### Changed
+
+- **Remnawave API**: Обновлен SDK с `remnawave-api-go v2.2.3` до `v2.3.2`
+- **Совместимость**: Версия 3.5.0 совместима с Remnawave начиная от версии 2.3.0+
+- **Типы API**: Обновлены типы ответов API:
+  - `UserResponseResponse` → `User`
+  - `UsersResponseResponseItem` → `User`
+  - `GetAllUsersResponseDtoResponseUsersItem` → `User`
+  - `GetInternalSquadsResponseDto` → `InternalSquadsResponse`
+  - `HwidDevicesResponseResponseDevicesItem` → `Device`
+- **Сигнатуры методов API**: Обновлены вызовы методов:
+  - `GetAllUsers` теперь принимает `(ctx, float64, float64)` вместо структуры параметров
+  - `GetUserByTelegramId` теперь принимает `(ctx, string)` вместо структуры параметров
+  - `GetUserHwidDevices` теперь принимает `(ctx, string)` вместо структуры параметров
+- **Обработка ошибок**: Убрана обработка `NotFoundError` (больше не возвращается в новой версии API)
+- **Обновлены зависимости**:
+  - `golang.org/x/text`: `v0.30.0` → `v0.31.0`
+  - `github.com/go-faster/jx`: `v1.1.0` → `v1.2.0`
+  - `github.com/ogen-go/ogen`: `v1.16.0` → `v1.18.0`
+  - `go.uber.org/zap`: `v1.27.0` → `v1.27.1`
+  - `golang.org/x/crypto`: `v0.43.0` → `v0.44.0`
+  - `golang.org/x/net`: `v0.46.0` → `v0.47.0`
+  - `golang.org/x/sync`: `v0.17.0` → `v0.18.0`
+  - `golang.org/x/sys`: `v0.37.0` → `v0.38.0`
+
+### Fixed
+
+- **Tribute webhook**: Исправлена паника при обработке успешного платежа для несуществующего клиента
+  - Добавлена проверка ошибки после `FindByTelegramId`
+  - Добавлена проверка на `nil` для `customer` перед вызовом `CreatePurchase`
+- **Поиск пользователей**: Добавлена проверка на пустой ответ при поиске пользователя по Telegram ID в Remnawave API
+  - Если API возвращает пустой массив пользователей, создается новый пользователь
+- **Доступ к трафику**: Исправлен доступ к использованному трафику через `UserTraffic.UsedTrafficBytes` вместо прямого поля
+
+### Technical
+
+- Обновлены все функции работы с пользователями для использования новых типов API
+- Рефакторинг обработки ответов API: переход с `switch` на проверку типа с `type assertion`
+- Улучшена обработка пустых ответов во всех методах поиска пользователей
+- Обновлены методы `GetUserInfo`, `GetUserTrafficInfo`, `GetUserDevicesByUuid` для новой версии API
+
+### Migration Notes
+
+- ⚠️ **Важно**: При обновлении до версии 3.5.0 убедитесь, что ваш Remnawave сервер обновлен до версии 2.3.0 или выше
+- Версия 3.5.0 не совместима с Remnawave версий ниже 2.3.0
+- Все уникальные функции бота (стратегии сброса трафика, trial пользователи) сохранены и работают корректно
+
 ## [3.4.0] - 2025-11-24
 
 ### Added
