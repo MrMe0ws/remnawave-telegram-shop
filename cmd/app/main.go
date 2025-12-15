@@ -131,17 +131,25 @@ func main() {
 	_, err = b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
 		Commands: []models.BotCommand{
 			{Command: "start", Description: "Начать работу с ботом"},
+			{Command: "connect", Description: "Подключиться"},
 		},
 		LanguageCode: "ru",
 	})
+	if err != nil {
+		slog.Warn("Failed to set bot commands for Russian", "error", err)
+	}
 
 	// Установка списка команд бота для английского языка
 	_, err = b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
 		Commands: []models.BotCommand{
 			{Command: "start", Description: "Start using the bot"},
+			{Command: "connect", Description: "Connect"},
 		},
 		LanguageCode: "en",
 	})
+	if err != nil {
+		slog.Warn("Failed to set bot commands for English", "error", err)
+	}
 
 	// Сохранение URL бота в конфигурации (используется для генерации ссылок)
 	config.SetBotURL(fmt.Sprintf("https://t.me/%s", me.Username))

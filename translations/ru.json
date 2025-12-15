@@ -46,6 +46,8 @@
   "server_selection_button": "🌏 Какой сервер выбрать",
   "video_guide_button": "📺 Видеоинструкция",
   "public_offer_button": "📄 Публичная оферта",
+  "privacy_policy_button": "🔒 Политика конфиденциальности",
+  "terms_of_service_button": "📋 Пользовательское соглашение",
   "devices_button": "📱 Мои устройства",
   "devices_title": "<b>Ваши устройства:</b>\n\n",
   "device_limit": "Лимит устройств %d/%d\n\n",

@@ -195,6 +195,24 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		helpKeyboard = append(helpKeyboard, supportAndOfferRow)
 	}
 
+	// Добавляем кнопки "Политика конфиденциальности" и "Пользовательское соглашение" если ссылки установлены
+	var privacyAndTermsRow []models.InlineKeyboardButton
+	if config.PrivacyPolicyURL() != "" {
+		privacyAndTermsRow = append(privacyAndTermsRow, models.InlineKeyboardButton{
+			Text: h.translation.GetText(langCode, "privacy_policy_button"),
+			URL:  config.PrivacyPolicyURL(),
+		})
+	}
+	if config.TermsOfServiceURL() != "" {
+		privacyAndTermsRow = append(privacyAndTermsRow, models.InlineKeyboardButton{
+			Text: h.translation.GetText(langCode, "terms_of_service_button"),
+			URL:  config.TermsOfServiceURL(),
+		})
+	}
+	if len(privacyAndTermsRow) > 0 {
+		helpKeyboard = append(helpKeyboard, privacyAndTermsRow)
+	}
+
 	// Кнопка "Назад"
 	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
 		{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart},
