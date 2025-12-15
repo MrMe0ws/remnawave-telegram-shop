@@ -60,6 +60,8 @@
   "server_selection_button": "🌏 Which server to choose",
   "video_guide_button": "📺 Video guide",
   "public_offer_button": "📄 Public offer",
+  "privacy_policy_button": "🔒 Privacy Policy",
+  "user_agreement_button": "📋 User Agreement",
 
   "devices_button": "📱 My Devices",
   "devices_title": "📱 <b>Your devices:</b>\n\n",
