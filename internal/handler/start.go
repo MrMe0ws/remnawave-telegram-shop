@@ -248,19 +248,7 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 		inlineKeyboard = append(inlineKeyboard, h.resolveConnectButton(langCode))
 	}
 
-	// 4. Собираем кнопки для 2-в-ряд: рефералы, статус серверов
-	var firstRow []models.InlineKeyboardButton
-	if config.GetReferralDays() > 0 {
-		firstRow = append(firstRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "referral_button"), CallbackData: CallbackReferral})
-	}
-	if config.ServerStatusURL() != "" {
-		firstRow = append(firstRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "server_status_button"), URL: config.ServerStatusURL()})
-	}
-	if len(firstRow) > 0 {
-		inlineKeyboard = append(inlineKeyboard, firstRow)
-	}
-
-	// 5. Собираем кнопки для 2-в-ряд: отзывы, канал
+	// 4. Собираем кнопки для 2-в-ряд: отзывы, канал
 	var secondRow []models.InlineKeyboardButton
 	if config.FeedbackURL() != "" {
 		secondRow = append(secondRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "feedback_button"), URL: config.FeedbackURL()})

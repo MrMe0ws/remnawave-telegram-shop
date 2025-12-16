@@ -11,6 +11,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/utils"
@@ -37,6 +38,21 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 				URL: *customer.SubscriptionLink,
 			}}})
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+
+		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
+		var referralAndStatusRow []models.InlineKeyboardButton
+		// Кнопка "Рефералы" всегда показывается при активной подписке
+		referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+			Text:         h.translation.GetText(langCode, "referral_button"),
+			CallbackData: CallbackReferral,
+		})
+		if config.ServerStatusURL() != "" {
+			referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+				Text: h.translation.GetText(langCode, "server_status_button"),
+				URL:  config.ServerStatusURL(),
+			})
+		}
+		markup = append(markup, referralAndStatusRow)
 	} else {
 		// Если нет активной подписки, добавляем кнопку "Купить"
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
@@ -84,6 +100,21 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				URL: *customer.SubscriptionLink,
 			}}})
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+
+		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
+		var referralAndStatusRow []models.InlineKeyboardButton
+		// Кнопка "Рефералы" всегда показывается при активной подписке
+		referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+			Text:         h.translation.GetText(langCode, "referral_button"),
+			CallbackData: CallbackReferral,
+		})
+		if config.ServerStatusURL() != "" {
+			referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+				Text: h.translation.GetText(langCode, "server_status_button"),
+				URL:  config.ServerStatusURL(),
+			})
+		}
+		markup = append(markup, referralAndStatusRow)
 	} else {
 		// Если нет активной подписки, добавляем кнопку "Купить"
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
