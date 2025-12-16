@@ -9,6 +9,7 @@ import (
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
@@ -29,6 +30,7 @@ type PaymentService struct {
 	yookasaClient      *yookasa.Client
 	referralRepository *database.ReferralRepository
 	cache              *cache.Cache
+	moynalogClient     *moynalog.Client
 }
 
 func NewPaymentService(
@@ -41,6 +43,7 @@ func NewPaymentService(
 	yookasaClient *yookasa.Client,
 	referralRepository *database.ReferralRepository,
 	cache *cache.Cache,
+	moynalogClient *moynalog.Client,
 ) *PaymentService {
 	return &PaymentService{
 		purchaseRepository: purchaseRepository,
@@ -52,6 +55,7 @@ func NewPaymentService(
 		yookasaClient:      yookasaClient,
 		referralRepository: referralRepository,
 		cache:              cache,
+		moynalogClient:     moynalogClient,
 	}
 }
 
@@ -61,7 +65,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		return err
 	}
 	if purchase == nil {
-		return fmt.Errorf("purchase with crypto invoice id %d not found", utils.MaskHalfInt64(purchaseId))
+		return fmt.Errorf("purchase with crypto invoice id %s not found", utils.MaskHalfInt64(purchaseId))
 	}
 
 	customer, err := s.customerRepository.FindById(ctx, purchase.CustomerID)
@@ -90,6 +94,25 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	err = s.purchaseRepository.MarkAsPaid(ctx, purchase.ID)
 	if err != nil {
 		return err
+	}
+
+	slog.Info("checking conditions for Moynalog receipt", "invoice_type", purchase.InvoiceType, "moynalog_client", s.moynalogClient != nil)
+	if purchase.InvoiceType == database.InvoiceTypeYookasa && s.moynalogClient != nil {
+		slog.Info("attempting to send receipt to Moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "month", purchase.Month)
+		go func() {
+			err := s.sendReceiptToMoynalog(purchase)
+			if err != nil {
+				slog.Error("error sending receipt to Moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+			} else {
+				slog.Info("successfully sent receipt to Moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID))
+			}
+		}()
+	} else {
+		if purchase.InvoiceType != database.InvoiceTypeYookasa {
+			slog.Info("not sending receipt to Moynalog - not a Yookasa invoice", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		} else if s.moynalogClient == nil {
+			slog.Error("not sending receipt to Moynalog - client is nil", "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		}
 	}
 
 	customerFilesToUpdate := map[string]interface{}{
@@ -399,7 +422,7 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 		return err
 	}
 	if purchase == nil {
-		return fmt.Errorf("purchase with crypto invoice id %d not found", utils.MaskHalfInt64(purchaseId))
+		return fmt.Errorf("purchase with crypto invoice id %s not found", utils.MaskHalfInt64(purchaseId))
 	}
 
 	purchaseFieldsToUpdate := map[string]interface{}{
@@ -429,4 +452,33 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 	}
 
 	return "", purchaseId, nil
+}
+
+func (s PaymentService) sendReceiptToMoynalog(purchase *database.Purchase) error {
+	if s.moynalogClient == nil {
+		return fmt.Errorf("moynalog client not initialized")
+	}
+
+	// Подготовка данных для чека
+	// Используем описание из Юкассы, как в функции createYookasaInvoice
+	var monthString string
+	switch purchase.Month {
+	case 1:
+		monthString = "месяц"
+	case 3, 4:
+		monthString = "месяца"
+	default:
+		monthString = "месяцев"
+	}
+	comment := fmt.Sprintf("Подписка на %d %s", purchase.Month, monthString)
+	amount := purchase.Amount
+
+	// Вызов метода для создания чека
+	_, err := s.moynalogClient.CreateIncome(amount, comment)
+	if err != nil {
+		return fmt.Errorf("failed to create income in Moynalog: %w", err)
+	}
+
+	slog.Info("Receipt sent to Moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", amount, "comment", comment)
+	return nil
 }

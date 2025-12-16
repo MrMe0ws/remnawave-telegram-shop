@@ -13,6 +13,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/handler"
+	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/notification"
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/remnawave"
@@ -45,6 +46,19 @@ func main() {
 
 	// Инициализация конфигурации из переменных окружения
 	config.InitConfig()
+	slog.Info("Application starting", "version", Version, "commit", Commit, "buildDate", BuildDate)
+
+	// Check if Moynalog is enabled
+	var moynalogClient *moynalog.Client
+	if config.IsMoynalogEnabled() {
+		var err error
+		moynalogClient, err = moynalog.NewClient(config.MoynalogUrl(), config.MoynalogUsername(), config.MoynalogPassword())
+		if err != nil {
+			log.Fatalf("Moynalog initialization error: %v", err)
+		}
+
+		slog.Info("Moynalog authentication successful")
+	}
 
 	// Инициализация системы переводов (поддержка русского и английского языков)
 	tm := translation.GetInstance()
@@ -85,7 +99,7 @@ func main() {
 	}
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// Проверяет оплаченные счета в CryptoPay и YooKassa
