@@ -13,6 +13,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/handler"
+	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/notification"
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/remnawave"
@@ -71,6 +72,15 @@ func main() {
 	remnawaveClient := remnawave.NewClient(config.RemnawaveUrl(), config.RemnawaveToken(), config.RemnawaveMode()) // Remnawave API
 	yookasaClient := yookasa.NewClient(config.YookasaUrl(), config.YookasaShopId(), config.YookasaSecretKey())     // YooKassa платежи
 
+	// Инициализация клиента МойНалог (опционально, если указаны учетные данные)
+	var moynalogClient *moynalog.Client
+	if config.MoynalogUsername() != "" && config.MoynalogPassword() != "" {
+		moynalogClient = moynalog.NewClient(config.MoynalogURL(), config.MoynalogUsername(), config.MoynalogPassword())
+		slog.Info("Moynalog client initialized")
+	} else {
+		slog.Info("Moynalog credentials not provided, skipping moynalog integration")
+	}
+
 	// Создание экземпляра Telegram бота с 3 воркерами для параллельной обработки запросов
 	b, err := bot.New(config.TelegramToken(), bot.WithWorkers(3))
 	if err != nil {
@@ -78,7 +88,7 @@ func main() {
 	}
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// Проверяет оплаченные счета в CryptoPay и YooKassa

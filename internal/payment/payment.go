@@ -4,18 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 	"log/slog"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"remnawave-tg-shop-bot/utils"
 	"time"
+
+	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 type PaymentService struct {
@@ -28,6 +30,7 @@ type PaymentService struct {
 	yookasaClient      *yookasa.Client
 	referralRepository *database.ReferralRepository
 	cache              *cache.Cache
+	moynalogClient     *moynalog.Client
 }
 
 func NewPaymentService(
@@ -40,6 +43,7 @@ func NewPaymentService(
 	yookasaClient *yookasa.Client,
 	referralRepository *database.ReferralRepository,
 	cache *cache.Cache,
+	moynalogClient *moynalog.Client,
 ) *PaymentService {
 	return &PaymentService{
 		purchaseRepository: purchaseRepository,
@@ -51,6 +55,7 @@ func NewPaymentService(
 		yookasaClient:      yookasaClient,
 		referralRepository: referralRepository,
 		cache:              cache,
+		moynalogClient:     moynalogClient,
 	}
 }
 
@@ -89,6 +94,38 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	err = s.purchaseRepository.MarkAsPaid(ctx, purchase.ID)
 	if err != nil {
 		return err
+	}
+
+	// Отправка чека в МойНалог для платежей YooKassa (сразу после подтверждения платежа)
+	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
+		slog.Debug("Attempting to send moynalog receipt", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+
+		var monthString string
+		switch purchase.Month {
+		case 1:
+			monthString = "месяц"
+		case 2, 3, 4:
+			monthString = "месяца"
+		default:
+			monthString = "месяцев"
+		}
+
+		description := fmt.Sprintf("Подписка на %d %s", purchase.Month, monthString)
+
+		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
+
+		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
+			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+			// Не прерываем обработку покупки при ошибке отправки чека
+		} else {
+			slog.Info("Receipt sent to moynalog successfully", "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		}
+	} else {
+		if s.moynalogClient == nil {
+			slog.Debug("Moynalog client not available, skipping receipt", "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		} else if purchase.InvoiceType != database.InvoiceTypeYookasa {
+			slog.Debug("Invoice type is not YooKassa, skipping moynalog receipt", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		}
 	}
 
 	customerFilesToUpdate := map[string]interface{}{

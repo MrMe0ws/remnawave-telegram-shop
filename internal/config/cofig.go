@@ -51,6 +51,7 @@ type config struct {
 	trialTrafficLimitResetStrategy                            string
 	blockedTelegramIds                                        map[int64]bool
 	whitelistedTelegramIds                                    map[int64]bool
+	moynalogURL, moynalogUsername, moynalogPassword           string
 }
 
 var conf config
@@ -266,6 +267,18 @@ func IsWepAppLinkEnabled() bool {
 
 func GetXApiKey() string {
 	return conf.xApiKey
+}
+
+func MoynalogURL() string {
+	return conf.moynalogURL
+}
+
+func MoynalogUsername() string {
+	return conf.moynalogUsername
+}
+
+func MoynalogPassword() string {
+	return conf.moynalogPassword
 }
 
 const bytesInGigabyte = 1073741824
@@ -491,4 +504,9 @@ func InitConfig() {
 			return map[int64]bool{}
 		}
 	}()
+
+	// Moynalog configuration (optional)
+	conf.moynalogURL = envStringDefault("MOYNALOG_URL", "https://lknpd.nalog.ru")
+	conf.moynalogUsername = os.Getenv("MOYNALOG_USERNAME")
+	conf.moynalogPassword = os.Getenv("MOYNALOG_PASSWORD")
 }
