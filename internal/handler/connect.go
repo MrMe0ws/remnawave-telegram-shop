@@ -11,6 +11,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/utils"
@@ -48,6 +49,24 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 				URL: *customer.SubscriptionLink,
 			}}})
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+
+		// Кнопки Рефералы и Статус серверов в одном ряду
+		var referralAndStatusRow []models.InlineKeyboardButton
+		// Рефералы показываем всегда (если подписка активна)
+		referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+			Text:         h.translation.GetText(langCode, "referral_button"),
+			CallbackData: CallbackReferral,
+		})
+		// Статус серверов показываем только если URL указан
+		if config.ServerStatusURL() != "" {
+			referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+				Text: h.translation.GetText(langCode, "server_status_button"),
+				URL:  config.ServerStatusURL(),
+			})
+		}
+		if len(referralAndStatusRow) > 0 {
+			markup = append(markup, referralAndStatusRow)
+		}
 	}
 
 	// Если подписка истекла, показываем кнопку "Купить"
@@ -109,6 +128,24 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				URL: *customer.SubscriptionLink,
 			}}})
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+
+		// Кнопки Рефералы и Статус серверов в одном ряду
+		var referralAndStatusRow []models.InlineKeyboardButton
+		// Рефералы показываем всегда (если подписка активна)
+		referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+			Text:         h.translation.GetText(langCode, "referral_button"),
+			CallbackData: CallbackReferral,
+		})
+		// Статус серверов показываем только если URL указан
+		if config.ServerStatusURL() != "" {
+			referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
+				Text: h.translation.GetText(langCode, "server_status_button"),
+				URL:  config.ServerStatusURL(),
+			})
+		}
+		if len(referralAndStatusRow) > 0 {
+			markup = append(markup, referralAndStatusRow)
+		}
 	}
 
 	// Если подписка истекла, показываем кнопку "Купить"
