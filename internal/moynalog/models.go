@@ -1,48 +1,68 @@
 package moynalog
 
-import "time"
+import (
+	"time"
+)
 
-// AuthRequest представляет запрос на аутентификацию
+// AuthRequest - структура для запроса аутентификации
 type AuthRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username   string     `json:"username"`
+	Password   string     `json:"password"`
+	DeviceInfo DeviceInfo `json:"deviceInfo"`
 }
 
-// AuthResponse представляет ответ на аутентификацию
+// DeviceInfo - информация об устройстве для аутентификации
+type DeviceInfo struct {
+	SourceDeviceId string      `json:"sourceDeviceId"`
+	SourceType     string      `json:"sourceType"`
+	AppVersion     string      `json:"appVersion"`
+	MetaDetails    MetaDetails `json:"metaDetails"`
+}
+
+// MetaDetails - дополнительная информация об устройстве
+type MetaDetails struct {
+	UserAgent string `json:"userAgent"`
+}
+
+// AuthResponse - ответ на запрос аутентификации
 type AuthResponse struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Token string `json:"token"`
 }
 
-// CreateIncomeRequest представляет запрос на создание чека о доходе
+// CreateIncomeRequest - структура для запроса создания дохода (чека)
 type CreateIncomeRequest struct {
-	Amount      float64 `json:"amount"`
-	Description string  `json:"description"`
-	Date        string  `json:"date"` // Формат: "YYYY-MM-DD"
+	OperationTime                   time.Time    `json:"operationTime"`
+	RequestTime                     time.Time    `json:"requestTime"`
+	Services                        []Service    `json:"services"`
+	TotalAmount                     string       `json:"totalAmount"`
+	Client                          IncomeClient `json:"client"`
+	PaymentType                     string       `json:"paymentType"`
+	IgnoreMaxTotalIncomeRestriction bool         `json:"ignoreMaxTotalIncomeRestriction"`
 }
 
-// CreateIncomeResponse представляет ответ на создание чека
+// Service - услуга в чеке
+type Service struct {
+	Name     string  `json:"name"`
+	Amount   float64 `json:"amount"`
+	Quantity int     `json:"quantity"`
+}
+
+// IncomeClient - клиент в чеке
+type IncomeClient struct {
+	ContactPhone *string `json:"contactPhone,omitempty"`
+	DisplayName  *string `json:"displayName,omitempty"`
+	INN          *string `json:"inn,omitempty"`
+	IncomeType   string  `json:"incomeType"`
+}
+
+// CreateIncomeResponse - ответ на запрос создания дохода
 type CreateIncomeResponse struct {
-	ID          string    `json:"id"`
-	Amount      float64   `json:"amount"`
-	Description string    `json:"description"`
-	Date        string    `json:"date"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
-// TaxpayerProfile представляет профиль налогоплательщика
-type TaxpayerProfile struct {
-	INN       string `json:"inn"`
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	TaxSystem string `json:"tax_system"`
-}
-
-// IncomeRecord представляет запись о доходе
-type IncomeRecord struct {
-	ID          string    `json:"id"`
-	Amount      float64   `json:"amount"`
-	Description string    `json:"description"`
-	Date        string    `json:"date"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID            string       `json:"id"`
+	OperationTime time.Time    `json:"operationTime"`
+	RequestTime   time.Time    `json:"requestTime"`
+	Services      []Service    `json:"services"`
+	TotalAmount   string       `json:"totalAmount"`
+	Client        IncomeClient `json:"client"`
+	PaymentType   string       `json:"paymentType"`
+	Status        string       `json:"status"`
 }

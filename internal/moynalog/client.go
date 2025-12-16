@@ -18,7 +18,6 @@ type Client struct {
 	username   string
 	password   string
 	token      string
-	tokenExp   time.Time
 }
 
 // NewClient создает новый клиент МойНалог
@@ -46,14 +45,24 @@ func NewClient(baseURL, username, password string) *Client {
 
 // Authenticate выполняет аутентификацию и сохраняет токен
 func (c *Client) Authenticate(ctx context.Context) error {
-	authURL := fmt.Sprintf("%s/api/auth", c.baseURL)
+	authURL := fmt.Sprintf("%s/auth/lkfl", c.baseURL)
 
-	authReq := AuthRequest{
-		Username: c.username,
-		Password: c.password,
+	deviceInfo := DeviceInfo{
+		SourceDeviceId: "*",
+		SourceType:     "WEB",
+		AppVersion:     "1.0.0",
+		MetaDetails: MetaDetails{
+			UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0 Safari/537.36",
+		},
 	}
 
-	reqBody, err := json.Marshal(authReq)
+	authRequest := AuthRequest{
+		Username:   c.username,
+		Password:   c.password,
+		DeviceInfo: deviceInfo,
+	}
+
+	reqBody, err := json.Marshal(authRequest)
 	if err != nil {
 		return fmt.Errorf("failed to marshal auth request: %w", err)
 	}
@@ -64,6 +73,7 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -72,26 +82,28 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("authentication failed. Status: %d, Body: %s", resp.StatusCode, string(body))
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error reading response body: %w", err)
+		}
+		return fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var authResp AuthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
+		return fmt.Errorf("failed to decode auth response: %w", err)
 	}
 
 	c.token = authResp.Token
-	c.tokenExp = authResp.ExpiresAt
 
-	slog.Info("Moynalog client authenticated successfully", "expires_at", authResp.ExpiresAt)
+	slog.Info("Moynalog client authenticated successfully")
 	return nil
 }
 
 // ensureAuthenticated проверяет и обновляет токен при необходимости
 func (c *Client) ensureAuthenticated(ctx context.Context) error {
-	// Если токен истекает в течение 5 минут, обновляем его
-	if c.token == "" || time.Until(c.tokenExp) < 5*time.Minute {
+	// Если токен пустой, обновляем его
+	if c.token == "" {
 		return c.Authenticate(ctx)
 	}
 	return nil
@@ -103,15 +115,34 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		return fmt.Errorf("authentication failed: %w", err)
 	}
 
-	incomeURL := fmt.Sprintf("%s/api/income", c.baseURL)
+	incomeURL := fmt.Sprintf("%s/income", c.baseURL)
 
-	incomeReq := CreateIncomeRequest{
-		Amount:      amount,
-		Description: description,
-		Date:        time.Now().Format("2006-01-02"),
+	formattedTime := getFormattedTime()
+
+	service := Service{
+		Name:     description,
+		Amount:   amount,
+		Quantity: 1,
 	}
 
-	reqBody, err := json.Marshal(incomeReq)
+	client := IncomeClient{
+		ContactPhone: nil,
+		DisplayName:  nil,
+		INN:          nil,
+		IncomeType:   "FROM_INDIVIDUAL",
+	}
+
+	incomeRequest := CreateIncomeRequest{
+		OperationTime:                   parseTimeString(formattedTime),
+		RequestTime:                     parseTimeString(formattedTime),
+		Services:                        []Service{service},
+		TotalAmount:                     fmt.Sprintf("%.2f", amount),
+		Client:                          client,
+		PaymentType:                     "CASH",
+		IgnoreMaxTotalIncomeRestriction: false,
+	}
+
+	reqBody, err := json.Marshal(incomeRequest)
 	if err != nil {
 		return fmt.Errorf("failed to marshal income request: %w", err)
 	}
@@ -122,7 +153,9 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -131,15 +164,35 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to create income receipt. Status: %d, Body: %s", resp.StatusCode, string(body))
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error reading response body: %w", err)
+		}
+		return fmt.Errorf("create income failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var incomeResp CreateIncomeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&incomeResp); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
+		return fmt.Errorf("failed to decode income response: %w", err)
 	}
 
 	slog.Info("Income receipt created successfully", "id", incomeResp.ID, "amount", amount)
 	return nil
+}
+
+func parseTimeString(timeStr string) time.Time {
+	t, err := time.Parse("2006-01-02T15:04:05-07:00", timeStr)
+	if err != nil {
+		// Если формат не соответствует, пробуем другой формат
+		t, err = time.Parse("2006-01-02T15:04:05", timeStr)
+		if err != nil {
+			// Если оба формата не подходят, возвращаем текущее время
+			return time.Now()
+		}
+	}
+	return t
+}
+
+func getFormattedTime() string {
+	return time.Now().Format("2006-01-02T15:04:05-07:00")
 }
