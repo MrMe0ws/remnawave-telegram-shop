@@ -2,35 +2,49 @@ package moynalog
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 )
 
+// Client представляет клиент для работы с API МойНалог
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
+	username   string
+	password   string
 	token      string
 }
 
-func NewClient(baseURL, username, password string) (*Client, error) {
+// NewClient создает новый клиент МойНалог
+func NewClient(baseURL, username, password string) *Client {
 	client := &Client{
-		httpClient: &http.Client{},
-		baseURL:    baseURL,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		baseURL:  baseURL,
+		username: username,
+		password: password,
 	}
 
-	authResp, err := client.Authenticate(username, password)
-	if err != nil {
-		return nil, fmt.Errorf("authentication failed: %w", err)
+	// Автоматическая аутентификация при создании клиента
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := client.Authenticate(ctx); err != nil {
+		slog.Error("Failed to authenticate moynalog client on startup", "error", err)
+		// Не паникуем, чтобы не сломать запуск приложения, если МойНалог недоступен
 	}
 
-	client.token = authResp.Token
-	return client, nil
+	return client
 }
 
-func (c *Client) Authenticate(username, password string) (*AuthResponse, error) {
+// Authenticate выполняет аутентификацию и сохраняет токен
+func (c *Client) Authenticate(ctx context.Context) error {
 	authURL := fmt.Sprintf("%s/auth/lkfl", c.baseURL)
 
 	deviceInfo := DeviceInfo{
@@ -43,19 +57,19 @@ func (c *Client) Authenticate(username, password string) (*AuthResponse, error) 
 	}
 
 	authRequest := AuthRequest{
-		Username:   username,
-		Password:   password,
+		Username:   c.username,
+		Password:   c.password,
 		DeviceInfo: deviceInfo,
 	}
 
 	reqBody, err := json.Marshal(authRequest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal auth request: %w", err)
+		return fmt.Errorf("failed to marshal auth request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", authURL, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", authURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -63,33 +77,50 @@ func (c *Client) Authenticate(username, password string) (*AuthResponse, error) 
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			return fmt.Errorf("error reading response body: %w", err)
 		}
-		return nil, fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var authResp AuthResponse
 	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
-		return nil, fmt.Errorf("failed to decode auth response: %w", err)
+		return fmt.Errorf("failed to decode auth response: %w", err)
 	}
 
-	return &authResp, nil
+	c.token = authResp.Token
+
+	slog.Info("Moynalog client authenticated successfully")
+	return nil
 }
 
-func (c *Client) CreateIncome(amount float64, comment string) (*CreateIncomeResponse, error) {
+// ensureAuthenticated проверяет и обновляет токен при необходимости
+func (c *Client) ensureAuthenticated(ctx context.Context) error {
+	// Если токен пустой, обновляем его
+	if c.token == "" {
+		return c.Authenticate(ctx)
+	}
+	return nil
+}
+
+// CreateIncome создает чек о доходе
+func (c *Client) CreateIncome(ctx context.Context, amount float64, description string) error {
+	if err := c.ensureAuthenticated(ctx); err != nil {
+		return fmt.Errorf("authentication failed: %w", err)
+	}
+
 	incomeURL := fmt.Sprintf("%s/income", c.baseURL)
 
 	formattedTime := getFormattedTime()
 
 	service := Service{
-		Name:     comment,
+		Name:     description,
 		Amount:   amount,
 		Quantity: 1,
 	}
@@ -113,12 +144,12 @@ func (c *Client) CreateIncome(amount float64, comment string) (*CreateIncomeResp
 
 	reqBody, err := json.Marshal(incomeRequest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal income request: %w", err)
+		return fmt.Errorf("failed to marshal income request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", incomeURL, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", incomeURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -128,24 +159,25 @@ func (c *Client) CreateIncome(amount float64, comment string) (*CreateIncomeResp
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
+			return fmt.Errorf("error reading response body: %w", err)
 		}
-		return nil, fmt.Errorf("create income failed with status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("create income failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var incomeResp CreateIncomeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&incomeResp); err != nil {
-		return nil, fmt.Errorf("failed to decode income response: %w", err)
+		return fmt.Errorf("failed to decode income response: %w", err)
 	}
 
-	return &incomeResp, nil
+	slog.Info("Income receipt created successfully", "id", incomeResp.ID, "amount", amount)
+	return nil
 }
 
 func parseTimeString(timeStr string) time.Time {

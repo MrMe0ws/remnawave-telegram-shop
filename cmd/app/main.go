@@ -48,16 +48,13 @@ func main() {
 	config.InitConfig()
 	slog.Info("Application starting", "version", Version, "commit", Commit, "buildDate", BuildDate)
 
-	// Check if Moynalog is enabled
+	// Инициализация клиента МойНалог (опционально, если включен)
 	var moynalogClient *moynalog.Client
 	if config.IsMoynalogEnabled() {
-		var err error
-		moynalogClient, err = moynalog.NewClient(config.MoynalogUrl(), config.MoynalogUsername(), config.MoynalogPassword())
-		if err != nil {
-			log.Fatalf("Moynalog initialization error: %v", err)
-		}
-
-		slog.Info("Moynalog authentication successful")
+		moynalogClient = moynalog.NewClient(config.MoynalogUrl(), config.MoynalogUsername(), config.MoynalogPassword())
+		slog.Info("Moynalog client initialized")
+	} else {
+		slog.Info("Moynalog integration disabled")
 	}
 
 	// Инициализация системы переводов (поддержка русского и английского языков)
