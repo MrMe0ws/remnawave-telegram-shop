@@ -51,6 +51,7 @@ type config struct {
 	trialTrafficLimitResetStrategy                            string
 	blockedTelegramIds                                        map[int64]bool
 	whitelistedTelegramIds                                    map[int64]bool
+	isMoynalogEnabled                                         bool
 	moynalogURL, moynalogUsername, moynalogPassword           string
 }
 
@@ -251,6 +252,10 @@ func IsYookasaEnabled() bool {
 
 func IsTelegramStarsEnabled() bool {
 	return conf.isTelegramStarsEnabled
+}
+
+func IsMoynalogEnabled() bool {
+	return conf.isMoynalogEnabled
 }
 
 func GetAdminTelegramId() int64 {
@@ -506,7 +511,10 @@ func InitConfig() {
 	}()
 
 	// Moynalog configuration (optional)
-	conf.moynalogURL = envStringDefault("MOYNALOG_URL", "https://lknpd.nalog.ru")
-	conf.moynalogUsername = os.Getenv("MOYNALOG_USERNAME")
-	conf.moynalogPassword = os.Getenv("MOYNALOG_PASSWORD")
+	conf.isMoynalogEnabled = envBool("MOYNALOG_ENABLED")
+	if conf.isMoynalogEnabled {
+		conf.moynalogURL = envStringDefault("MOYNALOG_URL", "https://lknpd.nalog.ru")
+		conf.moynalogUsername = mustEnv("MOYNALOG_USERNAME")
+		conf.moynalogPassword = mustEnv("MOYNALOG_PASSWORD")
+	}
 }

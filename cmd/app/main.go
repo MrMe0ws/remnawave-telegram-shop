@@ -72,13 +72,13 @@ func main() {
 	remnawaveClient := remnawave.NewClient(config.RemnawaveUrl(), config.RemnawaveToken(), config.RemnawaveMode()) // Remnawave API
 	yookasaClient := yookasa.NewClient(config.YookasaUrl(), config.YookasaShopId(), config.YookasaSecretKey())     // YooKassa платежи
 
-	// Инициализация клиента МойНалог (опционально, если указаны учетные данные)
+	// Инициализация клиента МойНалог (опционально, если включен)
 	var moynalogClient *moynalog.Client
-	if config.MoynalogUsername() != "" && config.MoynalogPassword() != "" {
+	if config.IsMoynalogEnabled() {
 		moynalogClient = moynalog.NewClient(config.MoynalogURL(), config.MoynalogUsername(), config.MoynalogPassword())
 		slog.Info("Moynalog client initialized")
 	} else {
-		slog.Info("Moynalog credentials not provided, skipping moynalog integration")
+		slog.Info("Moynalog integration disabled")
 	}
 
 	// Создание экземпляра Telegram бота с 3 воркерами для параллельной обработки запросов
