@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -147,36 +148,62 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		return fmt.Errorf("failed to marshal income request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", incomeURL, bytes.NewBuffer(reqBody))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
+	errTokenExpired := errors.New("moynalog token expired")
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		body, err := io.ReadAll(resp.Body)
+	doSend := func() error {
+		req, err := http.NewRequestWithContext(ctx, "POST", incomeURL, bytes.NewBuffer(reqBody))
 		if err != nil {
-			return fmt.Errorf("error reading response body: %w", err)
+			return fmt.Errorf("failed to create request: %w", err)
 		}
-		return fmt.Errorf("create income failed with status %d: %s", resp.StatusCode, string(body))
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/plain, */*")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token))
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			// токен истёк/невалиден — сигнализируем наверх для реавторизации
+			return errTokenExpired
+		}
+
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("error reading response body: %w", err)
+			}
+			return fmt.Errorf("create income failed with status %d: %s", resp.StatusCode, string(body))
+		}
+
+		var incomeResp CreateIncomeResponse
+		if err := json.NewDecoder(resp.Body).Decode(&incomeResp); err != nil {
+			return fmt.Errorf("failed to decode income response: %w", err)
+		}
+
+		slog.Info("Income receipt created successfully", "id", incomeResp.ID, "amount", amount)
+		return nil
 	}
 
-	var incomeResp CreateIncomeResponse
-	if err := json.NewDecoder(resp.Body).Decode(&incomeResp); err != nil {
-		return fmt.Errorf("failed to decode income response: %w", err)
+	// Первая попытка
+	if err := doSend(); err != nil {
+		if errors.Is(err, errTokenExpired) {
+			// Переавторизация и повтор
+			if authErr := c.Authenticate(ctx); authErr != nil {
+				return fmt.Errorf("reauthentication failed after token expiration: %w", authErr)
+			}
+			if retryErr := doSend(); retryErr != nil {
+				return fmt.Errorf("create income failed after reauthentication: %w", retryErr)
+			}
+			return nil
+		}
+		return err
 	}
 
-	slog.Info("Income receipt created successfully", "id", incomeResp.ID, "amount", amount)
 	return nil
 }
 
