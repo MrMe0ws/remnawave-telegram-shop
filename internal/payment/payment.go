@@ -116,6 +116,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 
 		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
 			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+			notifyAdminMoynalogFailure(ctx, s.telegramBot, config.GetAdminTelegramId(), purchase, err, description)
 			// Не прерываем обработку покупки при ошибке отправки чека
 		} else {
 			slog.Info("Receipt sent to moynalog successfully", "purchase_id", utils.MaskHalfInt64(purchase.ID))
@@ -465,4 +466,27 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 	}
 
 	return "", purchaseId, nil
+}
+
+// notifyAdminMoynalogFailure отправляет админу уведомление о неуспешной отправке чека в МойНалог
+func notifyAdminMoynalogFailure(ctx context.Context, b *bot.Bot, adminID int64, purchase *database.Purchase, sendErr error, description string) {
+	if b == nil || adminID == 0 || purchase == nil {
+		return
+	}
+
+	msg := fmt.Sprintf(
+		"Не удалось создать чек в Мой Налог.\nПокупка ID: %d\nСумма: %.2f\nОписание: %s\nТип счета: %s\nОшибка: %v",
+		purchase.ID,
+		purchase.Amount,
+		description,
+		purchase.InvoiceType,
+		sendErr,
+	)
+
+	if _, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: adminID,
+		Text:   msg,
+	}); err != nil {
+		slog.Error("Failed to notify admin about moynalog receipt failure", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+	}
 }
