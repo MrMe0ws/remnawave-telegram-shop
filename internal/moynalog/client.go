@@ -197,11 +197,12 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		return fmt.Errorf("failed to marshal income request: %w", err)
 	}
 
-	maxRetries := 2
+	maxRetries := 3
+	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		if attempt > 0 {
 			// Небольшая задержка перед повтором
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * time.Duration(attempt))
 		}
 
 		err := c.sendIncomeRequest(ctx, incomeURL, reqBody, amount)
@@ -209,25 +210,32 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 			return nil
 		}
 
+		lastErr = err
+		slog.Warn("Failed to create income", "attempt", attempt+1, "maxRetries", maxRetries, "error", err)
+
 		// Если это ошибка авторизации, пытаемся переавторизоваться
 		if errors.Is(err, ErrAuth) {
+			slog.Info("Authentication error detected, reauthenticating", "attempt", attempt+1)
 			if authErr := c.Authenticate(ctx); authErr != nil {
 				return fmt.Errorf("reauthentication failed: %w", authErr)
 			}
-			// Продолжаем цикл для повторной попытки
+			// Продолжаем цикл для повторной попытки после переавторизации
 			continue
 		}
 
 		// Если это retryable ошибка и не последняя попытка, продолжаем
 		if isRetryableError(err) && attempt < maxRetries-1 {
+			slog.Info("Retryable error detected, will retry", "attempt", attempt+1)
 			continue
 		}
 
-		// Если это не retryable ошибка или последняя попытка, возвращаем ошибку
-		return err
+		// Если это не retryable ошибка, возвращаем ошибку сразу
+		if !isRetryableError(err) {
+			return fmt.Errorf("non-retryable error: %w", err)
+		}
 	}
 
-	return fmt.Errorf("failed to create income after %d attempts", maxRetries)
+	return fmt.Errorf("failed to create income after %d attempts: %w", maxRetries, lastErr)
 }
 
 // sendIncomeRequest отправляет запрос на создание чека
@@ -253,23 +261,29 @@ func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBod
 		var netErr net.Error
 		if errors.As(err, &netErr) {
 			if netErr.Timeout() || netErr.Temporary() {
+				slog.Warn("Network error (retryable)", "error", err, "timeout", netErr.Timeout(), "temporary", netErr.Temporary())
 				return fmt.Errorf("%w: %w", ErrRetryable, err)
 			}
 		}
+		slog.Error("Network error (non-retryable)", "error", err)
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
-		return fmt.Errorf("%w: status %d", ErrAuth, resp.StatusCode)
+		b, _ := io.ReadAll(resp.Body)
+		slog.Warn("Authentication error from moynalog", "status", resp.StatusCode, "body", string(b))
+		return fmt.Errorf("%w: status %d: %s", ErrAuth, resp.StatusCode, b)
 
 	case resp.StatusCode >= 500:
 		b, _ := io.ReadAll(resp.Body)
+		slog.Warn("Server error from moynalog", "status", resp.StatusCode, "body", string(b))
 		return fmt.Errorf("%w: status %d: %s", ErrRetryable, resp.StatusCode, b)
 
 	case resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated:
 		b, _ := io.ReadAll(resp.Body)
+		slog.Error("Client error from moynalog", "status", resp.StatusCode, "body", string(b))
 		return fmt.Errorf("%w: status %d: %s", ErrClient, resp.StatusCode, b)
 	}
 
