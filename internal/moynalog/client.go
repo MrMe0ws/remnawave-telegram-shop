@@ -60,8 +60,14 @@ func NewClient(baseURL, username, password string) *Client {
 	return c
 }
 
+// clearToken очищает токен (используется при ошибке авторизации)
+func (c *Client) clearToken() {
+	c.token.Store("")
+}
+
 // Authenticate выполняет аутентификацию и сохраняет токен
-func (c *Client) Authenticate(ctx context.Context) error {
+// forceReauth принудительно выполняет переаутентификацию, даже если токен уже есть
+func (c *Client) Authenticate(ctx context.Context, forceReauth ...bool) error {
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
 
@@ -70,9 +76,12 @@ func (c *Client) Authenticate(ctx context.Context) error {
 		c.authCond.Wait()
 	}
 
-	// Проверяем, не авторизовались ли мы пока ждали
-	if token := c.token.Load(); token != nil && token.(string) != "" {
-		return nil
+	// Проверяем, не авторизовались ли мы пока ждали (только если не принудительная переаутентификация)
+	force := len(forceReauth) > 0 && forceReauth[0]
+	if !force {
+		if token := c.token.Load(); token != nil && token.(string) != "" {
+			return nil
+		}
 	}
 
 	c.authInFlight = true
@@ -213,10 +222,11 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		lastErr = err
 		slog.Warn("Failed to create income", "attempt", attempt+1, "maxRetries", maxRetries, "error", err)
 
-		// Если это ошибка авторизации, пытаемся переавторизоваться
+		// Если это ошибка авторизации, очищаем токен и переавторизуемся
 		if errors.Is(err, ErrAuth) {
-			slog.Info("Authentication error detected, reauthenticating", "attempt", attempt+1)
-			if authErr := c.Authenticate(ctx); authErr != nil {
+			slog.Info("Authentication error detected, clearing token and reauthenticating", "attempt", attempt+1)
+			c.clearToken()                                            // Очищаем истекший токен
+			if authErr := c.Authenticate(ctx, true); authErr != nil { // Принудительная переаутентификация
 				return fmt.Errorf("reauthentication failed: %w", authErr)
 			}
 			// Продолжаем цикл для повторной попытки после переавторизации
@@ -274,6 +284,8 @@ func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBod
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		b, _ := io.ReadAll(resp.Body)
 		slog.Warn("Authentication error from moynalog", "status", resp.StatusCode, "body", string(b))
+		// Очищаем токен при ошибке авторизации
+		c.clearToken()
 		return fmt.Errorf("%w: status %d: %s", ErrAuth, resp.StatusCode, b)
 
 	case resp.StatusCode >= 500:
