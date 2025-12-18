@@ -122,9 +122,27 @@ func main() {
 	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, cryptoPayClient, yookasaClient, referralRepository, cache)
 
 	// Получение информации о боте (username и т.д.)
-	me, err := b.GetMe(ctx)
+	// Используем контекст с таймаутом для GetMe, чтобы избежать зависания при проблемах с сетью
+	// Таймаут 30 секунд применяется к каждой попытке отдельно
+	var me *models.User
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		// Создаем новый контекст с таймаутом для каждой попытки
+		getMeCtx, getMeCancel := context.WithTimeout(ctx, 30*time.Second)
+		me, err = b.GetMe(getMeCtx)
+		getMeCancel() // Освобождаем ресурсы контекста
+
+		if err == nil {
+			break
+		}
+		if i < maxRetries-1 {
+			slog.Warn("Failed to get bot info, retrying...", "attempt", i+1, "maxRetries", maxRetries, "error", err)
+			time.Sleep(2 * time.Second)
+		}
+	}
 	if err != nil {
-		panic(err)
+		slog.Error("Failed to get bot info after retries", "error", err)
+		panic(fmt.Errorf("failed to get bot info: %w", err))
 	}
 
 	// Настройка кнопки меню бота (показывать список команд)

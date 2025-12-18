@@ -198,17 +198,11 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 func (s PaymentService) createConnectKeyboard(customer *database.Customer) [][]models.InlineKeyboardButton {
 	var inlineCustomerKeyboard [][]models.InlineKeyboardButton
 
-	if config.GetMiniAppURL() != "" {
-		inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
-			{Text: s.translation.GetText(customer.Language, "connect_button"), WebApp: &models.WebAppInfo{
-				URL: config.GetMiniAppURL(),
-			}},
-		})
-	} else {
-		inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
-			{Text: s.translation.GetText(customer.Language, "connect_button"), CallbackData: "connect"},
-		})
-	}
+	// Кнопка "Мой VPN" всегда открывает подменю подключения
+	// В подменю кнопка "подключить устройство" будет использовать MINI_APP_URL если он указан
+	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
+		{Text: s.translation.GetText(customer.Language, "connect_button"), CallbackData: "connect"},
+	})
 
 	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
 		{Text: s.translation.GetText(customer.Language, "back_button"), CallbackData: "start"},
