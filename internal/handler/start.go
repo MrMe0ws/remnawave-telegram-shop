@@ -136,20 +136,11 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 }
 
 func (h Handler) resolveConnectButton(lang string) []models.InlineKeyboardButton {
-	var inlineKeyboard []models.InlineKeyboardButton
-
-	if config.GetMiniAppURL() != "" {
-		inlineKeyboard = []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(lang, "connect_button"), WebApp: &models.WebAppInfo{
-				URL: config.GetMiniAppURL(),
-			}},
-		}
-	} else {
-		inlineKeyboard = []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(lang, "connect_button"), CallbackData: CallbackConnect},
-		}
+	// Всегда возвращаем callback, чтобы открыть подменю
+	// В подменю уже будет решаться, открывать миниапп или webapp
+	return []models.InlineKeyboardButton{
+		{Text: h.translation.GetText(lang, "connect_button"), CallbackData: CallbackConnect},
 	}
-	return inlineKeyboard
 }
 
 func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {

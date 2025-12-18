@@ -198,17 +198,28 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 func (s PaymentService) createConnectKeyboard(customer *database.Customer) [][]models.InlineKeyboardButton {
 	var inlineCustomerKeyboard [][]models.InlineKeyboardButton
 
+	// Если указан MINI_APP_URL, используем его, иначе используем subscription_link
+	var webAppURL string
 	if config.GetMiniAppURL() != "" {
-		inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
-			{Text: s.translation.GetText(customer.Language, "connect_button"), WebApp: &models.WebAppInfo{
-				URL: config.GetMiniAppURL(),
-			}},
-		})
+		webAppURL = config.GetMiniAppURL()
+	} else if customer.SubscriptionLink != nil {
+		webAppURL = *customer.SubscriptionLink
 	} else {
+		// Если нет ни миниаппа, ни subscription_link, используем callback
 		inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
 			{Text: s.translation.GetText(customer.Language, "connect_button"), CallbackData: "connect"},
 		})
+		inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
+			{Text: s.translation.GetText(customer.Language, "back_button"), CallbackData: "start"},
+		})
+		return inlineCustomerKeyboard
 	}
+
+	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
+		{Text: s.translation.GetText(customer.Language, "connect_button"), WebApp: &models.WebAppInfo{
+			URL: webAppURL,
+		}},
+	})
 
 	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
 		{Text: s.translation.GetText(customer.Language, "back_button"), CallbackData: "start"},

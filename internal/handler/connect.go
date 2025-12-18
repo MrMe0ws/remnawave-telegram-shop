@@ -44,9 +44,16 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 	var markup [][]models.InlineKeyboardButton
 
 	if customer.SubscriptionLink != nil && !isExpired {
+		// Если указан MINI_APP_URL, используем его, иначе используем subscription_link
+		var webAppURL string
+		if config.GetMiniAppURL() != "" {
+			webAppURL = config.GetMiniAppURL()
+		} else {
+			webAppURL = *customer.SubscriptionLink
+		}
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "connect_device_button"),
 			WebApp: &models.WebAppInfo{
-				URL: *customer.SubscriptionLink,
+				URL: webAppURL,
 			}}})
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
 
@@ -123,9 +130,16 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 
 	if customer.SubscriptionLink != nil && !isExpired {
+		// Если указан MINI_APP_URL, используем его, иначе используем subscription_link
+		var webAppURL string
+		if config.GetMiniAppURL() != "" {
+			webAppURL = config.GetMiniAppURL()
+		} else {
+			webAppURL = *customer.SubscriptionLink
+		}
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "connect_device_button"),
 			WebApp: &models.WebAppInfo{
-				URL: *customer.SubscriptionLink,
+				URL: webAppURL,
 			}}})
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
 
