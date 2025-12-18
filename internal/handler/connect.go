@@ -33,10 +33,7 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 	var markup [][]models.InlineKeyboardButton
 	if customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now()) {
 		// Если есть активная подписка, показываем кнопки подключения
-		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "connect_device_button"),
-			WebApp: &models.WebAppInfo{
-				URL: *customer.SubscriptionLink,
-			}}})
+		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
 
 		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
@@ -95,10 +92,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	var markup [][]models.InlineKeyboardButton
 	if customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now()) {
 		// Если есть активная подписка, показываем кнопки подключения
-		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "connect_device_button"),
-			WebApp: &models.WebAppInfo{
-				URL: *customer.SubscriptionLink,
-			}}})
+		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
 		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
 
 		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
@@ -193,4 +187,30 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	}
 
 	return info.String()
+}
+
+func (h Handler) resolveConnectDeviceButton(lang string, subscriptionLink *string) []models.InlineKeyboardButton {
+	var inlineKeyboard []models.InlineKeyboardButton
+
+	if config.GetMiniAppURL() != "" {
+		// Если указан MINI_APP_URL, используем его
+		inlineKeyboard = []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(lang, "connect_device_button"), WebApp: &models.WebAppInfo{
+				URL: config.GetMiniAppURL(),
+			}},
+		}
+	} else if subscriptionLink != nil && *subscriptionLink != "" {
+		// Если MINI_APP_URL не указан, используем subscriptionLink как webapp
+		inlineKeyboard = []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(lang, "connect_device_button"), WebApp: &models.WebAppInfo{
+				URL: *subscriptionLink,
+			}},
+		}
+	} else {
+		// Если нет ни того, ни другого, используем callback
+		inlineKeyboard = []models.InlineKeyboardButton{
+			{Text: h.translation.GetText(lang, "connect_device_button"), CallbackData: CallbackConnect},
+		}
+	}
+	return inlineKeyboard
 }
