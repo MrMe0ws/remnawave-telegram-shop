@@ -61,7 +61,13 @@ func NewClient(baseURL, username, password string) *Client {
 }
 
 // Authenticate выполняет аутентификацию и сохраняет токен
+// forceReauth - если true, принудительно выполняет переаутентификацию даже если токен есть
 func (c *Client) Authenticate(ctx context.Context) error {
+	return c.authenticate(ctx, false)
+}
+
+// authenticate выполняет аутентификацию с возможностью принудительной переаутентификации
+func (c *Client) authenticate(ctx context.Context, forceReauth bool) error {
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
 
@@ -70,9 +76,11 @@ func (c *Client) Authenticate(ctx context.Context) error {
 		c.authCond.Wait()
 	}
 
-	// Проверяем, не авторизовались ли мы пока ждали
-	if token := c.token.Load(); token != nil && token.(string) != "" {
-		return nil
+	// Проверяем, не авторизовались ли мы пока ждали (только если не принудительная переаутентификация)
+	if !forceReauth {
+		if token := c.token.Load(); token != nil && token.(string) != "" {
+			return nil
+		}
 	}
 
 	c.authInFlight = true
@@ -213,10 +221,13 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		lastErr = err
 		slog.Warn("Failed to create income", "attempt", attempt+1, "maxRetries", maxRetries, "error", err)
 
-		// Если это ошибка авторизации, пытаемся переавторизоваться
+		// Если это ошибка авторизации, очищаем токен и пытаемся переавторизоваться
 		if errors.Is(err, ErrAuth) {
-			slog.Info("Authentication error detected, reauthenticating", "attempt", attempt+1)
-			if authErr := c.Authenticate(ctx); authErr != nil {
+			slog.Info("Authentication error detected, clearing token and reauthenticating", "attempt", attempt+1)
+			// Очищаем истекший токен перед переаутентификацией
+			c.token.Store("")
+			// Принудительно выполняем переаутентификацию
+			if authErr := c.authenticate(ctx, true); authErr != nil {
 				return fmt.Errorf("reauthentication failed: %w", authErr)
 			}
 			// Продолжаем цикл для повторной попытки после переавторизации
