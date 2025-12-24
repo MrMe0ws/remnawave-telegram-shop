@@ -68,6 +68,12 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		return fmt.Errorf("purchase with crypto invoice id %d not found", utils.MaskHalfInt64(purchaseId))
 	}
 
+	// Защита от дублирования: если покупка уже обработана, пропускаем
+	if purchase.Status == database.PurchaseStatusPaid {
+		slog.Info("Purchase already processed, skipping", "purchase_id", utils.MaskHalfInt64(purchaseId))
+		return nil
+	}
+
 	customer, err := s.customerRepository.FindById(ctx, purchase.CustomerID)
 	if err != nil {
 		return err

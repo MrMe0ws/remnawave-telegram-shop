@@ -485,6 +485,12 @@ func checkYookasaInvoice(
 
 	// Проверяем каждую покупку
 	for _, purchase := range *pendingPurchases {
+		// Дополнительная проверка: если покупка уже обработана, пропускаем
+		// (защита от race condition, если статус обновился между запросами)
+		if purchase.Status == database.PurchaseStatusPaid {
+			continue
+		}
+
 		// Получаем информацию о счете из YooKassa
 		invoice, err := yookasaClient.GetPayment(ctx, *purchase.YookasaID)
 
@@ -508,18 +514,15 @@ func checkYookasaInvoice(
 		}
 
 		// Счет оплачен - обрабатываем покупку
-		// Извлекаем ID покупки из метаданных счета
-		purchaseId, err := strconv.Atoi(invoice.Metadata["purchaseId"])
-		if err != nil {
-			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, err)
-		}
+		// Используем ID покупки напрямую (уже есть в purchase)
 		// Передаем username в контексте для логирования
-		ctxWithValue := context.WithValue(ctx, "username", invoice.Metadata["username"])
-		err = paymentService.ProcessPurchaseById(ctxWithValue, int64(purchaseId))
+		username := invoice.Metadata["username"]
+		ctxWithValue := context.WithValue(ctx, "username", username)
+		err = paymentService.ProcessPurchaseById(ctxWithValue, purchase.ID)
 		if err != nil {
-			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, err)
+			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, err)
 		} else {
-			slog.Info("Invoice processed", "invoiceId", invoice.ID, "purchaseId", purchaseId)
+			slog.Info("Invoice processed", "invoiceId", invoice.ID, "purchaseId", purchase.ID)
 		}
 	}
 }
