@@ -41,6 +41,11 @@ func NewClient(baseURL, username, password string) *Client {
 	c := &Client{
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        10,
+				IdleConnTimeout:     90 * time.Second,
+				TLSHandshakeTimeout: 10 * time.Second,
+			},
 		},
 		baseURL:  baseURL,
 		username: username,
@@ -176,7 +181,7 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 
 	incomeURL := fmt.Sprintf("%s/income", c.baseURL)
 
-	formattedTime := getFormattedTime()
+	now := time.Now()
 
 	service := Service{
 		Name:     description,
@@ -192,8 +197,8 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 	}
 
 	incomeRequest := CreateIncomeRequest{
-		OperationTime:                   parseTimeString(formattedTime),
-		RequestTime:                     parseTimeString(formattedTime),
+		OperationTime:                   now,
+		RequestTime:                     now,
 		Services:                        []Service{service},
 		TotalAmount:                     fmt.Sprintf("%.2f", amount),
 		Client:                          client,
@@ -207,11 +212,17 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 	}
 
 	maxRetries := 3
+	baseDelay := 500 * time.Millisecond
 	var lastErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		if attempt > 0 {
-			// Небольшая задержка перед повтором
-			time.Sleep(time.Second * time.Duration(attempt))
+	authRetries := 0
+	maxAuthRetries := 2
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Проверяем context перед каждой попыткой
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
 		err := c.sendIncomeRequest(ctx, incomeURL, reqBody, amount)
@@ -220,22 +231,33 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		}
 
 		lastErr = err
-		slog.Warn("Failed to create income", "attempt", attempt+1, "maxRetries", maxRetries, "error", err)
+		slog.Warn("Failed to create income", "attempt", attempt, "maxRetries", maxRetries, "error", err)
 
 		// Если это ошибка авторизации, очищаем токен и переавторизуемся
 		if errors.Is(err, ErrAuth) {
-			slog.Info("Authentication error detected, clearing token and reauthenticating", "attempt", attempt+1)
+			if authRetries >= maxAuthRetries {
+				return fmt.Errorf("authentication failed after %d retries: %w", maxAuthRetries, err)
+			}
+
+			slog.Info("Authentication error detected, clearing token and reauthenticating", "attempt", attempt, "authRetry", authRetries+1)
 			c.clearToken()                                            // Очищаем истекший токен
 			if authErr := c.Authenticate(ctx, true); authErr != nil { // Принудительная переаутентификация
 				return fmt.Errorf("reauthentication failed: %w", authErr)
 			}
-			// Продолжаем цикл для повторной попытки после переавторизации
+			authRetries++
+			attempt-- // Не считаем эту попытку, повторяем с новым токеном
 			continue
 		}
 
 		// Если это retryable ошибка и не последняя попытка, продолжаем
-		if isRetryableError(err) && attempt < maxRetries-1 {
-			slog.Info("Retryable error detected, will retry", "attempt", attempt+1)
+		if isRetryableError(err) && attempt < maxRetries {
+			slog.Info("Retryable error detected, will retry", "attempt", attempt)
+			// Задержка с учетом context
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(baseDelay * time.Duration(1<<(attempt-1))):
+			}
 			continue
 		}
 
@@ -245,7 +267,7 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		}
 	}
 
-	return fmt.Errorf("failed to create income after %d attempts: %w", maxRetries, lastErr)
+	return fmt.Errorf("create income failed after retries: %w", lastErr)
 }
 
 // sendIncomeRequest отправляет запрос на создание чека
@@ -306,21 +328,4 @@ func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBod
 
 	slog.Info("Income receipt created successfully", "id", incomeResp.ID, "amount", amount)
 	return nil
-}
-
-func parseTimeString(timeStr string) time.Time {
-	t, err := time.Parse("2006-01-02T15:04:05-07:00", timeStr)
-	if err != nil {
-		// Если формат не соответствует, пробуем другой формат
-		t, err = time.Parse("2006-01-02T15:04:05", timeStr)
-		if err != nil {
-			// Если оба формата не подходят, возвращаем текущее время
-			return time.Now()
-		}
-	}
-	return t
-}
-
-func getFormattedTime() string {
-	return time.Now().Format("2006-01-02T15:04:05-07:00")
 }

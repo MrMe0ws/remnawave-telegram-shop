@@ -68,12 +68,6 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		return fmt.Errorf("purchase with crypto invoice id %d not found", utils.MaskHalfInt64(purchaseId))
 	}
 
-	// Защита от дублирования: если покупка уже обработана, пропускаем
-	if purchase.Status == database.PurchaseStatusPaid {
-		slog.Info("Purchase already processed, skipping", "purchase_id", utils.MaskHalfInt64(purchaseId))
-		return nil
-	}
-
 	customer, err := s.customerRepository.FindById(ctx, purchase.CustomerID)
 	if err != nil {
 		return err
@@ -120,7 +114,11 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 
-		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
+		// Создаем отдельный context с таймаутом для отправки чека в МойНалог
+		moynalogCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		if err := s.moynalogClient.CreateIncome(moynalogCtx, purchase.Amount, description); err != nil {
 			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 			notifyAdminMoynalogFailure(ctx, s.telegramBot, config.GetAdminTelegramId(), purchase, err, description)
 			// Не прерываем обработку покупки при ошибке отправки чека
