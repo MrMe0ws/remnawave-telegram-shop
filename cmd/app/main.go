@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -530,6 +531,13 @@ func checkYookasaInvoice(
 		invoice, err := yookasaClient.GetPayment(ctx, *purchase.YookasaID)
 
 		if err != nil {
+			if errors.Is(err, yookasa.ErrPaymentNotFound) {
+				slog.Warn("YooKassa invoice not found, canceling purchase", "invoiceId", purchase.YookasaID, "purchaseId", purchase.ID)
+				if cancelErr := paymentService.CancelYookassaPayment(purchase.ID); cancelErr != nil {
+					slog.Error("Error canceling invoice after not found", "invoiceId", purchase.YookasaID, "purchaseId", purchase.ID, cancelErr)
+				}
+				continue
+			}
 			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, err)
 			continue
 		}

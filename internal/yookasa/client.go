@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+var ErrPaymentNotFound = errors.New("yookasa payment not found")
 
 type YookasaAPI interface {
 	CreatePayment(ctx context.Context, request PaymentRequest, idempotencyKey string) (*Payment, error)
@@ -169,6 +172,10 @@ func (c *Client) GetPayment(ctx context.Context, paymentID uuid.UUID) (*Payment,
 			log.Printf("Received 429 Too Many Requests. Retrying in %v...", retryDelay)
 			time.Sleep(retryDelay)
 			continue
+		}
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("%w (status %d)", ErrPaymentNotFound, resp.StatusCode)
 		}
 
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
