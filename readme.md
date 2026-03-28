@@ -130,6 +130,11 @@ Telegram бот для продажи подписок с интеграцией
 | `YOOKASA_SHOP_ID`                    | Идентификатор магазина YooKassa                                                                                                                               |
 | `YOOKASA_URL`                        | URL API YooKassa                                                                                                                                              |
 | `YOOKASA_EMAIL`                      | Email адрес, связанный с аккаунтом YooKassa                                                                                                                   |
+| `MOYNALOG_ENABLED`                   | Включить/отключить интеграцию с Мой Налог (true/false)                                                                                                         |
+| `MOYNALOG_URL`                       | URL API Мой Налог (по умолчанию https://lknpd.nalog.ru/api/v1)                                                                                                 |
+| `MOYNALOG_USERNAME`                  | Логин для Мой Налог                                                                                                                                           |
+| `MOYNALOG_PASSWORD`                  | Пароль для Мой Налог                                                                                                                                          |
+| `MOYNALOG_PROXY_URL`                 | Прокси для запросов к Мой Налог (например, http://user:pass@ip:3128). Если пусто — запросы идут напрямую                                                      |
 | `TRAFFIC_LIMIT`                      | Максимально разрешенный трафик в гб (0 для неограниченного)                                                                                                   |
 | `TELEGRAM_STARS_ENABLED`             | Включить/отключить способ оплаты Telegram Stars (true/false)                                                                                                  |
 | `REQUIRE_PAID_PURCHASE_FOR_STARS`    | Требовать успешную оплату через криптовалюту или карту перед использованием Telegram Stars (true/false). По умолчанию: false                                  |
@@ -294,6 +299,29 @@ docker compose up -d
 ```bash
 docker compose down && docker compose up -d
 ```
+
+## Мой Налог через прокси (для серверов вне РФ)
+
+Если ваш сервер находится за пределами РФ и доступ к `lknpd.nalog.ru` блокируется, можно направить **только запросы Мой Налог** через HTTP‑прокси (например, squid на ВДС в РФ).
+
+### Мини‑гайд
+
+1. Убедитесь, что прокси доступен из контейнера (IP/порт, логин/пароль).
+2. В `.env` включите Мой Налог и укажите прокси:
+
+```
+MOYNALOG_ENABLED=true
+MOYNALOG_URL=https://lknpd.nalog.ru/api/v1
+MOYNALOG_PROXY_URL=http://user:pass@ip:3128
+```
+
+3. Перезапустите бота:
+
+```bash
+docker compose down && docker compose up -d
+```
+
+Если `MOYNALOG_PROXY_URL` пустой — бот работает как раньше, без прокси.
 
 ## Как Изменить Сообщения Бота
 

@@ -52,7 +52,12 @@ func main() {
 	// Инициализация клиента МойНалог (опционально, если включен)
 	var moynalogClient *moynalog.Client
 	if config.IsMoynalogEnabled() {
-		moynalogClient = moynalog.NewClient(config.MoynalogUrl(), config.MoynalogUsername(), config.MoynalogPassword())
+		moynalogClient = moynalog.NewClient(
+			config.MoynalogUrl(),
+			config.MoynalogUsername(),
+			config.MoynalogPassword(),
+			config.MoynalogProxyURL(),
+		)
 		slog.Info("Moynalog client initialized")
 	} else {
 		slog.Info("Moynalog integration disabled")

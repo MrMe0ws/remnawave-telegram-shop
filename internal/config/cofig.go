@@ -23,6 +23,7 @@ type config struct {
 	botURL                                                    string
 	yookasaURL, yookasaShopId, yookasaSecretKey, yookasaEmail string
 	moynalogURL, moynalogUsername, moynalogPassword           string
+	moynalogProxyURL                                          string
 	trafficLimit, trialTrafficLimit                           int
 	feedbackURL                                               string
 	channelURL                                                string
@@ -320,6 +321,10 @@ func MoynalogUsername() string {
 
 func MoynalogPassword() string {
 	return conf.moynalogPassword
+}
+
+func MoynalogProxyURL() string {
+	return conf.moynalogProxyURL
 }
 
 func IsMoynalogEnabled() bool {
@@ -635,6 +640,7 @@ func InitConfig() {
 	conf.isMoynalogEnabled = envBool("MOYNALOG_ENABLED")
 	if conf.isMoynalogEnabled {
 		conf.moynalogURL = envStringDefault("MOYNALOG_URL", "https://moynalog.ru/api/v1")
+		conf.moynalogProxyURL = envStringDefault("MOYNALOG_PROXY_URL", "")
 		conf.moynalogUsername = mustEnv("MOYNALOG_USERNAME")
 		conf.moynalogPassword = mustEnv("MOYNALOG_PASSWORD")
 	}

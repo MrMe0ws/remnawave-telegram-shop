@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,15 +38,11 @@ type Client struct {
 }
 
 // NewClient создает новый клиент МойНалог
-func NewClient(baseURL, username, password string) *Client {
+func NewClient(baseURL, username, password, proxyURL string) *Client {
 	c := &Client{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-			Transport: &http.Transport{
-				MaxIdleConns:        10,
-				IdleConnTimeout:     90 * time.Second,
-				TLSHandshakeTimeout: 10 * time.Second,
-			},
+			Timeout:   30 * time.Second,
+			Transport: newHTTPTransport(proxyURL),
 		},
 		baseURL:  baseURL,
 		username: username,
@@ -63,6 +60,27 @@ func NewClient(baseURL, username, password string) *Client {
 	}
 
 	return c
+}
+
+func newHTTPTransport(proxyURL string) *http.Transport {
+	transport := &http.Transport{
+		MaxIdleConns:        10,
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+
+	if proxyURL == "" {
+		return transport
+	}
+
+	parsedURL, err := url.Parse(proxyURL)
+	if err != nil {
+		slog.Error("Invalid moynalog proxy URL, proxy disabled", "error", err)
+		return transport
+	}
+
+	transport.Proxy = http.ProxyURL(parsedURL)
+	return transport
 }
 
 // Authenticate выполняет аутентификацию и сохраняет токен
