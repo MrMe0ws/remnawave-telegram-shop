@@ -134,7 +134,7 @@ Telegram бот для продажи подписок с интеграцией
 | `MOYNALOG_URL`                       | URL API Мой Налог (по умолчанию https://lknpd.nalog.ru/api/v1)                                                                                                 |
 | `MOYNALOG_USERNAME`                  | Логин для Мой Налог                                                                                                                                           |
 | `MOYNALOG_PASSWORD`                  | Пароль для Мой Налог                                                                                                                                          |
-| `MOYNALOG_PROXY_URL`                 | Прокси для запросов к Мой Налог (например, http://user:pass@ip:3128). Если пусто — запросы идут напрямую                                                      |
+| `MOYNALOG_PROXY_URL`                 | Прокси для запросов к Мой Налог (http/https/socks5). Пример: http://user:pass@ip:3128 или socks5://user:pass@ip:1080. Если пусто — запросы идут напрямую     |
 | `TRAFFIC_LIMIT`                      | Максимально разрешенный трафик в гб (0 для неограниченного)                                                                                                   |
 | `TELEGRAM_STARS_ENABLED`             | Включить/отключить способ оплаты Telegram Stars (true/false)                                                                                                  |
 | `REQUIRE_PAID_PURCHASE_FOR_STARS`    | Требовать успешную оплату через криптовалюту или карту перед использованием Telegram Stars (true/false). По умолчанию: false                                  |
@@ -302,7 +302,7 @@ docker compose down && docker compose up -d
 
 ## Мой Налог через прокси (для серверов вне РФ)
 
-Если ваш сервер находится за пределами РФ и доступ к `lknpd.nalog.ru` блокируется, можно направить **только запросы Мой Налог** через HTTP‑прокси (например, squid на ВДС в РФ).
+Если ваш сервер находится за пределами РФ и доступ к `lknpd.nalog.ru` блокируется, можно направить **только запросы Мой Налог** через прокси (HTTP или SOCKS5, например squid или gost на ВДС в РФ).
 
 ### Мини‑гайд
 
@@ -313,6 +313,12 @@ docker compose down && docker compose up -d
 MOYNALOG_ENABLED=true
 MOYNALOG_URL=https://lknpd.nalog.ru/api/v1
 MOYNALOG_PROXY_URL=http://user:pass@ip:3128
+```
+
+Для SOCKS5 используйте:
+
+```
+MOYNALOG_PROXY_URL=socks5://user:pass@ip:1080
 ```
 
 3. Перезапустите бота:

@@ -11,9 +11,12 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 var (
@@ -79,7 +82,39 @@ func newHTTPTransport(proxyURL string) *http.Transport {
 		return transport
 	}
 
-	transport.Proxy = http.ProxyURL(parsedURL)
+	switch strings.ToLower(parsedURL.Scheme) {
+	case "socks5", "socks5h":
+		if parsedURL.Host == "" {
+			slog.Error("Moynalog proxy host is empty, proxy disabled", "proxyURL", proxyURL)
+			return transport
+		}
+
+		var auth *proxy.Auth
+		if parsedURL.User != nil {
+			password, _ := parsedURL.User.Password()
+			auth = &proxy.Auth{
+				User:     parsedURL.User.Username(),
+				Password: password,
+			}
+		}
+
+		dialer, err := proxy.SOCKS5("tcp", parsedURL.Host, auth, proxy.Direct)
+		if err != nil {
+			slog.Error("Failed to initialize SOCKS5 proxy, proxy disabled", "error", err)
+			return transport
+		}
+
+		if ctxDialer, ok := dialer.(proxy.ContextDialer); ok {
+			transport.DialContext = ctxDialer.DialContext
+		} else {
+			transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			}
+		}
+	default:
+		transport.Proxy = http.ProxyURL(parsedURL)
+	}
+
 	return transport
 }
 
