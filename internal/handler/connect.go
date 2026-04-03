@@ -180,12 +180,10 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 				}
 			}
 
-			// Добавляем ссылку на подписку, если не используется webapp
+			// Добавляем ссылку на подписку
 			if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
-				if config.GetMiniAppURL() == "" && !config.IsWepAppLinkEnabled() {
-					subscriptionLinkText := tm.GetText(langCode, "subscription_link")
-					info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
-				}
+				subscriptionLinkText := tm.GetText(langCode, "subscription_link")
+				info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
 			}
 		} else {
 			noSubscriptionText := tm.GetText(langCode, "no_subscription")
