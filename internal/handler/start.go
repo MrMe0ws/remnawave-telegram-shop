@@ -139,7 +139,7 @@ func (h Handler) resolveConnectButton(lang string) []models.InlineKeyboardButton
 	// Кнопка "Мой VPN" всегда открывает подменю подключения
 	// В подменю кнопка "подключить устройство" будет использовать MINI_APP_URL если он указан
 	return []models.InlineKeyboardButton{
-		{Text: h.translation.GetText(lang, "connect_button"), CallbackData: CallbackConnect},
+		h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 	}
 }
 
@@ -157,30 +157,28 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	// Добавляем кнопку "Какой сервер выбрать" если ссылка установлена
 	if config.ServerSelectionURL() != "" {
 		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(langCode, "server_selection_button"), URL: config.ServerSelectionURL()},
+			h.translation.WithButton(langCode, "server_selection_button", models.InlineKeyboardButton{URL: config.ServerSelectionURL()}),
 		})
 	}
 
 	// Добавляем кнопку "Видеоинструкция" если ссылка установлена
 	if config.VideoGuideURL() != "" {
 		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(langCode, "video_guide_button"), URL: config.VideoGuideURL()},
+			h.translation.WithButton(langCode, "video_guide_button", models.InlineKeyboardButton{URL: config.VideoGuideURL()}),
 		})
 	}
 
 	// Добавляем кнопки "Поддержка" и "Публичная оферта" если ссылки установлены
 	var supportAndOfferRow []models.InlineKeyboardButton
 	if config.SupportURL() != "" {
-		supportAndOfferRow = append(supportAndOfferRow, models.InlineKeyboardButton{
-			Text: h.translation.GetText(langCode, "support_button"),
-			URL:  config.SupportURL(),
-		})
+		supportAndOfferRow = append(supportAndOfferRow, h.translation.WithButton(langCode, "support_button", models.InlineKeyboardButton{
+			URL: config.SupportURL(),
+		}))
 	}
 	if config.PublicOfferURL() != "" {
-		supportAndOfferRow = append(supportAndOfferRow, models.InlineKeyboardButton{
-			Text: h.translation.GetText(langCode, "public_offer_button"),
-			URL:  config.PublicOfferURL(),
-		})
+		supportAndOfferRow = append(supportAndOfferRow, h.translation.WithButton(langCode, "public_offer_button", models.InlineKeyboardButton{
+			URL: config.PublicOfferURL(),
+		}))
 	}
 	if len(supportAndOfferRow) > 0 {
 		helpKeyboard = append(helpKeyboard, supportAndOfferRow)
@@ -189,16 +187,14 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	// Добавляем кнопки "Политика конфиденциальности" и "Пользовательское соглашение" если ссылки установлены
 	var privacyAndTermsRow []models.InlineKeyboardButton
 	if config.PrivacyPolicyURL() != "" {
-		privacyAndTermsRow = append(privacyAndTermsRow, models.InlineKeyboardButton{
-			Text: h.translation.GetText(langCode, "privacy_policy_button"),
-			URL:  config.PrivacyPolicyURL(),
-		})
+		privacyAndTermsRow = append(privacyAndTermsRow, h.translation.WithButton(langCode, "privacy_policy_button", models.InlineKeyboardButton{
+			URL: config.PrivacyPolicyURL(),
+		}))
 	}
 	if config.TermsOfServiceURL() != "" {
-		privacyAndTermsRow = append(privacyAndTermsRow, models.InlineKeyboardButton{
-			Text: h.translation.GetText(langCode, "terms_of_service_button"),
-			URL:  config.TermsOfServiceURL(),
-		})
+		privacyAndTermsRow = append(privacyAndTermsRow, h.translation.WithButton(langCode, "terms_of_service_button", models.InlineKeyboardButton{
+			URL: config.TermsOfServiceURL(),
+		}))
 	}
 	if len(privacyAndTermsRow) > 0 {
 		helpKeyboard = append(helpKeyboard, privacyAndTermsRow)
@@ -206,7 +202,7 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 
 	// Кнопка "Назад"
 	helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-		{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart},
+		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 	})
 
 	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
@@ -228,11 +224,15 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 
 	// 1. Попробовать бесплатно (если юзер новый)
 	if existingCustomer.SubscriptionLink == nil && config.TrialDays() > 0 {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "trial_button"), CallbackData: CallbackTrial}})
+		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "trial_button", models.InlineKeyboardButton{CallbackData: CallbackTrial}),
+		})
 	}
 
 	// 2. Купить (всегда показывается)
-	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
+	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+	})
 
 	// 3. Подключиться (если есть подписка)
 	if existingCustomer.SubscriptionLink != nil {
@@ -242,17 +242,19 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 	// 4. Собираем кнопки для 2-в-ряд: отзывы, канал
 	var secondRow []models.InlineKeyboardButton
 	if config.FeedbackURL() != "" {
-		secondRow = append(secondRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "feedback_button"), URL: config.FeedbackURL()})
+		secondRow = append(secondRow, h.translation.WithButton(langCode, "feedback_button", models.InlineKeyboardButton{URL: config.FeedbackURL()}))
 	}
 	if config.ChannelURL() != "" {
-		secondRow = append(secondRow, models.InlineKeyboardButton{Text: h.translation.GetText(langCode, "channel_button"), URL: config.ChannelURL()})
+		secondRow = append(secondRow, h.translation.WithButton(langCode, "channel_button", models.InlineKeyboardButton{URL: config.ChannelURL()}))
 	}
 	if len(secondRow) > 0 {
 		inlineKeyboard = append(inlineKeyboard, secondRow)
 	}
 
 	// 6. Кнопка "Помощь"
-	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "help_button"), CallbackData: "help"}})
+	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "help_button", models.InlineKeyboardButton{CallbackData: "help"}),
+	})
 
 	return inlineKeyboard
 }

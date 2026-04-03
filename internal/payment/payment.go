@@ -86,7 +86,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		}
 	}
 
-	user, err := s.remnawaveClient.CreateOrUpdateUserWithStrategyAndTrial(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*config.DaysInMonth(), config.TrafficLimitResetStrategy(), false)
+	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*config.DaysInMonth(), false)
 	if err != nil {
 		return err
 	}
@@ -165,13 +165,13 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if err != nil {
 		return err
 	}
-	refereeUser, err := s.remnawaveClient.CreateOrUpdateUserWithStrategyAndTrial(ctxReferee, refereeCustomer.ID, refereeCustomer.TelegramID, config.TrafficLimit(), config.GetReferralDays(), config.TrafficLimitResetStrategy(), false)
+	refereeUser, err := s.remnawaveClient.CreateOrUpdateUser(ctxReferee, refereeCustomer.ID, refereeCustomer.TelegramID, config.TrafficLimit(), config.GetReferralDays(), false)
 	if err != nil {
 		return err
 	}
 	refereeUserFilesToUpdate := map[string]interface{}{
-		"subscription_link": refereeUser.GetSubscriptionUrl(),
-		"expire_at":         refereeUser.GetExpireAt(),
+		"subscription_link": refereeUser.SubscriptionUrl,
+		"expire_at":         refereeUser.ExpireAt,
 	}
 	err = s.customerRepository.UpdateFields(ctxReferee, refereeCustomer.ID, refereeUserFilesToUpdate)
 	if err != nil {
@@ -201,11 +201,11 @@ func (s PaymentService) createConnectKeyboard(customer *database.Customer) [][]m
 	// Кнопка "Мой VPN" всегда открывает подменю подключения
 	// В подменю кнопка "подключить устройство" будет использовать MINI_APP_URL если он указан
 	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
-		{Text: s.translation.GetText(customer.Language, "connect_button"), CallbackData: "connect"},
+		s.translation.WithButton(customer.Language, "connect_button", models.InlineKeyboardButton{CallbackData: "connect"}),
 	})
 
 	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
-		{Text: s.translation.GetText(customer.Language, "back_button"), CallbackData: "start"},
+		s.translation.WithButton(customer.Language, "back_button", models.InlineKeyboardButton{CallbackData: "start"}),
 	})
 	return inlineCustomerKeyboard
 }
@@ -285,12 +285,13 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		return "", 0, err
 	}
 
+	username, _ := ctx.Value(remnawave.CtxKeyUsername).(string)
 	invoice, err := s.cryptoPayClient.CreateInvoice(&cryptopay.InvoiceRequest{
 		CurrencyType:   "fiat",
 		Fiat:           "RUB",
 		Amount:         fmt.Sprintf("%d", int(amount)),
 		AcceptedAssets: "USDT",
-		Payload:        fmt.Sprintf("purchaseId=%d&username=%s", purchaseId, ctx.Value("username")),
+		Payload:        fmt.Sprintf("purchaseId=%d&username=%s", purchaseId, username),
 		Description:    fmt.Sprintf("Subscription on %d month", months),
 		PaidBtnName:    "callback",
 		PaidBtnUrl:     config.BotURL(),
@@ -364,6 +365,7 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 		return "", 0, nil
 	}
 
+	username, _ := ctx.Value(remnawave.CtxKeyUsername).(string)
 	invoiceUrl, err := s.telegramBot.CreateInvoiceLink(ctx, &bot.CreateInvoiceLinkParams{
 		Title:    s.translation.GetText(customer.Language, "invoice_title"),
 		Currency: "XTR",
@@ -374,7 +376,7 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 			},
 		},
 		Description: s.translation.GetText(customer.Language, "invoice_description"),
-		Payload:     fmt.Sprintf("%d&%s", purchaseId, ctx.Value("username")),
+		Payload:     fmt.Sprintf("%d&%s", purchaseId, username),
 	})
 
 	updates := map[string]interface{}{
@@ -402,15 +404,15 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	if customer == nil {
 		return "", fmt.Errorf("customer %d not found", telegramId)
 	}
-	user, err := s.remnawaveClient.CreateOrUpdateUserWithStrategyAndTrial(ctx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), config.TrialTrafficLimitResetStrategy(), true)
+	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), true)
 	if err != nil {
 		slog.Error("Error creating user", err)
 		return "", err
 	}
 
 	customerFilesToUpdate := map[string]interface{}{
-		"subscription_link": user.GetSubscriptionUrl(),
-		"expire_at":         user.GetExpireAt(),
+		"subscription_link": user.SubscriptionUrl,
+		"expire_at":         user.ExpireAt,
 	}
 
 	err = s.customerRepository.UpdateFields(ctx, customer.ID, customerFilesToUpdate)
@@ -418,7 +420,7 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 		return "", err
 	}
 
-	return user.GetSubscriptionUrl(), nil
+	return user.SubscriptionUrl, nil
 
 }
 

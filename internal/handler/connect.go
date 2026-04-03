@@ -34,27 +34,31 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 	if customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now()) {
 		// Если есть активная подписка, показываем кнопки подключения
 		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
-		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
+		})
 
 		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
 		var referralAndStatusRow []models.InlineKeyboardButton
 		// Кнопка "Рефералы" всегда показывается при активной подписке
-		referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
-			Text:         h.translation.GetText(langCode, "referral_button"),
+		referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
 			CallbackData: CallbackReferral,
-		})
+		}))
 		if config.ServerStatusURL() != "" {
-			referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
-				Text: h.translation.GetText(langCode, "server_status_button"),
-				URL:  config.ServerStatusURL(),
-			})
+			referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
+				URL: config.ServerStatusURL(),
+			}))
 		}
 		markup = append(markup, referralAndStatusRow)
 	} else {
 		// Если нет активной подписки, добавляем кнопку "Купить"
-		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+		})
 	}
-	markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}})
+	markup = append(markup, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+	})
 
 	isDisabled := true
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
@@ -93,27 +97,31 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	if customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now()) {
 		// Если есть активная подписка, показываем кнопки подключения
 		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
-		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "devices_button"), CallbackData: CallbackDevices}})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
+		})
 
 		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
 		var referralAndStatusRow []models.InlineKeyboardButton
 		// Кнопка "Рефералы" всегда показывается при активной подписке
-		referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
-			Text:         h.translation.GetText(langCode, "referral_button"),
+		referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
 			CallbackData: CallbackReferral,
-		})
+		}))
 		if config.ServerStatusURL() != "" {
-			referralAndStatusRow = append(referralAndStatusRow, models.InlineKeyboardButton{
-				Text: h.translation.GetText(langCode, "server_status_button"),
-				URL:  config.ServerStatusURL(),
-			})
+			referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
+				URL: config.ServerStatusURL(),
+			}))
 		}
 		markup = append(markup, referralAndStatusRow)
 	} else {
 		// Если нет активной подписки, добавляем кнопку "Купить"
-		markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+		})
 	}
-	markup = append(markup, []models.InlineKeyboardButton{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}})
+	markup = append(markup, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+	})
 
 	isDisabled := true
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
@@ -152,8 +160,8 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 			userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
 			if err == nil && userInfo != nil {
 				// Проверяем, есть ли лимит трафика
-				if userInfo.TrafficLimitBytes.IsSet() && userInfo.TrafficLimitBytes.Value > 0 {
-					trafficLimitBytes := userInfo.TrafficLimitBytes.Value
+				if userInfo.TrafficLimitBytes > 0 {
+					trafficLimitBytes := userInfo.TrafficLimitBytes
 
 					// Получаем использованный трафик
 					usedTrafficBytes := int64(userInfo.UserTraffic.UsedTrafficBytes)
@@ -172,10 +180,12 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 				}
 			}
 
-			// Добавляем ссылку на подписку
+			// Добавляем ссылку на подписку, если не используется webapp
 			if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
-				subscriptionLinkText := tm.GetText(langCode, "subscription_link")
-				info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
+				if config.GetMiniAppURL() == "" && !config.IsWepAppLinkEnabled() {
+					subscriptionLinkText := tm.GetText(langCode, "subscription_link")
+					info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
+				}
 			}
 		} else {
 			noSubscriptionText := tm.GetText(langCode, "no_subscription")
@@ -195,21 +205,21 @@ func (h Handler) resolveConnectDeviceButton(lang string, subscriptionLink *strin
 	if config.GetMiniAppURL() != "" {
 		// Если указан MINI_APP_URL, используем его
 		inlineKeyboard = []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(lang, "connect_device_button"), WebApp: &models.WebAppInfo{
+			h.translation.WithButton(lang, "connect_device_button", models.InlineKeyboardButton{WebApp: &models.WebAppInfo{
 				URL: config.GetMiniAppURL(),
-			}},
+			}}),
 		}
 	} else if subscriptionLink != nil && *subscriptionLink != "" {
 		// Если MINI_APP_URL не указан, используем subscriptionLink как webapp
 		inlineKeyboard = []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(lang, "connect_device_button"), WebApp: &models.WebAppInfo{
+			h.translation.WithButton(lang, "connect_device_button", models.InlineKeyboardButton{WebApp: &models.WebAppInfo{
 				URL: *subscriptionLink,
-			}},
+			}}),
 		}
 	} else {
 		// Если нет ни того, ни другого, используем callback
 		inlineKeyboard = []models.InlineKeyboardButton{
-			{Text: h.translation.GetText(lang, "connect_device_button"), CallbackData: CallbackConnect},
+			h.translation.WithButton(lang, "connect_device_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 		}
 	}
 	return inlineKeyboard

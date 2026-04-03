@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"remnawave-tg-shop-bot/internal/config"
+	"remnawave-tg-shop-bot/internal/remnawave"
 	"strconv"
 	"time"
 
@@ -74,10 +75,11 @@ func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, custo
 		},
 	}
 
+	username, _ := ctx.Value(remnawave.CtxKeyUsername).(string)
 	metaData := map[string]any{
 		"customerId": customerId,
 		"purchaseId": purchaseId,
-		"username":   ctx.Value("username"),
+		"username":   username,
 	}
 
 	paymentRequest := NewPaymentRequest(

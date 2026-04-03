@@ -23,6 +23,9 @@ func (h Handler) CreateCustomerIfNotExistMiddleware(next bot.HandlerFunc) bot.Ha
 		} else if update.CallbackQuery != nil {
 			telegramId = update.CallbackQuery.From.ID
 			langCode = update.CallbackQuery.From.LanguageCode
+	} else {
+		next(ctx, b, update)
+		return
 		}
 		existingCustomer, err := h.customerRepository.FindByTelegramId(ctx, telegramId)
 		if err != nil {
@@ -116,5 +119,19 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 		}
 
 		next(ctx, b, update)
+	}
+}
+
+// AnswerCallbackQueryMiddleware автоматически отвечает на callback, чтобы убрать "loading"
+func (h Handler) AnswerCallbackQueryMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
+	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
+		next(ctx, b, update)
+
+		if update.CallbackQuery == nil {
+			return
+		}
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: update.CallbackQuery.ID,
+		})
 	}
 }

@@ -24,6 +24,7 @@ type config struct {
 	yookasaURL, yookasaShopId, yookasaSecretKey, yookasaEmail string
 	moynalogURL, moynalogUsername, moynalogPassword           string
 	moynalogProxyURL                                          string
+	telegramProxyURL                                          string
 	trafficLimit, trialTrafficLimit                           int
 	feedbackURL                                               string
 	channelURL                                                string
@@ -325,6 +326,10 @@ func MoynalogPassword() string {
 
 func MoynalogProxyURL() string {
 	return conf.moynalogProxyURL
+}
+
+func TelegramProxyURL() string {
+	return conf.telegramProxyURL
 }
 
 func IsMoynalogEnabled() bool {
@@ -644,4 +649,6 @@ func InitConfig() {
 		conf.moynalogUsername = mustEnv("MOYNALOG_USERNAME")
 		conf.moynalogPassword = mustEnv("MOYNALOG_PASSWORD")
 	}
+
+	conf.telegramProxyURL = envStringDefault("TELEGRAM_PROXY_URL", "")
 }

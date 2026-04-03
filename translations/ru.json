@@ -1,34 +1,62 @@
 {
   "greeting": "🎁 14 дней VPN бесплатно!\nПодключайся прямо сейчас!\n\n🌐 Доступные сервера:\n    🇱🇻 Латвия\n    🇩🇪 Германия\n    🇸🇪 Швеция\n    🇷🇺 Россия\n\n🚀 Скорость до 1 Гбит/с\n💪 Нет рекламы\n♾️ Безлимитный трафик\n\n🔗 Пригласи друга и получи\n+14 дней подписки («🤝 Рефералы»)",
   
-  "buy_button": "💰 Купить",
+  "buy_button": {
+  "text": "Купить",
+  "style": "green",
+  "emoji_id": "5258165702707125574"
+   },
   "connect_button": "🔌 Мой VPN",
   "connect_device_button": "🔌 Подключить устройство",
-  "back_button": "🔙 Назад",
+  "back_button": {
+    "text": "Назад",
+    "emoji_id": "6039539366177541657"
+  },
   "pricing_info": "💰 Тарифы VPN-подписки:\n• 1 мес — 150₽\n• 3 мес — 400₽ (выгода 50₽)\n• 6 мес — 750₽ (выгода 150₽)\n• 12 мес — 1320₽ (выгода 480₽)\n\nПодписка действует на 2 устройства\n\nСпособы оплаты:\n💸 СБП и Банковской картой 💳\n⭐ Звёзды Telegram",
   "month_1": "1 мес - 150₽",
   "month_3": "3 мес - 400₽",
   "month_6": "6 мес - 750₽",
   "month_12": "12 мес - 1320₽",
-  "crypto_button": "₿ Криптовалютой",
+  "crypto_button": {
+    "text": "Криптовалютой",
+    "emoji_id": "5402186569006210455"
+  },
   "card_button": "💳 СБП / Карта 💸",
-  "pay_button": "💸 Оплатить",
+  "pay_button": {
+    "text": "Оплатить",
+    "emoji_id": "5436386989857320953"
+  },
   "subscription_active": "📅 Подписка действует до <b><i>%s</i></b>",
   "traffic_limit": "\n\nЛимит - %s/%s гб",
   "subscription_link": "\n\n🔗 <a href=\"%s\">Ссылка на подписку</a>",
   "no_subscription": "❌ У вас нет активной подписки",
   "subscription_activated": "✅ Подписка активирована",
-  "feedback_button": "⭐ Отзывы",
-  "server_status_button": "🟢 Статус серверов",
-  "support_button": "🆘 Поддержка",
-  "channel_button": "📢 Канал",
+  "feedback_button": {
+    "text": "Отзывы",
+    "emoji_id": "5379600444098093058"
+  },
+  "server_status_button": {
+    "text": "Статус серверов",
+    "emoji_id": "5805532930662996322"
+  },
+  "support_button": {
+    "text": "Поддержка",
+    "emoji_id": "6301027265899661025"
+  },
+  "channel_button": {
+    "text": "Канал",
+    "emoji_id": "6021418126061605425"
+  },
   "tos_button": "Условия сервиса",
   "subscription_expiring": "⚠️ <b>Уведомление о подписке</b> ⚠️\n\nВаша подписка истекает <b>%s</b>\nПожалуйста, продлите подписку",
   "renew_subscription_button": "🔄 Продлить подписку",
   "invoice_description": "Подписка",
   "invoice_label": "Подписка",
   "invoice_title": "Подписка",
-  "trial_button": "🔥 Попробовать бесплатно",
+  "trial_button": {
+    "text": "Попробовать бесплатно",
+    "emoji_id": "5089506485931606869"
+  },
   "trial_activated": "🔥 Пробный период активирован",
   "trial_text": "🎁 Вам доступна бесплатная подписка на 14 дней!\n\n🚧 Доступно 3 ГБ трафика в день",
   "activate_trial_button": "🔥 Активировать",
@@ -37,7 +65,10 @@
   "referral_bonus_granted": "🎁 Вы получили бонус за реферала!",
   "stars_button": " ⭐Telegram Stars",
   "share_referral_button": "Поделиться",
-  "web_app_button_text": "🔌 Подключиться",
+  "web_app_button_text": {
+    "text": "Подключиться",
+    "emoji_id": "5843553939672274145"
+  },  
   "tribute_button" : "Tribute",
   "tribute_cancelled" : "Tribute cancelled",
   "access_denied": "⚠️ Доступ запрещён\nПодозрительный никнейм\nИзмените его или обратитесь в @Meows_support_bot",

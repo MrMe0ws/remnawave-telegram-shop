@@ -31,28 +31,29 @@ func (s SyncService) Sync() {
 	var mappedUsers []database.Customer
 	users, err := s.client.GetUsers(ctx)
 	if err != nil {
-		slog.Error("Error while getting users from remnawave", err)
+		slog.Error("Error while getting users from remnawave", "error", err)
 		return
 	}
-	if users == nil || len(*users) == 0 {
+	if len(users) == 0 {
 		slog.Error("No users found in remnawave")
 		return
 	}
 
-	for _, user := range *users {
-		if user.TelegramId.Null {
+	for _, user := range users {
+		if user.TelegramID == nil {
 			continue
 		}
-		if _, exists := telegramIDsSet[int64(user.TelegramId.Value)]; exists {
+		tid := *user.TelegramID
+		if _, exists := telegramIDsSet[tid]; exists {
 			continue
 		}
 
-		telegramIDsSet[int64(user.TelegramId.Value)] = int64(user.TelegramId.Value)
+		telegramIDsSet[tid] = tid
 
-		telegramIDs = append(telegramIDs, int64(user.TelegramId.Value))
+		telegramIDs = append(telegramIDs, tid)
 
 		mappedUsers = append(mappedUsers, database.Customer{
-			TelegramID:       int64(user.TelegramId.Value),
+			TelegramID:       tid,
 			ExpireAt:         &user.ExpireAt,
 			SubscriptionLink: &user.SubscriptionUrl,
 		})

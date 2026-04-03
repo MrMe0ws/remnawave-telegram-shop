@@ -11,7 +11,15 @@ import (
 )
 
 func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	customer, _ := h.customerRepository.FindByTelegramId(ctx, update.CallbackQuery.From.ID)
+	customer, err := h.customerRepository.FindByTelegramId(ctx, update.CallbackQuery.From.ID)
+	if err != nil {
+		slog.Error("error finding customer", "error", err)
+		return
+	}
+	if customer == nil {
+		slog.Error("customer not found", "telegramId", update.CallbackQuery.From.ID)
+		return
+	}
 	langCode := update.CallbackQuery.From.LanguageCode
 	refCode := customer.TelegramID
 
@@ -48,10 +56,10 @@ func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update
 		ParseMode: models.ParseModeHTML,
 		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
-				{Text: h.translation.GetText(langCode, "share_referral_button"), URL: refLink},
+				h.translation.WithButton(langCode, "share_referral_button", models.InlineKeyboardButton{URL: refLink}),
 			},
 			{
-				{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart},
+				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 			},
 		}},
 	})

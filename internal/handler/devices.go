@@ -9,9 +9,10 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 
-	remapi "github.com/Jolymmiles/remnawave-api-go/v2/api"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+
+	"remnawave-tg-shop-bot/internal/remnawave"
 )
 
 // DevicesCallbackHandler обрабатывает нажатие на кнопку "Мои устройства"
@@ -33,8 +34,12 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			Text:      h.translation.GetText(langCode, "no_subscription"),
 			ReplyMarkup: models.InlineKeyboardMarkup{
 				InlineKeyboard: [][]models.InlineKeyboardButton{
-					{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}},
-					{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+					{
+						h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+					},
+					{
+						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+					},
 				},
 			},
 		})
@@ -57,7 +62,9 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				Text:      h.translation.GetText(langCode, "no_devices"),
 				ReplyMarkup: models.InlineKeyboardMarkup{
 					InlineKeyboard: [][]models.InlineKeyboardButton{
-						{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+						{
+							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+						},
 					},
 				},
 			})
@@ -68,7 +75,9 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				Text:      h.translation.GetText(langCode, "devices_error"),
 				ReplyMarkup: models.InlineKeyboardMarkup{
 					InlineKeyboard: [][]models.InlineKeyboardButton{
-						{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+						{
+							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+						},
 					},
 				},
 			})
@@ -94,7 +103,9 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			Text:      h.translation.GetText(langCode, "devices_error"),
 			ReplyMarkup: models.InlineKeyboardMarkup{
 				InlineKeyboard: [][]models.InlineKeyboardButton{
-					{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+					{
+						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+					},
 				},
 			},
 		})
@@ -154,7 +165,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 
 	// Добавляем кнопку "Назад"
 	keyboard = append(keyboard, []models.InlineKeyboardButton{
-		{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart},
+		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 	})
 
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
@@ -197,8 +208,12 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 			Text:      h.translation.GetText(langCode, "no_subscription"),
 			ReplyMarkup: models.InlineKeyboardMarkup{
 				InlineKeyboard: [][]models.InlineKeyboardButton{
-					{{Text: h.translation.GetText(langCode, "buy_button"), CallbackData: CallbackBuy}},
-					{{Text: h.translation.GetText(langCode, "back_button"), CallbackData: CallbackStart}},
+					{
+						h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+					},
+					{
+						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+					},
 				},
 			},
 		})
@@ -253,23 +268,23 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 }
 
 // getDeviceDisplayName создает информативное название устройства
-func (h Handler) getDeviceDisplayName(device remapi.Device, deviceNumber int) string {
+func (h Handler) getDeviceDisplayName(device remnawave.Device, deviceNumber int) string {
 	// Собираем доступную информацию об устройстве
 	var deviceInfo []string
 
 	// Добавляем модель устройства, если доступна
-	if !device.DeviceModel.Null {
-		deviceInfo = append(deviceInfo, device.DeviceModel.Value)
+	if device.DeviceModel != nil && *device.DeviceModel != "" {
+		deviceInfo = append(deviceInfo, *device.DeviceModel)
 	}
 
 	// Добавляем платформу, если доступна
-	if !device.Platform.Null {
-		deviceInfo = append(deviceInfo, device.Platform.Value)
+	if device.Platform != nil && *device.Platform != "" {
+		deviceInfo = append(deviceInfo, *device.Platform)
 	}
 
 	// Добавляем версию ОС, если доступна
-	if !device.OsVersion.Null {
-		deviceInfo = append(deviceInfo, device.OsVersion.Value)
+	if device.OsVersion != nil && *device.OsVersion != "" {
+		deviceInfo = append(deviceInfo, *device.OsVersion)
 	}
 
 	// Если есть дополнительная информация, возвращаем её
