@@ -30,11 +30,11 @@
   "vpn_subscription_info_title": "<b>📱 Информация о подписке</b>\n",
   "vpn_expires_at": "📅 Действует до: %s",
   "vpn_days_left": "⏰ Осталось: %d дн.",
-  "vpn_traffic": "📈 Трафик: %s / %s",
+  "vpn_traffic": "📈 Трафик: %s ГБ / %s ГБ",
   "vpn_devices": "📱 Устройства: %s / %s",
   "vpn_subscription_link_title": "🔗 Ссылка для подключения:",
   "vpn_subscription_link_hint": "📱 Скопируйте ссылку и добавьте в ваше VPN приложение",
-  "vpn_unlimited": "безлимит",
+  "vpn_unlimited": "∞",
   "vpn_not_available": "—",
   "subscription_activated": "✅ Подписка активирована",
   "feedback_button": {

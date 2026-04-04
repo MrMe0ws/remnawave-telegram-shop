@@ -197,6 +197,7 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	trafficLimit := tm.GetText(langCode, "vpn_not_available")
 	deviceCount := tm.GetText(langCode, "vpn_not_available")
 	deviceLimit := tm.GetText(langCode, "vpn_not_available")
+	showDevices := false
 
 	userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
 	if err == nil && userInfo != nil {
@@ -207,10 +208,15 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 			trafficLimit = tm.GetText(langCode, "vpn_unlimited")
 		}
 
+		deviceLimitValue := 0
 		if userInfo.HwidDeviceLimit != nil && *userInfo.HwidDeviceLimit > 0 {
-			deviceLimit = strconv.Itoa(*userInfo.HwidDeviceLimit)
+			deviceLimitValue = *userInfo.HwidDeviceLimit
 		} else {
-			deviceLimit = tm.GetText(langCode, "vpn_unlimited")
+			deviceLimitValue = config.GetHwidFallbackDeviceLimit()
+		}
+		if deviceLimitValue > 0 {
+			deviceLimit = strconv.Itoa(deviceLimitValue)
+			showDevices = true
 		}
 
 		if userInfo.UUID != uuid.Nil {
@@ -222,8 +228,10 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	}
 
 	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_traffic"), trafficUsed, trafficLimit))
-	info.WriteString("\n")
-	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_devices"), deviceCount, deviceLimit))
+	if showDevices {
+		info.WriteString("\n")
+		info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_devices"), deviceCount, deviceLimit))
+	}
 
 	if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
 		info.WriteString("\n\n")
