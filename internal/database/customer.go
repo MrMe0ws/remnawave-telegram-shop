@@ -22,16 +22,18 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 }
 
 type Customer struct {
-	ID               int64      `db:"id"`
-	TelegramID       int64      `db:"telegram_id"`
-	ExpireAt         *time.Time `db:"expire_at"`
-	CreatedAt        time.Time  `db:"created_at"`
-	SubscriptionLink *string    `db:"subscription_link"`
-	Language         string     `db:"language"`
+	ID                 int64      `db:"id"`
+	TelegramID         int64      `db:"telegram_id"`
+	ExpireAt           *time.Time `db:"expire_at"`
+	CreatedAt          time.Time  `db:"created_at"`
+	SubscriptionLink   *string    `db:"subscription_link"`
+	Language           string     `db:"language"`
+	ExtraHwid          int        `db:"extra_hwid"`
+	ExtraHwidExpiresAt *time.Time `db:"extra_hwid_expires_at"`
 }
 
 func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDate, endDate time.Time) (*[]Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language").
+	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
 		From("customer").
 		Where(
 			sq.And{
@@ -78,7 +80,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 }
 
 func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language").
+	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
 		From("customer").
 		Where(sq.Eq{"id": id}).
 		PlaceholderFormat(sq.Dollar)
@@ -97,6 +99,8 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 		&customer.CreatedAt,
 		&customer.SubscriptionLink,
 		&customer.Language,
+		&customer.ExtraHwid,
+		&customer.ExtraHwidExpiresAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -108,7 +112,7 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 }
 
 func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId int64) (*Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language").
+	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
 		From("customer").
 		Where(sq.Eq{"telegram_id": telegramId}).
 		PlaceholderFormat(sq.Dollar)
@@ -127,6 +131,8 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 		&customer.CreatedAt,
 		&customer.SubscriptionLink,
 		&customer.Language,
+		&customer.ExtraHwid,
+		&customer.ExtraHwidExpiresAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -146,7 +152,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 	INSERT INTO customer (telegram_id, expire_at, language)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (telegram_id) DO UPDATE SET telegram_id = customer.telegram_id
-	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language
+	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at
 	`
 
 	row := cr.pool.QueryRow(ctx, query, customer.TelegramID, customer.ExpireAt, customer.Language)
@@ -158,6 +164,8 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 		&result.CreatedAt,
 		&result.SubscriptionLink,
 		&result.Language,
+		&result.ExtraHwid,
+		&result.ExtraHwidExpiresAt,
 	); err != nil {
 		return nil, fmt.Errorf("failed to find or create customer: %w", err)
 	}
@@ -235,6 +243,8 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 			&customer.CreatedAt,
 			&customer.SubscriptionLink,
 			&customer.Language,
+		&customer.ExtraHwid,
+		&customer.ExtraHwidExpiresAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)

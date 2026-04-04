@@ -45,6 +45,7 @@ type Purchase struct {
 	CryptoInvoiceLink *string        `db:"crypto_invoice_url"`
 	YookasaURL        *string        `db:"yookasa_url"`
 	YookasaID         *uuid.UUID     `db:"yookasa_id"`
+	ExtraHwid         int            `db:"extra_hwid"`
 }
 
 type PurchaseRepository struct {
@@ -59,8 +60,8 @@ func NewPurchaseRepository(pool *pgxpool.Pool) *PurchaseRepository {
 
 func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (int64, error) {
 	buildInsert := sq.Insert("purchase").
-		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id").
-		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID).
+		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "extra_hwid").
+		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.ExtraHwid).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 
@@ -116,6 +117,7 @@ func (cr *PurchaseRepository) FindByInvoiceTypeAndStatus(ctx context.Context, in
 			&purchase.CryptoInvoiceLink,
 			&purchase.YookasaURL,
 			&purchase.YookasaID,
+			&purchase.ExtraHwid,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan purchase: %w", err)
@@ -157,6 +159,7 @@ func (cr *PurchaseRepository) FindById(ctx context.Context, id int64) (*Purchase
 		&purchase.CryptoInvoiceLink,
 		&purchase.YookasaURL,
 		&purchase.YookasaID,
+		&purchase.ExtraHwid,
 	)
 
 	if err != nil {
@@ -251,7 +254,7 @@ func (pr *PurchaseRepository) FindLatestActiveTributesByCustomerIDs(
 		if err := rows.Scan(
 			&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
 			&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
-			&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID,
+			&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
 		); err != nil {
 			return nil, fmt.Errorf("scan purchase: %w", err)
 		}
@@ -271,6 +274,7 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},
 			sq.Eq{"status": PurchaseStatusPaid},
+			sq.Eq{"extra_hwid": 0},
 			sq.Or{
 				sq.Eq{"invoice_type": InvoiceTypeCrypto},
 				sq.Eq{"invoice_type": InvoiceTypeYookasa},
@@ -301,6 +305,7 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 		&purchase.CryptoInvoiceLink,
 		&purchase.YookasaURL,
 		&purchase.YookasaID,
+		&purchase.ExtraHwid,
 	)
 
 	if err != nil {
@@ -354,6 +359,7 @@ func (pr *PurchaseRepository) FindPaidByCustomer(ctx context.Context, customerID
 			&purchase.CryptoInvoiceLink,
 			&purchase.YookasaURL,
 			&purchase.YookasaID,
+			&purchase.ExtraHwid,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan purchase: %w", err)
 		}
@@ -388,6 +394,59 @@ func (pr *PurchaseRepository) CountPaidByCustomer(ctx context.Context, customerI
 	return count, nil
 }
 
+func (pr *PurchaseRepository) CountPaidSubscriptionsByCustomer(ctx context.Context, customerID int64) (int, error) {
+	buildSelect := sq.Select("COUNT(*)").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"customer_id": customerID},
+			sq.Eq{"status": PurchaseStatusPaid},
+			sq.Eq{"extra_hwid": 0},
+			sq.Gt{"month": 0},
+		}).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	var count int
+	err = pr.pool.QueryRow(ctx, sql, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count paid purchases: %w", err)
+	}
+
+	return count, nil
+}
+
+func (pr *PurchaseRepository) HasPaidSubscription(ctx context.Context, customerID int64) (bool, error) {
+	buildSelect := sq.Select("1").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"customer_id": customerID},
+			sq.Eq{"status": PurchaseStatusPaid},
+			sq.Eq{"extra_hwid": 0},
+			sq.Gt{"month": 0},
+		}).
+		Limit(1).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return false, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	var dummy int
+	err = pr.pool.QueryRow(ctx, sql, args...).Scan(&dummy)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check paid subscription: %w", err)
+	}
+	return true, nil
+}
+
 func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(
 	ctx context.Context,
 	customerID int64,
@@ -413,7 +472,7 @@ func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(
 	err = pr.pool.QueryRow(ctx, sql, args...).Scan(
 		&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
 		&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
-		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID,
+		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

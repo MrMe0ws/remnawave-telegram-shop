@@ -49,6 +49,9 @@ type config struct {
 	referralFirstRefereeDays                                  int
 	referralRepeatReferrerDays                                int
 	trialAddsToPaid                                           bool
+	hwidAddPrice                                              int
+	hwidMaxDevices                                            int
+	trialHwidLimit                                            int
 	miniApp                                                   string
 	enableAutoPayment                                         bool
 	healthCheckPort                                           int
@@ -122,6 +125,19 @@ func ReferralRepeatReferrerDays() int {
 func TrialAddsToPaid() bool {
 	return conf.trialAddsToPaid
 }
+
+func HwidAddPrice() int {
+	return conf.hwidAddPrice
+}
+
+func HwidMaxDevices() int {
+	return conf.hwidMaxDevices
+}
+
+func TrialHwidLimit() int {
+	return conf.trialHwidLimit
+}
+
 
 func GetMiniAppURL() string {
 	return conf.miniApp
@@ -412,6 +428,7 @@ func envBoolDefault(key string, def bool) bool {
 	return v == "true"
 }
 
+
 func InitConfig() {
 	if os.Getenv("DISABLE_ENV_FILE") != "true" {
 		if err := godotenv.Load(".env"); err != nil {
@@ -545,6 +562,9 @@ func InitConfig() {
 	conf.referralFirstRefereeDays = envIntDefault("REFERRAL_FIRST_REFEREE_DAYS", 7)
 	conf.referralRepeatReferrerDays = envIntDefault("REFERRAL_REPEAT_REFERRER_DAYS", 3)
 	conf.trialAddsToPaid = envBoolDefault("TRIAL_ADD_TO_PAID", true)
+	conf.hwidAddPrice = mustEnvInt("HWID_ADD_PRICE")
+	conf.hwidMaxDevices = envIntDefault("HWID_MAX_DEVICE", 10)
+	conf.trialHwidLimit = envIntDefault("TRIAL_HWID_LIMIT", 1)
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")

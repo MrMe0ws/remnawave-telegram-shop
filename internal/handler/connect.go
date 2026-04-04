@@ -30,6 +30,10 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 		slog.Error("customer not exist", "telegramId", utils.MaskHalfInt64(update.Message.Chat.ID), "error", err)
 		return
 	}
+	if err := h.cleanupExpiredExtraHwid(ctx, customer); err != nil {
+		slog.Error("Error cleaning expired extra hwid", "error", err)
+		return
+	}
 
 	langCode := update.Message.From.LanguageCode
 
@@ -38,7 +42,7 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 		// Если есть активная подписка, показываем кнопки подключения
 		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
 		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
+			h.translation.WithButton(langCode, "manage_devices_button", models.InlineKeyboardButton{CallbackData: CallbackManageDevices}),
 		})
 		markup = append(markup, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
@@ -97,6 +101,10 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		slog.Error("customer not exist", "telegramId", utils.MaskHalfInt64(callback.Chat.ID), "error", err)
 		return
 	}
+	if err := h.cleanupExpiredExtraHwid(ctx, customer); err != nil {
+		slog.Error("Error cleaning expired extra hwid", "error", err)
+		return
+	}
 
 	langCode := update.CallbackQuery.From.LanguageCode
 
@@ -105,7 +113,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		// Если есть активная подписка, показываем кнопки подключения
 		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
 		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
+			h.translation.WithButton(langCode, "manage_devices_button", models.InlineKeyboardButton{CallbackData: CallbackManageDevices}),
 		})
 		markup = append(markup, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
@@ -297,4 +305,13 @@ func (h Handler) resolveConnectDeviceButton(lang string, subscriptionLink *strin
 		}
 	}
 	return inlineKeyboard
+}
+
+func (h Handler) hasPaidSubscription(ctx context.Context, customerID int64) bool {
+	hasPaid, err := h.purchaseRepository.HasPaidSubscription(ctx, customerID)
+	if err != nil {
+		slog.Error("Error checking paid purchase", "error", err)
+		return false
+	}
+	return hasPaid
 }

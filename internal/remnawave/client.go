@@ -327,6 +327,13 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 		TrafficLimitStrategy: normalizeStrategy(strategy),
 	}
 
+	if isTrialUser {
+		trialLimit := config.TrialHwidLimit()
+		if trialLimit > 0 {
+			userUpdate.HwidDeviceLimit = &trialLimit
+		}
+	}
+
 	externalSquad := config.ExternalSquadUUID()
 	if isTrialUser {
 		externalSquad = config.TrialExternalSquadUUID()
@@ -395,6 +402,12 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		ExpireAt:             expireAt,
 		TrafficLimitStrategy: normalizeStrategy(strategy),
 		TrafficLimitBytes:    &trafficLimit,
+	}
+	if isTrialUser {
+		trialLimit := config.TrialHwidLimit()
+		if trialLimit > 0 {
+			createReq.HwidDeviceLimit = &trialLimit
+		}
 	}
 	if externalSquad != uuid.Nil {
 		createReq.ExternalSquadUuid = &externalSquad
@@ -475,6 +488,32 @@ func (r *Client) DeleteUserDevice(ctx context.Context, userUuidStr string, hwid 
 	}
 
 	return r.doJSON(ctx, http.MethodPost, "/api/hwid/devices/delete", req, nil)
+}
+
+func (r *Client) UpdateUserDeviceLimit(ctx context.Context, telegramId int64, newLimit int) (*User, error) {
+	users, err := r.getUsersByTelegramID(ctx, telegramId)
+	if err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, errors.New("user not found")
+	}
+	user := findUserBySuffix(users, telegramId)
+	if newLimit <= 0 {
+		return nil, fmt.Errorf("invalid device limit: %d", newLimit)
+	}
+
+	req := &UpdateUserRequest{
+		UUID:            &user.UUID,
+		Status:          "ACTIVE",
+		HwidDeviceLimit: &newLimit,
+	}
+
+	var resp apiResponse[User]
+	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Response, nil
 }
 
 // ---------------------------------------------------------------------------

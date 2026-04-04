@@ -42,7 +42,7 @@ func NewClient(baseURL, shopID, secretKey string) *Client {
 	}
 }
 
-func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, customerId int64, purchaseId int64) (*Payment, error) {
+func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, extraHwid int, customerId int64, purchaseId int64) (*Payment, error) {
 	rub := Amount{
 		Value:    strconv.Itoa(amount),
 		Currency: "RUB",
@@ -58,7 +58,14 @@ func (c *Client) CreateInvoice(ctx context.Context, amount int, month int, custo
 		monthString = "месяцев"
 	}
 
-	description := fmt.Sprintf("Подписка на %d %s", month, monthString)
+	description := ""
+	if month > 0 && extraHwid > 0 {
+		description = fmt.Sprintf("Подписка на %d %s + %d устр.", month, monthString, extraHwid)
+	} else if extraHwid > 0 {
+		description = fmt.Sprintf("Оплата подписки +%d", extraHwid)
+	} else {
+		description = fmt.Sprintf("Подписка на %d %s", month, monthString)
+	}
 	receipt := &Receipt{
 		Customer: &Customer{
 			Email: config.YookasaEmail(),

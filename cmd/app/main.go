@@ -264,6 +264,24 @@ func main() {
 	// Callback для подключения устройств
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypeExact, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
+	// Callback для управления устройствами
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackManageDevices, bot.MatchTypeExact, h.ManageDevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Callback для подтверждения изменения устройств
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceConfirm, bot.MatchTypePrefix, h.AddDeviceConfirmCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Callback для применения изменения без оплаты
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceApply, bot.MatchTypePrefix, h.AddDeviceApplyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Callback для докупки устройств (с префиксом, т.к. содержит параметры)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevice, bot.MatchTypePrefix, h.AddDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Callback для оплаты докупки устройств (с префиксом, т.к. содержит параметры)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevicePayment, bot.MatchTypePrefix, h.AddDevicePaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Callback для продления доп. устройств
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackRenewExtraHwid, bot.MatchTypePrefix, h.RenewExtraHwidCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
 	// Callback для истории операций (с префиксом, т.к. содержит параметры страницы)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPurchaseHistory, bot.MatchTypePrefix, h.PurchaseHistoryCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
