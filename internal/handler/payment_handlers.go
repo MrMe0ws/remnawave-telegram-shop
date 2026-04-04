@@ -175,9 +175,15 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 	})
 
-	_, err := b.EditMessageReplyMarkup(ctx, &bot.EditMessageReplyMarkupParams{
+	textKey := "pricing_info"
+	if extraCount > 0 {
+		textKey = "pricing_info_extra"
+	}
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      h.translation.GetText(langCode, textKey),
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: keyboard,
 		},
