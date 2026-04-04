@@ -61,7 +61,7 @@ func (h Handler) PurchaseHistoryCallbackHandler(ctx context.Context, b *bot.Bot,
 		return
 	}
 
-	text := buildPurchaseHistoryText(langCode, purchases)
+	text := buildPurchaseHistoryText(langCode, purchases, page, totalPages)
 	markup := buildPurchaseHistoryMarkup(langCode, page, totalPages)
 
 	isDisabled := true
@@ -105,14 +105,18 @@ func parseHistoryPage(data string) int {
 	return 1
 }
 
-func buildPurchaseHistoryText(langCode string, purchases []database.Purchase) string {
+func buildPurchaseHistoryText(langCode string, purchases []database.Purchase, page, totalPages int) string {
 	tm := translation.GetInstance()
+	title := tm.GetText(langCode, "purchase_history_title")
+	if totalPages > 1 {
+		title = fmt.Sprintf("%s (%d/%d)", title, page, totalPages)
+	}
 	if len(purchases) == 0 {
-		return tm.GetText(langCode, "purchase_history_empty")
+		return title + "\n\n" + tm.GetText(langCode, "purchase_history_empty")
 	}
 
 	var sb strings.Builder
-	sb.WriteString(tm.GetText(langCode, "purchase_history_title"))
+	sb.WriteString(title)
 	sb.WriteString("\n\n")
 
 	for i, p := range purchases {
@@ -121,7 +125,7 @@ func buildPurchaseHistoryText(langCode string, purchases []database.Purchase) st
 		}
 		amount := formatAmount(p.Amount, p.Currency)
 		method := purchaseInvoiceLabel(langCode, p.InvoiceType)
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), fmt.Sprintf("%s: %s", method, amount)))
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), purchaseMethodEmoji(p.InvoiceType), method, amount))
 		sb.WriteString("\n")
 		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription"), formatMonthLabel(langCode, p.Month)))
 		sb.WriteString("\n")
@@ -182,6 +186,9 @@ func formatAmount(amount float64, currency string) string {
 	if currency == "" || strings.EqualFold(currency, "RUB") {
 		return fmt.Sprintf("+%s ₽", formatted)
 	}
+	if strings.EqualFold(currency, "XTR") || strings.EqualFold(currency, "STARS") {
+		return fmt.Sprintf("+%s STARS", formatted)
+	}
 	return fmt.Sprintf("+%s %s", formatted, strings.ToUpper(currency))
 }
 
@@ -211,5 +218,16 @@ func formatMonthLabel(langCode string, month int) string {
 		return "12 мес."
 	default:
 		return fmt.Sprintf("%d мес.", month)
+	}
+}
+
+func purchaseMethodEmoji(invoiceType database.InvoiceType) string {
+	switch invoiceType {
+	case database.InvoiceTypeTelegram:
+		return "⭐️"
+	case database.InvoiceTypeCrypto:
+		return "₿"
+	default:
+		return "💰"
 	}
 }

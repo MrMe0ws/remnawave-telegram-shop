@@ -89,7 +89,7 @@
   "purchase_history_button": "🧾 Purchase history",
   "purchase_history_title": "🧾 Purchase history",
   "purchase_history_empty": "❌ No purchase history yet",
-  "purchase_history_amount": "💰 Top up %s",
+  "purchase_history_amount": "%s Top up %s: %s",
   "purchase_history_subscription": "📝 Subscription for %s",
   "purchase_history_date": "📅 %s",
   "purchase_history_prev": "⬅️ Prev",
