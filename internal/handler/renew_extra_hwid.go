@@ -73,7 +73,7 @@ func (h Handler) RenewExtraHwidCallbackHandler(ctx context.Context, b *bot.Bot, 
 		},
 	})
 	if err != nil {
-		slog.Error("Error sending renew hwid payment message", "error", err)
+		logEditError("Error sending renew hwid payment message", err)
 		return
 	}
 
@@ -143,7 +143,5 @@ func (h Handler) showRenewPaymentMethods(ctx context.Context, b *bot.Bot, callba
 			InlineKeyboard: keyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending renew hwid payment methods", "error", err)
-	}
+	logEditError("Error sending renew hwid payment methods", err)
 }

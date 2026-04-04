@@ -332,9 +332,7 @@ func (h Handler) showDeviceChangeOptions(ctx context.Context, b *bot.Bot, callba
 			InlineKeyboard: keyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending add device message", "error", err)
-	}
+	logEditError("Error sending add device message", err)
 }
 
 func (h Handler) showDeviceChangeConfirm(ctx context.Context, b *bot.Bot, callbackMessage *models.Message, langCode string, customer *database.Customer, currentLimit, target int) {
@@ -382,9 +380,7 @@ func (h Handler) showDeviceChangeConfirm(ctx context.Context, b *bot.Bot, callba
 			InlineKeyboard: keyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending confirm device message", "error", err)
-	}
+	logEditError("Error sending confirm device message", err)
 }
 
 func (h Handler) showDevicePaymentMethods(ctx context.Context, b *bot.Bot, callbackMessage *models.Message, langCode string, target, amount int) {
@@ -448,9 +444,7 @@ func (h Handler) showDevicePaymentMethods(ctx context.Context, b *bot.Bot, callb
 			InlineKeyboard: keyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending add device payment options", "error", err)
-	}
+	logEditError("Error sending add device payment options", err)
 }
 
 func buildDeviceChangeText(langCode string, currentLimit, price int) string {
@@ -572,7 +566,5 @@ func (h Handler) editSimpleMessage(ctx context.Context, b *bot.Bot, message *mod
 			},
 		},
 	})
-	if err != nil {
-		slog.Error("Error editing message", "error", err)
-	}
+	logEditError("Error editing message", err)
 }

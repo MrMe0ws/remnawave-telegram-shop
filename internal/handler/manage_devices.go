@@ -61,7 +61,5 @@ func (h Handler) ManageDevicesCallbackHandler(ctx context.Context, b *bot.Bot, u
 			InlineKeyboard: keyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending manage devices message", "error", err)
-	}
+	logEditError("Error sending manage devices message", err)
 }

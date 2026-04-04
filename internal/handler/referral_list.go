@@ -57,9 +57,7 @@ func (h Handler) ReferralListCallbackHandler(ctx context.Context, b *bot.Bot, up
 			},
 		}},
 	})
-	if err != nil {
-		slog.Error("Error sending referral list message", "error", err)
-	}
+	logEditError("Error sending referral list message", err)
 }
 
 func buildReferralListText(langCode string, referrals []referralDisplay) string {

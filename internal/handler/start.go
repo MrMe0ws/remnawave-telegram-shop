@@ -101,9 +101,7 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 		},
 		Text: h.translation.GetText(langCode, "greeting"),
 	})
-	if err != nil {
-		slog.Error("Error sending /start message", err)
-	}
+	logEditError("Error sending /start message", err)
 }
 
 func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -214,9 +212,7 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 			InlineKeyboard: helpKeyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending help message", err)
-	}
+	logEditError("Error sending help message", err)
 }
 
 func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCode string) [][]models.InlineKeyboardButton {

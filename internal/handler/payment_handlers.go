@@ -69,10 +69,7 @@ func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *mod
 		},
 		Text: h.translation.GetText(langCode, "pricing_info"),
 	})
-
-	if err != nil {
-		slog.Error("Error sending buy message", err)
-	}
+	logEditError("Error sending buy message", err)
 }
 
 func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -118,9 +115,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 					},
 				},
 			})
-			if err != nil {
-				slog.Error("Error sending renew prompt", err)
-			}
+			logEditError("Error sending renew prompt", err)
 			return
 		}
 	}
@@ -187,10 +182,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 			InlineKeyboard: keyboard,
 		},
 	})
-
-	if err != nil {
-		slog.Error("Error sending sell message", err)
-	}
+	logEditError("Error sending sell message", err)
 }
 
 func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -255,7 +247,7 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		},
 	})
 	if err != nil {
-		slog.Error("Error updating sell message", err)
+		logEditError("Error updating sell message", err)
 		return
 	}
 	h.cache.Set(purchaseId, message.ID)

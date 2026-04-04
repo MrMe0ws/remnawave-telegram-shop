@@ -156,9 +156,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		},
 	})
 
-	if err != nil {
-		slog.Error("Error sending connect message", err)
-	}
+	logEditError("Error sending connect message", err)
 }
 
 func (h Handler) buildConnectText(ctx context.Context, customer *database.Customer, langCode, displayName string) string {

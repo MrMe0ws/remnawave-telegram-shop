@@ -77,9 +77,7 @@ func (h Handler) PurchaseHistoryCallbackHandler(ctx context.Context, b *bot.Bot,
 			InlineKeyboard: markup,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending purchase history message", "error", err)
-	}
+	logEditError("Error sending purchase history message", err)
 }
 
 func parseHistoryPage(data string) int {
