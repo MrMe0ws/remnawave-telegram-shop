@@ -126,6 +126,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	if len(devices) == 0 {
 		messageText += h.translation.GetText(langCode, "no_devices")
 	} else {
+		var deviceRow []models.InlineKeyboardButton
 		for i, device := range devices {
 			// Создаем более информативное название устройства
 			deviceName := h.getDeviceDisplayName(device, i+1)
@@ -150,13 +151,18 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				messageText += formattedDeviceInfo
 			}
 
-			// Добавляем кнопку удаления для каждого устройства
-			keyboard = append(keyboard, []models.InlineKeyboardButton{
-				{
-					Text:         fmt.Sprintf("🗑️ %s", deviceName),
-					CallbackData: fmt.Sprintf("%s%s", CallbackDeleteDevice, device.Hwid),
-				},
+			// Добавляем кнопку удаления для каждого устройства (по 2 в ряд)
+			deviceRow = append(deviceRow, models.InlineKeyboardButton{
+				Text:         fmt.Sprintf("🗑️ %s", deviceName),
+				CallbackData: fmt.Sprintf("%s%s", CallbackDeleteDevice, device.Hwid),
 			})
+			if len(deviceRow) == 2 {
+				keyboard = append(keyboard, deviceRow)
+				deviceRow = nil
+			}
+		}
+		if len(deviceRow) > 0 {
+			keyboard = append(keyboard, deviceRow)
 		}
 
 		// Добавляем информативный текст под устройствами

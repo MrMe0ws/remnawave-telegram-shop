@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"log/slog"
@@ -40,7 +41,8 @@ func (h Handler) ReferralListCallbackHandler(ctx context.Context, b *bot.Bot, up
 		return
 	}
 
-	text := buildReferralListText(langCode, referrals)
+	displayList := buildReferralDisplayList(ctx, b, referrals)
+	text := buildReferralListText(langCode, displayList)
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,
@@ -60,7 +62,7 @@ func (h Handler) ReferralListCallbackHandler(ctx context.Context, b *bot.Bot, up
 	}
 }
 
-func buildReferralListText(langCode string, referrals []database.RefereeSummary) string {
+func buildReferralListText(langCode string, referrals []referralDisplay) string {
 	tm := translation.GetInstance()
 	if len(referrals) == 0 {
 		return tm.GetText(langCode, "referral_list_empty")
@@ -79,8 +81,36 @@ func buildReferralListText(langCode string, referrals []database.RefereeSummary)
 			statusKey = "referral_list_status_active"
 		}
 		status := tm.GetText(langCode, statusKey)
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "referral_list_item"), ref.TelegramID, status))
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "referral_list_item"), ref.DisplayName, status))
 	}
 
 	return sb.String()
+}
+
+type referralDisplay struct {
+	DisplayName string
+	Active      bool
+}
+
+func buildReferralDisplayList(ctx context.Context, b *bot.Bot, referrals []database.RefereeSummary) []referralDisplay {
+	result := make([]referralDisplay, 0, len(referrals))
+	for _, ref := range referrals {
+		displayName := getReferralDisplayName(ctx, b, ref.TelegramID)
+		result = append(result, referralDisplay{DisplayName: displayName, Active: ref.Active})
+	}
+	return result
+}
+
+func getReferralDisplayName(ctx context.Context, b *bot.Bot, telegramID int64) string {
+	chat, err := b.GetChat(ctx, &bot.GetChatParams{ChatID: telegramID})
+	if err == nil && chat != nil {
+		if chat.Username != "" {
+			return "@" + escapeHTML(chat.Username)
+		}
+		fullName := strings.TrimSpace(strings.TrimSpace(chat.FirstName + " " + chat.LastName))
+		if fullName != "" {
+			return escapeHTML(fullName)
+		}
+	}
+	return strconv.FormatInt(telegramID, 10)
 }
