@@ -273,8 +273,8 @@ func main() {
 	// Callback для применения изменения без оплаты
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceApply, bot.MatchTypePrefix, h.AddDeviceApplyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
-	// Callback для докупки устройств (с префиксом, т.к. содержит параметры)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevice, bot.MatchTypePrefix, h.AddDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	// Callback для докупки устройств
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevice, bot.MatchTypeExact, h.AddDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для оплаты докупки устройств (с префиксом, т.к. содержит параметры)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevicePayment, bot.MatchTypePrefix, h.AddDevicePaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)

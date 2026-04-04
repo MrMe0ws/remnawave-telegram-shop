@@ -26,8 +26,6 @@ func (h Handler) AddDeviceCallbackHandler(ctx context.Context, b *bot.Bot, updat
 
 	callbackMessage := update.CallbackQuery.Message.Message
 	langCode := update.CallbackQuery.From.LanguageCode
-	params := parseCallbackData(update.CallbackQuery.Data)
-	targetStr := params["target"]
 
 	customer, err := h.customerRepository.FindByTelegramId(ctx, update.CallbackQuery.From.ID)
 	if err != nil {
@@ -66,15 +64,6 @@ func (h Handler) AddDeviceCallbackHandler(ctx context.Context, b *bot.Bot, updat
 	maxLimit := config.HwidMaxDevices()
 	if maxLimit > 0 && currentLimit >= maxLimit {
 		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_add_limit_reached"), CallbackConnect)
-		return
-	}
-
-	if targetStr != "" {
-		target, err := strconv.Atoi(targetStr)
-		if err != nil || target <= 0 {
-			return
-		}
-		h.showDeviceChangeConfirm(ctx, b, callbackMessage, langCode, customer, currentLimit, target)
 		return
 	}
 

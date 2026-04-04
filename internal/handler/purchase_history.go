@@ -119,7 +119,8 @@ func buildPurchaseHistoryText(langCode string, purchases []database.Purchase) st
 		}
 		amount := formatAmount(p.Amount, p.Currency)
 		method := purchaseInvoiceLabel(langCode, p.InvoiceType)
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), fmt.Sprintf("%s: %s", method, amount)))
+		emoji := purchaseMethodEmoji(p.InvoiceType)
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), emoji, method, amount))
 		sb.WriteString("\n")
 		if p.ExtraHwid > 0 && p.Month > 0 {
 			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription_combo"), formatMonthLabel(langCode, p.Month), p.ExtraHwid))
@@ -215,5 +216,16 @@ func formatMonthLabel(langCode string, month int) string {
 		return "12 мес."
 	default:
 		return fmt.Sprintf("%d мес.", month)
+	}
+}
+
+func purchaseMethodEmoji(invoiceType database.InvoiceType) string {
+	switch invoiceType {
+	case database.InvoiceTypeTelegram:
+		return "⭐️"
+	case database.InvoiceTypeCrypto:
+		return "₿"
+	default:
+		return "💰"
 	}
 }

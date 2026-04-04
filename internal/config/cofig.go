@@ -52,6 +52,7 @@ type config struct {
 	hwidAddPrice                                              int
 	hwidMaxDevices                                            int
 	trialHwidLimit                                            int
+	paidHwidLimit                                             int
 	miniApp                                                   string
 	enableAutoPayment                                         bool
 	healthCheckPort                                           int
@@ -136,6 +137,10 @@ func HwidMaxDevices() int {
 
 func TrialHwidLimit() int {
 	return conf.trialHwidLimit
+}
+
+func PaidHwidLimit() int {
+	return conf.paidHwidLimit
 }
 
 
@@ -565,6 +570,7 @@ func InitConfig() {
 	conf.hwidAddPrice = mustEnvInt("HWID_ADD_PRICE")
 	conf.hwidMaxDevices = envIntDefault("HWID_MAX_DEVICE", 10)
 	conf.trialHwidLimit = envIntDefault("TRIAL_HWID_LIMIT", 1)
+	conf.paidHwidLimit = envIntDefault("PAID_HWID_LIMIT", 0)
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")
