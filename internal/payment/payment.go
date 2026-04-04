@@ -197,7 +197,8 @@ func (s PaymentService) applyDefaultReferralBonus(ctx context.Context, referral 
 		return err
 	}
 
-	if err := s.grantReferralDays(ctx, referrerCustomer, config.GetReferralDays()); err != nil {
+	bonusDays := config.GetReferralDays()
+	if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
 		return err
 	}
 	if err := s.referralRepository.MarkBonusGranted(ctx, referral.ID); err != nil {
@@ -205,14 +206,7 @@ func (s PaymentService) applyDefaultReferralBonus(ctx context.Context, referral 
 	}
 
 	slog.Info("Granted referral bonus", "customer_id", utils.MaskHalfInt64(referrerCustomer.ID))
-	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    referrerCustomer.TelegramID,
-		ParseMode: models.ParseModeHTML,
-		Text:      s.translation.GetText(referrerCustomer.Language, "referral_bonus_granted"),
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: s.createConnectKeyboard(referrerCustomer),
-		},
-	})
+	err = s.sendReferralBonusMessage(ctx, referrerCustomer, bonusDays)
 	return err
 }
 
@@ -231,11 +225,13 @@ func (s PaymentService) applyProgressiveReferralBonus(ctx context.Context, refer
 		return err
 	}
 
+	bonusDays := 0
 	if paidCount == 1 {
 		if err := s.grantReferralDays(ctx, customer, config.ReferralFirstRefereeDays()); err != nil {
 			return err
 		}
-		if err := s.grantReferralDays(ctx, referrerCustomer, config.ReferralFirstReferrerDays()); err != nil {
+		bonusDays = config.ReferralFirstReferrerDays()
+		if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
 			return err
 		}
 		if !referral.BonusGranted {
@@ -244,7 +240,8 @@ func (s PaymentService) applyProgressiveReferralBonus(ctx context.Context, refer
 			}
 		}
 	} else {
-		if err := s.grantReferralDays(ctx, referrerCustomer, config.ReferralRepeatReferrerDays()); err != nil {
+		bonusDays = config.ReferralRepeatReferrerDays()
+		if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
 			return err
 		}
 		if !referral.BonusGranted {
@@ -255,14 +252,10 @@ func (s PaymentService) applyProgressiveReferralBonus(ctx context.Context, refer
 	}
 
 	slog.Info("Granted referral bonus", "customer_id", utils.MaskHalfInt64(referrerCustomer.ID))
-	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    referrerCustomer.TelegramID,
-		ParseMode: models.ParseModeHTML,
-		Text:      s.translation.GetText(referrerCustomer.Language, "referral_bonus_granted"),
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: s.createConnectKeyboard(referrerCustomer),
-		},
-	})
+	if bonusDays <= 0 {
+		return nil
+	}
+	err = s.sendReferralBonusMessage(ctx, referrerCustomer, bonusDays)
 	return err
 }
 
@@ -279,6 +272,21 @@ func (s PaymentService) grantReferralDays(ctx context.Context, customer *databas
 		"expire_at":         user.ExpireAt,
 	}
 	return s.customerRepository.UpdateFields(ctx, customer.ID, updates)
+}
+
+func (s PaymentService) sendReferralBonusMessage(ctx context.Context, customer *database.Customer, days int) error {
+	if days <= 0 {
+		return nil
+	}
+	_, err := s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    customer.TelegramID,
+		ParseMode: models.ParseModeHTML,
+		Text:      fmt.Sprintf(s.translation.GetText(customer.Language, "referral_bonus_granted"), days),
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: s.createConnectKeyboard(customer),
+		},
+	})
+	return err
 }
 
 func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {

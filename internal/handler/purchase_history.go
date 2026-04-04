@@ -120,9 +120,10 @@ func buildPurchaseHistoryText(langCode string, purchases []database.Purchase) st
 			sb.WriteString("\n\n")
 		}
 		amount := formatAmount(p.Amount, p.Currency)
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), amount))
+		method := purchaseInvoiceLabel(langCode, p.InvoiceType)
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), method+amount))
 		sb.WriteString("\n")
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_note"), purchaseInvoiceLabel(langCode, p.InvoiceType), amount))
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription"), formatMonthLabel(langCode, p.Month)))
 		sb.WriteString("\n")
 		if p.PaidAt != nil {
 			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_date"), p.PaidAt.Format("02.01.2006 15:04")))
@@ -182,4 +183,33 @@ func formatAmount(amount float64, currency string) string {
 		return fmt.Sprintf("+%s ₽", formatted)
 	}
 	return fmt.Sprintf("+%s %s", formatted, strings.ToUpper(currency))
+}
+
+func formatMonthLabel(langCode string, month int) string {
+	if strings.ToLower(langCode) == "en" {
+		switch month {
+		case 1:
+			return "1 mo."
+		case 3:
+			return "3 mo."
+		case 6:
+			return "6 mo."
+		case 12:
+			return "12 mo."
+		default:
+			return fmt.Sprintf("%d mo.", month)
+		}
+	}
+	switch month {
+	case 1:
+		return "1 мес."
+	case 3:
+		return "3 мес."
+	case 6:
+		return "6 мес."
+	case 12:
+		return "12 мес."
+	default:
+		return fmt.Sprintf("%d мес.", month)
+	}
 }
