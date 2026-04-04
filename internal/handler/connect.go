@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/google/uuid"
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -61,9 +64,10 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 	})
 
 	isDisabled := true
+	displayName := buildDisplayName(update.Message.From.FirstName, update.Message.From.LastName, update.Message.From.Username)
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
-		Text:      h.buildConnectText(ctx, customer, langCode),
+		Text:      h.buildConnectText(ctx, customer, langCode, displayName),
 		ParseMode: models.ParseModeHTML,
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &isDisabled,
@@ -124,11 +128,12 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	})
 
 	isDisabled := true
+	displayName := buildDisplayName(update.CallbackQuery.From.FirstName, update.CallbackQuery.From.LastName, update.CallbackQuery.From.Username)
 	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
 		ParseMode: models.ParseModeHTML,
-		Text:      h.buildConnectText(ctx, customer, langCode),
+		Text:      h.buildConnectText(ctx, customer, langCode, displayName),
 		LinkPreviewOptions: &models.LinkPreviewOptions{
 			IsDisabled: &isDisabled,
 		},
@@ -142,59 +147,124 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 }
 
-func (h Handler) buildConnectText(ctx context.Context, customer *database.Customer, langCode string) string {
+func (h Handler) buildConnectText(ctx context.Context, customer *database.Customer, langCode, displayName string) string {
 	var info strings.Builder
 
 	tm := translation.GetInstance()
 
-	if customer.ExpireAt != nil {
-		currentTime := time.Now()
+	now := time.Now()
+	isActive := customer.ExpireAt != nil && now.Before(*customer.ExpireAt)
+	if !isActive {
+		return tm.GetText(langCode, "no_subscription")
+	}
 
-		if currentTime.Before(*customer.ExpireAt) {
-			formattedDate := customer.ExpireAt.Format("02.01.2006 15:04")
+	name := strings.TrimSpace(displayName)
+	if name == "" {
+		name = tm.GetText(langCode, "vpn_username_unknown")
+	}
 
-			subscriptionActiveText := tm.GetText(langCode, "subscription_active")
-			info.WriteString(fmt.Sprintf(subscriptionActiveText, formattedDate))
-
-			// Получаем информацию о лимите трафика
-			userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
-			if err == nil && userInfo != nil {
-				// Проверяем, есть ли лимит трафика
-				if userInfo.TrafficLimitBytes > 0 {
-					trafficLimitBytes := userInfo.TrafficLimitBytes
-
-					// Получаем использованный трафик
-					usedTrafficBytes := int64(userInfo.UserTraffic.UsedTrafficBytes)
-
-					// Конвертируем байты в гигабайты (1 GB = 1073741824 байт)
-					bytesInGigabyte := float64(1073741824)
-					usedGB := float64(usedTrafficBytes) / bytesInGigabyte
-					limitGB := float64(trafficLimitBytes) / bytesInGigabyte
-
-					// Форматируем с одним знаком после запятой
-					usedGBStr := fmt.Sprintf("%.1f", usedGB)
-					limitGBStr := fmt.Sprintf("%.1f", limitGB)
-
-					trafficLimitText := tm.GetText(langCode, "traffic_limit")
-					info.WriteString(fmt.Sprintf(trafficLimitText, usedGBStr, limitGBStr))
-				}
-			}
-
-			// Добавляем ссылку на подписку
-			if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
-				subscriptionLinkText := tm.GetText(langCode, "subscription_link")
-				info.WriteString(fmt.Sprintf(subscriptionLinkText, *customer.SubscriptionLink))
-			}
-		} else {
-			noSubscriptionText := tm.GetText(langCode, "no_subscription")
-			info.WriteString(noSubscriptionText)
-		}
+	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_username"), escapeHTML(name)))
+	info.WriteString("\n")
+	if isActive {
+		info.WriteString(tm.GetText(langCode, "vpn_status_active"))
 	} else {
-		noSubscriptionText := tm.GetText(langCode, "no_subscription")
-		info.WriteString(noSubscriptionText)
+		info.WriteString(tm.GetText(langCode, "vpn_status_inactive"))
+	}
+
+	info.WriteString("\n\n")
+	info.WriteString(tm.GetText(langCode, "vpn_subscription_info_title"))
+	info.WriteString("\n")
+
+	expireAtText := tm.GetText(langCode, "vpn_not_available")
+	if customer.ExpireAt != nil {
+		expireAtText = customer.ExpireAt.Format("02.01.2006 15:04")
+	}
+	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_expires_at"), expireAtText))
+	info.WriteString("\n")
+
+	if customer.ExpireAt != nil {
+		info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_days_left"), daysLeft(*customer.ExpireAt, now)))
+		info.WriteString("\n")
+	}
+
+	trafficUsed := tm.GetText(langCode, "vpn_not_available")
+	trafficLimit := tm.GetText(langCode, "vpn_not_available")
+	deviceCount := tm.GetText(langCode, "vpn_not_available")
+	deviceLimit := tm.GetText(langCode, "vpn_not_available")
+
+	userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
+	if err == nil && userInfo != nil {
+		trafficUsed = formatGigabytes(userInfo.UserTraffic.UsedTrafficBytes)
+		if userInfo.TrafficLimitBytes > 0 {
+			trafficLimit = formatGigabytes(float64(userInfo.TrafficLimitBytes))
+		} else {
+			trafficLimit = tm.GetText(langCode, "vpn_unlimited")
+		}
+
+		if userInfo.HwidDeviceLimit != nil && *userInfo.HwidDeviceLimit > 0 {
+			deviceLimit = strconv.Itoa(*userInfo.HwidDeviceLimit)
+		} else {
+			deviceLimit = tm.GetText(langCode, "vpn_unlimited")
+		}
+
+		if userInfo.UUID != uuid.Nil {
+			devices, err := h.syncService.GetRemnawaveClient().GetUserDevicesByUuid(ctx, userInfo.UUID.String())
+			if err == nil {
+				deviceCount = strconv.Itoa(len(devices))
+			}
+		}
+	}
+
+	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_traffic"), trafficUsed, trafficLimit))
+	info.WriteString("\n")
+	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_devices"), deviceCount, deviceLimit))
+
+	if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
+		info.WriteString("\n\n")
+		info.WriteString(tm.GetText(langCode, "vpn_subscription_link_title"))
+		info.WriteString("\n")
+		info.WriteString(escapeHTML(*customer.SubscriptionLink))
+		info.WriteString("\n\n")
+		info.WriteString(tm.GetText(langCode, "vpn_subscription_link_hint"))
 	}
 
 	return info.String()
+}
+
+func buildDisplayName(firstName, lastName, username string) string {
+	fullName := strings.TrimSpace(strings.TrimSpace(firstName + " " + lastName))
+	if fullName != "" {
+		return fullName
+	}
+	return strings.TrimSpace(strings.TrimPrefix(username, "@"))
+}
+
+func daysLeft(expireAt, now time.Time) int {
+	if expireAt.Before(now) {
+		return 0
+	}
+	days := int(math.Ceil(expireAt.Sub(now).Hours() / 24))
+	if days < 0 {
+		return 0
+	}
+	return days
+}
+
+func formatGigabytes(bytes float64) string {
+	if bytes <= 0 {
+		return "0.0"
+	}
+	const bytesInGigabyte = 1073741824
+	return fmt.Sprintf("%.1f", bytes/bytesInGigabyte)
+}
+
+func escapeHTML(value string) string {
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+	)
+	return replacer.Replace(value)
 }
 
 func (h Handler) resolveConnectDeviceButton(lang string, subscriptionLink *string) []models.InlineKeyboardButton {
