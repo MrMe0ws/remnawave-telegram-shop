@@ -1,13 +1,13 @@
 {
-  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\n+14 days subscription (“🤝 Referrals”)",
+  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\nbonus subscription days (“🤝 Referrals”)",
 
   "buy_button": "💰 Buy",
   "connect_button": "🔌 My VPN",
   "connect_device_button": "🔌 Connect Device",
   "back_button": "🔙 Back",
 
-  "pricing_info": "Subscription works on 2 devices\n\n🌐 After payment you get full access to all locations\n\nPayment methods:\n💸 Bank card\n₿ Crypto\n⭐ Telegram Stars",
-  "pricing_info_extra": "Subscription works on 2 devices\n\nSubscription + extra devices\n\nPayment methods:\n💸 Bank card\n₿ Crypto\n⭐ Telegram Stars",
+  "pricing_info": "💰 VPN subscription plans:\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\nSubscription works on 2 devices\n\nPayment methods:\n💸 Bank card\n⭐ Telegram Stars",
+  "pricing_info_extra": "💰 VPN subscription plans:\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\nSubscription + extra devices\n\nPayment methods:\n💸 Bank card\n⭐ Telegram Stars",
 
   "month_1": "1 month – $?",
   "month_3": "3 months – $?",
@@ -76,7 +76,7 @@
   "tribute_button": "Tribute",
   "tribute_cancelled": "Tribute cancelled",
 
-  "access_denied": "⚠️ Access denied\nSuspicious nickname\nChange it or contact @Meows_support_bot",
+  "access_denied": "⚠️ Access denied\nSuspicious nickname\nChange it or contact @support_bot",
 
   "help_button": "📚 Help",
   "help_title": "Help",

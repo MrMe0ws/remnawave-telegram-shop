@@ -1,13 +1,12 @@
 {
-  "greeting": "🎁 14 дней VPN бесплатно!\nПодключайся прямо сейчас!\n\n🌐 Доступные сервера:\n    🇱🇻 Латвия\n    🇩🇪 Германия\n    🇸🇪 Швеция\n    🇷🇺 Россия\n\n🚀 Скорость до 1 Гбит/с\n💪 Нет рекламы\n♾️ Безлимитный трафик\n\n🔗 Пригласи друга и получи\n+14 дней подписки («🤝 Рефералы»)",
+  "greeting": "🎁 14 дней VPN бесплатно!\nПодключайся прямо сейчас!\n\n🌐 Доступные сервера:\n    🇱🇻 Латвия\n    🇩🇪 Германия\n    🇸🇪 Швеция\n    🇷🇺 Россия\n\n🚀 Скорость до 1 Гбит/с\n💪 Нет рекламы\n♾️ Безлимитный трафик\n\n🔗 Пригласи друга и получи\nбонусные дни подписки («🤝 Рефералы»)",
   
-  "buy_button": {
-  "text": "Купить",
-  "style": "green",
-  "emoji_id": "5258165702707125574"
-   },
+  "buy_button": "💰 Купить",
   "connect_button": "🔌 Мой VPN",
-  "connect_device_button": "🔌 Подключить устройство",
+  "connect_device_button": {
+    "text": "🔌 Подключить устройство",
+    "style": "green"
+  },
   "back_button": {
     "text": "Назад",
     "emoji_id": "6039539366177541657"
@@ -18,15 +17,9 @@
   "month_3": "3 мес - 400₽",
   "month_6": "6 мес - 750₽",
   "month_12": "12 мес - 1320₽",
-  "crypto_button": {
-    "text": "Криптовалютой",
-    "emoji_id": "5402186569006210455"
-  },
+  "crypto_button": "₿ Криптовалютой",
   "card_button": "💳 СБП / Карта 💸",
-  "pay_button": {
-    "text": "Оплатить",
-    "emoji_id": "5436386989857320953"
-  },
+  "pay_button": "💸 Оплатить",
   "subscription_active": "📅 Подписка действует до <b><i>%s</i></b>",
   "traffic_limit": "\n\nЛимит - %s/%s гб",
   "subscription_link": "\n\n🔗 <a href=\"%s\">Ссылка на подписку</a>",
@@ -35,32 +28,26 @@
   "vpn_username_unknown": "Не задан",
   "vpn_status_active": "🟢 Подписка: активна",
   "vpn_status_inactive": "🔴 Подписка: неактивна",
-  "vpn_subscription_info_title": "📱 Информация о подписке\n",
+  "vpn_subscription_info_title": "<b>📱 Информация о подписке</b>\n",
   "vpn_expires_at": "📅 Действует до: %s",
   "vpn_days_left": "⏰ Осталось: %d дн.",
-  "vpn_traffic": "📈 Трафик: %s / %s",
+  "vpn_traffic": "📈 Трафик: %s ГБ / %s ГБ",
   "vpn_devices": "📱 Устройства: %s / %s",
   "vpn_subscription_link_title": "🔗 Ссылка для подключения:",
   "vpn_subscription_link_hint": "📱 Скопируйте ссылку и добавьте в ваше VPN приложение",
-  "vpn_unlimited": "безлимит",
+  "vpn_unlimited": "∞",
   "vpn_not_available": "—",
   "subscription_activated": "✅ Подписка активирована",
   "feedback_button": {
     "text": "Отзывы",
-    "emoji_id": "5379600444098093058"
+    "emoji_id": "5463289097336405244"
   },
   "server_status_button": {
     "text": "Статус серверов",
-    "emoji_id": "5805532930662996322"
+    "emoji_id": "5188234920639632382"
   },
-  "support_button": {
-    "text": "Поддержка",
-    "emoji_id": "6301027265899661025"
-  },
-  "channel_button": {
-    "text": "Канал",
-    "emoji_id": "6021418126061605425"
-  },
+  "support_button": "🆘 Поддержка",
+  "channel_button": "📢 Канал",
   "tos_button": "Условия сервиса",
   "subscription_expiring": "⚠️ <b>Уведомление о подписке</b> ⚠️\n\nВаша подписка истекает <b>%s</b>\nПожалуйста, продлите подписку",
   "renew_subscription_button": "🔄 Продлить подписку",
@@ -69,12 +56,20 @@
   "invoice_title": "Подписка",
   "trial_button": {
     "text": "Попробовать бесплатно",
-    "emoji_id": "5089506485931606869"
+    "emoji_id": "5424972470023104089",
+    "style": "red"
   },
-  "trial_activated": "🔥 Пробный период активирован",
+  "trial_activated": "Пробный период активирован",
   "trial_text": "🎁 Вам доступна бесплатная подписка на 14 дней!\n\n🚧 Доступно 3 ГБ трафика в день",
-  "activate_trial_button": "🔥 Активировать",
-  "referral_button": "🤝 Рефералы",
+  "activate_trial_button": {
+    "text": "Активировать",
+    "emoji_id": "5424972470023104089",
+    "style": "red"
+  },
+  "referral_button": {
+    "text": "Рефералы",
+    "emoji_id": "5395732581780040886"
+  },
   "referral_desc_default": "🚩 За первую успешную оплату\nподписки по вашей ссылке\nВы получаете +%d дней к подписке",
   "referral_desc_progressive": "🚩 Бонусы за рефералов\nПервое пополнение: вы +%d дн., реферал +%d дн.\nКаждое следующее пополнение: вы +%d дн.",
   "referral_stats": "\n\n<b>📊 Ваша статистика:</b>\n\n• Приглашено: %d\n• Оплатили по вашей ссылке: %d\n• Активных рефералов: %d\n• Конверсия: %d%%\n• Дней заработано всего: %d\n• За последний месяц: %d",
@@ -88,13 +83,10 @@
   "referral_list_item": "• %s — %s",
   "referral_list_status_active": "активен",
   "referral_list_status_inactive": "неактивен",
-  "web_app_button_text": {
-    "text": "Подключиться",
-    "emoji_id": "5843553939672274145"
-  },  
+  "web_app_button_text": "🔌 Подключиться",
   "tribute_button" : "Tribute",
   "tribute_cancelled" : "Tribute cancelled",
-  "access_denied": "⚠️ Доступ запрещён\nПодозрительный никнейм\nИзмените его или обратитесь в @Meows_support_bot",
+  "access_denied": "⚠️ Доступ запрещён\nПодозрительный никнейм\nИзмените его или обратитесь в @support_bot",
   "help_button": "📚 Помощь",
   "help_title": "Помощь",
   "server_selection_button": "🌏 Какой сервер выбрать",
