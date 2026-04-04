@@ -243,6 +243,9 @@ func main() {
 	// Callback для реферальной системы
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
+	// Callback для списка рефералов
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferralList, bot.MatchTypeExact, h.ReferralListCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
 	// Callback для покупки подписки
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypeExact, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
@@ -260,6 +263,9 @@ func main() {
 
 	// Callback для подключения устройств
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypeExact, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Callback для истории операций (с префиксом, т.к. содержит параметры страницы)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPurchaseHistory, bot.MatchTypePrefix, h.PurchaseHistoryCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для обработки платежей (с префиксом, т.к. содержит параметры)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPayment, bot.MatchTypePrefix, h.PaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)

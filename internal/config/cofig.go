@@ -44,6 +44,10 @@ type config struct {
 	trialDays                                                 int
 	squadUUIDs                                                map[uuid.UUID]uuid.UUID
 	referralDays                                              int
+	referralMode                                              string
+	referralFirstReferrerDays                                 int
+	referralFirstRefereeDays                                  int
+	referralRepeatReferrerDays                                int
 	miniApp                                                   string
 	enableAutoPayment                                         bool
 	healthCheckPort                                           int
@@ -98,6 +102,22 @@ func GetReferralDays() int {
 	return conf.referralDays
 }
 
+func ReferralMode() string {
+	return conf.referralMode
+}
+
+func ReferralFirstReferrerDays() int {
+	return conf.referralFirstReferrerDays
+}
+
+func ReferralFirstRefereeDays() int {
+	return conf.referralFirstRefereeDays
+}
+
+func ReferralRepeatReferrerDays() int {
+	return conf.referralRepeatReferrerDays
+}
+
 func GetMiniAppURL() string {
 	return conf.miniApp
 }
@@ -115,7 +135,7 @@ func GetWhitelistedTelegramIds() map[int64]bool {
 }
 
 func TrialInternalSquads() map[uuid.UUID]uuid.UUID {
-	if conf.trialInternalSquads != nil && len(conf.trialInternalSquads) > 0 {
+	if len(conf.trialInternalSquads) > 0 {
 		return conf.trialInternalSquads
 	}
 	return conf.squadUUIDs
@@ -501,6 +521,16 @@ func InitConfig() {
 
 	conf.trafficLimit = mustEnvInt("TRAFFIC_LIMIT")
 	conf.referralDays = mustEnvInt("REFERRAL_DAYS")
+	conf.referralMode = func() string {
+		v := strings.ToLower(envStringDefault("REFERRAL_MODE", "default"))
+		if v != "default" && v != "progressive" {
+			panic("REFERRAL_MODE must be 'default' or 'progressive'")
+		}
+		return v
+	}()
+	conf.referralFirstReferrerDays = envIntDefault("REFERRAL_FIRST_REFERRER_DAYS", 7)
+	conf.referralFirstRefereeDays = envIntDefault("REFERRAL_FIRST_REFEREE_DAYS", 7)
+	conf.referralRepeatReferrerDays = envIntDefault("REFERRAL_REPEAT_REFERRER_DAYS", 3)
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")

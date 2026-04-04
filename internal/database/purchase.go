@@ -313,6 +313,81 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 	return purchase, nil
 }
 
+func (pr *PurchaseRepository) FindPaidByCustomer(ctx context.Context, customerID int64, limit, offset int) ([]Purchase, error) {
+	buildSelect := sq.Select("*").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"customer_id": customerID},
+			sq.Eq{"status": PurchaseStatusPaid},
+		}).
+		OrderBy("paid_at DESC").
+		Limit(uint64(limit)).
+		Offset(uint64(offset)).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	rows, err := pr.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query purchases: %w", err)
+	}
+	defer rows.Close()
+
+	var purchases []Purchase
+	for rows.Next() {
+		var purchase Purchase
+		if err := rows.Scan(
+			&purchase.ID,
+			&purchase.Amount,
+			&purchase.CustomerID,
+			&purchase.CreatedAt,
+			&purchase.Month,
+			&purchase.PaidAt,
+			&purchase.Currency,
+			&purchase.ExpireAt,
+			&purchase.Status,
+			&purchase.InvoiceType,
+			&purchase.CryptoInvoiceID,
+			&purchase.CryptoInvoiceLink,
+			&purchase.YookasaURL,
+			&purchase.YookasaID,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan purchase: %w", err)
+		}
+		purchases = append(purchases, purchase)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return purchases, nil
+}
+
+func (pr *PurchaseRepository) CountPaidByCustomer(ctx context.Context, customerID int64) (int, error) {
+	buildSelect := sq.Select("COUNT(*)").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"customer_id": customerID},
+			sq.Eq{"status": PurchaseStatusPaid},
+		}).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	var count int
+	if err := pr.pool.QueryRow(ctx, sql, args...).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to query count: %w", err)
+	}
+	return count, nil
+}
+
 func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(
 	ctx context.Context,
 	customerID int64,

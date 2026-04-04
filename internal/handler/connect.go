@@ -40,6 +40,9 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 		markup = append(markup, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
 		})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
+		})
 
 		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
 		var referralAndStatusRow []models.InlineKeyboardButton
@@ -103,6 +106,9 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
 		markup = append(markup, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
+		})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
 		})
 
 		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
