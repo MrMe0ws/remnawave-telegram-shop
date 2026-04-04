@@ -255,6 +255,21 @@ func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, teleg
 	return r.updateUser(ctx, existingUser, trafficLimit, days, isTrialUser)
 }
 
+// CreateOrUpdateUserFromNow обновляет подписку, считая срок от текущего времени.
+func (r *Client) CreateOrUpdateUserFromNow(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
+	users, err := r.getUsersByTelegramID(ctx, telegramId)
+	if err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return r.createUser(ctx, customerId, telegramId, trafficLimit, days, isTrialUser)
+	}
+
+	existingUser := findUserBySuffix(users, telegramId)
+	base := time.Now().UTC().Add(-time.Second)
+	return r.updateUserWithBase(ctx, existingUser, trafficLimit, days, isTrialUser, &base)
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -277,7 +292,15 @@ func usernameFromCtx(ctx context.Context) string {
 }
 
 func (r *Client) updateUser(ctx context.Context, existingUser *User, trafficLimit int, days int, isTrialUser bool) (*User, error) {
-	newExpire := getNewExpire(days, existingUser.ExpireAt)
+	return r.updateUserWithBase(ctx, existingUser, trafficLimit, days, isTrialUser, nil)
+}
+
+func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, trafficLimit int, days int, isTrialUser bool, baseExpire *time.Time) (*User, error) {
+	expireBase := existingUser.ExpireAt
+	if baseExpire != nil {
+		expireBase = *baseExpire
+	}
+	newExpire := getNewExpire(days, expireBase)
 
 	squads, err := r.getInternalSquads(ctx)
 	if err != nil {
@@ -296,10 +319,10 @@ func (r *Client) updateUser(ctx context.Context, existingUser *User, trafficLimi
 	}
 
 	userUpdate := &UpdateUserRequest{
-		UUID:                &existingUser.UUID,
-		ExpireAt:            &newExpire,
-		Status:              "ACTIVE",
-		TrafficLimitBytes:   &trafficLimit,
+		UUID:                 &existingUser.UUID,
+		ExpireAt:             &newExpire,
+		Status:               "ACTIVE",
+		TrafficLimitBytes:    &trafficLimit,
 		ActiveInternalSquads: squadIds,
 		TrafficLimitStrategy: normalizeStrategy(strategy),
 	}

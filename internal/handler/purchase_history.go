@@ -121,7 +121,7 @@ func buildPurchaseHistoryText(langCode string, purchases []database.Purchase) st
 		}
 		amount := formatAmount(p.Amount, p.Currency)
 		method := purchaseInvoiceLabel(langCode, p.InvoiceType)
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), method+amount))
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), fmt.Sprintf("%s: %s", method, amount)))
 		sb.WriteString("\n")
 		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription"), formatMonthLabel(langCode, p.Month)))
 		sb.WriteString("\n")

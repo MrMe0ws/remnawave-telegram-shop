@@ -86,12 +86,30 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		}
 	}
 
-	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), purchase.Month*config.DaysInMonth(), false)
+	daysToAdd := purchase.Month * config.DaysInMonth()
+	useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
+	if useFromNow {
+		paidCount, err := s.purchaseRepository.CountPaidByCustomer(ctx, customer.ID)
+		if err != nil {
+			return err
+		}
+		if paidCount == 0 {
+			user, err := s.remnawaveClient.CreateOrUpdateUserFromNow(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
+			if err != nil {
+				return err
+			}
+			return s.finalizePurchase(ctx, purchase, customer, user)
+		}
+	}
+	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
 	if err != nil {
 		return err
 	}
+	return s.finalizePurchase(ctx, purchase, customer, user)
+}
 
-	err = s.purchaseRepository.MarkAsPaid(ctx, purchase.ID)
+func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database.Purchase, customer *database.Customer, user *remnawave.User) error {
+	err := s.purchaseRepository.MarkAsPaid(ctx, purchase.ID)
 	if err != nil {
 		return err
 	}

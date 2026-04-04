@@ -48,6 +48,7 @@ type config struct {
 	referralFirstReferrerDays                                 int
 	referralFirstRefereeDays                                  int
 	referralRepeatReferrerDays                                int
+	trialAddsToPaid                                           bool
 	miniApp                                                   string
 	enableAutoPayment                                         bool
 	healthCheckPort                                           int
@@ -116,6 +117,10 @@ func ReferralFirstRefereeDays() int {
 
 func ReferralRepeatReferrerDays() int {
 	return conf.referralRepeatReferrerDays
+}
+
+func TrialAddsToPaid() bool {
+	return conf.trialAddsToPaid
 }
 
 func GetMiniAppURL() string {
@@ -399,6 +404,14 @@ func envBool(key string) bool {
 	return os.Getenv(key) == "true"
 }
 
+func envBoolDefault(key string, def bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	return v == "true"
+}
+
 func InitConfig() {
 	if os.Getenv("DISABLE_ENV_FILE") != "true" {
 		if err := godotenv.Load(".env"); err != nil {
@@ -531,6 +544,7 @@ func InitConfig() {
 	conf.referralFirstReferrerDays = envIntDefault("REFERRAL_FIRST_REFERRER_DAYS", 7)
 	conf.referralFirstRefereeDays = envIntDefault("REFERRAL_FIRST_REFEREE_DAYS", 7)
 	conf.referralRepeatReferrerDays = envIntDefault("REFERRAL_REPEAT_REFERRER_DAYS", 3)
+	conf.trialAddsToPaid = envBoolDefault("TRIAL_ADD_TO_PAID", true)
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")
