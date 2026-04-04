@@ -60,6 +60,7 @@
   "referral_desc_progressive": "🚩 Referral bonuses\nFirst top up: you +%d days, referral +%d days\nEach next top up: you +%d days",
   "referral_stats": "\n\n<b>📊 Your stats:</b>\n👫 Invited: %d\n💳 Paid via your link: %d\nActive referrals: %d\nConversion: %d%%\n📅 Total days earned: %d\nLast month: %d",
   "referral_bonus_granted": "🎁 Referral bonus received: +%d days",
+  "referral_first_bonus_granted": "🎁 Bonus for first payment via referral link: +%d days",
   "stars_button": "⭐ Telegram Stars",
   "share_referral_button": "Share",
   "referral_list_button": "📋 Referral list",

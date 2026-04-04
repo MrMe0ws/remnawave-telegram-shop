@@ -58,7 +58,7 @@ func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update
 				h.translation.WithButton(langCode, "referral_list_button", models.InlineKeyboardButton{CallbackData: CallbackReferralList}),
 			},
 			{
-				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 			},
 		}},
 	})

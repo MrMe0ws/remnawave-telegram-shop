@@ -245,7 +245,11 @@ func (s PaymentService) applyProgressiveReferralBonus(ctx context.Context, refer
 
 	bonusDays := 0
 	if paidCount == 1 {
-		if err := s.grantReferralDays(ctx, customer, config.ReferralFirstRefereeDays()); err != nil {
+		refereeBonusDays := config.ReferralFirstRefereeDays()
+		if err := s.grantReferralDays(ctx, customer, refereeBonusDays); err != nil {
+			return err
+		}
+		if err := s.sendReferralFirstBonusMessage(ctx, customer, refereeBonusDays); err != nil {
 			return err
 		}
 		bonusDays = config.ReferralFirstReferrerDays()
@@ -301,10 +305,36 @@ func (s PaymentService) sendReferralBonusMessage(ctx context.Context, customer *
 		ParseMode: models.ParseModeHTML,
 		Text:      fmt.Sprintf(s.translation.GetText(customer.Language, "referral_bonus_granted"), days),
 		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: s.createConnectKeyboard(customer),
+			InlineKeyboard: s.createReferralBonusKeyboard(customer),
 		},
 	})
 	return err
+}
+
+func (s PaymentService) sendReferralFirstBonusMessage(ctx context.Context, customer *database.Customer, days int) error {
+	if days <= 0 {
+		return nil
+	}
+	_, err := s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    customer.TelegramID,
+		ParseMode: models.ParseModeHTML,
+		Text:      fmt.Sprintf(s.translation.GetText(customer.Language, "referral_first_bonus_granted"), days),
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: s.createReferralBonusKeyboard(customer),
+		},
+	})
+	return err
+}
+
+func (s PaymentService) createReferralBonusKeyboard(customer *database.Customer) [][]models.InlineKeyboardButton {
+	return [][]models.InlineKeyboardButton{
+		{
+			s.translation.WithButton(customer.Language, "referral_button", models.InlineKeyboardButton{CallbackData: "referral"}),
+		},
+		{
+			s.translation.WithButton(customer.Language, "connect_button", models.InlineKeyboardButton{CallbackData: "connect"}),
+		},
+	}
 }
 
 func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
