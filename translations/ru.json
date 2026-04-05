@@ -84,13 +84,8 @@
   "referral_list_status_active": "активен",
   "referral_list_status_inactive": "неактивен",
   "web_app_button_text": "🔌 Подключиться",
-<<<<<<< HEAD
   "tribute_button": "Tribute",
   "tribute_cancelled": "Tribute cancelled",
-=======
-  "tribute_button" : "Tribute",
-  "tribute_cancelled" : "Tribute cancelled",
->>>>>>> 2.7.x
   "access_denied": "⚠️ Доступ запрещён\nПодозрительный никнейм\nИзмените его или обратитесь в @support_bot",
   "help_button": "📚 Помощь",
   "help_title": "Помощь",
@@ -99,20 +94,15 @@
   "public_offer_button": "📄 Публичная оферта",
   "privacy_policy_button": "🔒 Политика конфиденциальности",
   "terms_of_service_button": "📋 Пользовательское соглашение",
-<<<<<<< HEAD
-=======
   "manage_devices_button": {
     "text": "📱 Управление устройствами",
     "style": "blue"
   },
   "manage_devices_title": "📱 Управление устройствами",
->>>>>>> 2.7.x
   "devices_button": {
     "text": "📱 Мои устройства",
     "style": "blue"
   },
-<<<<<<< HEAD
-=======
   "add_device_button": "➕ Добавить устройство",
   "hwid_add_title": "Сколько устройств добавить?",
   "hwid_add_option": "+%d устройство",
@@ -140,7 +130,6 @@
   "hwid_renew_payment_title": "Оплата продления доп. устройств\n+%d устройств\nСрок: %d мес.\nСумма: %d ₽",
   "confirm_button": "✅ Подтвердить",
   "cancel_button": "❌ Отмена",
->>>>>>> 2.7.x
   "purchase_history_button": "🧾 История транзакций",
   "purchase_history_title": "🧾 История операций",
   "purchase_history_empty": "❌ История операций пуста",
