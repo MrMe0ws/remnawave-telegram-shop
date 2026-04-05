@@ -44,6 +44,9 @@ func (h Handler) RenewExtraHwidCallbackHandler(ctx context.Context, b *bot.Bot, 
 	}
 
 	amount := config.HwidAddPrice() * extra * months
+	if params["invoiceType"] == string(database.InvoiceTypeTelegram) {
+		amount = config.HwidAddStarsPrice() * extra * months
+	}
 	if params["invoiceType"] == "" {
 		h.showRenewPaymentMethods(ctx, b, callbackMessage, langCode, extra, months, amount)
 		return

@@ -259,7 +259,11 @@ func (h Handler) AddDevicePaymentCallbackHandler(ctx context.Context, b *bot.Bot
 		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "no_subscription"), CallbackConnect)
 		return
 	}
-	amount := calcProportionalPrice(config.HwidAddPrice(), delta, daysLeft)
+	pricePerMonth := config.HwidAddPrice()
+	if params["invoiceType"] == string(database.InvoiceTypeTelegram) {
+		pricePerMonth = config.HwidAddStarsPrice()
+	}
+	amount := calcProportionalPrice(pricePerMonth, delta, daysLeft)
 
 	if params["invoiceType"] == "" {
 		h.showDevicePaymentMethods(ctx, b, callbackMessage, langCode, target, amount)
@@ -333,9 +337,10 @@ func (h Handler) showDeviceChangeConfirm(ctx context.Context, b *bot.Bot, callba
 	daysLeft := remainingDays(customer.ExpireAt)
 	delta := target - currentLimit
 	amount := 0
+	pricePerMonth := config.HwidAddPrice()
 	actionKey := "hwid_change_action_decrease"
 	if delta > 0 {
-		amount = calcProportionalPrice(config.HwidAddPrice(), delta, daysLeft)
+		amount = calcProportionalPrice(pricePerMonth, delta, daysLeft)
 		actionKey = "hwid_change_action_increase"
 	}
 

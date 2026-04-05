@@ -50,6 +50,7 @@ type config struct {
 	referralRepeatReferrerDays                                int
 	trialAddsToPaid                                           bool
 	hwidAddPrice                                              int
+	hwidAddStarsPrice                                         int
 	hwidMaxDevices                                            int
 	trialHwidLimit                                            int
 	paidHwidLimit                                             int
@@ -129,6 +130,10 @@ func TrialAddsToPaid() bool {
 
 func HwidAddPrice() int {
 	return conf.hwidAddPrice
+}
+
+func HwidAddStarsPrice() int {
+	return conf.hwidAddStarsPrice
 }
 
 func HwidMaxDevices() int {
@@ -568,6 +573,7 @@ func InitConfig() {
 	conf.referralRepeatReferrerDays = envIntDefault("REFERRAL_REPEAT_REFERRER_DAYS", 3)
 	conf.trialAddsToPaid = envBoolDefault("TRIAL_ADD_TO_PAID", true)
 	conf.hwidAddPrice = mustEnvInt("HWID_ADD_PRICE")
+	conf.hwidAddStarsPrice = envIntDefault("HWID_ADD_STARS_PRICE", conf.hwidAddPrice)
 	conf.hwidMaxDevices = envIntDefault("HWID_MAX_DEVICE", 10)
 	conf.trialHwidLimit = envIntDefault("TRIAL_HWID_LIMIT", 1)
 	conf.paidHwidLimit = envIntDefault("PAID_HWID_LIMIT", 0)

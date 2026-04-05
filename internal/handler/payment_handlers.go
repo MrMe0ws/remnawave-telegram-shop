@@ -206,11 +206,14 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	var price int
 	if invoiceType == database.InvoiceTypeTelegram {
 		price = config.StarsPrice(month)
+		if extra > 0 {
+			price += config.HwidAddStarsPrice() * extra * month
+		}
 	} else {
 		price = config.Price(month)
-	}
-	if extra > 0 {
-		price += config.HwidAddPrice() * extra * month
+		if extra > 0 {
+			price += config.HwidAddPrice() * extra * month
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
