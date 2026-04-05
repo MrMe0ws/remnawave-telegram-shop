@@ -103,7 +103,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 			if err != nil {
 				return err
 			}
-			return s.finalizePurchase(ctx, purchase, customer, user)
+			if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
+				return err
+			}
+			return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
 		}
 	}
 	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
