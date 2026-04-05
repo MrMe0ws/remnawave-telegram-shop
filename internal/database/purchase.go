@@ -274,7 +274,6 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},
 			sq.Eq{"status": PurchaseStatusPaid},
-			sq.Eq{"extra_hwid": 0},
 			sq.Or{
 				sq.Eq{"invoice_type": InvoiceTypeCrypto},
 				sq.Eq{"invoice_type": InvoiceTypeYookasa},
@@ -400,7 +399,6 @@ func (pr *PurchaseRepository) CountPaidSubscriptionsByCustomer(ctx context.Conte
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},
 			sq.Eq{"status": PurchaseStatusPaid},
-			sq.Eq{"extra_hwid": 0},
 			sq.Gt{"month": 0},
 		}).
 		PlaceholderFormat(sq.Dollar)
@@ -425,7 +423,6 @@ func (pr *PurchaseRepository) HasPaidSubscription(ctx context.Context, customerI
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},
 			sq.Eq{"status": PurchaseStatusPaid},
-			sq.Eq{"extra_hwid": 0},
 			sq.Gt{"month": 0},
 		}).
 		Limit(1).
