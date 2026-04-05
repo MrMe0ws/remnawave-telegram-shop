@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
@@ -86,10 +87,14 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		}
 	}
 
+	if purchase.Month <= 0 && purchase.ExtraHwid > 0 {
+		return s.processDevicePurchase(ctx, purchase, customer)
+	}
+
 	daysToAdd := purchase.Month * config.DaysInMonth()
 	useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
 	if useFromNow {
-		paidCount, err := s.purchaseRepository.CountPaidByCustomer(ctx, customer.ID)
+		paidCount, err := s.purchaseRepository.CountPaidSubscriptionsByCustomer(ctx, customer.ID)
 		if err != nil {
 			return err
 		}
@@ -105,7 +110,155 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if err != nil {
 		return err
 	}
-	return s.finalizePurchase(ctx, purchase, customer, user)
+	if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
+		return err
+	}
+	return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+}
+
+func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *database.Purchase, customer *database.Customer) error {
+	err := s.purchaseRepository.MarkAsPaid(ctx, purchase.ID)
+	if err != nil {
+		return err
+	}
+
+	userInfo, err := s.remnawaveClient.GetUserTrafficInfo(ctx, customer.TelegramID)
+	if err != nil {
+		return err
+	}
+
+	currentExtra := 0
+	if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
+		currentExtra = customer.ExtraHwid
+	} else if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.Before(time.Now()) {
+		currentLimit := resolveDeviceLimit(userInfo)
+		newLimit := currentLimit - customer.ExtraHwid
+		if newLimit < 1 {
+			newLimit = 1
+		}
+		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit); err != nil {
+			return err
+		}
+		if err := s.customerRepository.UpdateFields(ctx, customer.ID, map[string]interface{}{
+			"extra_hwid":            0,
+			"extra_hwid_expires_at": nil,
+		}); err != nil {
+			return err
+		}
+		currentExtra = 0
+	}
+
+	currentLimit := resolveDeviceLimit(userInfo)
+	newLimit := currentLimit + purchase.ExtraHwid
+	maxLimit := config.HwidMaxDevices()
+	if maxLimit > 0 && newLimit > maxLimit {
+		newLimit = maxLimit
+	}
+
+	updatedUser, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit)
+	if err != nil {
+		return err
+	}
+
+	newExtra := currentExtra + purchase.ExtraHwid
+	if customer.ExpireAt == nil {
+		return fmt.Errorf("subscription expire_at is not set")
+	}
+	if err := s.customerRepository.UpdateFields(ctx, customer.ID, map[string]interface{}{
+		"extra_hwid":            newExtra,
+		"extra_hwid_expires_at": customer.ExpireAt,
+	}); err != nil {
+		return err
+	}
+
+	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
+		description := fmt.Sprintf("Оплата подписки +%d", purchase.ExtraHwid)
+		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
+		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
+			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+			notifyAdminMoynalogFailure(ctx, s.telegramBot, config.GetAdminTelegramId(), purchase, err, description)
+		}
+	}
+
+	if updatedUser != nil {
+		customerFilesToUpdate := map[string]interface{}{
+			"subscription_link": updatedUser.SubscriptionUrl,
+			"expire_at":         updatedUser.ExpireAt,
+		}
+		if err := s.customerRepository.UpdateFields(ctx, customer.ID, customerFilesToUpdate); err != nil {
+			return err
+		}
+	}
+
+	successText := fmt.Sprintf(s.translation.GetText(customer.Language, "hwid_change_success_paid"), currentLimit, newLimit, int(math.Ceil(purchase.Amount)))
+	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: customer.TelegramID,
+		Text:   successText,
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: s.createConnectKeyboard(customer),
+		},
+	})
+	return err
+}
+
+func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, customer *database.Customer, user *remnawave.User, purchase *database.Purchase) error {
+	if customer == nil || user == nil || purchase == nil {
+		return nil
+	}
+	if purchase.Month <= 0 {
+		return nil
+	}
+
+	userInfo, err := s.remnawaveClient.GetUserTrafficInfo(ctx, customer.TelegramID)
+	if err != nil {
+		return err
+	}
+
+	currentLimit := resolveDeviceLimit(userInfo)
+	activeExtra := 0
+	if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
+		activeExtra = customer.ExtraHwid
+	}
+	baseLimit := currentLimit - activeExtra
+	if baseLimit < 1 {
+		baseLimit = 1
+	}
+
+	newExtra := purchase.ExtraHwid
+	if newExtra < 0 {
+		newExtra = 0
+	}
+	newLimit := baseLimit + newExtra
+	maxLimit := config.HwidMaxDevices()
+	if maxLimit > 0 && newLimit > maxLimit {
+		newLimit = maxLimit
+	}
+
+	if activeExtra > 0 || newExtra > 0 {
+		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit); err != nil {
+			return err
+		}
+	}
+
+	updates := map[string]interface{}{
+		"extra_hwid":            newExtra,
+		"extra_hwid_expires_at": nil,
+	}
+	if newExtra > 0 {
+		updates["extra_hwid_expires_at"] = user.ExpireAt
+	}
+	return s.customerRepository.UpdateFields(ctx, customer.ID, updates)
+}
+
+func resolveDeviceLimit(userInfo *remnawave.User) int {
+	if userInfo != nil && userInfo.HwidDeviceLimit != nil && *userInfo.HwidDeviceLimit > 0 {
+		return *userInfo.HwidDeviceLimit
+	}
+	fallback := config.GetHwidFallbackDeviceLimit()
+	if fallback <= 0 {
+		return 1
+	}
+	return fallback
 }
 
 func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database.Purchase, customer *database.Customer, user *remnawave.User) error {
@@ -233,7 +386,7 @@ func (s PaymentService) applyProgressiveReferralBonus(ctx context.Context, refer
 		return nil
 	}
 
-	paidCount, err := s.purchaseRepository.CountPaidByCustomer(ctx, customer.ID)
+	paidCount, err := s.purchaseRepository.CountPaidSubscriptionsByCustomer(ctx, customer.ID)
 	if err != nil {
 		return err
 	}
@@ -340,13 +493,49 @@ func (s PaymentService) createReferralBonusKeyboard(customer *database.Customer)
 func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, months, customer)
+		return s.createCryptoInvoice(ctx, amount, months, 0, customer)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, months, customer)
+		return s.createYookasaInvoice(ctx, amount, months, 0, customer)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, months, customer)
+		return s.createTelegramInvoice(ctx, amount, months, 0, customer)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, months, customer)
+		return s.createTributeInvoice(ctx, amount, months, 0, customer)
+	default:
+		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
+	}
+}
+
+func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
+	if extraHwid < 0 {
+		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
+	}
+	switch invoiceType {
+	case database.InvoiceTypeCrypto:
+		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer)
+	case database.InvoiceTypeYookasa:
+		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer)
+	case database.InvoiceTypeTelegram:
+		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer)
+	case database.InvoiceTypeTribute:
+		return s.createTributeInvoice(ctx, amount, months, extraHwid, customer)
+	default:
+		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
+	}
+}
+
+func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
+	if extraHwid <= 0 {
+		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
+	}
+	switch invoiceType {
+	case database.InvoiceTypeCrypto:
+		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer)
+	case database.InvoiceTypeYookasa:
+		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer)
+	case database.InvoiceTypeTelegram:
+		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer)
+	case database.InvoiceTypeTribute:
+		return s.createTributeInvoice(ctx, amount, 0, extraHwid, customer)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
@@ -398,7 +587,7 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 	return nil
 }
 
-func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64, months int, customer *database.Customer) (url string, purchaseId int64, err error) {
+func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
 	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
 		InvoiceType: database.InvoiceTypeCrypto,
 		Status:      database.PurchaseStatusNew,
@@ -406,6 +595,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		Currency:    "RUB",
 		CustomerID:  customer.ID,
 		Month:       months,
+		ExtraHwid:   extraHwid,
 	})
 	if err != nil {
 		slog.Error("Error creating purchase", err)
@@ -413,13 +603,17 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	}
 
 	username, _ := ctx.Value(remnawave.CtxKeyUsername).(string)
+	description := fmt.Sprintf("Subscription on %d month", months)
+	if extraHwid > 0 {
+		description = fmt.Sprintf("Extra devices +%d", extraHwid)
+	}
 	invoice, err := s.cryptoPayClient.CreateInvoice(&cryptopay.InvoiceRequest{
 		CurrencyType:   "fiat",
 		Fiat:           "RUB",
 		Amount:         fmt.Sprintf("%d", int(amount)),
 		AcceptedAssets: "USDT",
 		Payload:        fmt.Sprintf("purchaseId=%d&username=%s", purchaseId, username),
-		Description:    fmt.Sprintf("Subscription on %d month", months),
+		Description:    description,
 		PaidBtnName:    "callback",
 		PaidBtnUrl:     config.BotURL(),
 	})
@@ -443,7 +637,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	return invoice.BotInvoiceUrl, purchaseId, nil
 }
 
-func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64, months int, customer *database.Customer) (url string, purchaseId int64, err error) {
+func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
 	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
 		InvoiceType: database.InvoiceTypeYookasa,
 		Status:      database.PurchaseStatusNew,
@@ -451,13 +645,14 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		Currency:    "RUB",
 		CustomerID:  customer.ID,
 		Month:       months,
+		ExtraHwid:   extraHwid,
 	})
 	if err != nil {
 		slog.Error("Error creating purchase", err)
 		return "", 0, err
 	}
 
-	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), months, customer.ID, purchaseId)
+	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), months, extraHwid, customer.ID, purchaseId)
 	if err != nil {
 		slog.Error("Error creating invoice", err)
 		return "", 0, err
@@ -478,7 +673,7 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 	return invoice.Confirmation.ConfirmationURL, purchaseId, nil
 }
 
-func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, customer *database.Customer) (url string, purchaseId int64, err error) {
+func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
 	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
 		InvoiceType: database.InvoiceTypeTelegram,
 		Status:      database.PurchaseStatusNew,
@@ -486,6 +681,7 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 		Currency:    "STARS",
 		CustomerID:  customer.ID,
 		Month:       months,
+		ExtraHwid:   extraHwid,
 	})
 	if err != nil {
 		slog.Error("Error creating purchase", err)
@@ -574,7 +770,7 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 	return nil
 }
 
-func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64, months int, customer *database.Customer) (url string, purchaseId int64, err error) {
+func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
 	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
 		InvoiceType: database.InvoiceTypeTribute,
 		Status:      database.PurchaseStatusPending,
@@ -582,6 +778,7 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 		Currency:    "RUB",
 		CustomerID:  customer.ID,
 		Month:       months,
+		ExtraHwid:   extraHwid,
 	})
 	if err != nil {
 		slog.Error("Error creating purchase", err)

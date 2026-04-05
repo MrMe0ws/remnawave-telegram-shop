@@ -77,9 +77,7 @@ func (h Handler) PurchaseHistoryCallbackHandler(ctx context.Context, b *bot.Bot,
 			InlineKeyboard: markup,
 		},
 	})
-	if err != nil {
-		slog.Error("Error sending purchase history message", "error", err)
-	}
+	logEditError("Error sending purchase history message", err)
 }
 
 func parseHistoryPage(data string) int {
@@ -125,9 +123,16 @@ func buildPurchaseHistoryText(langCode string, purchases []database.Purchase, pa
 		}
 		amount := formatAmount(p.Amount, p.Currency)
 		method := purchaseInvoiceLabel(langCode, p.InvoiceType)
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), purchaseMethodEmoji(p.InvoiceType), method, amount))
+		emoji := purchaseMethodEmoji(p.InvoiceType)
+		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), emoji, method, amount))
 		sb.WriteString("\n")
-		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription"), formatMonthLabel(langCode, p.Month)))
+		if p.ExtraHwid > 0 && p.Month > 0 {
+			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription_combo"), formatMonthLabel(langCode, p.Month), p.ExtraHwid))
+		} else if p.ExtraHwid > 0 {
+			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription_hwid"), p.ExtraHwid))
+		} else {
+			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription"), formatMonthLabel(langCode, p.Month)))
+		}
 		sb.WriteString("\n")
 		if p.PaidAt != nil {
 			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_date"), p.PaidAt.Format("02.01.2006 15:04")))

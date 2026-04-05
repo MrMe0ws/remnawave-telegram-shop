@@ -83,6 +83,7 @@ type CreateUserRequest struct {
 	Status               string      `json:"status,omitempty"`
 	TrafficLimitBytes    *int        `json:"trafficLimitBytes,omitempty"`
 	TrafficLimitStrategy string      `json:"trafficLimitStrategy,omitempty"`
+	HwidDeviceLimit      *int        `json:"hwidDeviceLimit,omitempty"`
 	ActiveInternalSquads []uuid.UUID `json:"activeInternalSquads,omitempty"`
 	ExternalSquadUuid    *uuid.UUID  `json:"externalSquadUuid,omitempty"`
 	Tag                  *string     `json:"tag,omitempty"`
@@ -92,15 +93,16 @@ type CreateUserRequest struct {
 
 // UpdateUserRequest is the request body for PATCH /api/users.
 type UpdateUserRequest struct {
-	UUID                *uuid.UUID  `json:"uuid,omitempty"`
-	Status              string      `json:"status,omitempty"`
-	ExpireAt            *time.Time  `json:"expireAt,omitempty"`
-	TrafficLimitBytes   *int        `json:"trafficLimitBytes,omitempty"`
-	TrafficLimitStrategy string     `json:"trafficLimitStrategy,omitempty"`
+	UUID                 *uuid.UUID  `json:"uuid,omitempty"`
+	Status               string      `json:"status,omitempty"`
+	ExpireAt             *time.Time  `json:"expireAt,omitempty"`
+	TrafficLimitBytes    *int        `json:"trafficLimitBytes,omitempty"`
+	TrafficLimitStrategy string      `json:"trafficLimitStrategy,omitempty"`
+	HwidDeviceLimit      *int        `json:"hwidDeviceLimit,omitempty"`
 	ActiveInternalSquads []uuid.UUID `json:"activeInternalSquads,omitempty"`
-	ExternalSquadUuid   *uuid.UUID  `json:"externalSquadUuid,omitempty"`
-	Tag                 *string     `json:"tag,omitempty"`
-	Description         *string     `json:"description,omitempty"`
+	ExternalSquadUuid    *uuid.UUID  `json:"externalSquadUuid,omitempty"`
+	Tag                  *string     `json:"tag,omitempty"`
+	Description          *string     `json:"description,omitempty"`
 }
 
 type deleteUserDeviceRequest struct {

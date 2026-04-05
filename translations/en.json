@@ -1,12 +1,14 @@
 {
-  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\n+14 days subscription (“🤝 Referrals”)",
+  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\nbonus subscription days (“🤝 Referrals”)",
 
   "buy_button": "💰 Buy",
   "connect_button": "🔌 My VPN",
   "connect_device_button": "🔌 Connect Device",
   "back_button": "🔙 Back",
 
-  "pricing_info": "Subscription works on 2 devices\n\n🌐 After payment you get full access to all locations\n\nPayment methods:\n💸 Bank card\n₿ Crypto\n⭐ Telegram Stars",
+  "pricing_info_trial": "<b>💰 VPN subscription plans</b>\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\n<i>Trial does not renew automatically</i>\n\n<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
+  "pricing_info_paid": "<b>💰 VPN subscription plans</b>\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\n<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
+  "pricing_info_paid_extra": "<b>💰 VPN subscription plans</b>\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\n<b>Subscription + extra devices</b>\n<i>Single combined invoice</i>\n\n<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
 
   "month_1": "1 month – $?",
   "month_3": "3 months – $?",
@@ -75,7 +77,7 @@
   "tribute_button": "Tribute",
   "tribute_cancelled": "Tribute cancelled",
 
-  "access_denied": "⚠️ Access denied\nSuspicious nickname\nChange it or contact @Meows_support_bot",
+  "access_denied": "⚠️ Access denied\nSuspicious nickname\nChange it or contact @support_bot",
 
   "help_button": "📚 Help",
   "help_title": "Help",
@@ -85,12 +87,43 @@
   "privacy_policy_button": "🔒 Privacy Policy",
   "terms_of_service_button": "📋 Terms of Service",
 
+  "manage_devices_button": "📱 Device management",
+  "manage_devices_title": "📱 Device management",
   "devices_button": "📱 My Devices",
+  "add_device_button": "➕ Add device",
+  "hwid_add_title": "How many devices to add?",
+  "hwid_add_option": "+%d device",
+  "hwid_add_limit_reached": "⚠️ You already reached the maximum device limit.",
+  "hwid_add_paid_only": "⚠️ Extra devices are available only for paid subscriptions.",
+  "hwid_add_success": "✅ Device limit increased by +%d.",
+  "hwid_change_title": "Change device count\n\nCurrent limit: %d devices\nPrice per extra device: %d ₽/month\nChoose a new device count:\n\n💡 Important:\n• Increasing — prorated charge for remaining time\n• Decreasing — no refunds",
+  "hwid_change_option_decrease": "%d devices (no refund)",
+  "hwid_change_option_current": "✅ %d devices (current)",
+  "hwid_change_option_increase": "+ %d devices (+%d ₽ for %d days)",
+  "hwid_change_confirm_text": "Confirm change\n\nCurrent count: %d\nNew count: %d\nAction: %s\n%s\n\nConfirm change?",
+  "hwid_change_action_increase": "increase to %d",
+  "hwid_change_action_decrease": "decrease to %d",
+  "hwid_change_amount": "Charge: %d ₽ (for %d days)",
+  "hwid_change_no_refund": "No refunds for decrease",
+  "hwid_change_noop": "Current device count already selected.",
+  "hwid_change_success_free": "✅ Device count changed!\nWas: %d → Now: %d\nCharged: 0 ₽",
+  "hwid_change_success_paid": "✅ Device count increased!\nWas: %d → Now: %d\nCharged: %d ₽",
+  "hwid_payment_methods": "Choose a payment method\nAmount: %d ₽",
+  "hwid_payment_title": "Extra devices payment\n+%d devices\nAmount: %s\nPeriod: %d days",
+  "hwid_renew_prompt": "Renew extra devices?\n\nCurrent extra devices: %d\nPeriod: %d months\nPrice: %d ₽\n\nRenew for the new period?",
+  "hwid_renew_confirm_button": "✅ Renew",
+  "hwid_renew_cancel_button": "❌ Don't renew",
+  "hwid_renew_payment_methods": "Choose a payment method\nAmount: %d ₽",
+  "hwid_renew_payment_title": "Extra devices renewal\n+%d devices\nPeriod: %d months\nAmount: %d ₽",
+  "confirm_button": "✅ Confirm",
+  "cancel_button": "❌ Cancel",
   "purchase_history_button": "🧾 Purchase history",
   "purchase_history_title": "🧾 Purchase history",
   "purchase_history_empty": "❌ No purchase history yet",
   "purchase_history_amount": "%s Top up %s: %s",
   "purchase_history_subscription": "📝 Subscription for %s",
+  "purchase_history_subscription_hwid": "📝 Subscription: +%d devices",
+  "purchase_history_subscription_combo": "📝 Subscription for %s + %d devices",
   "purchase_history_date": "📅 %s",
   "purchase_history_prev": "⬅️ Prev",
   "purchase_history_next": "➡️ Next",
@@ -111,5 +144,5 @@
   "device_delete_error": "❌ Error removing device",
   "devices_error": "❌ Error loading device list",
 
-  "device_delete_info": "<i>Remove a device if you reached the limit or can't add a new one. If removed by mistake — you can add it again.</i>\n\nTap a device to remove it from your subscription"
+  "device_delete_info": "If your device limit is full, remove an old device to connect a new one.\n\n⚠️ Note: removing from the list does not uninstall the app. The system simply “forgets” the device, and VPN will stop working on it until you connect it again.\n\nExample: limit is 3 devices, all taken → remove the old phone → connect the new one."
 }

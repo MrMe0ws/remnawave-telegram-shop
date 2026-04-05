@@ -43,9 +43,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				},
 			},
 		})
-		if err != nil {
-			slog.Error("Error editing message", err)
-		}
+		logEditError("Error editing message", err)
 		return
 	}
 
@@ -82,9 +80,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				},
 			})
 		}
-		if err != nil {
-			slog.Error("Error editing message", err)
-		}
+		logEditError("Error editing message", err)
 		return
 	}
 
@@ -109,9 +105,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				},
 			},
 		})
-		if err != nil {
-			slog.Error("Error editing message", err)
-		}
+		logEditError("Error editing message", err)
 		return
 	}
 
@@ -183,9 +177,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			InlineKeyboard: keyboard,
 		},
 	})
-	if err != nil {
-		slog.Error("Error editing message", err)
-	}
+	logEditError("Error editing message", err)
 }
 
 // DeleteDeviceCallbackHandler обрабатывает удаление устройства
@@ -223,9 +215,7 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 				},
 			},
 		})
-		if err != nil {
-			slog.Error("Error editing message", err)
-		}
+		logEditError("Error editing message", err)
 		return
 	}
 

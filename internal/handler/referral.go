@@ -62,9 +62,7 @@ func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update
 			},
 		}},
 	})
-	if err != nil {
-		slog.Error("Error sending referral message", "error", err)
-	}
+	logEditError("Error sending referral message", err)
 }
 
 func buildReferralDescription(langCode string) string {

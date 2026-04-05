@@ -44,9 +44,7 @@ func (h Handler) TrialCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 			},
 		}},
 	})
-	if err != nil {
-		slog.Error("Error sending /trial message", err)
-	}
+	logEditError("Error sending /trial message", err)
 }
 
 func (h Handler) ActivateTrialCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -80,9 +78,7 @@ func (h Handler) ActivateTrialCallbackHandler(ctx context.Context, b *bot.Bot, u
 		ParseMode:   models.ParseModeHTML,
 		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: h.createConnectKeyboard(langCode)},
 	})
-	if err != nil {
-		slog.Error("Error sending /trial message", err)
-	}
+	logEditError("Error sending /trial message", err)
 }
 
 func (h Handler) createConnectKeyboard(lang string) [][]models.InlineKeyboardButton {

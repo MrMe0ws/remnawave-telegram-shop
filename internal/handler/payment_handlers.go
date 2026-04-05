@@ -20,6 +20,15 @@ import (
 func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	callback := update.CallbackQuery.Message.Message
 	langCode := update.CallbackQuery.From.LanguageCode
+	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
+	if err != nil {
+		slog.Error("Error finding customer", "error", err)
+		return
+	}
+	if customer == nil {
+		slog.Error("customer not exist", "chatID", callback.Chat.ID, "error", err)
+		return
+	}
 
 	var priceButtons []models.InlineKeyboardButton
 
@@ -60,19 +69,17 @@ func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *mod
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 	})
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+	infoKey := h.resolvePricingInfoKey(ctx, customer, 0)
+	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
 		ParseMode: models.ParseModeHTML,
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: keyboard,
 		},
-		Text: h.translation.GetText(langCode, "pricing_info"),
+		Text: h.translation.GetText(langCode, infoKey),
 	})
-
-	if err != nil {
-		slog.Error("Error sending buy message", err)
-	}
+	logEditError("Error sending buy message", err)
 }
 
 func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -81,18 +88,65 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	langCode := update.CallbackQuery.From.LanguageCode
 	month := callbackQuery["month"]
 	amount := callbackQuery["amount"]
+	extraChoice := callbackQuery["extra"]
 
 	var keyboard [][]models.InlineKeyboardButton
+	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
+	if err != nil {
+		slog.Error("Error finding customer", "error", err)
+		return
+	}
+	if customer == nil {
+		slog.Error("customer not exist", "chatID", callback.Chat.ID, "error", err)
+		return
+	}
+
+	if extraChoice == "" {
+		if err := h.cleanupExpiredExtraHwid(ctx, customer); err != nil {
+			slog.Error("Error cleaning expired extra hwid", "error", err)
+			return
+		}
+		if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
+			monthInt := parseIntSafe(month)
+			promptText := fmt.Sprintf(h.translation.GetText(langCode, "hwid_renew_prompt"), customer.ExtraHwid, monthInt, config.HwidAddPrice()*customer.ExtraHwid*monthInt)
+			_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+				ChatID:    callback.Chat.ID,
+				MessageID: callback.ID,
+				ParseMode: models.ParseModeHTML,
+				Text:      promptText,
+				ReplyMarkup: models.InlineKeyboardMarkup{
+					InlineKeyboard: [][]models.InlineKeyboardButton{
+						{
+							h.translation.WithButton(langCode, "hwid_renew_confirm_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&amount=%s&extra=%d", CallbackSell, month, amount, customer.ExtraHwid)}),
+						},
+						{
+							h.translation.WithButton(langCode, "hwid_renew_cancel_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&amount=%s&extra=%d", CallbackSell, month, amount, 0)}),
+						},
+						{
+							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+						},
+					},
+				},
+			})
+			logEditError("Error sending renew prompt", err)
+			return
+		}
+	}
+
+	extraCount := 0
+	if extraChoice != "" {
+		extraCount = parseIntSafe(extraChoice)
+	}
 
 	if config.IsCryptoPayEnabled() {
 		keyboard = append(keyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "crypto_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s", CallbackPayment, month, database.InvoiceTypeCrypto, amount)}),
+			h.translation.WithButton(langCode, "crypto_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s&extra=%d", CallbackPayment, month, database.InvoiceTypeCrypto, amount, extraCount)}),
 		})
 	}
 
 	if config.IsYookasaEnabled() {
 		keyboard = append(keyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "card_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s", CallbackPayment, month, database.InvoiceTypeYookasa, amount)}),
+			h.translation.WithButton(langCode, "card_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s&extra=%d", CallbackPayment, month, database.InvoiceTypeYookasa, amount, extraCount)}),
 		})
 	}
 
@@ -119,7 +173,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 
 		if shouldShowStarsButton {
 			keyboard = append(keyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "stars_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s", CallbackPayment, month, database.InvoiceTypeTelegram, amount)}),
+			h.translation.WithButton(langCode, "stars_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&invoiceType=%s&amount=%s&extra=%d", CallbackPayment, month, database.InvoiceTypeTelegram, amount, extraCount)}),
 			})
 		}
 	}
@@ -134,17 +188,17 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 	})
 
-	_, err := b.EditMessageReplyMarkup(ctx, &bot.EditMessageReplyMarkupParams{
+	textKey := h.resolvePricingInfoKey(ctx, customer, extraCount)
+	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      h.translation.GetText(langCode, textKey),
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: keyboard,
 		},
 	})
-
-	if err != nil {
-		slog.Error("Error sending sell message", err)
-	}
+	logEditError("Error sending sell message", err)
 }
 
 func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -157,12 +211,19 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 
 	invoiceType := database.InvoiceType(callbackQuery["invoiceType"])
+	extra := parseIntSafe(callbackQuery["extra"])
 
 	var price int
 	if invoiceType == database.InvoiceTypeTelegram {
 		price = config.StarsPrice(month)
+		if extra > 0 {
+			price += config.HwidAddStarsPrice() * extra * month
+		}
 	} else {
 		price = config.Price(month)
+		if extra > 0 {
+			price += config.HwidAddPrice() * extra * month
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -178,7 +239,13 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, update.CallbackQuery.From.Username)
-	paymentURL, purchaseId, err := h.paymentService.CreatePurchase(ctxWithUsername, float64(price), month, customer, invoiceType)
+	var paymentURL string
+	var purchaseId int64
+	if extra > 0 {
+		paymentURL, purchaseId, err = h.paymentService.CreatePurchaseWithExtra(ctxWithUsername, float64(price), month, extra, customer, invoiceType)
+	} else {
+		paymentURL, purchaseId, err = h.paymentService.CreatePurchase(ctxWithUsername, float64(price), month, customer, invoiceType)
+	}
 	if err != nil {
 		slog.Error("Error creating payment", err)
 		return
@@ -193,13 +260,13 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			InlineKeyboard: [][]models.InlineKeyboardButton{
 				{
 					h.translation.WithButton(langCode, "pay_button", models.InlineKeyboardButton{URL: paymentURL}),
-					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, month, price)}),
+					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%d&amount=%d&extra=%d", CallbackSell, month, price, extra)}),
 				},
 			},
 		},
 	})
 	if err != nil {
-		slog.Error("Error updating sell message", err)
+		logEditError("Error updating sell message", err)
 		return
 	}
 	h.cache.Set(purchaseId, message.ID)
@@ -231,6 +298,17 @@ func (h Handler) SuccessPaymentHandler(ctx context.Context, b *bot.Bot, update *
 	}
 }
 
+func parseIntSafe(value string) int {
+	if value == "" {
+		return 0
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0
+	}
+	return parsed
+}
+
 func parseCallbackData(data string) map[string]string {
 	result := make(map[string]string)
 
@@ -248,4 +326,22 @@ func parseCallbackData(data string) map[string]string {
 	}
 
 	return result
+}
+
+func (h Handler) resolvePricingInfoKey(ctx context.Context, customer *database.Customer, extraCount int) string {
+	if customer == nil {
+		return "pricing_info_paid"
+	}
+	hasPaid, err := h.purchaseRepository.HasPaidSubscription(ctx, customer.ID)
+	if err != nil {
+		slog.Error("Error checking paid subscription", "error", err)
+		return "pricing_info_paid"
+	}
+	if !hasPaid {
+		return "pricing_info_trial"
+	}
+	if extraCount > 0 {
+		return "pricing_info_paid_extra"
+	}
+	return "pricing_info_paid"
 }
