@@ -530,19 +530,11 @@ func (h Handler) cleanupExpiredExtraHwid(ctx context.Context, customer *database
 		return nil
 	}
 
-	userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
-	if err != nil {
-		return err
-	}
-	totalLimit := resolveCurrentDeviceLimit(userInfo)
-	if totalLimit <= 0 {
-		totalLimit = config.GetHwidFallbackDeviceLimit()
-	}
-	newLimit := totalLimit - customer.ExtraHwid
+	newLimit := config.GetHwidFallbackDeviceLimit()
 	if newLimit < 1 {
 		newLimit = 1
 	}
-	_, err = h.syncService.GetRemnawaveClient().UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit)
+	_, err := h.syncService.GetRemnawaveClient().UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit)
 	if err != nil {
 		return err
 	}

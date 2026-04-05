@@ -65,6 +65,8 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 			&customer.CreatedAt,
 			&customer.SubscriptionLink,
 			&customer.Language,
+			&customer.ExtraHwid,
+			&customer.ExtraHwidExpiresAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)

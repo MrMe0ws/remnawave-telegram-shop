@@ -131,8 +131,7 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 	if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
 		currentExtra = customer.ExtraHwid
 	} else if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.Before(time.Now()) {
-		currentLimit := resolveDeviceLimit(userInfo)
-		newLimit := currentLimit - customer.ExtraHwid
+		newLimit := config.GetHwidFallbackDeviceLimit()
 		if newLimit < 1 {
 			newLimit = 1
 		}
@@ -219,19 +218,25 @@ func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, custome
 	if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
 		activeExtra = customer.ExtraHwid
 	}
-	baseLimit := currentLimit - activeExtra
-	if baseLimit < 1 {
-		baseLimit = 1
-	}
 
 	newExtra := purchase.ExtraHwid
 	if newExtra < 0 {
 		newExtra = 0
 	}
+	baseLimit := currentLimit - activeExtra
+	if baseLimit < 1 {
+		baseLimit = 1
+	}
 	newLimit := baseLimit + newExtra
 	maxLimit := config.HwidMaxDevices()
 	if maxLimit > 0 && newLimit > maxLimit {
 		newLimit = maxLimit
+	}
+	if activeExtra > 0 && newExtra == 0 {
+		newLimit = config.GetHwidFallbackDeviceLimit()
+		if newLimit < 1 {
+			newLimit = 1
+		}
 	}
 
 	if activeExtra > 0 || newExtra > 0 {
