@@ -278,7 +278,7 @@ func (h Handler) AddDevicePaymentCallbackHandler(ctx context.Context, b *bot.Bot
 		return
 	}
 
-	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_payment_title"), delta, amount, daysLeft)
+	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_payment_title"), delta, formatPaymentAmount(amount, params["invoiceType"]), daysLeft)
 	message, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,
@@ -493,6 +493,13 @@ func calcProportionalPrice(pricePerMonth, delta, daysLeft int) int {
 	}
 	total := float64(pricePerMonth*delta) * float64(daysLeft) / 30.0
 	return int(math.Ceil(total))
+}
+
+func formatPaymentAmount(amount int, invoiceType string) string {
+	if invoiceType == string(database.InvoiceTypeTelegram) {
+		return fmt.Sprintf("%d STARS", amount)
+	}
+	return fmt.Sprintf("%d ₽", amount)
 }
 
 func resolveCurrentDeviceLimit(userInfo *remnawave.User) int {
