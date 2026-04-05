@@ -332,14 +332,6 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 		if trialLimit > 0 {
 			userUpdate.HwidDeviceLimit = &trialLimit
 		}
-	} else {
-		paidLimit := config.PaidHwidLimit()
-		if paidLimit <= 0 {
-			paidLimit = config.GetHwidFallbackDeviceLimit()
-		}
-		if paidLimit > 0 {
-			userUpdate.HwidDeviceLimit = &paidLimit
-		}
 	}
 
 	externalSquad := config.ExternalSquadUUID()
@@ -415,14 +407,6 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		trialLimit := config.TrialHwidLimit()
 		if trialLimit > 0 {
 			createReq.HwidDeviceLimit = &trialLimit
-		}
-	} else {
-		paidLimit := config.PaidHwidLimit()
-		if paidLimit <= 0 {
-			paidLimit = config.GetHwidFallbackDeviceLimit()
-		}
-		if paidLimit > 0 {
-			createReq.HwidDeviceLimit = &paidLimit
 		}
 	}
 	if externalSquad != uuid.Nil {
