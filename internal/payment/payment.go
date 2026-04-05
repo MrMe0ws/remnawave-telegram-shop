@@ -223,6 +223,17 @@ func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, custome
 	if newExtra < 0 {
 		newExtra = 0
 	}
+
+	paidBaseLimit := config.PaidHwidLimit()
+	if paidBaseLimit <= 0 {
+		paidBaseLimit = config.GetHwidFallbackDeviceLimit()
+	}
+	if activeExtra == 0 && newExtra == 0 && paidBaseLimit > 0 && currentLimit > 0 && currentLimit < paidBaseLimit {
+		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, paidBaseLimit); err != nil {
+			return err
+		}
+		currentLimit = paidBaseLimit
+	}
 	baseLimit := currentLimit - activeExtra
 	if baseLimit < 1 {
 		baseLimit = 1
