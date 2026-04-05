@@ -20,6 +20,15 @@ import (
 func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	callback := update.CallbackQuery.Message.Message
 	langCode := update.CallbackQuery.From.LanguageCode
+	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
+	if err != nil {
+		slog.Error("Error finding customer", "error", err)
+		return
+	}
+	if customer == nil {
+		slog.Error("customer not exist", "chatID", callback.Chat.ID, "error", err)
+		return
+	}
 
 	var priceButtons []models.InlineKeyboardButton
 
@@ -60,14 +69,15 @@ func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *mod
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 	})
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+	infoKey := h.resolvePricingInfoKey(ctx, customer, 0)
+	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
 		ParseMode: models.ParseModeHTML,
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: keyboard,
 		},
-		Text: h.translation.GetText(langCode, "pricing_info"),
+		Text: h.translation.GetText(langCode, infoKey),
 	})
 	logEditError("Error sending buy message", err)
 }
@@ -81,17 +91,17 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	extraChoice := callbackQuery["extra"]
 
 	var keyboard [][]models.InlineKeyboardButton
+	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
+	if err != nil {
+		slog.Error("Error finding customer", "error", err)
+		return
+	}
+	if customer == nil {
+		slog.Error("customer not exist", "chatID", callback.Chat.ID, "error", err)
+		return
+	}
 
 	if extraChoice == "" {
-		customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
-		if err != nil {
-			slog.Error("Error finding customer", err)
-			return
-		}
-		if customer == nil {
-			slog.Error("customer not exist", "chatID", callback.Chat.ID, "error", err)
-			return
-		}
 		if err := h.cleanupExpiredExtraHwid(ctx, customer); err != nil {
 			slog.Error("Error cleaning expired extra hwid", "error", err)
 			return
@@ -111,6 +121,9 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 						},
 						{
 							h.translation.WithButton(langCode, "hwid_renew_cancel_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?month=%s&amount=%s&extra=%d", CallbackSell, month, amount, 0)}),
+						},
+						{
+							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 						},
 					},
 				},
@@ -175,11 +188,8 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 	})
 
-	textKey := "pricing_info"
-	if extraCount > 0 {
-		textKey = "pricing_info_extra"
-	}
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+	textKey := h.resolvePricingInfoKey(ctx, customer, extraCount)
+	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
 		ParseMode: models.ParseModeHTML,
@@ -316,4 +326,22 @@ func parseCallbackData(data string) map[string]string {
 	}
 
 	return result
+}
+
+func (h Handler) resolvePricingInfoKey(ctx context.Context, customer *database.Customer, extraCount int) string {
+	if customer == nil {
+		return "pricing_info_paid"
+	}
+	hasPaid, err := h.purchaseRepository.HasPaidSubscription(ctx, customer.ID)
+	if err != nil {
+		slog.Error("Error checking paid subscription", "error", err)
+		return "pricing_info_paid"
+	}
+	if !hasPaid {
+		return "pricing_info_trial"
+	}
+	if extraCount > 0 {
+		return "pricing_info_paid_extra"
+	}
+	return "pricing_info_paid"
 }

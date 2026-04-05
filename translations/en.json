@@ -6,8 +6,9 @@
   "connect_device_button": "🔌 Connect Device",
   "back_button": "🔙 Back",
 
-  "pricing_info": "💰 VPN subscription plans:\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\nSubscription works on 2 devices\n\nPayment methods:\n💸 Bank card\n⭐ Telegram Stars",
-  "pricing_info_extra": "💰 VPN subscription plans:\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\nSubscription + extra devices\n\nPayment methods:\n💸 Bank card\n⭐ Telegram Stars",
+  "pricing_info_trial": "<b>💰 VPN subscription plans</b>\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\n<i>Trial does not renew automatically</i>\n\n<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
+  "pricing_info_paid": "<b>💰 VPN subscription plans</b>\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\n<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
+  "pricing_info_paid_extra": "<b>💰 VPN subscription plans</b>\n• 1 mo — 150₽\n• 3 mo — 400₽ (save 50₽)\n• 6 mo — 750₽ (save 150₽)\n• 12 mo — 1320₽ (save 480₽)\n\n<b>Subscription + extra devices</b>\n<i>Single combined invoice</i>\n\n<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
 
   "month_1": "1 month – $?",
   "month_3": "3 months – $?",
@@ -108,7 +109,7 @@
   "hwid_change_success_free": "✅ Device count changed!\nWas: %d → Now: %d\nCharged: 0 ₽",
   "hwid_change_success_paid": "✅ Device count increased!\nWas: %d → Now: %d\nCharged: %d ₽",
   "hwid_payment_methods": "Choose a payment method\nAmount: %d ₽",
-  "hwid_payment_title": "Extra devices payment\n+%d devices\nAmount: %d ₽\nPeriod: %d days",
+  "hwid_payment_title": "Extra devices payment\n+%d devices\nAmount: %s\nPeriod: %d days",
   "hwid_renew_prompt": "Renew extra devices?\n\nCurrent extra devices: %d\nPeriod: %d months\nPrice: %d ₽\n\nRenew for the new period?",
   "hwid_renew_confirm_button": "✅ Renew",
   "hwid_renew_cancel_button": "❌ Don't renew",
@@ -143,5 +144,5 @@
   "device_delete_error": "❌ Error removing device",
   "devices_error": "❌ Error loading device list",
 
-  "device_delete_info": "<i>Remove a device if you reached the limit or can't add a new one. If removed by mistake — you can add it again.</i>\n\nTap a device to remove it from your subscription"
+  "device_delete_info": "If your device limit is full, remove an old device to connect a new one.\n\n⚠️ Note: removing from the list does not uninstall the app. The system simply “forgets” the device, and VPN will stop working on it until you connect it again.\n\nExample: limit is 3 devices, all taken → remove the old phone → connect the new one."
 }
