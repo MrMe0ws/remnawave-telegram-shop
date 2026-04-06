@@ -338,3 +338,6 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 .env
+
+# Локальная заметка по тарифам (не пушить в репозиторий)
+tariffs.md
