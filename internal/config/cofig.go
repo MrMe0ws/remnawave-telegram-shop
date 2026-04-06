@@ -41,6 +41,7 @@ type config struct {
 	isTelegramStarsEnabled                                    bool
 	isMoynalogEnabled                                         bool
 	adminTelegramId                                           int64
+	forwardUserMessagesToAdmin                                bool
 	trialDays                                                 int
 	squadUUIDs                                                map[uuid.UUID]uuid.UUID
 	referralDays                                              int
@@ -351,6 +352,11 @@ func GetAdminTelegramId() int64 {
 	return conf.adminTelegramId
 }
 
+// ForwardUserMessagesToAdmin — пересылать админу текст пользователей и неизвестные команды (FORWARD_USER_MESSAGES_TO_ADMIN).
+func ForwardUserMessagesToAdmin() bool {
+	return conf.forwardUserMessagesToAdmin
+}
+
 func GetHealthCheckPort() int {
 	return conf.healthCheckPort
 }
@@ -450,6 +456,8 @@ func InitConfig() {
 	if err != nil {
 		panic("ADMIN_TELEGRAM_ID .env variable not set")
 	}
+
+	conf.forwardUserMessagesToAdmin = envBoolDefault("FORWARD_USER_MESSAGES_TO_ADMIN", true)
 
 	conf.telegramToken = mustEnv("TELEGRAM_TOKEN")
 
