@@ -1,9 +1,12 @@
 {
   "greeting": "🎁 14 дней VPN бесплатно!\nПодключайся прямо сейчас!\n\n🌐 Доступные сервера:\n    🇱🇻 Латвия\n    🇩🇪 Германия\n    🇸🇪 Швеция\n    🇷🇺 Россия\n\n🚀 Скорость до 1 Гбит/с\n💪 Нет рекламы\n♾️ Безлимитный трафик\n\n🔗 Пригласи друга и получи\nбонусные дни подписки («🤝 Рефералы»)",
   "buy_button": "💰 Купить",
-  "connect_button": "🔌 Мой VPN",
+  "connect_button": {
+    "text": "🔌 Мой VPN",
+    "style": "blue"
+  },
   "connect_device_button": {
-    "text": "🔌 Подключить устройство",
+    "text": "🔌 Подключить VPN",
     "style": "green"
   },
   "back_button": {
@@ -46,7 +49,10 @@
     "text": "Статус серверов",
     "emoji_id": "5188234920639632382"
   },
-  "support_button": "🆘 Поддержка",
+  "support_button": {
+    "text": "🆘 Поддержка",
+    "style": "red"
+  },
   "channel_button": "📢 Канал",
   "tos_button": "Условия сервиса",
   "subscription_expiring": "⚠️ <b>Уведомление о подписке</b> ⚠️\n\nВаша подписка истекает <b>%s</b>\nПожалуйста, продлите подписку",
@@ -60,7 +66,7 @@
     "style": "red"
   },
   "trial_activated": "Пробный период активирован",
-  "trial_text": "🎁 Вам доступна бесплатная подписка на 14 дней!\n\n🚧 Доступно 3 ГБ трафика в день",
+  "trial_text": "🎁 Вам доступна бесплатная подписка на 14 дней!\n\n🚧 Доступно 3 ГБ трафика в день\n🚧Доступно 1 устройство",
   "activate_trial_button": {
     "text": "Активировать",
     "emoji_id": "5424972470023104089",
@@ -88,12 +94,21 @@
   "tribute_cancelled": "Tribute cancelled",
   "access_denied": "⚠️ Доступ запрещён\nПодозрительный никнейм\nИзмените его или обратитесь в @support_bot",
   "help_button": "📚 Помощь",
-  "help_title": "Помощь",
+  "help_title": "📚Помощь\n\nЕсли у вас есть вопросы - нажмите на кнопку <b>'🆘 Поддержка'</b>",
   "server_selection_button": "🌏 Какой сервер выбрать",
   "video_guide_button": "📺 Видеоинструкция",
-  "public_offer_button": "📄 Публичная оферта",
-  "privacy_policy_button": "🔒 Политика конфиденциальности",
-  "terms_of_service_button": "📋 Пользовательское соглашение",
+  "public_offer_button": {
+    "text": "📄 Публичная оферта",
+    "style": "blue"
+  },
+  "privacy_policy_button": {
+    "text": "🔒 Политика конфиденциальности",
+    "style": "blue"
+  },
+  "terms_of_service_button": {
+    "text": "📋 Пользовательское соглашение",
+    "style": "blue"
+  },
   "manage_devices_button": {
     "text": "📱 Управление устройствами",
     "style": "blue"
@@ -109,7 +124,7 @@
   "hwid_add_limit_reached": "⚠️ Вы уже достигли максимального лимита устройств.",
   "hwid_add_paid_only": "⚠️ Дополнительные устройства доступны только для платной подписки.",
   "hwid_add_success": "✅ Лимит устройств увеличен на +%d.",
-  "hwid_change_title": "<b>📱 Изменение количества устройств</b>\n\n<b>Текущий лимит:</b> %d устройств\n<b>Цена за доп. устройство:</b> %d ₽/мес\n\n<b>Выберите новое количество устройств:</b>\n\n<b>💡 Важно:</b>\n• При увеличении — доплата пропорционально оставшемуся времени\n• При уменьшении — возврат средств не производится",
+  "hwid_change_title": "<b>📱 Изменение количества устройств</b>\n\n<b>Текущий лимит:</b> %d устройств\n<b>Цена за доп. устройство:</b> %d ₽/мес\n\n<b>Выберите новое количество устройств:</b>\n\n<b>💡 Важно:</b>\n• При увеличении — доплата пропорционально оставшемуся времени\n• ⚠️ При уменьшении — возврат средств не производится",
   "hwid_change_option_decrease": "%d устр. (без возврата)",
   "hwid_change_option_current": "✅ %d устр. (текущее)",
   "hwid_change_option_increase": "+ %d устр. (+%d ₽ за %d дн.)",
@@ -117,19 +132,31 @@
   "hwid_change_action_increase": "увеличить до %d",
   "hwid_change_action_decrease": "уменьшить до %d",
   "hwid_change_amount": "Доплата: %d ₽ (за %d дн.)",
-  "hwid_change_no_refund": "Возврат средств не производится",
+  "hwid_change_no_refund": "\n<b>⚠️ Возврат средств не производится⚠️</b>",
   "hwid_change_noop": "Текущее количество устройств уже выбрано.",
   "hwid_change_success_free": "✅ Количество устройств изменено!\nБыло: %d → Стало: %d\nСписано: 0 ₽",
   "hwid_change_success_paid": "✅ Количество устройств увеличено!\nБыло: %d → Стало: %d\nСписано: %d ₽",
   "hwid_payment_methods": "Выберите способ оплаты\nСумма: %d ₽",
   "hwid_payment_title": "Оплата доп. устройств\n+%d устройств\nСумма: %s\nСрок: %d дн.",
   "hwid_renew_prompt": "<b>⚠️ Продлить доп. устройства?</b>\n\n<b>Сейчас доп. устройств:</b> %d\n<b>Срок:</b> %d мес.\n<b>Стоимость:</b> %d ₽\n\n<b>Продлить на новый период?</b>",
-  "hwid_renew_confirm_button": "✅ Продлить",
-  "hwid_renew_cancel_button": "❌ Не продлевать",
+  "hwid_renew_confirm_button": {
+    "text": "✅ Продлить",
+    "style": "green"
+  },
+  "hwid_renew_cancel_button": {
+    "text": "❌ Не продлевать",
+    "style": "red"
+  },
   "hwid_renew_payment_methods": "Выберите способ оплаты\nСумма: %d ₽",
   "hwid_renew_payment_title": "Оплата продления доп. устройств\n+%d устройств\nСрок: %d мес.\nСумма: %d ₽",
-  "confirm_button": "✅ Подтвердить",
-  "cancel_button": "❌ Отмена",
+  "confirm_button": {
+    "text": "✅ Подтвердить",
+    "style": "green"
+  },
+  "cancel_button": {
+    "text": "❌ Отмена",
+    "style": "red"
+  },
   "purchase_history_button": "🧾 История транзакций",
   "purchase_history_title": "🧾 История операций",
   "purchase_history_empty": "❌ История операций пуста",

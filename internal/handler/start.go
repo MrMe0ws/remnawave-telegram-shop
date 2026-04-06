@@ -152,50 +152,50 @@ func (h Handler) HelpCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	langCode := callback.From.LanguageCode
 	var helpKeyboard [][]models.InlineKeyboardButton
 
-	// Добавляем кнопку "Какой сервер выбрать" если ссылка установлена
+	// Ряд 1: «Какой сервер выбрать», «Видеоинструкция»
+	var serverVideoRow []models.InlineKeyboardButton
 	if config.ServerSelectionURL() != "" {
-		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "server_selection_button", models.InlineKeyboardButton{URL: config.ServerSelectionURL()}),
-		})
-	}
-
-	// Добавляем кнопку "Видеоинструкция" если ссылка установлена
-	if config.VideoGuideURL() != "" {
-		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "video_guide_button", models.InlineKeyboardButton{URL: config.VideoGuideURL()}),
-		})
-	}
-
-	// Добавляем кнопки "Поддержка" и "Публичная оферта" если ссылки установлены
-	var supportAndOfferRow []models.InlineKeyboardButton
-	if config.SupportURL() != "" {
-		supportAndOfferRow = append(supportAndOfferRow, h.translation.WithButton(langCode, "support_button", models.InlineKeyboardButton{
-			URL: config.SupportURL(),
+		serverVideoRow = append(serverVideoRow, h.translation.WithButton(langCode, "server_selection_button", models.InlineKeyboardButton{
+			URL: config.ServerSelectionURL(),
 		}))
 	}
+	if config.VideoGuideURL() != "" {
+		serverVideoRow = append(serverVideoRow, h.translation.WithButton(langCode, "video_guide_button", models.InlineKeyboardButton{
+			URL: config.VideoGuideURL(),
+		}))
+	}
+	if len(serverVideoRow) > 0 {
+		helpKeyboard = append(helpKeyboard, serverVideoRow)
+	}
+
+	// Ряд 2: только «Поддержка»
+	if config.SupportURL() != "" {
+		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "support_button", models.InlineKeyboardButton{URL: config.SupportURL()}),
+		})
+	}
+
+	// Ряд 3: «Публичная оферта», «Политика конфиденциальности»
+	var offerPrivacyRow []models.InlineKeyboardButton
 	if config.PublicOfferURL() != "" {
-		supportAndOfferRow = append(supportAndOfferRow, h.translation.WithButton(langCode, "public_offer_button", models.InlineKeyboardButton{
+		offerPrivacyRow = append(offerPrivacyRow, h.translation.WithButton(langCode, "public_offer_button", models.InlineKeyboardButton{
 			URL: config.PublicOfferURL(),
 		}))
 	}
-	if len(supportAndOfferRow) > 0 {
-		helpKeyboard = append(helpKeyboard, supportAndOfferRow)
-	}
-
-	// Добавляем кнопки "Политика конфиденциальности" и "Пользовательское соглашение" если ссылки установлены
-	var privacyAndTermsRow []models.InlineKeyboardButton
 	if config.PrivacyPolicyURL() != "" {
-		privacyAndTermsRow = append(privacyAndTermsRow, h.translation.WithButton(langCode, "privacy_policy_button", models.InlineKeyboardButton{
+		offerPrivacyRow = append(offerPrivacyRow, h.translation.WithButton(langCode, "privacy_policy_button", models.InlineKeyboardButton{
 			URL: config.PrivacyPolicyURL(),
 		}))
 	}
-	if config.TermsOfServiceURL() != "" {
-		privacyAndTermsRow = append(privacyAndTermsRow, h.translation.WithButton(langCode, "terms_of_service_button", models.InlineKeyboardButton{
-			URL: config.TermsOfServiceURL(),
-		}))
+	if len(offerPrivacyRow) > 0 {
+		helpKeyboard = append(helpKeyboard, offerPrivacyRow)
 	}
-	if len(privacyAndTermsRow) > 0 {
-		helpKeyboard = append(helpKeyboard, privacyAndTermsRow)
+
+	// Ряд 4: «Пользовательское соглашение»
+	if config.TermsOfServiceURL() != "" {
+		helpKeyboard = append(helpKeyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "terms_of_service_button", models.InlineKeyboardButton{URL: config.TermsOfServiceURL()}),
+		})
 	}
 
 	// Кнопка "Назад"
