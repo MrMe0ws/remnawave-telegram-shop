@@ -247,10 +247,19 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 		inlineKeyboard = append(inlineKeyboard, secondRow)
 	}
 
-	// 6. Кнопка "Помощь"
+	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "promo_code_button", models.InlineKeyboardButton{CallbackData: CallbackEnterPromo}),
+	})
+
 	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "help_button", models.InlineKeyboardButton{CallbackData: "help"}),
 	})
+
+	if existingCustomer.TelegramID == config.GetAdminTelegramId() {
+		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "admin_panel_button", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel}),
+		})
+	}
 
 	return inlineKeyboard
 }

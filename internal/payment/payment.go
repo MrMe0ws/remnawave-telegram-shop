@@ -11,6 +11,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/moynalog"
+	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
@@ -32,6 +33,13 @@ type PaymentService struct {
 	referralRepository *database.ReferralRepository
 	cache              *cache.Cache
 	moynalogClient     *moynalog.Client
+	promoService       *promo.Service
+}
+
+// PromoMeta attaches an activated percent discount to a new purchase row (optional).
+type PromoMeta struct {
+	PromoCodeID            *int64
+	DiscountPercentApplied *int
 }
 
 func NewPaymentService(
@@ -45,6 +53,7 @@ func NewPaymentService(
 	referralRepository *database.ReferralRepository,
 	cache *cache.Cache,
 	moynalogClient *moynalog.Client,
+	promoService *promo.Service,
 ) *PaymentService {
 	return &PaymentService{
 		purchaseRepository: purchaseRepository,
@@ -57,6 +66,7 @@ func NewPaymentService(
 		referralRepository: referralRepository,
 		cache:              cache,
 		moynalogClient:     moynalogClient,
+		promoService:       promoService,
 	}
 }
 
@@ -200,7 +210,11 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 			InlineKeyboard: s.createConnectKeyboard(customer),
 		},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
+	return nil
 }
 
 func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, customer *database.Customer, user *remnawave.User, purchase *database.Purchase) error {
@@ -343,9 +357,19 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	if err := s.applyReferralBonus(ctx, purchase, customer); err != nil {
 		return err
 	}
+	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
 	slog.Info("purchase processed", "purchase_id", utils.MaskHalfInt64(purchase.ID), "type", purchase.InvoiceType, "customer_id", utils.MaskHalfInt64(customer.ID))
 
 	return nil
+}
+
+func (s *PaymentService) clearPromoDiscountIfUsed(ctx context.Context, purchase *database.Purchase, customer *database.Customer) {
+	if s.promoService == nil || purchase == nil || customer == nil {
+		return
+	}
+	if purchase.PromoCodeID != nil && *purchase.PromoCodeID > 0 {
+		_ = s.promoService.ClearPendingDiscountAfterSuccessfulSubscriptionPayment(ctx, customer.ID)
+	}
 }
 
 func (s PaymentService) createConnectKeyboard(customer *database.Customer) [][]models.InlineKeyboardButton {
@@ -509,52 +533,52 @@ func (s PaymentService) createReferralBonusKeyboard(customer *database.Customer)
 	}
 }
 
-func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
+func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta) (url string, purchaseId int64, err error) {
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, months, 0, customer)
+		return s.createCryptoInvoice(ctx, amount, months, 0, customer, meta)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, months, 0, customer)
+		return s.createYookasaInvoice(ctx, amount, months, 0, customer, meta)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, months, 0, customer)
+		return s.createTelegramInvoice(ctx, amount, months, 0, customer, meta)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, months, 0, customer)
+		return s.createTributeInvoice(ctx, amount, months, 0, customer, nil)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
 }
 
-func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
+func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta) (url string, purchaseId int64, err error) {
 	if extraHwid < 0 {
 		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
 	}
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer)
+		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer, meta)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer)
+		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer, meta)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer)
+		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer, meta)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, months, extraHwid, customer)
+		return s.createTributeInvoice(ctx, amount, months, extraHwid, customer, nil)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
 }
 
-func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
+func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta) (url string, purchaseId int64, err error) {
 	if extraHwid <= 0 {
 		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
 	}
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer)
+		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer, meta)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer)
+		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer, meta)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer)
+		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer, meta)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, 0, extraHwid, customer)
+		return s.createTributeInvoice(ctx, amount, 0, extraHwid, customer, nil)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
@@ -606,8 +630,8 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 	return nil
 }
 
-func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
-	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
+func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta) (url string, purchaseId int64, err error) {
+	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeCrypto,
 		Status:      database.PurchaseStatusNew,
 		Amount:      amount,
@@ -615,7 +639,12 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
-	})
+	}
+	if meta != nil {
+		pur.PromoCodeID = meta.PromoCodeID
+		pur.DiscountPercentApplied = meta.DiscountPercentApplied
+	}
+	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
 		slog.Error("Error creating purchase", err)
 		return "", 0, err
@@ -656,8 +685,8 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	return invoice.BotInvoiceUrl, purchaseId, nil
 }
 
-func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
-	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
+func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta) (url string, purchaseId int64, err error) {
+	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeYookasa,
 		Status:      database.PurchaseStatusNew,
 		Amount:      amount,
@@ -665,7 +694,12 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
-	})
+	}
+	if meta != nil {
+		pur.PromoCodeID = meta.PromoCodeID
+		pur.DiscountPercentApplied = meta.DiscountPercentApplied
+	}
+	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
 		slog.Error("Error creating purchase", err)
 		return "", 0, err
@@ -692,8 +726,8 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 	return invoice.Confirmation.ConfirmationURL, purchaseId, nil
 }
 
-func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
-	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
+func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta) (url string, purchaseId int64, err error) {
+	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeTelegram,
 		Status:      database.PurchaseStatusNew,
 		Amount:      amount,
@@ -701,7 +735,12 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
-	})
+	}
+	if meta != nil {
+		pur.PromoCodeID = meta.PromoCodeID
+		pur.DiscountPercentApplied = meta.DiscountPercentApplied
+	}
+	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
 		slog.Error("Error creating purchase", err)
 		return "", 0, nil
@@ -789,7 +828,7 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 	return nil
 }
 
-func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer) (url string, purchaseId int64, err error) {
+func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, _ *PromoMeta) (url string, purchaseId int64, err error) {
 	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
 		InvoiceType: database.InvoiceTypeTribute,
 		Status:      database.PurchaseStatusPending,

@@ -44,8 +44,10 @@ type Purchase struct {
 	CryptoInvoiceID   *int64         `db:"crypto_invoice_id"`
 	CryptoInvoiceLink *string        `db:"crypto_invoice_url"`
 	YookasaURL        *string        `db:"yookasa_url"`
-	YookasaID         *uuid.UUID     `db:"yookasa_id"`
-	ExtraHwid         int            `db:"extra_hwid"`
+	YookasaID                *uuid.UUID     `db:"yookasa_id"`
+	ExtraHwid                int            `db:"extra_hwid"`
+	PromoCodeID              *int64         `db:"promo_code_id"`
+	DiscountPercentApplied   *int           `db:"discount_percent_applied"`
 }
 
 type PurchaseRepository struct {
@@ -58,10 +60,20 @@ func NewPurchaseRepository(pool *pgxpool.Pool) *PurchaseRepository {
 	}
 }
 
+// purchaseScanArgs returns pointers for scanning a full purchase row (column order must match SELECT * from purchase).
+func purchaseScanArgs(p *Purchase) []interface{} {
+	return []interface{}{
+		&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
+		&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
+		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
+		&p.PromoCodeID, &p.DiscountPercentApplied,
+	}
+}
+
 func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (int64, error) {
 	buildInsert := sq.Insert("purchase").
-		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "extra_hwid").
-		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.ExtraHwid).
+		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "extra_hwid", "promo_code_id", "discount_percent_applied").
+		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 
@@ -102,23 +114,7 @@ func (cr *PurchaseRepository) FindByInvoiceTypeAndStatus(ctx context.Context, in
 	purchases := []Purchase{}
 	for rows.Next() {
 		purchase := Purchase{}
-		err = rows.Scan(
-			&purchase.ID,
-			&purchase.Amount,
-			&purchase.CustomerID,
-			&purchase.CreatedAt,
-			&purchase.Month,
-			&purchase.PaidAt,
-			&purchase.Currency,
-			&purchase.ExpireAt,
-			&purchase.Status,
-			&purchase.InvoiceType,
-			&purchase.CryptoInvoiceID,
-			&purchase.CryptoInvoiceLink,
-			&purchase.YookasaURL,
-			&purchase.YookasaID,
-			&purchase.ExtraHwid,
-		)
+		err = rows.Scan(purchaseScanArgs(&purchase)...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan purchase: %w", err)
 		}
@@ -144,23 +140,7 @@ func (cr *PurchaseRepository) FindById(ctx context.Context, id int64) (*Purchase
 	}
 	purchase := &Purchase{}
 
-	err = cr.pool.QueryRow(ctx, sql, args...).Scan(
-		&purchase.ID,
-		&purchase.Amount,
-		&purchase.CustomerID,
-		&purchase.CreatedAt,
-		&purchase.Month,
-		&purchase.PaidAt,
-		&purchase.Currency,
-		&purchase.ExpireAt,
-		&purchase.Status,
-		&purchase.InvoiceType,
-		&purchase.CryptoInvoiceID,
-		&purchase.CryptoInvoiceLink,
-		&purchase.YookasaURL,
-		&purchase.YookasaID,
-		&purchase.ExtraHwid,
-	)
+	err = cr.pool.QueryRow(ctx, sql, args...).Scan(purchaseScanArgs(purchase)...)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -251,11 +231,7 @@ func (pr *PurchaseRepository) FindLatestActiveTributesByCustomerIDs(
 	var purchases []Purchase
 	for rows.Next() {
 		var p Purchase
-		if err := rows.Scan(
-			&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
-			&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
-			&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
-		); err != nil {
+		if err := rows.Scan(purchaseScanArgs(&p)...); err != nil {
 			return nil, fmt.Errorf("scan purchase: %w", err)
 		}
 		purchases = append(purchases, p)
@@ -289,23 +265,7 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 	}
 
 	purchase := &Purchase{}
-	err = pr.pool.QueryRow(ctx, sql, args...).Scan(
-		&purchase.ID,
-		&purchase.Amount,
-		&purchase.CustomerID,
-		&purchase.CreatedAt,
-		&purchase.Month,
-		&purchase.PaidAt,
-		&purchase.Currency,
-		&purchase.ExpireAt,
-		&purchase.Status,
-		&purchase.InvoiceType,
-		&purchase.CryptoInvoiceID,
-		&purchase.CryptoInvoiceLink,
-		&purchase.YookasaURL,
-		&purchase.YookasaID,
-		&purchase.ExtraHwid,
-	)
+	err = pr.pool.QueryRow(ctx, sql, args...).Scan(purchaseScanArgs(purchase)...)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -343,23 +303,7 @@ func (pr *PurchaseRepository) FindPaidByCustomer(ctx context.Context, customerID
 	var purchases []Purchase
 	for rows.Next() {
 		var purchase Purchase
-		if err := rows.Scan(
-			&purchase.ID,
-			&purchase.Amount,
-			&purchase.CustomerID,
-			&purchase.CreatedAt,
-			&purchase.Month,
-			&purchase.PaidAt,
-			&purchase.Currency,
-			&purchase.ExpireAt,
-			&purchase.Status,
-			&purchase.InvoiceType,
-			&purchase.CryptoInvoiceID,
-			&purchase.CryptoInvoiceLink,
-			&purchase.YookasaURL,
-			&purchase.YookasaID,
-			&purchase.ExtraHwid,
-		); err != nil {
+		if err := rows.Scan(purchaseScanArgs(&purchase)...); err != nil {
 			return nil, fmt.Errorf("failed to scan purchase: %w", err)
 		}
 		purchases = append(purchases, purchase)
@@ -466,11 +410,7 @@ func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(
 	}
 
 	p := &Purchase{}
-	err = pr.pool.QueryRow(ctx, sql, args...).Scan(
-		&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
-		&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
-		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
-	)
+	err = pr.pool.QueryRow(ctx, sql, args...).Scan(purchaseScanArgs(p)...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

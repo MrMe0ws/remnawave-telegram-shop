@@ -53,14 +53,16 @@ func (h Handler) RenewExtraHwidCallbackHandler(ctx context.Context, b *bot.Bot, 
 	}
 
 	invoiceType := database.InvoiceType(params["invoiceType"])
+	amt := amount
+	meta := h.checkoutPromoMeta(ctx, customer, invoiceType, &amt)
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, update.CallbackQuery.From.Username)
-	paymentURL, purchaseId, err := h.paymentService.CreateHwidPurchase(ctxWithUsername, float64(amount), extra, customer, invoiceType)
+	paymentURL, purchaseId, err := h.paymentService.CreateHwidPurchase(ctxWithUsername, float64(amt), extra, customer, invoiceType, meta)
 	if err != nil {
 		slog.Error("Error creating renew hwid payment", "error", err)
 		return
 	}
 
-	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_renew_payment_title"), extra, months, amount)
+	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_renew_payment_title"), extra, months, amt)
 	message, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,

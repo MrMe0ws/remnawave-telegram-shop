@@ -271,14 +271,16 @@ func (h Handler) AddDevicePaymentCallbackHandler(ctx context.Context, b *bot.Bot
 	}
 
 	invoiceType := database.InvoiceType(params["invoiceType"])
+	amt := amount
+	meta := h.checkoutPromoMeta(ctx, customer, invoiceType, &amt)
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, update.CallbackQuery.From.Username)
-	paymentURL, purchaseId, err := h.paymentService.CreateHwidPurchase(ctxWithUsername, float64(amount), delta, customer, invoiceType)
+	paymentURL, purchaseId, err := h.paymentService.CreateHwidPurchase(ctxWithUsername, float64(amt), delta, customer, invoiceType, meta)
 	if err != nil {
 		slog.Error("Error creating hwid payment", "error", err)
 		return
 	}
 
-	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_payment_title"), delta, formatPaymentAmount(amount, params["invoiceType"]), daysLeft)
+	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_payment_title"), delta, formatPaymentAmount(amt, params["invoiceType"]), daysLeft)
 	message, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,

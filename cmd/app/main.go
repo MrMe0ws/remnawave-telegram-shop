@@ -18,6 +18,7 @@ import (
 	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/notification"
 	"remnawave-tg-shop-bot/internal/payment"
+	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/translation"
@@ -90,6 +91,7 @@ func main() {
 	customerRepository := database.NewCustomerRepository(pool) // Работа с пользователями
 	purchaseRepository := database.NewPurchaseRepository(pool) // Работа с покупками
 	referralRepository := database.NewReferralRepository(pool) // Работа с реферальной системой
+	promoRepository := database.NewPromoRepository(pool)
 
 	// Инициализация клиентов для работы с внешними сервисами
 	cryptoPayClient := cryptopay.NewCryptoPayClient(config.CryptoPayUrl(), config.CryptoPayToken())                // Криптоплатежи
@@ -116,8 +118,10 @@ func main() {
 		panic(err)
 	}
 
+	promoService := promo.NewService(promoRepository, customerRepository, purchaseRepository, remnawaveClient)
+
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient, promoService)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// Проверяет оплаченные счета в CryptoPay и YooKassa
@@ -140,7 +144,7 @@ func main() {
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
 
 	// Создание главного обработчика всех команд и callback'ов бота
-	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, cryptoPayClient, yookasaClient, referralRepository, cache)
+	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, cryptoPayClient, yookasaClient, referralRepository, cache, promoRepository, promoService)
 
 	// Получение информации о боте (username и т.д.)
 	// Используем контекст с таймаутом для GetMe, чтобы избежать зависания при проблемах с сетью
@@ -233,12 +237,36 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastAll, bot.MatchTypeExact, h.BroadcastTypeSelectHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastActive, bot.MatchTypeExact, h.BroadcastTypeSelectHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastInactive, bot.MatchTypeExact, h.BroadcastTypeSelectHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastBackAdmin, bot.MatchTypeExact, h.BroadcastBackToAdminHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для подтверждения рассылки (только для админа)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastConfirm, bot.MatchTypeExact, h.BroadcastConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для отмены рассылки (только для админа)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastCancel, bot.MatchTypeExact, h.BroadcastCancelHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Админ-панель и промокоды
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackEnterPromo, bot.MatchTypeExact, h.EnterPromoCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPanel, bot.MatchTypeExact, h.AdminPanelHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminBroadcast, bot.MatchTypeExact, h.AdminBroadcastShortcutHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSync, bot.MatchTypeExact, h.AdminSyncShortcutHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPromo, bot.MatchTypeExact, h.AdminPromoOpenHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoRoot, bot.MatchTypeExact, h.PromoRootHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoList, bot.MatchTypePrefix, h.PromoListHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoNew, bot.MatchTypeExact, h.PromoNewMenuHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoStatsAll, bot.MatchTypeExact, h.PromoStatsAllHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoCard, bot.MatchTypePrefix, h.PromoCardHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoEdit, bot.MatchTypePrefix, h.PromoEditMenuHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoEditValid, bot.MatchTypePrefix, h.PromoEditAskValidHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoEditMax, bot.MatchTypePrefix, h.PromoEditAskMaxHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoEditSubDays, bot.MatchTypePrefix, h.PromoEditAskSubDaysHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoEditTrialDays, bot.MatchTypePrefix, h.PromoEditAskTrialDaysHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoNewType, bot.MatchTypePrefix, h.PromoNewTypeHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoToggle, bot.MatchTypePrefix, h.PromoToggleHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoFirstPur, bot.MatchTypePrefix, h.PromoFirstPurchaseToggle, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoStat, bot.MatchTypePrefix, h.PromoStatHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoDel, bot.MatchTypePrefix, h.PromoDeleteAskHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoDelYes, bot.MatchTypePrefix, h.PromoDeleteYesHandler, isAdminMiddleware)
 
 	// Callback для реферальной системы
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -313,6 +341,31 @@ func main() {
 	// ОБРАБОТЧИКИ ТЕКСТОВЫХ СООБЩЕНИЙ И REPLY
 	// ============================================================================
 	// Эти обработчики регистрируются после основных команд, чтобы не перехватывать их
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		if update.Message == nil || update.Message.Text == "" || strings.HasPrefix(update.Message.Text, "/") {
+			return false
+		}
+		if !handler.UserPromoWaiting(update.Message.From.ID) {
+			return false
+		}
+		// Админ: ввод промокода с главной не пересекается с мастером/редактированием в админке
+		if update.Message.From.ID == config.GetAdminTelegramId() {
+			if handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID) {
+				return false
+			}
+		}
+		return true
+	}, h.UserPromoMessageHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			(handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID))
+	}, h.AdminPromoTextHandler)
 
 	// Обработчик текстовых сообщений от админа для рассылки
 	// Срабатывает только если админ в режиме ввода текста для рассылки (после /broadcast)

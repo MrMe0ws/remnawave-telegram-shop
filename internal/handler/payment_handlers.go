@@ -77,7 +77,7 @@ func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *mod
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: keyboard,
 		},
-		Text: h.translation.GetText(langCode, infoKey),
+		Text: h.pricingInfoTextWithDiscount(ctx, langCode, customer, infoKey),
 	})
 	logEditError("Error sending buy message", err)
 }
@@ -193,7 +193,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		ChatID:    callback.Chat.ID,
 		MessageID: callback.ID,
 		ParseMode: models.ParseModeHTML,
-		Text:      h.translation.GetText(langCode, textKey),
+		Text:      h.pricingInfoTextWithDiscount(ctx, langCode, customer, textKey),
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: keyboard,
 		},
@@ -238,13 +238,15 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		return
 	}
 
+	meta := h.checkoutPromoMeta(ctx, customer, invoiceType, &price)
+
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, update.CallbackQuery.From.Username)
 	var paymentURL string
 	var purchaseId int64
 	if extra > 0 {
-		paymentURL, purchaseId, err = h.paymentService.CreatePurchaseWithExtra(ctxWithUsername, float64(price), month, extra, customer, invoiceType)
+		paymentURL, purchaseId, err = h.paymentService.CreatePurchaseWithExtra(ctxWithUsername, float64(price), month, extra, customer, invoiceType, meta)
 	} else {
-		paymentURL, purchaseId, err = h.paymentService.CreatePurchase(ctxWithUsername, float64(price), month, customer, invoiceType)
+		paymentURL, purchaseId, err = h.paymentService.CreatePurchase(ctxWithUsername, float64(price), month, customer, invoiceType, meta)
 	}
 	if err != nil {
 		slog.Error("Error creating payment", err)
@@ -344,4 +346,29 @@ func (h Handler) resolvePricingInfoKey(ctx context.Context, customer *database.C
 		return "pricing_info_paid_extra"
 	}
 	return "pricing_info_paid"
+}
+
+// pricingInfoTextWithDiscount inserts an active promo discount line before the payment methods block (all pricing_info_* keys).
+func (h Handler) pricingInfoTextWithDiscount(ctx context.Context, lang string, customer *database.Customer, pricingInfoKey string) string {
+	base := h.translation.GetText(lang, pricingInfoKey)
+	if h.promoService == nil || customer == nil {
+		return base
+	}
+	pct, _, _, ok, err := h.promoService.PendingDiscountForConnectUI(ctx, customer.ID)
+	if err != nil {
+		slog.Error("pricing screen pending discount", "error", err)
+		return base
+	}
+	if !ok || pct <= 0 {
+		return base
+	}
+	note := fmt.Sprintf(h.translation.GetText(lang, "buy_screen_pending_discount_note"), pct)
+	needle := "\n\n<b>Payment methods:</b>"
+	if lang == "ru" {
+		needle = "\n\n<b>Способы оплаты:</b>"
+	}
+	if idx := strings.Index(base, needle); idx >= 0 {
+		return base[:idx] + "\n\n" + note + needle + base[idx+len(needle):]
+	}
+	return base + "\n\n" + note
 }

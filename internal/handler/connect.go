@@ -167,6 +167,26 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	now := time.Now()
 	isActive := customer.ExpireAt != nil && now.Before(*customer.ExpireAt)
 	if !isActive {
+		if h.promoService != nil {
+			pct, untilFirst, expAt, ok, errPD := h.promoService.PendingDiscountForConnectUI(ctx, customer.ID)
+			if errPD != nil {
+				slog.Error("pending discount connect ui", "error", errPD)
+			} else if ok && pct > 0 {
+				var sb strings.Builder
+				sb.WriteString(tm.GetText(langCode, "no_subscription"))
+				sb.WriteString("\n\n")
+				sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_pending_discount_line"), pct))
+				sb.WriteString("\n")
+				if untilFirst {
+					sb.WriteString(tm.GetText(langCode, "vpn_pending_discount_until_first"))
+				} else if expAt != nil {
+					if left := formatDiscountTimeLeft(langCode, *expAt, now); left != "" {
+						sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_pending_discount_timer"), left))
+					}
+				}
+				return sb.String()
+			}
+		}
 		return tm.GetText(langCode, "no_subscription")
 	}
 
@@ -239,6 +259,24 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 		info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_devices"), deviceCount, deviceLimit))
 	}
 
+	if h.promoService != nil {
+		pct, untilFirst, expAt, ok, errPD := h.promoService.PendingDiscountForConnectUI(ctx, customer.ID)
+		if errPD != nil {
+			slog.Error("pending discount connect ui", "error", errPD)
+		} else if ok && pct > 0 {
+			info.WriteString("\n\n")
+			info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_pending_discount_line"), pct))
+			info.WriteString("\n")
+			if untilFirst {
+				info.WriteString(tm.GetText(langCode, "vpn_pending_discount_until_first"))
+			} else if expAt != nil {
+				if left := formatDiscountTimeLeft(langCode, *expAt, now); left != "" {
+					info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_pending_discount_timer"), left))
+				}
+			}
+		}
+	}
+
 	if customer.SubscriptionLink != nil && *customer.SubscriptionLink != "" {
 		info.WriteString("\n\n")
 		info.WriteString(tm.GetText(langCode, "vpn_subscription_link_title"))
@@ -257,6 +295,30 @@ func buildDisplayName(firstName, lastName, username string) string {
 		return fullName
 	}
 	return strings.TrimSpace(strings.TrimPrefix(username, "@"))
+}
+
+func formatDiscountTimeLeft(lang string, expiresAt, now time.Time) string {
+	if !expiresAt.After(now) {
+		return ""
+	}
+	d := expiresAt.Sub(now)
+	totalMin := int(d.Minutes())
+	if totalMin < 1 {
+		totalMin = 1
+	}
+	days := totalMin / (24 * 60)
+	h := (totalMin % (24 * 60)) / 60
+	m := totalMin % 60
+	if lang == "ru" {
+		if days > 0 {
+			return fmt.Sprintf("%d дн. %d ч.", days, h)
+		}
+		return fmt.Sprintf("%dч %dм", h, m)
+	}
+	if days > 0 {
+		return fmt.Sprintf("%d d %d h", days, h)
+	}
+	return fmt.Sprintf("%dh %dm", h, m)
 }
 
 func daysLeft(expireAt, now time.Time) int {

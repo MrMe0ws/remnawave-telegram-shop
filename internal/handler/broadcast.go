@@ -28,6 +28,7 @@ type BroadcastState struct {
 	pendingText     map[int64]string        // adminID -> текст сообщения
 	waitingForInput map[int64]bool          // adminID -> ожидается ли ввод текста для рассылки
 	selectedType    map[int64]BroadcastType // adminID -> выбранный тип рассылки
+	promptMessageID map[int64]int           // adminID -> id сообщения с подсказкой «введите текст» (удалить после ввода)
 }
 
 func NewBroadcastState() *BroadcastState {
@@ -35,10 +36,49 @@ func NewBroadcastState() *BroadcastState {
 		pendingText:     make(map[int64]string),
 		waitingForInput: make(map[int64]bool),
 		selectedType:    make(map[int64]BroadcastType),
+		promptMessageID: make(map[int64]int),
 	}
 }
 
+func clearBroadcastState(adminID int64) {
+	broadcastState.mu.Lock()
+	delete(broadcastState.pendingText, adminID)
+	delete(broadcastState.waitingForInput, adminID)
+	delete(broadcastState.selectedType, adminID)
+	delete(broadcastState.promptMessageID, adminID)
+	broadcastState.mu.Unlock()
+}
+
+// BroadcastAudienceKeyboard выбор аудитории; withBackToAdmin — кнопка «Назад» в админ-меню (экран из админки).
+func (h Handler) BroadcastAudienceKeyboard(lang string, withBackToAdmin bool) [][]models.InlineKeyboardButton {
+	rows := [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "broadcast_audience_all", models.InlineKeyboardButton{CallbackData: CallbackBroadcastAll})},
+		{h.translation.WithButton(lang, "broadcast_audience_active", models.InlineKeyboardButton{CallbackData: CallbackBroadcastActive})},
+		{h.translation.WithButton(lang, "broadcast_audience_inactive", models.InlineKeyboardButton{CallbackData: CallbackBroadcastInactive})},
+	}
+	if withBackToAdmin {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBroadcastBackAdmin}),
+		})
+	}
+	return rows
+}
+
 var broadcastState = NewBroadcastState()
+
+// SendBroadcastTypeSelection sends the broadcast audience keyboard (команда /broadcast — отдельное сообщение, без «Назад» в админку).
+func (h Handler) SendBroadcastTypeSelection(ctx context.Context, b *bot.Bot, adminChatID int64, lang string) error {
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      adminChatID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        h.translation.GetText(lang, "broadcast_choose_audience"),
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: h.BroadcastAudienceKeyboard(lang, false)},
+	})
+	if err != nil {
+		slog.Error("error sending broadcast type selection", "error", err)
+	}
+	return err
+}
 
 // BroadcastCommandHandler обрабатывает команду /broadcast от админа
 func (h Handler) BroadcastCommandHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -51,29 +91,8 @@ func (h Handler) BroadcastCommandHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 
-	// Создаем клавиатуру с выбором типа рассылки
-	inlineKeyboard := &models.InlineKeyboardMarkup{
-		InlineKeyboard: [][]models.InlineKeyboardButton{
-			{
-				{Text: "🌍 Всем пользователям", CallbackData: CallbackBroadcastAll},
-			},
-			{
-				{Text: "✅ Только активным", CallbackData: CallbackBroadcastActive},
-			},
-			{
-				{Text: "⏰ Неактивным", CallbackData: CallbackBroadcastInactive},
-			},
-		},
-	}
-
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      adminID,
-		Text:        "📢 Выберите, для кого отправить сообщение:",
-		ReplyMarkup: inlineKeyboard,
-	})
-	if err != nil {
-		slog.Error("error sending broadcast type selection", "error", err)
-	}
+	lang := update.Message.From.LanguageCode
+	_ = h.SendBroadcastTypeSelection(ctx, b, adminID, lang)
 }
 
 // BroadcastTypeSelectHandler обрабатывает выбор типа рассылки
@@ -87,20 +106,27 @@ func (h Handler) BroadcastTypeSelectHandler(ctx context.Context, b *bot.Bot, upd
 		return
 	}
 
+	lang := update.CallbackQuery.From.LanguageCode
 	var broadcastType BroadcastType
-	var typeText string
+	var summaryKey string
 
 	switch update.CallbackQuery.Data {
 	case CallbackBroadcastAll:
 		broadcastType = BroadcastTypeAll
-		typeText = "всем пользователям"
+		summaryKey = "broadcast_summary_all"
 	case CallbackBroadcastActive:
 		broadcastType = BroadcastTypeActive
-		typeText = "только активным пользователям"
+		summaryKey = "broadcast_summary_active"
 	case CallbackBroadcastInactive:
 		broadcastType = BroadcastTypeInactive
-		typeText = "неактивным пользователям"
+		summaryKey = "broadcast_summary_inactive"
 	default:
+		return
+	}
+
+	typeText := h.translation.GetText(lang, summaryKey)
+	callbackMessage := update.CallbackQuery.Message.Message
+	if callbackMessage == nil {
 		return
 	}
 
@@ -108,28 +134,21 @@ func (h Handler) BroadcastTypeSelectHandler(ctx context.Context, b *bot.Bot, upd
 	broadcastState.mu.Lock()
 	broadcastState.selectedType[adminID] = broadcastType
 	broadcastState.waitingForInput[adminID] = true
+	broadcastState.promptMessageID[adminID] = callbackMessage.ID
 	broadcastState.mu.Unlock()
 
-	// Отвечаем на callback
-	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-		CallbackQueryID: update.CallbackQuery.ID,
-		Text:            fmt.Sprintf("Выбрано: %s", typeText),
-	})
-
-	// Удаляем сообщение с выбором типа
-	callbackMessage := update.CallbackQuery.Message.Message
-	_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+	prompt := fmt.Sprintf(h.translation.GetText(lang, "broadcast_enter_message"), typeText)
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,
-	})
-
-	// Запрашиваем текст сообщения
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: adminID,
-		Text:   fmt.Sprintf("📢 Введите сообщение для рассылки %s:", typeText),
+		ParseMode: models.ParseModeHTML,
+		Text:      prompt,
+		ReplyMarkup: &models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{},
+		},
 	})
 	if err != nil {
-		slog.Error("error sending broadcast prompt", "error", err)
+		slog.Error("broadcast prompt edit", "error", err)
 	}
 }
 
@@ -161,36 +180,45 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 
 	messageText := update.Message.Text
 
+	lang := update.Message.From.LanguageCode
+
 	// Сохраняем текст сообщения и сбрасываем флаг ожидания ввода
 	broadcastState.mu.Lock()
 	broadcastState.pendingText[adminID] = messageText
 	broadcastState.waitingForInput[adminID] = false // Сбрасываем флаг, так как текст получен
+	promptMid := broadcastState.promptMessageID[adminID]
+	delete(broadcastState.promptMessageID, adminID)
 	broadcastState.mu.Unlock()
 
-	// Определяем текст для preview в зависимости от типа рассылки
-	var targetText string
-	switch broadcastType {
-	case BroadcastTypeAll:
-		targetText = "всем пользователям"
-	case BroadcastTypeActive:
-		targetText = "только активным пользователям"
-	case BroadcastTypeInactive:
-		targetText = "неактивным пользователям"
-	default:
-		targetText = "всем пользователям"
+	if promptMid != 0 {
+		_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+			ChatID:    adminID,
+			MessageID: promptMid,
+		})
 	}
 
-	// Создаем клавиатуру с кнопками подтверждения
+	var summaryKey string
+	switch broadcastType {
+	case BroadcastTypeAll:
+		summaryKey = "broadcast_summary_all"
+	case BroadcastTypeActive:
+		summaryKey = "broadcast_summary_active"
+	case BroadcastTypeInactive:
+		summaryKey = "broadcast_summary_inactive"
+	default:
+		summaryKey = "broadcast_summary_all"
+	}
+	targetText := h.translation.GetText(lang, summaryKey)
+	previewText := fmt.Sprintf(h.translation.GetText(lang, "broadcast_confirm_preview"), messageText, targetText)
+
 	inlineKeyboard := &models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
-				{Text: "✅ Да, отправить", CallbackData: CallbackBroadcastConfirm},
-				{Text: "❌ Нет, отменить", CallbackData: CallbackBroadcastCancel},
+				{Text: h.translation.GetText(lang, "broadcast_confirm_yes"), CallbackData: CallbackBroadcastConfirm},
+				{Text: h.translation.GetText(lang, "broadcast_confirm_no"), CallbackData: CallbackBroadcastCancel},
 			},
 		},
 	}
-
-	previewText := fmt.Sprintf("📢 Подтвердите отправку рассылки:\n\n%s\n\nОтправить это сообщение %s?", messageText, targetText)
 
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:      adminID,
@@ -219,22 +247,15 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 	broadcastType, typeExists := broadcastState.selectedType[adminID]
 	if !exists || !typeExists {
 		broadcastState.mu.Unlock()
-		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-			CallbackQueryID: update.CallbackQuery.ID,
-			Text:            "Сообщение не найдено. Начните заново с команды /broadcast",
+		lang := update.CallbackQuery.From.LanguageCode
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: adminID,
+			Text:   h.translation.GetText(lang, "broadcast_session_expired"),
 		})
 		return
 	}
-	delete(broadcastState.pendingText, adminID)
-	delete(broadcastState.waitingForInput, adminID) // Сбрасываем флаг ожидания
-	delete(broadcastState.selectedType, adminID)    // Удаляем выбранный тип
 	broadcastState.mu.Unlock()
-
-	// Отвечаем на callback
-	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-		CallbackQueryID: update.CallbackQuery.ID,
-		Text:            "Рассылка начата...",
-	})
+	clearBroadcastState(adminID)
 
 	// Удаляем сообщение с подтверждением
 	callbackMessage := update.CallbackQuery.Message.Message
@@ -243,10 +264,10 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		MessageID: callbackMessage.ID,
 	})
 
-	// Отправляем уведомление о начале рассылки
+	lang := update.CallbackQuery.From.LanguageCode
 	_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: adminID,
-		Text:   "🚀 Рассылка начата. Ожидайте завершения...",
+		Text:   h.translation.GetText(lang, "broadcast_started_wait"),
 	})
 
 	// Запускаем рассылку в отдельной горутине
@@ -266,25 +287,12 @@ func (h Handler) BroadcastCancelHandler(ctx context.Context, b *bot.Bot, update 
 
 	slog.Info("broadcast cancelled by admin", "adminID", adminID)
 
-	// Удаляем сохраненный текст и сбрасываем флаг ожидания
-	broadcastState.mu.Lock()
-	delete(broadcastState.pendingText, adminID)
-	delete(broadcastState.waitingForInput, adminID) // Сбрасываем флаг ожидания
-	delete(broadcastState.selectedType, adminID)    // Удаляем выбранный тип
-	broadcastState.mu.Unlock()
+	clearBroadcastState(adminID)
 
-	// Отвечаем на callback
-	_, err := b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-		CallbackQueryID: update.CallbackQuery.ID,
-		Text:            "Рассылка отменена",
-	})
-	if err != nil {
-		slog.Error("error answering callback query on cancel", "error", err)
-	}
+	lang := update.CallbackQuery.From.LanguageCode
 
-	// Удаляем сообщение с подтверждением
 	callbackMessage := update.CallbackQuery.Message.Message
-	_, err = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,
 	})
@@ -292,13 +300,27 @@ func (h Handler) BroadcastCancelHandler(ctx context.Context, b *bot.Bot, update 
 		slog.Warn("error deleting confirmation message", "error", err)
 	}
 
-	// Отправляем уведомление об отмене
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: adminID,
-		Text:   "❌ Рассылка отменена",
+		Text:   h.translation.GetText(lang, "broadcast_cancelled_msg"),
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+			{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel})},
+		}},
 	})
 	if err != nil {
 		slog.Error("error sending cancel notification", "error", err)
+	}
+}
+
+// BroadcastBackToAdminHandler возвращает из экрана выбора аудитории рассылки в админ-меню.
+func (h Handler) BroadcastBackToAdminHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() {
+		return
+	}
+	cb := update.CallbackQuery
+	clearBroadcastState(cb.From.ID)
+	if err := h.RenderAdminPanel(ctx, b, cb.Message.Message, cb.From.LanguageCode); err != nil {
+		slog.Error("broadcast back to admin", "error", err)
 	}
 }
 

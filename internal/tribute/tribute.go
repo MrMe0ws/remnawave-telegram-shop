@@ -115,7 +115,7 @@ func (c *Client) newSubscriptionHandler(ctx context.Context, wh SubscriptionWebh
 		return fmt.Errorf("customer not found for telegram_id: %d", wh.Payload.TelegramUserID)
 	}
 
-	_, purchaseId, err := c.paymentService.CreatePurchase(ctx, float64(wh.Payload.Amount), months, customer, database.InvoiceTypeTribute)
+	_, purchaseId, err := c.paymentService.CreatePurchase(ctx, float64(wh.Payload.Amount), months, customer, database.InvoiceTypeTribute, nil)
 
 	if err != nil {
 		return err
