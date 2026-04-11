@@ -1,9 +1,11 @@
 # Remnawave Telegram Shop - Улучшенный Форк
 
-<img width="427" height="270" alt="image" src="https://github.com/user-attachments/assets/ef62040e-fec5-4a48-b698-3c4f879b40b0" />
-<img width="340" height="217" alt="image" src="https://github.com/user-attachments/assets/3a565e9d-647f-409c-a2a7-654b3d01c933" />
-<img width="283" height="249" alt="image" src="https://github.com/user-attachments/assets/b8bda50c-ef76-4008-befd-84e18dbecef0" />
-<img width="414" height="224" alt="image" src="https://github.com/user-attachments/assets/8b03d6cf-cd40-4b9c-9d1d-1f8c28195b20" />
+
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/eff4a209-873c-400e-9ff3-2ad7facf6c51" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/96d96a7f-4316-427c-b9c8-781c6f7213d7" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/216cdcbe-f88e-4830-a799-a8ae86585720" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/17655790-b395-4afc-8710-3e07e97abf39" />
+
 
 ## 🚀 Улучшенные Возможности
 
