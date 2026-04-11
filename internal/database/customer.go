@@ -32,6 +32,19 @@ type Customer struct {
 	ExtraHwidExpiresAt *time.Time `db:"extra_hwid_expires_at"`
 }
 
+// BroadcastRecipient is a Telegram user with language for localized broadcast keyboards.
+type BroadcastRecipient struct {
+	TelegramID int64
+	Language   string
+}
+
+// Broadcast audience filters for GetBroadcastRecipients.
+const (
+	BroadcastAudienceAll      = "all"
+	BroadcastAudienceActive   = "active"
+	BroadcastAudienceInactive = "inactive"
+)
+
 func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDate, endDate time.Time) (*[]Customer, error) {
 	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
 		From("customer").
@@ -462,4 +475,66 @@ func (cr *CustomerRepository) GetInactiveTelegramIds(ctx context.Context) ([]int
 	}
 
 	return telegramIDs, nil
+}
+
+// GetBroadcastRecipients returns telegram_id and language for mass broadcast (button labels per user).
+func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string) ([]BroadcastRecipient, error) {
+	now := time.Now()
+	buildSelect := sq.Select("telegram_id", "language").
+		From("customer").
+		PlaceholderFormat(sq.Dollar)
+
+	switch audience {
+	case BroadcastAudienceAll:
+		// no extra filter
+	case BroadcastAudienceActive:
+		buildSelect = buildSelect.Where(
+			sq.And{
+				sq.NotEq{"expire_at": nil},
+				sq.Gt{"expire_at": now},
+			},
+		)
+	case BroadcastAudienceInactive:
+		buildSelect = buildSelect.Where(
+			sq.Or{
+				sq.Eq{"expire_at": nil},
+				sq.LtOrEq{"expire_at": now},
+			},
+		)
+	default:
+		return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
+	}
+
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build select query: %w", err)
+	}
+
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query broadcast recipients: %w", err)
+	}
+	defer rows.Close()
+
+	var out []BroadcastRecipient
+	for rows.Next() {
+		var r BroadcastRecipient
+		var lang string
+		err := rows.Scan(&r.TelegramID, &lang)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan broadcast recipient: %w", err)
+		}
+		if lang != "" {
+			r.Language = lang
+		} else {
+			r.Language = "en"
+		}
+		out = append(out, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating broadcast recipients: %w", err)
+	}
+
+	return out, nil
 }

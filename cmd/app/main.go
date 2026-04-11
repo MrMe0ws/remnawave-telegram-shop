@@ -245,6 +245,12 @@ func main() {
 	// Callback для отмены рассылки (только для админа)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastCancel, bot.MatchTypeExact, h.BroadcastCancelHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
+	// Выбор inline-кнопок под рассылку (только для админа)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastToggleMain, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastTogglePromo, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastToggleVPN, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastButtonsNext, bot.MatchTypeExact, h.BroadcastButtonsNextHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+
 	// Админ-панель и промокоды
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackEnterPromo, bot.MatchTypeExact, h.EnterPromoCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPanel, bot.MatchTypeExact, h.AdminPanelHandler, isAdminMiddleware)
@@ -371,11 +377,20 @@ func main() {
 	// Срабатывает только если админ в режиме ввода текста для рассылки (после /broadcast)
 	// НЕ обрабатывает reply-сообщения (они обрабатываются AdminReplyToUser ниже)
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
-		return update.Message != nil &&
-			update.Message.Text != "" &&
-			!strings.HasPrefix(update.Message.Text, "/") &&
-			update.Message.From.ID == config.GetAdminTelegramId() &&
-			update.Message.ReplyToMessage == nil // Пропускаем reply-сообщения
+		if update.Message == nil || update.Message.ReplyToMessage != nil {
+			return false
+		}
+		if update.Message.From.ID != config.GetAdminTelegramId() {
+			return false
+		}
+		content := update.Message.Text
+		if content == "" {
+			content = update.Message.Caption
+		}
+		if content == "" || strings.HasPrefix(content, "/") {
+			return false
+		}
+		return true
 	}, h.BroadcastMessageHandler)
 
 	// Обработчик для неизвестных команд от пользователей

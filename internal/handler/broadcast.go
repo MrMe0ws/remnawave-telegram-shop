@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/go-telegram/bot/models"
 
 	"remnawave-tg-shop-bot/internal/config"
+	"remnawave-tg-shop-bot/internal/database"
 )
 
 // BroadcastType определяет тип рассылки
@@ -22,32 +24,64 @@ const (
 	BroadcastTypeInactive BroadcastType = "inactive" // Неактивным
 )
 
-// BroadcastState хранит состояние рассылки для каждого админа
-type BroadcastState struct {
-	mu              sync.Mutex
-	pendingText     map[int64]string        // adminID -> текст сообщения
-	waitingForInput map[int64]bool          // adminID -> ожидается ли ввод текста для рассылки
-	selectedType    map[int64]BroadcastType // adminID -> выбранный тип рассылки
-	promptMessageID map[int64]int           // adminID -> id сообщения с подсказкой «введите текст» (удалить после ввода)
+// BroadcastRecipientButtons — какие inline-кнопки прикрепить к рассылке.
+type BroadcastRecipientButtons struct {
+	MainMenu bool
+	Promo    bool
+	Connect  bool
 }
 
-func NewBroadcastState() *BroadcastState {
+// BroadcastState хранит состояние рассылки для каждого админа
+type BroadcastState struct {
+	mu                   sync.Mutex
+	pendingText          map[int64]string
+	pendingEntities      map[int64][]models.MessageEntity
+	pendingButtons       map[int64]BroadcastRecipientButtons
+	waitingForInput      map[int64]bool
+	waitingForButtonPick map[int64]bool
+	selectedType         map[int64]BroadcastType
+	promptMessageID      map[int64]int
+	pendingPreviewMsgID  map[int64]int
+}
+
+func newBroadcastState() *BroadcastState {
 	return &BroadcastState{
-		pendingText:     make(map[int64]string),
-		waitingForInput: make(map[int64]bool),
-		selectedType:    make(map[int64]BroadcastType),
-		promptMessageID: make(map[int64]int),
+		pendingText:          make(map[int64]string),
+		pendingEntities:      make(map[int64][]models.MessageEntity),
+		pendingButtons:       make(map[int64]BroadcastRecipientButtons),
+		waitingForInput:      make(map[int64]bool),
+		waitingForButtonPick: make(map[int64]bool),
+		selectedType:         make(map[int64]BroadcastType),
+		promptMessageID:      make(map[int64]int),
+		pendingPreviewMsgID:  make(map[int64]int),
 	}
 }
 
 func clearBroadcastState(adminID int64) {
 	broadcastState.mu.Lock()
 	delete(broadcastState.pendingText, adminID)
+	delete(broadcastState.pendingEntities, adminID)
+	delete(broadcastState.pendingButtons, adminID)
 	delete(broadcastState.waitingForInput, adminID)
+	delete(broadcastState.waitingForButtonPick, adminID)
 	delete(broadcastState.selectedType, adminID)
 	delete(broadcastState.promptMessageID, adminID)
+	delete(broadcastState.pendingPreviewMsgID, adminID)
 	broadcastState.mu.Unlock()
 }
+
+func resetBroadcastDraft(adminID int64) {
+	broadcastState.mu.Lock()
+	delete(broadcastState.pendingText, adminID)
+	delete(broadcastState.pendingEntities, adminID)
+	delete(broadcastState.pendingButtons, adminID)
+	delete(broadcastState.waitingForButtonPick, adminID)
+	delete(broadcastState.promptMessageID, adminID)
+	delete(broadcastState.pendingPreviewMsgID, adminID)
+	broadcastState.mu.Unlock()
+}
+
+var broadcastState = newBroadcastState()
 
 // BroadcastAudienceKeyboard выбор аудитории; withBackToAdmin — кнопка «Назад» в админ-меню (экран из админки).
 func (h Handler) BroadcastAudienceKeyboard(lang string, withBackToAdmin bool) [][]models.InlineKeyboardButton {
@@ -63,8 +97,6 @@ func (h Handler) BroadcastAudienceKeyboard(lang string, withBackToAdmin bool) []
 	}
 	return rows
 }
-
-var broadcastState = NewBroadcastState()
 
 // SendBroadcastTypeSelection sends the broadcast audience keyboard (команда /broadcast — отдельное сообщение, без «Назад» в админку).
 func (h Handler) SendBroadcastTypeSelection(ctx context.Context, b *bot.Bot, adminChatID int64, lang string) error {
@@ -91,8 +123,84 @@ func (h Handler) BroadcastCommandHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 
+	clearBroadcastState(adminID)
+
 	lang := update.Message.From.LanguageCode
 	_ = h.SendBroadcastTypeSelection(ctx, b, adminID, lang)
+}
+
+func broadcastTypeToAudience(t BroadcastType) string {
+	switch t {
+	case BroadcastTypeAll:
+		return database.BroadcastAudienceAll
+	case BroadcastTypeActive:
+		return database.BroadcastAudienceActive
+	case BroadcastTypeInactive:
+		return database.BroadcastAudienceInactive
+	default:
+		return database.BroadcastAudienceAll
+	}
+}
+
+func (h Handler) broadcastToggleRow(lang string, on bool, buttonKey, callbackData string) models.InlineKeyboardButton {
+	data := h.translation.GetButton(lang, buttonKey)
+	prefix := "⬜ "
+	if on {
+		prefix = "✅ "
+	}
+	return models.InlineKeyboardButton{Text: prefix + data.Text, CallbackData: callbackData}
+}
+
+func (h Handler) broadcastButtonPickerKeyboard(lang string, flags BroadcastRecipientButtons) [][]models.InlineKeyboardButton {
+	return [][]models.InlineKeyboardButton{
+		{h.broadcastToggleRow(lang, flags.Connect, "connect_button", CallbackBroadcastToggleVPN)},
+		{h.broadcastToggleRow(lang, flags.Promo, "promo_code_button", CallbackBroadcastTogglePromo)},
+		{h.broadcastToggleRow(lang, flags.MainMenu, "broadcast_inline_main", CallbackBroadcastToggleMain)},
+		{
+			{Text: h.translation.GetText(lang, "broadcast_buttons_next"), CallbackData: CallbackBroadcastButtonsNext},
+			{Text: h.translation.GetText(lang, "broadcast_confirm_no"), CallbackData: CallbackBroadcastCancel},
+		},
+	}
+}
+
+func (h Handler) buildBroadcastReplyMarkup(lang string, flags BroadcastRecipientButtons) models.ReplyMarkup {
+	if !flags.MainMenu && !flags.Promo && !flags.Connect {
+		return nil
+	}
+	var rows [][]models.InlineKeyboardButton
+	if flags.Connect {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
+		})
+	}
+	if flags.Promo {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "promo_code_button", models.InlineKeyboardButton{CallbackData: CallbackEnterPromo}),
+		})
+	}
+	if flags.MainMenu {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "broadcast_inline_main", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+		})
+	}
+	return models.InlineKeyboardMarkup{InlineKeyboard: rows}
+}
+
+func (h Handler) broadcastButtonsSummaryLine(lang string, flags BroadcastRecipientButtons) string {
+	if !flags.MainMenu && !flags.Promo && !flags.Connect {
+		return h.translation.GetText(lang, "broadcast_buttons_none")
+	}
+	var parts []string
+	if flags.Connect {
+		parts = append(parts, h.translation.GetButton(lang, "connect_button").Text)
+	}
+	if flags.Promo {
+		parts = append(parts, h.translation.GetButton(lang, "promo_code_button").Text)
+	}
+	if flags.MainMenu {
+		parts = append(parts, h.translation.GetButton(lang, "broadcast_inline_main").Text)
+	}
+	return strings.Join(parts, ", ")
 }
 
 // BroadcastTypeSelectHandler обрабатывает выбор типа рассылки
@@ -130,7 +238,8 @@ func (h Handler) BroadcastTypeSelectHandler(ctx context.Context, b *bot.Bot, upd
 		return
 	}
 
-	// Сохраняем выбранный тип и устанавливаем флаг ожидания ввода
+	resetBroadcastDraft(adminID)
+
 	broadcastState.mu.Lock()
 	broadcastState.selectedType[adminID] = broadcastType
 	broadcastState.waitingForInput[adminID] = true
@@ -152,9 +261,22 @@ func (h Handler) BroadcastTypeSelectHandler(ctx context.Context, b *bot.Bot, upd
 	}
 }
 
-// BroadcastMessageHandler обрабатывает текстовое сообщение от админа после команды /broadcast
+// BroadcastMessageHandler обрабатывает сообщение от админа с текстом или подписью к медиа после выбора аудитории
 func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	if update.Message == nil || update.Message.Text == "" {
+	if update.Message == nil {
+		return
+	}
+
+	var messageText string
+	var entities []models.MessageEntity
+	switch {
+	case update.Message.Text != "":
+		messageText = update.Message.Text
+		entities = update.Message.Entities
+	case update.Message.Caption != "":
+		messageText = update.Message.Caption
+		entities = update.Message.CaptionEntities
+	default:
 		return
 	}
 
@@ -163,29 +285,36 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 
-	// Пропускаем команды
-	if update.Message.Text[0] == '/' {
+	if len(messageText) > 0 && messageText[0] == '/' {
 		return
 	}
 
-	// Проверяем, что админ находится в режиме ввода текста для рассылки и выбран тип
 	broadcastState.mu.Lock()
 	isWaiting, exists := broadcastState.waitingForInput[adminID]
-	broadcastType, typeExists := broadcastState.selectedType[adminID]
+	_, typeExists := broadcastState.selectedType[adminID]
 	if !exists || !isWaiting || !typeExists {
 		broadcastState.mu.Unlock()
-		return // Не обрабатываем сообщение, если админ не в режиме рассылки или тип не выбран
+		return
 	}
 	broadcastState.mu.Unlock()
 
-	messageText := update.Message.Text
+	var entCopy []models.MessageEntity
+	if len(entities) > 0 {
+		entCopy = append([]models.MessageEntity(nil), entities...)
+	}
 
 	lang := update.Message.From.LanguageCode
 
-	// Сохраняем текст сообщения и сбрасываем флаг ожидания ввода
 	broadcastState.mu.Lock()
 	broadcastState.pendingText[adminID] = messageText
-	broadcastState.waitingForInput[adminID] = false // Сбрасываем флаг, так как текст получен
+	if len(entCopy) > 0 {
+		broadcastState.pendingEntities[adminID] = entCopy
+	} else {
+		delete(broadcastState.pendingEntities, adminID)
+	}
+	broadcastState.pendingButtons[adminID] = BroadcastRecipientButtons{}
+	broadcastState.waitingForInput[adminID] = false
+	broadcastState.waitingForButtonPick[adminID] = true
 	promptMid := broadcastState.promptMessageID[adminID]
 	delete(broadcastState.promptMessageID, adminID)
 	broadcastState.mu.Unlock()
@@ -196,6 +325,91 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 			MessageID: promptMid,
 		})
 	}
+
+	flags := BroadcastRecipientButtons{}
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      adminID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        h.translation.GetText(lang, "broadcast_pick_buttons"),
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastButtonPickerKeyboard(lang, flags)},
+	})
+	if err != nil {
+		slog.Error("error sending broadcast button picker", "error", err)
+	}
+}
+
+// BroadcastButtonToggleHandler переключает выбор кнопок под рассылкой
+func (h Handler) BroadcastButtonToggleHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	adminID := config.GetAdminTelegramId()
+	if cb.From.ID != adminID || cb.Message.Message == nil {
+		return
+	}
+
+	lang := cb.From.LanguageCode
+
+	broadcastState.mu.Lock()
+	if !broadcastState.waitingForButtonPick[adminID] {
+		broadcastState.mu.Unlock()
+		return
+	}
+	flags := broadcastState.pendingButtons[adminID]
+	switch cb.Data {
+	case CallbackBroadcastToggleMain:
+		flags.MainMenu = !flags.MainMenu
+	case CallbackBroadcastTogglePromo:
+		flags.Promo = !flags.Promo
+	case CallbackBroadcastToggleVPN:
+		flags.Connect = !flags.Connect
+	default:
+		broadcastState.mu.Unlock()
+		return
+	}
+	broadcastState.pendingButtons[adminID] = flags
+	broadcastState.mu.Unlock()
+
+	pickerMsg := cb.Message.Message
+	_, err := b.EditMessageReplyMarkup(ctx, &bot.EditMessageReplyMarkupParams{
+		ChatID:      pickerMsg.Chat.ID,
+		MessageID:   pickerMsg.ID,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastButtonPickerKeyboard(lang, flags)},
+	})
+	if err != nil {
+		slog.Error("broadcast toggle edit markup", "error", err)
+	}
+}
+
+// BroadcastButtonsNextHandler переходит от выбора кнопок к предпросмотру и подтверждению
+func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	adminID := config.GetAdminTelegramId()
+	if cb.From.ID != adminID || cb.Message.Message == nil {
+		return
+	}
+
+	lang := cb.From.LanguageCode
+
+	broadcastState.mu.Lock()
+	if !broadcastState.waitingForButtonPick[adminID] {
+		broadcastState.mu.Unlock()
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: adminID,
+			Text:   h.translation.GetText(lang, "broadcast_session_expired"),
+		})
+		return
+	}
+	messageText := broadcastState.pendingText[adminID]
+	entities := broadcastState.pendingEntities[adminID]
+	flags := broadcastState.pendingButtons[adminID]
+	broadcastType := broadcastState.selectedType[adminID]
+	broadcastState.waitingForButtonPick[adminID] = false
+	broadcastState.mu.Unlock()
 
 	var summaryKey string
 	switch broadcastType {
@@ -209,8 +423,36 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		summaryKey = "broadcast_summary_all"
 	}
 	targetText := h.translation.GetText(lang, summaryKey)
-	previewText := fmt.Sprintf(h.translation.GetText(lang, "broadcast_confirm_preview"), messageText, targetText)
+	buttonsLine := h.broadcastButtonsSummaryLine(lang, flags)
 
+	pickerMsg := cb.Message.Message
+	_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    pickerMsg.Chat.ID,
+		MessageID: pickerMsg.ID,
+	})
+
+	previewParams := bot.SendMessageParams{
+		ChatID: adminID,
+		Text:   messageText,
+	}
+	if len(entities) > 0 {
+		previewParams.Entities = entities
+	}
+	if markup := h.buildBroadcastReplyMarkup(lang, flags); markup != nil {
+		previewParams.ReplyMarkup = markup
+	}
+	previewMsg, err := b.SendMessage(ctx, &previewParams)
+	if err != nil {
+		slog.Error("broadcast preview send", "error", err)
+	}
+
+	if previewMsg != nil {
+		broadcastState.mu.Lock()
+		broadcastState.pendingPreviewMsgID[adminID] = previewMsg.ID
+		broadcastState.mu.Unlock()
+	}
+
+	confirmText := fmt.Sprintf(h.translation.GetText(lang, "broadcast_confirm_question"), targetText, buttonsLine)
 	inlineKeyboard := &models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
@@ -220,9 +462,10 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		},
 	}
 
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:      adminID,
-		Text:        previewText,
+		ParseMode:   models.ParseModeHTML,
+		Text:        confirmText,
 		ReplyMarkup: inlineKeyboard,
 	})
 	if err != nil {
@@ -241,10 +484,12 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 
-	// Получаем сохраненный текст сообщения и тип рассылки
 	broadcastState.mu.Lock()
 	messageText, exists := broadcastState.pendingText[adminID]
 	broadcastType, typeExists := broadcastState.selectedType[adminID]
+	entities := broadcastState.pendingEntities[adminID]
+	flags := broadcastState.pendingButtons[adminID]
+	previewID := broadcastState.pendingPreviewMsgID[adminID]
 	if !exists || !typeExists {
 		broadcastState.mu.Unlock()
 		lang := update.CallbackQuery.From.LanguageCode
@@ -254,11 +499,18 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		})
 		return
 	}
+	entCopy := append([]models.MessageEntity(nil), entities...)
+	flagsCopy := flags
 	broadcastState.mu.Unlock()
 	clearBroadcastState(adminID)
 
-	// Удаляем сообщение с подтверждением
 	callbackMessage := update.CallbackQuery.Message.Message
+	if previewID != 0 {
+		_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+			ChatID:    adminID,
+			MessageID: previewID,
+		})
+	}
 	_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
 		ChatID:    callbackMessage.Chat.ID,
 		MessageID: callbackMessage.ID,
@@ -270,8 +522,7 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		Text:   h.translation.GetText(lang, "broadcast_started_wait"),
 	})
 
-	// Запускаем рассылку в отдельной горутине
-	go h.sendBroadcast(ctx, b, adminID, messageText, broadcastType)
+	go h.sendBroadcast(ctx, b, adminID, messageText, entCopy, flagsCopy, broadcastType)
 }
 
 // BroadcastCancelHandler обрабатывает отмену рассылки
@@ -287,20 +538,31 @@ func (h Handler) BroadcastCancelHandler(ctx context.Context, b *bot.Bot, update 
 
 	slog.Info("broadcast cancelled by admin", "adminID", adminID)
 
+	broadcastState.mu.Lock()
+	previewID := broadcastState.pendingPreviewMsgID[adminID]
+	broadcastState.mu.Unlock()
 	clearBroadcastState(adminID)
 
 	lang := update.CallbackQuery.From.LanguageCode
 
 	callbackMessage := update.CallbackQuery.Message.Message
-	_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-	})
-	if err != nil {
-		slog.Warn("error deleting confirmation message", "error", err)
+	if previewID != 0 {
+		_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+			ChatID:    adminID,
+			MessageID: previewID,
+		})
+	}
+	if callbackMessage != nil {
+		_, err := b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+			ChatID:    callbackMessage.Chat.ID,
+			MessageID: callbackMessage.ID,
+		})
+		if err != nil {
+			slog.Warn("error deleting confirmation message", "error", err)
+		}
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: adminID,
 		Text:   h.translation.GetText(lang, "broadcast_cancelled_msg"),
 		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
@@ -325,24 +587,11 @@ func (h Handler) BroadcastBackToAdminHandler(ctx context.Context, b *bot.Bot, up
 }
 
 // sendBroadcast отправляет сообщение пользователям пачками в зависимости от типа рассылки
-func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, broadcastType BroadcastType) {
-	// Получаем telegram_id пользователей в зависимости от типа рассылки
-	var telegramIDs []int64
-	var err error
-
-	switch broadcastType {
-	case BroadcastTypeAll:
-		telegramIDs, err = h.customerRepository.GetAllTelegramIds(ctx)
-	case BroadcastTypeActive:
-		telegramIDs, err = h.customerRepository.GetActiveTelegramIds(ctx)
-	case BroadcastTypeInactive:
-		telegramIDs, err = h.customerRepository.GetInactiveTelegramIds(ctx)
-	default:
-		telegramIDs, err = h.customerRepository.GetAllTelegramIds(ctx)
-	}
-
+func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, entities []models.MessageEntity, flags BroadcastRecipientButtons, broadcastType BroadcastType) {
+	audience := broadcastTypeToAudience(broadcastType)
+	recipients, err := h.customerRepository.GetBroadcastRecipients(ctx, audience)
 	if err != nil {
-		slog.Error("error getting telegram ids for broadcast", "error", err, "type", broadcastType)
+		slog.Error("error getting broadcast recipients", "error", err, "type", broadcastType)
 		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: adminID,
 			Text:   fmt.Sprintf("❌ Ошибка при получении списка пользователей: %v", err),
@@ -350,7 +599,7 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		return
 	}
 
-	if len(telegramIDs) == 0 {
+	if len(recipients) == 0 {
 		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: adminID,
 			Text:   "❌ Нет пользователей для рассылки",
@@ -358,44 +607,46 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		return
 	}
 
-	totalUsers := len(telegramIDs)
+	totalUsers := len(recipients)
 	sentCount := 0
 	failedCount := 0
 
-	// Константы для лимитов Telegram API
-	const batchSize = 29                    // Отправляем по 29 сообщений за раз (меньше лимита в 30)
-	const delayBetweenBatches = time.Second // Задержка между пачками - 1 секунда
+	const batchSize = 29
+	const delayBetweenBatches = time.Second
 
-	// Отправляем сообщения пачками
 	for i := 0; i < totalUsers; i += batchSize {
 		end := i + batchSize
 		if end > totalUsers {
 			end = totalUsers
 		}
 
-		batch := telegramIDs[i:end]
+		batch := recipients[i:end]
 
-		// Отправляем пачку сообщений
-		for _, userID := range batch {
-			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: userID,
+		for _, rec := range batch {
+			params := bot.SendMessageParams{
+				ChatID: rec.TelegramID,
 				Text:   messageText,
-			})
+			}
+			if len(entities) > 0 {
+				params.Entities = entities
+			}
+			if markup := h.buildBroadcastReplyMarkup(rec.Language, flags); markup != nil {
+				params.ReplyMarkup = markup
+			}
+			_, err := b.SendMessage(ctx, &params)
 			if err != nil {
-				slog.Warn("error sending broadcast message", "userId", userID, "error", err)
+				slog.Warn("error sending broadcast message", "userId", rec.TelegramID, "error", err)
 				failedCount++
 			} else {
 				sentCount++
 			}
 		}
 
-		// Если это не последняя пачка, ждем перед следующей
 		if end < totalUsers {
 			time.Sleep(delayBetweenBatches)
 		}
 	}
 
-	// Отправляем итоговый отчет админу
 	resultText := fmt.Sprintf("✅ Рассылка завершена!\n\n📊 Статистика:\n• Всего пользователей: %d\n• Успешно отправлено: %d\n• Ошибок: %d",
 		totalUsers, sentCount, failedCount)
 

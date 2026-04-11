@@ -25,6 +25,10 @@ const (
 	CallbackBroadcastActive   = "broadcast_active"
 	CallbackBroadcastInactive   = "broadcast_inactive"
 	CallbackBroadcastBackAdmin  = "broadcast_back_admin"
+	CallbackBroadcastToggleMain = "bc_t_main"
+	CallbackBroadcastTogglePromo = "bc_t_prm"
+	CallbackBroadcastToggleVPN   = "bc_t_vpn"
+	CallbackBroadcastButtonsNext = "bc_next"
 
 	CallbackAdminPanel   = "admin_panel"
 	CallbackAdminBroadcast = "admin_bc"
