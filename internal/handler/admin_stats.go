@@ -258,7 +258,8 @@ func (h Handler) AdminStatsRefHandler(ctx context.Context, b *bot.Bot, update *m
 				slog.Error("admin stats ref earned days", "error", err, "referrer", tr.ReferrerID)
 				days = 0
 			}
-			topLines = append(topLines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_ref_top_line"), i+1, tr.ReferrerID, tr.PaidReferees, days))
+			label := getReferralDisplayName(ctx, b, tr.ReferrerID)
+			topLines = append(topLines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_ref_top_line"), i+1, label, tr.PaidReferees, days))
 		}
 	}
 	topBlock := strings.Join(topLines, "\n")

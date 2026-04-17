@@ -1,5 +1,5 @@
 {
-  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n    🇱🇻 Latvia\n    🇩🇪 Germany\n    🇸🇪 Sweden\n    🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Unlimited traffic\n\n🔗 Invite a friend and get\nbonus subscription days (“🤝 Referrals”)",
+  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Available servers:\n   🇷🇺 Bypassing WS  🇱🇻 Latvia\n   🇩🇪 Germany  🇩🇪 Germany 🔥\n   🇸🇪 Sweden  🇷🇺 Russia\n\n🚀 Speed up to 1 Gbps\n💪 No ads\n♾️ Bypassing WS\n\n🔗 Invite a friend and get\nbonus subscription days (“🤝 Referrals”)",
 
   "buy_button": "💰 Buy",
   "connect_button": "🔌 My VPN",
@@ -227,7 +227,7 @@
   "admin_stats_ref_title": "🤝 <b>Referral statistics</b>",
   "admin_stats_ref_body": "<b>Overview:</b>\n• Unique referrers: %d\n• Active referrers (with a paying referee): %d\n• Total days credited to referrers: <b>%d</b>\n\n<b>Days credited to referrers:</b>\n• Today: %d\n• Last 7 days: %d\n• This month: %d\n\n<b>Average per active referrer:</b> %s days\n\n<b>Top referrers:</b>\n%s",
   "admin_stats_ref_top_empty": "No active referrers yet.",
-  "admin_stats_ref_top_line": "%d) ID <code>%d</code> — paying referees: %d, total days (estimate): %d",
+  "admin_stats_ref_top_line": "%d) %s — paying referees: %d, total days (estimate): %d",
   "admin_stats_summary_title": "📊 <b>System summary</b>",
   "admin_stats_summary_body": "<b>Users:</b>\n• Total: %d\n• Active subscription: %d\n• New this month: %d\n\n<b>Subscriptions:</b>\n• VPN active now: %d\n• Paid among them: %d\n• Paid share among active VPN: %s%%\n\n<b>Finance (month, ₽ RUB):</b>\n• Revenue: %s ₽\n• ARPU: %s ₽\n• Transactions: %d\n\n<b>Growth:</b>\n• Users: <b>%s%d</b> this month (%s%% vs prev. month)\n• Subscription sales: <b>%s%d</b> this month (%s%% vs prev. month)",
   "admin_infra_billing": "🏗 Infra",
