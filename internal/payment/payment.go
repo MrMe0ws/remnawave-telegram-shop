@@ -681,7 +681,7 @@ func (s PaymentService) grantReferralDays(ctx context.Context, customer *databas
 	if days <= 0 {
 		return nil
 	}
-	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), days, false)
+	user, err := s.remnawaveClient.ExtendSubscriptionByDaysPreserveSquads(ctx, customer.ID, customer.TelegramID, days)
 	if err != nil {
 		return err
 	}

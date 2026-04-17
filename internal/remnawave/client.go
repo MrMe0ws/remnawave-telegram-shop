@@ -274,6 +274,39 @@ func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, teleg
 	return r.updateUser(ctx, existingUser, trafficLimit, days, isTrialUser)
 }
 
+// ExtendSubscriptionByDaysPreserveSquads продлевает только expire_at (рефералка, промо-дни и т.п.):
+// не трогает internal squads, external squad, tag, лимит трафика и стратегию — в отличие от CreateOrUpdateUser.
+// Если пользователя в Remnawave ещё нет — создаётся как при обычной первой выдаче (createUser).
+func (r *Client) ExtendSubscriptionByDaysPreserveSquads(ctx context.Context, customerID int64, telegramID int64, days int) (*User, error) {
+	if days <= 0 {
+		return nil, fmt.Errorf("invalid days: %d", days)
+	}
+	users, err := r.getUsersByTelegramID(ctx, telegramID)
+	if err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return r.createUser(ctx, customerID, telegramID, config.TrafficLimit(), days, false)
+	}
+	existingUser := findUserBySuffix(users, telegramID)
+	newExpire := getNewExpire(days, existingUser.ExpireAt)
+	userUpdate := &UpdateUserRequest{
+		UUID:     &existingUser.UUID,
+		Status:   "ACTIVE",
+		ExpireAt: &newExpire,
+	}
+	var resp apiResponse[User]
+	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", userUpdate, &resp); err != nil {
+		return nil, err
+	}
+	tgid := ""
+	if existingUser.TelegramID != nil {
+		tgid = strconv.FormatInt(*existingUser.TelegramID, 10)
+	}
+	slog.Info("extended subscription (expire only)", "telegramId", utils.MaskHalf(tgid), "days", days)
+	return &resp.Response, nil
+}
+
 // CreateOrUpdateUserFromNow обновляет подписку, считая срок от текущего времени.
 func (r *Client) CreateOrUpdateUserFromNow(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
 	users, err := r.getUsersByTelegramID(ctx, telegramId)

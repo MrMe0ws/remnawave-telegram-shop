@@ -247,7 +247,7 @@ func (s *Service) applySubscriptionDays(ctx context.Context, telegramID int64, c
 	var user *remnawave.User
 	var err error
 	if hasActive {
-		user, err = s.Remnawave.CreateOrUpdateUser(ctx, customer.ID, telegramID, config.TrafficLimit(), days, false)
+		user, err = s.Remnawave.ExtendSubscriptionByDaysPreserveSquads(ctx, customer.ID, telegramID, days)
 	} else {
 		user, err = s.Remnawave.CreateOrUpdateUserFromNow(ctx, customer.ID, telegramID, config.TrafficLimit(), days, false)
 	}
