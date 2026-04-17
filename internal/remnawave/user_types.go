@@ -14,7 +14,7 @@ type User struct {
 	ExpireAt          time.Time  `json:"expireAt"`
 	TelegramID        *int64     `json:"telegramId"`
 	Status            string     `json:"status"`
-	TrafficLimitBytes int        `json:"trafficLimitBytes"`
+	TrafficLimitBytes int64      `json:"trafficLimitBytes"`
 	HwidDeviceLimit   *int       `json:"hwidDeviceLimit"`
 	UserTraffic       UserTraffic `json:"userTraffic"`
 }
@@ -81,7 +81,7 @@ type CreateUserRequest struct {
 	Username             string      `json:"username"`
 	ExpireAt             time.Time   `json:"expireAt"`
 	Status               string      `json:"status,omitempty"`
-	TrafficLimitBytes    *int        `json:"trafficLimitBytes,omitempty"`
+	TrafficLimitBytes    *int64      `json:"trafficLimitBytes,omitempty"`
 	TrafficLimitStrategy string      `json:"trafficLimitStrategy,omitempty"`
 	HwidDeviceLimit      *int        `json:"hwidDeviceLimit,omitempty"`
 	ActiveInternalSquads []uuid.UUID `json:"activeInternalSquads,omitempty"`
@@ -96,7 +96,7 @@ type UpdateUserRequest struct {
 	UUID                 *uuid.UUID  `json:"uuid,omitempty"`
 	Status               string      `json:"status,omitempty"`
 	ExpireAt             *time.Time  `json:"expireAt,omitempty"`
-	TrafficLimitBytes    *int        `json:"trafficLimitBytes,omitempty"`
+	TrafficLimitBytes    *int64      `json:"trafficLimitBytes,omitempty"`
 	TrafficLimitStrategy string      `json:"trafficLimitStrategy,omitempty"`
 	HwidDeviceLimit      *int        `json:"hwidDeviceLimit,omitempty"`
 	ActiveInternalSquads []uuid.UUID `json:"activeInternalSquads,omitempty"`

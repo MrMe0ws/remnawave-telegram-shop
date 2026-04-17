@@ -26,9 +26,16 @@ const (
 
 // BroadcastRecipientButtons — какие inline-кнопки прикрепить к рассылке.
 type BroadcastRecipientButtons struct {
+	Buy      bool
 	MainMenu bool
 	Promo    bool
 	Connect  bool
+}
+
+// broadcastDraftMedia — черновик рассылки с картинкой (фото или файл JPEG/PNG/WebP).
+type broadcastDraftMedia struct {
+	FileID  string
+	AsPhoto bool // true → sendPhoto, false → sendDocument (файлом)
 }
 
 // BroadcastState хранит состояние рассылки для каждого админа
@@ -36,6 +43,7 @@ type BroadcastState struct {
 	mu                   sync.Mutex
 	pendingText          map[int64]string
 	pendingEntities      map[int64][]models.MessageEntity
+	pendingMedia         map[int64]*broadcastDraftMedia
 	pendingButtons       map[int64]BroadcastRecipientButtons
 	waitingForInput      map[int64]bool
 	waitingForButtonPick map[int64]bool
@@ -48,6 +56,7 @@ func newBroadcastState() *BroadcastState {
 	return &BroadcastState{
 		pendingText:          make(map[int64]string),
 		pendingEntities:      make(map[int64][]models.MessageEntity),
+		pendingMedia:         make(map[int64]*broadcastDraftMedia),
 		pendingButtons:       make(map[int64]BroadcastRecipientButtons),
 		waitingForInput:      make(map[int64]bool),
 		waitingForButtonPick: make(map[int64]bool),
@@ -61,6 +70,7 @@ func clearBroadcastState(adminID int64) {
 	broadcastState.mu.Lock()
 	delete(broadcastState.pendingText, adminID)
 	delete(broadcastState.pendingEntities, adminID)
+	delete(broadcastState.pendingMedia, adminID)
 	delete(broadcastState.pendingButtons, adminID)
 	delete(broadcastState.waitingForInput, adminID)
 	delete(broadcastState.waitingForButtonPick, adminID)
@@ -74,6 +84,7 @@ func resetBroadcastDraft(adminID int64) {
 	broadcastState.mu.Lock()
 	delete(broadcastState.pendingText, adminID)
 	delete(broadcastState.pendingEntities, adminID)
+	delete(broadcastState.pendingMedia, adminID)
 	delete(broadcastState.pendingButtons, adminID)
 	delete(broadcastState.waitingForButtonPick, adminID)
 	delete(broadcastState.promptMessageID, adminID)
@@ -82,6 +93,49 @@ func resetBroadcastDraft(adminID int64) {
 }
 
 var broadcastState = newBroadcastState()
+
+// extractBroadcastImageFromMessage — фото как картинка или документ JPEG/PNG/WebP (отправка файлом).
+func extractBroadcastImageFromMessage(m *models.Message) (fileID string, asPhoto bool, ok bool) {
+	if m == nil {
+		return "", false, false
+	}
+	if len(m.Photo) > 0 {
+		last := m.Photo[len(m.Photo)-1]
+		return last.FileID, true, true
+	}
+	if m.Document != nil {
+		mime := strings.ToLower(strings.TrimSpace(m.Document.MimeType))
+		switch mime {
+		case "image/jpeg", "image/jpg", "image/png", "image/webp":
+			return m.Document.FileID, false, true
+		}
+	}
+	return "", false, false
+}
+
+// BroadcastAwaitingMessageInput — админ выбрал аудиторию и бот ждёт текст/картинку черновика.
+func BroadcastAwaitingMessageInput(adminID int64) bool {
+	broadcastState.mu.Lock()
+	defer broadcastState.mu.Unlock()
+	isWaiting, wok := broadcastState.waitingForInput[adminID]
+	_, tok := broadcastState.selectedType[adminID]
+	return wok && isWaiting && tok
+}
+
+// BroadcastIncomingDraftMessage — подходит ли сообщение как черновик рассылки (текст, подпись к медиа или картинка).
+func BroadcastIncomingDraftMessage(m *models.Message) bool {
+	if m == nil {
+		return false
+	}
+	if strings.TrimSpace(m.Text) != "" && !strings.HasPrefix(m.Text, "/") {
+		return true
+	}
+	if m.Caption != "" {
+		return true
+	}
+	_, _, ok := extractBroadcastImageFromMessage(m)
+	return ok
+}
 
 // BroadcastAudienceKeyboard выбор аудитории; withBackToAdmin — кнопка «Назад» в админ-меню (экран из админки).
 func (h Handler) BroadcastAudienceKeyboard(lang string, withBackToAdmin bool) [][]models.InlineKeyboardButton {
@@ -144,7 +198,7 @@ func broadcastTypeToAudience(t BroadcastType) string {
 
 func (h Handler) broadcastToggleRow(lang string, on bool, buttonKey, callbackData string) models.InlineKeyboardButton {
 	data := h.translation.GetButton(lang, buttonKey)
-	prefix := "⬜ "
+	prefix := "☐ "
 	if on {
 		prefix = "✅ "
 	}
@@ -153,6 +207,7 @@ func (h Handler) broadcastToggleRow(lang string, on bool, buttonKey, callbackDat
 
 func (h Handler) broadcastButtonPickerKeyboard(lang string, flags BroadcastRecipientButtons) [][]models.InlineKeyboardButton {
 	return [][]models.InlineKeyboardButton{
+		{h.broadcastToggleRow(lang, flags.Buy, "buy_button", CallbackBroadcastToggleBuy)},
 		{h.broadcastToggleRow(lang, flags.Connect, "connect_button", CallbackBroadcastToggleVPN)},
 		{h.broadcastToggleRow(lang, flags.Promo, "promo_code_button", CallbackBroadcastTogglePromo)},
 		{h.broadcastToggleRow(lang, flags.MainMenu, "broadcast_inline_main", CallbackBroadcastToggleMain)},
@@ -164,33 +219,41 @@ func (h Handler) broadcastButtonPickerKeyboard(lang string, flags BroadcastRecip
 }
 
 func (h Handler) buildBroadcastReplyMarkup(lang string, flags BroadcastRecipientButtons) models.ReplyMarkup {
-	if !flags.MainMenu && !flags.Promo && !flags.Connect {
+	if !flags.Buy && !flags.MainMenu && !flags.Promo && !flags.Connect {
 		return nil
 	}
 	var rows [][]models.InlineKeyboardButton
+	if flags.Buy {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy + BroadcastInlineQuery}),
+		})
+	}
 	if flags.Connect {
 		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
+			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{CallbackData: CallbackConnect + BroadcastInlineQuery}),
 		})
 	}
 	if flags.Promo {
 		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "promo_code_button", models.InlineKeyboardButton{CallbackData: CallbackEnterPromo}),
+			h.translation.WithButton(lang, "promo_code_button", models.InlineKeyboardButton{CallbackData: CallbackEnterPromo + BroadcastInlineQuery}),
 		})
 	}
 	if flags.MainMenu {
 		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "broadcast_inline_main", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+			h.translation.WithButton(lang, "broadcast_inline_main", models.InlineKeyboardButton{CallbackData: CallbackStart + BroadcastInlineQuery}),
 		})
 	}
 	return models.InlineKeyboardMarkup{InlineKeyboard: rows}
 }
 
 func (h Handler) broadcastButtonsSummaryLine(lang string, flags BroadcastRecipientButtons) string {
-	if !flags.MainMenu && !flags.Promo && !flags.Connect {
+	if !flags.Buy && !flags.MainMenu && !flags.Promo && !flags.Connect {
 		return h.translation.GetText(lang, "broadcast_buttons_none")
 	}
 	var parts []string
+	if flags.Buy {
+		parts = append(parts, h.translation.GetButton(lang, "buy_button").Text)
+	}
 	if flags.Connect {
 		parts = append(parts, h.translation.GetButton(lang, "connect_button").Text)
 	}
@@ -267,25 +330,8 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 
-	var messageText string
-	var entities []models.MessageEntity
-	switch {
-	case update.Message.Text != "":
-		messageText = update.Message.Text
-		entities = update.Message.Entities
-	case update.Message.Caption != "":
-		messageText = update.Message.Caption
-		entities = update.Message.CaptionEntities
-	default:
-		return
-	}
-
 	adminID := config.GetAdminTelegramId()
 	if update.Message.From.ID != adminID {
-		return
-	}
-
-	if len(messageText) > 0 && messageText[0] == '/' {
 		return
 	}
 
@@ -297,6 +343,27 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 	broadcastState.mu.Unlock()
+
+	fileID, asPhoto, hasMedia := extractBroadcastImageFromMessage(update.Message)
+	var messageText string
+	var entities []models.MessageEntity
+	if hasMedia {
+		messageText = update.Message.Caption
+		if len(update.Message.CaptionEntities) > 0 {
+			entities = append([]models.MessageEntity(nil), update.Message.CaptionEntities...)
+		}
+	} else {
+		messageText = update.Message.Text
+		if len(update.Message.Entities) > 0 {
+			entities = append([]models.MessageEntity(nil), update.Message.Entities...)
+		}
+	}
+	if strings.TrimSpace(messageText) == "" && !hasMedia {
+		return
+	}
+	if !hasMedia && len(messageText) > 0 && messageText[0] == '/' {
+		return
+	}
 
 	var entCopy []models.MessageEntity
 	if len(entities) > 0 {
@@ -311,6 +378,11 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		broadcastState.pendingEntities[adminID] = entCopy
 	} else {
 		delete(broadcastState.pendingEntities, adminID)
+	}
+	if hasMedia {
+		broadcastState.pendingMedia[adminID] = &broadcastDraftMedia{FileID: fileID, AsPhoto: asPhoto}
+	} else {
+		delete(broadcastState.pendingMedia, adminID)
 	}
 	broadcastState.pendingButtons[adminID] = BroadcastRecipientButtons{}
 	broadcastState.waitingForInput[adminID] = false
@@ -358,6 +430,8 @@ func (h Handler) BroadcastButtonToggleHandler(ctx context.Context, b *bot.Bot, u
 	}
 	flags := broadcastState.pendingButtons[adminID]
 	switch cb.Data {
+	case CallbackBroadcastToggleBuy:
+		flags.Buy = !flags.Buy
 	case CallbackBroadcastToggleMain:
 		flags.MainMenu = !flags.MainMenu
 	case CallbackBroadcastTogglePromo:
@@ -408,6 +482,11 @@ func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, up
 	entities := broadcastState.pendingEntities[adminID]
 	flags := broadcastState.pendingButtons[adminID]
 	broadcastType := broadcastState.selectedType[adminID]
+	var draftMedia *broadcastDraftMedia
+	if m, ok := broadcastState.pendingMedia[adminID]; ok {
+		cp := *m
+		draftMedia = &cp
+	}
 	broadcastState.waitingForButtonPick[adminID] = false
 	broadcastState.mu.Unlock()
 
@@ -431,19 +510,48 @@ func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, up
 		MessageID: pickerMsg.ID,
 	})
 
-	previewParams := bot.SendMessageParams{
-		ChatID: adminID,
-		Text:   messageText,
+	var previewMsg *models.Message
+	var previewErr error
+	markup := h.buildBroadcastReplyMarkup(lang, flags)
+	if draftMedia != nil {
+		if draftMedia.AsPhoto {
+			pp := &bot.SendPhotoParams{
+				ChatID:          adminID,
+				Photo:           &models.InputFileString{Data: draftMedia.FileID},
+				Caption:         messageText,
+				CaptionEntities: entities,
+			}
+			if markup != nil {
+				pp.ReplyMarkup = markup
+			}
+			previewMsg, previewErr = b.SendPhoto(ctx, pp)
+		} else {
+			dp := &bot.SendDocumentParams{
+				ChatID:          adminID,
+				Document:        &models.InputFileString{Data: draftMedia.FileID},
+				Caption:         messageText,
+				CaptionEntities: entities,
+			}
+			if markup != nil {
+				dp.ReplyMarkup = markup
+			}
+			previewMsg, previewErr = b.SendDocument(ctx, dp)
+		}
+	} else {
+		previewParams := bot.SendMessageParams{
+			ChatID: adminID,
+			Text:   messageText,
+		}
+		if len(entities) > 0 {
+			previewParams.Entities = entities
+		}
+		if markup != nil {
+			previewParams.ReplyMarkup = markup
+		}
+		previewMsg, previewErr = b.SendMessage(ctx, &previewParams)
 	}
-	if len(entities) > 0 {
-		previewParams.Entities = entities
-	}
-	if markup := h.buildBroadcastReplyMarkup(lang, flags); markup != nil {
-		previewParams.ReplyMarkup = markup
-	}
-	previewMsg, err := b.SendMessage(ctx, &previewParams)
-	if err != nil {
-		slog.Error("broadcast preview send", "error", err)
+	if previewErr != nil {
+		slog.Error("broadcast preview send", "error", previewErr)
 	}
 
 	if previewMsg != nil {
@@ -462,7 +570,7 @@ func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, up
 		},
 	}
 
-	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:      adminID,
 		ParseMode:   models.ParseModeHTML,
 		Text:        confirmText,
@@ -490,6 +598,11 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 	entities := broadcastState.pendingEntities[adminID]
 	flags := broadcastState.pendingButtons[adminID]
 	previewID := broadcastState.pendingPreviewMsgID[adminID]
+	var draftMedia *broadcastDraftMedia
+	if m, ok := broadcastState.pendingMedia[adminID]; ok {
+		cp := *m
+		draftMedia = &cp
+	}
 	if !exists || !typeExists {
 		broadcastState.mu.Unlock()
 		lang := update.CallbackQuery.From.LanguageCode
@@ -522,7 +635,7 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		Text:   h.translation.GetText(lang, "broadcast_started_wait"),
 	})
 
-	go h.sendBroadcast(ctx, b, adminID, messageText, entCopy, flagsCopy, broadcastType)
+	go h.sendBroadcast(ctx, b, adminID, messageText, entCopy, draftMedia, flagsCopy, broadcastType)
 }
 
 // BroadcastCancelHandler обрабатывает отмену рассылки
@@ -587,7 +700,7 @@ func (h Handler) BroadcastBackToAdminHandler(ctx context.Context, b *bot.Bot, up
 }
 
 // sendBroadcast отправляет сообщение пользователям пачками в зависимости от типа рассылки
-func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, entities []models.MessageEntity, flags BroadcastRecipientButtons, broadcastType BroadcastType) {
+func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, entities []models.MessageEntity, media *broadcastDraftMedia, flags BroadcastRecipientButtons, broadcastType BroadcastType) {
 	audience := broadcastTypeToAudience(broadcastType)
 	recipients, err := h.customerRepository.GetBroadcastRecipients(ctx, audience)
 	if err != nil {
@@ -623,17 +736,45 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		batch := recipients[i:end]
 
 		for _, rec := range batch {
-			params := bot.SendMessageParams{
-				ChatID: rec.TelegramID,
-				Text:   messageText,
+			markup := h.buildBroadcastReplyMarkup(rec.Language, flags)
+			var err error
+			if media != nil {
+				if media.AsPhoto {
+					pp := &bot.SendPhotoParams{
+						ChatID:          rec.TelegramID,
+						Photo:           &models.InputFileString{Data: media.FileID},
+						Caption:         messageText,
+						CaptionEntities: entities,
+					}
+					if markup != nil {
+						pp.ReplyMarkup = markup
+					}
+					_, err = b.SendPhoto(ctx, pp)
+				} else {
+					dp := &bot.SendDocumentParams{
+						ChatID:          rec.TelegramID,
+						Document:        &models.InputFileString{Data: media.FileID},
+						Caption:         messageText,
+						CaptionEntities: entities,
+					}
+					if markup != nil {
+						dp.ReplyMarkup = markup
+					}
+					_, err = b.SendDocument(ctx, dp)
+				}
+			} else {
+				params := bot.SendMessageParams{
+					ChatID: rec.TelegramID,
+					Text:   messageText,
+				}
+				if len(entities) > 0 {
+					params.Entities = entities
+				}
+				if markup != nil {
+					params.ReplyMarkup = markup
+				}
+				_, err = b.SendMessage(ctx, &params)
 			}
-			if len(entities) > 0 {
-				params.Entities = entities
-			}
-			if markup := h.buildBroadcastReplyMarkup(rec.Language, flags); markup != nil {
-				params.ReplyMarkup = markup
-			}
-			_, err := b.SendMessage(ctx, &params)
 			if err != nil {
 				slog.Warn("error sending broadcast message", "userId", rec.TelegramID, "error", err)
 				failedCount++

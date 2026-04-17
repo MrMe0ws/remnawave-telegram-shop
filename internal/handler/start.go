@@ -119,15 +119,9 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 
 	inlineKeyboard := h.buildStartKeyboard(existingCustomer, langCode)
 
-	_, err = b.EditMessageText(ctxWithTime, &bot.EditMessageTextParams{
-		ChatID:    callback.Message.Message.Chat.ID,
-		MessageID: callback.Message.Message.ID,
-		ParseMode: models.ParseModeHTML,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: inlineKeyboard,
-		},
-		Text: h.translation.GetText(langCode, "greeting"),
-	})
+	err = SendOrEditAfterInlineCallback(ctxWithTime, b, update, h.translation.GetText(langCode, "greeting"), models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: inlineKeyboard,
+	}, nil)
 	if err != nil {
 		slog.Error("Error sending /start message", err)
 	}

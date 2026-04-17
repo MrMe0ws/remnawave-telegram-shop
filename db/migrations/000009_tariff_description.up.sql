@@ -1,0 +1,2 @@
+ALTER TABLE tariff
+    ADD COLUMN IF NOT EXISTS description TEXT;

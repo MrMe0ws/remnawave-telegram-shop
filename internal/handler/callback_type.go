@@ -1,7 +1,10 @@
 package handler
 
 const (
-	CallbackBuy               = "buy"
+	CallbackBuy = "buy"
+
+	// BroadcastInlineQuery — суффикс callback у кнопок под постом рассылки: обработчики не трогают исходное сообщение, шлют новое.
+	BroadcastInlineQuery = "?bc=1"
 	CallbackSell              = "sell"
 	CallbackStart             = "start"
 	CallbackConnect           = "connect"
@@ -28,12 +31,30 @@ const (
 	CallbackBroadcastToggleMain = "bc_t_main"
 	CallbackBroadcastTogglePromo = "bc_t_prm"
 	CallbackBroadcastToggleVPN   = "bc_t_vpn"
+	CallbackBroadcastToggleBuy   = "bc_t_buy"
 	CallbackBroadcastButtonsNext = "bc_next"
 
 	CallbackAdminPanel   = "admin_panel"
 	CallbackAdminBroadcast = "admin_bc"
 	CallbackAdminSync    = "admin_sync"
 	CallbackAdminPromo   = "admin_promo"
+	CallbackAdminTariffs = "admin_tariffs"
+
+	CallbackAdminStatsRoot    = "as_r"
+	CallbackAdminStatsUsers   = "as_u"
+	CallbackAdminStatsSubs    = "as_s"
+	CallbackAdminStatsRevenue = "as_v"
+	CallbackAdminStatsRef     = "as_f"
+	CallbackAdminStatsSummary = "as_m"
+
+	CallbackAdminInfraRoot   = "ib_r"
+	CallbackAdminInfraNodes  = "ib_n"
+	CallbackAdminInfraNotify = "ib_u"
+	CallbackAdminInfraHist   = "ib_h"
+	CallbackAdminInfraProv   = "ib_p"
+	CallbackAdminInfraToggle = "ibt"
+	CallbackTariffNew    = "tf_new"
+	// Префиксы callback: tf_v?, tf_t?, tf_d?, tf_y?, tf_s?, tf_q?, tf_sc?, tf_sa?, tf_nm?, tf_tt?, tf_td?, tf_tl?, tf_ep?, tf_ds?, tf_ca?, tf_wc?
 
 	CallbackPromoRoot     = "promo_root"
 	CallbackPromoList     = "promo_list"

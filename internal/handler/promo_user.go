@@ -46,16 +46,9 @@ func (h Handler) EnterPromoCallbackHandler(ctx context.Context, b *bot.Bot, upda
 	cb := update.CallbackQuery
 	userPromoSetWait(cb.From.ID, true)
 	lang := cb.From.LanguageCode
-	msg := cb.Message.Message
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		ParseMode:   models.ParseModeHTML,
-		Text:        h.translation.GetText(lang, "promo_enter_code"),
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
-			{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart})},
-		}},
-	})
+	err := SendOrEditAfterInlineCallback(ctx, b, update, h.translation.GetText(lang, "promo_enter_code"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart})},
+	}}, nil)
 	if err != nil {
 		slog.Error("enter promo edit", "error", err)
 	}

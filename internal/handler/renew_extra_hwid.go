@@ -42,6 +42,10 @@ func (h Handler) RenewExtraHwidCallbackHandler(ctx context.Context, b *bot.Bot, 
 		slog.Error("customer not exist", "telegramId", utils.MaskHalfInt64(update.CallbackQuery.From.ID))
 		return
 	}
+	if !config.HwidExtraDevicesEnabled() {
+		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_extra_disabled"), CallbackConnect)
+		return
+	}
 
 	amount := config.HwidAddPrice() * extra * months
 	if params["invoiceType"] == string(database.InvoiceTypeTelegram) {

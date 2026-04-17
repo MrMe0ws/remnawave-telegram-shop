@@ -30,6 +30,15 @@ const (
 	PurchaseStatusCancel  PurchaseStatus = "cancel"
 )
 
+// PurchaseKind вид строки покупки (тарифы / доплата и т.д.).
+type PurchaseKind string
+
+const (
+	PurchaseKindSubscription  PurchaseKind = "subscription"
+	PurchaseKindTariffUpgrade PurchaseKind = "tariff_upgrade"
+	PurchaseKindExtraHwid     PurchaseKind = "extra_hwid"
+)
+
 type Purchase struct {
 	ID                int64          `db:"id"`
 	Amount            float64        `db:"amount"`
@@ -48,6 +57,9 @@ type Purchase struct {
 	ExtraHwid                int            `db:"extra_hwid"`
 	PromoCodeID              *int64         `db:"promo_code_id"`
 	DiscountPercentApplied   *int           `db:"discount_percent_applied"`
+	TariffID                 *int64         `db:"tariff_id"`
+	PurchaseKind             PurchaseKind   `db:"purchase_kind"`
+	IsEarlyDowngrade         bool           `db:"is_early_downgrade"`
 }
 
 type PurchaseRepository struct {
@@ -67,13 +79,17 @@ func purchaseScanArgs(p *Purchase) []interface{} {
 		&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
 		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
 		&p.PromoCodeID, &p.DiscountPercentApplied,
+		&p.TariffID, &p.PurchaseKind, &p.IsEarlyDowngrade,
 	}
 }
 
 func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (int64, error) {
+	if purchase.PurchaseKind == "" {
+		purchase.PurchaseKind = PurchaseKindSubscription
+	}
 	buildInsert := sq.Insert("purchase").
-		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "extra_hwid", "promo_code_id", "discount_percent_applied").
-		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied).
+		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade").
+		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 

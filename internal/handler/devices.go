@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"remnawave-tg-shop-bot/internal/config"
 
@@ -20,30 +19,14 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	callback := update.CallbackQuery
 	langCode := callback.From.LanguageCode
 
-	// Проверяем, есть ли у пользователя активная подписка
 	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.From.ID)
 	if err != nil {
 		slog.Error("Error finding customer", err)
 		return
 	}
 
-	if customer == nil || customer.SubscriptionLink == nil || customer.ExpireAt == nil || customer.ExpireAt.Before(time.Now()) {
-		_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-			ChatID:    callback.Message.Message.Chat.ID,
-			MessageID: callback.Message.Message.ID,
-			Text:      h.translation.GetText(langCode, "no_subscription"),
-			ReplyMarkup: models.InlineKeyboardMarkup{
-				InlineKeyboard: [][]models.InlineKeyboardButton{
-					{
-						h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
-					},
-					{
-						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-					},
-				},
-			},
-		})
-		logEditError("Error editing message", err)
+	if customer == nil {
+		slog.Error("customer not exist", "telegramId", callback.From.ID)
 		return
 	}
 
@@ -192,30 +175,14 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 		return
 	}
 
-	// Проверяем, есть ли у пользователя активная подписка
 	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.From.ID)
 	if err != nil {
 		slog.Error("Error finding customer", err)
 		return
 	}
 
-	if customer == nil || customer.SubscriptionLink == nil || customer.ExpireAt == nil || customer.ExpireAt.Before(time.Now()) {
-		_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-			ChatID:    callback.Message.Message.Chat.ID,
-			MessageID: callback.Message.Message.ID,
-			Text:      h.translation.GetText(langCode, "no_subscription"),
-			ReplyMarkup: models.InlineKeyboardMarkup{
-				InlineKeyboard: [][]models.InlineKeyboardButton{
-					{
-						h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
-					},
-					{
-						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-					},
-				},
-			},
-		})
-		logEditError("Error editing message", err)
+	if customer == nil {
+		slog.Error("customer not exist", "telegramId", callback.From.ID)
 		return
 	}
 

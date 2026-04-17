@@ -23,7 +23,7 @@ type tributeRepository interface {
 }
 
 type paymentProcessor interface {
-	CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *payment.PromoMeta) (string, int64, error)
+	CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *payment.PromoMeta, tariffID *int64, extras *payment.TariffPurchaseExtras) (string, int64, error)
 	ProcessPurchaseById(ctx context.Context, purchaseId int64) error
 }
 
@@ -85,7 +85,7 @@ func (s *SubscriptionService) ProcessSubscriptionExpiration() error {
 			if daysUntilExpiration != 1 {
 				continue
 			}
-			_, purchaseId, err := s.paymentService.CreatePurchase(ctx, p.Amount, p.Month, &customer, database.InvoiceTypeTribute, nil)
+			_, purchaseId, err := s.paymentService.CreatePurchase(ctx, p.Amount, p.Month, &customer, database.InvoiceTypeTribute, nil, nil, nil)
 			if err != nil {
 				slog.Error("Failed to create tribute purchase", "error", err)
 				continue

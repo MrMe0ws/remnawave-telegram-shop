@@ -24,6 +24,7 @@ import (
 
 type PaymentService struct {
 	purchaseRepository *database.PurchaseRepository
+	tariffRepository   *database.TariffRepository
 	remnawaveClient    *remnawave.Client
 	customerRepository *database.CustomerRepository
 	telegramBot        *bot.Bot
@@ -45,6 +46,7 @@ type PromoMeta struct {
 func NewPaymentService(
 	translation *translation.Manager,
 	purchaseRepository *database.PurchaseRepository,
+	tariffRepository *database.TariffRepository,
 	remnawaveClient *remnawave.Client,
 	customerRepository *database.CustomerRepository,
 	telegramBot *bot.Bot,
@@ -57,6 +59,7 @@ func NewPaymentService(
 ) *PaymentService {
 	return &PaymentService{
 		purchaseRepository: purchaseRepository,
+		tariffRepository:   tariffRepository,
 		remnawaveClient:    remnawaveClient,
 		customerRepository: customerRepository,
 		telegramBot:        telegramBot,
@@ -87,6 +90,13 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		return fmt.Errorf("customer %s not found", utils.MaskHalfInt64(purchase.CustomerID))
 	}
 
+	if !config.HwidExtraDevicesEnabled() && purchase.ExtraHwid > 0 {
+		if purchase.Month <= 0 {
+			return fmt.Errorf("extra hwid purchase is disabled")
+		}
+		purchase.ExtraHwid = 0
+	}
+
 	if messageId, b := s.cache.Get(purchase.ID); b {
 		_, err = s.telegramBot.DeleteMessage(ctx, &bot.DeleteMessageParams{
 			ChatID:    customer.TelegramID,
@@ -102,6 +112,76 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	}
 
 	daysToAdd := purchase.Month * config.DaysInMonth()
+	if config.SalesMode() == "tariffs" && purchase.TariffID != nil && *purchase.TariffID > 0 && s.tariffRepository != nil {
+		tariff, err := s.tariffRepository.GetByID(ctx, *purchase.TariffID)
+		if err != nil {
+			return err
+		}
+		if tariff == nil {
+			return fmt.Errorf("tariff %d not found", *purchase.TariffID)
+		}
+		profile := buildRemnawaveTariffProfile(tariff)
+
+		// Апгрейд и досрочный даунгрейд: срок от момента оплаты. Остаток старого тарифа уже учтён в bonus
+		// (пересчёт «дневной» стоимости); нельзя прибавлять дни к текущему expire_at — иначе остаток считается дважды.
+		if purchase.PurchaseKind == database.PurchaseKindTariffUpgrade || purchase.IsEarlyDowngrade {
+			now := time.Now().UTC()
+			tpNew, err := s.tariffRepository.GetPrice(ctx, *purchase.TariffID, purchase.Month)
+			if err != nil {
+				return err
+			}
+			if tpNew == nil {
+				return fmt.Errorf("no tariff_price for tariff %d months %d", *purchase.TariffID, purchase.Month)
+			}
+			dim := config.DaysInMonth()
+			if dim <= 0 {
+				dim = 30
+			}
+			var bonus int
+			if customer.CurrentTariffID != nil && *customer.CurrentTariffID > 0 {
+				tpOld, err := s.tariffRepository.GetPrice(ctx, *customer.CurrentTariffID, purchase.Month)
+				if err == nil && tpOld != nil {
+					bonus = ComputeUpgradeBonusDays(customer, tpOld, tpNew, purchase.Month, now)
+				}
+			}
+			daysSwitch := purchase.Month*dim + bonus
+			user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(ctx, customer.ID, customer.TelegramID, daysSwitch, profile)
+			if err != nil {
+				return err
+			}
+			if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
+				return err
+			}
+			return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+		}
+
+		useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
+		if useFromNow {
+			paidCount, err := s.purchaseRepository.CountPaidSubscriptionsByCustomer(ctx, customer.ID)
+			if err != nil {
+				return err
+			}
+			if paidCount == 0 {
+				user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(ctx, customer.ID, customer.TelegramID, daysToAdd, profile)
+				if err != nil {
+					return err
+				}
+				if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
+					return err
+				}
+				return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+			}
+		}
+		user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfile(ctx, customer.ID, customer.TelegramID, daysToAdd, profile)
+		if err != nil {
+			return err
+		}
+		if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
+			return err
+		}
+		return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+	}
+
 	useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
 	if useFromNow {
 		paidCount, err := s.purchaseRepository.CountPaidSubscriptionsByCustomer(ctx, customer.ID)
@@ -231,27 +311,68 @@ func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, custome
 	}
 
 	currentLimit := resolveDeviceLimit(userInfo)
-	activeExtra := 0
+	storedExtra := 0
 	if customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
-		activeExtra = customer.ExtraHwid
+		storedExtra = customer.ExtraHwid
 	}
+	// SALES_MODE=tariffs: при смене тарифа слоты «база старого + extra» могут целиком войти в базу нового — не копить лишний extra в БД.
+	carriedExtra := s.tariffEffectiveCarriedExtraHwid(ctx, customer, purchase, storedExtra)
 
 	newExtra := purchase.ExtraHwid
 	if newExtra < 0 {
 		newExtra = 0
 	}
 
-	paidBaseLimit := config.PaidHwidLimit()
-	if paidBaseLimit <= 0 {
-		paidBaseLimit = config.GetHwidFallbackDeviceLimit()
+	paidBaseLimit := s.paidHwidBaseLimit(ctx, purchase)
+
+	// В tariffs при оплате подписки без доп. HWID в счёте: лимит = только база выбранного тарифа;
+	// не переносим «виртуальные» слоты между тарифами и не сохраняем старый paid extra в БД.
+	if newExtra == 0 && config.SalesMode() == "tariffs" && purchase.TariffID != nil && *purchase.TariffID > 0 && s.tariffRepository != nil {
+		limit := paidBaseLimit
+		if limit < 1 {
+			limit = 1
+		}
+		if maxL := config.HwidMaxDevices(); maxL > 0 && limit > maxL {
+			limit = maxL
+		}
+		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, limit); err != nil {
+			return err
+		}
+		return s.customerRepository.UpdateFields(ctx, customer.ID, map[string]interface{}{
+			"extra_hwid":            0,
+			"extra_hwid_expires_at": nil,
+		})
 	}
-	if activeExtra == 0 && newExtra == 0 && paidBaseLimit > 0 && currentLimit > 0 && currentLimit < paidBaseLimit {
+
+	// Смена тарифа + в счёте явная докупка HWID: лимит = база нового тарифа + newExtra (из счёта).
+	// Иначе при carriedExtra>0 и newExtra>0 выражение currentLimit−carriedExtra+n даёт занижение лимита, а extra_hwid=carried+newExtra — лишние «допы» в БД и промпт продления.
+	if config.SalesMode() == "tariffs" && purchase.TariffID != nil && *purchase.TariffID > 0 && s.tariffRepository != nil && newExtra > 0 {
+		var oldTID int64
+		if customer != nil && customer.CurrentTariffID != nil {
+			oldTID = *customer.CurrentTariffID
+		}
+		if oldTID != *purchase.TariffID {
+			newLimit := paidBaseLimit + newExtra
+			if maxL := config.HwidMaxDevices(); maxL > 0 && newLimit > maxL {
+				newLimit = maxL
+			}
+			if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit); err != nil {
+				return err
+			}
+			return s.customerRepository.UpdateFields(ctx, customer.ID, map[string]interface{}{
+				"extra_hwid":            newExtra,
+				"extra_hwid_expires_at": user.ExpireAt,
+			})
+		}
+	}
+
+	if carriedExtra == 0 && newExtra == 0 && paidBaseLimit > 0 && currentLimit > 0 && currentLimit < paidBaseLimit {
 		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, paidBaseLimit); err != nil {
 			return err
 		}
 		currentLimit = paidBaseLimit
 	}
-	baseLimit := currentLimit - activeExtra
+	baseLimit := currentLimit - carriedExtra
 	if baseLimit < 1 {
 		baseLimit = 1
 	}
@@ -260,27 +381,95 @@ func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, custome
 	if maxLimit > 0 && newLimit > maxLimit {
 		newLimit = maxLimit
 	}
-	if activeExtra > 0 && newExtra == 0 {
-		newLimit = config.GetHwidFallbackDeviceLimit()
+	if carriedExtra > 0 && newExtra == 0 {
+		// Продление подписки без новой докупки HWID: база = лимит тарифа (или env), не fallback из конфига.
+		newLimit = paidBaseLimit + carriedExtra
 		if newLimit < 1 {
 			newLimit = 1
 		}
+		if maxLimit > 0 && newLimit > maxLimit {
+			newLimit = maxLimit
+		}
 	}
 
-	if activeExtra > 0 || newExtra > 0 {
+	if carriedExtra > 0 || newExtra > 0 {
 		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit); err != nil {
 			return err
 		}
 	}
 
+	persistedExtra := newExtra
+	if config.SalesMode() == "tariffs" && purchase.TariffID != nil && *purchase.TariffID > 0 && s.tariffRepository != nil {
+		var oldTID int64
+		if customer != nil && customer.CurrentTariffID != nil {
+			oldTID = *customer.CurrentTariffID
+		}
+		if oldTID != *purchase.TariffID {
+			persistedExtra = carriedExtra + newExtra
+		}
+	}
 	updates := map[string]interface{}{
-		"extra_hwid":            newExtra,
+		"extra_hwid":            persistedExtra,
 		"extra_hwid_expires_at": nil,
 	}
-	if newExtra > 0 {
+	if persistedExtra > 0 {
 		updates["extra_hwid_expires_at"] = user.ExpireAt
 	}
 	return s.customerRepository.UpdateFields(ctx, customer.ID, updates)
+}
+
+// tariffEffectiveCarriedExtraHwid — для classic / без смены тарифа возвращает stored как есть.
+// В tariffs при смене тарифа: сколько слотов остаётся «сверх новой базы» (старая база тарифа + extra_hwid минус база нового тарифа); stored может быть 0, если все слоты были в базе дорогого тарифа.
+// Нет current_tariff_id (триал, первый платный тариф): не подставлять PAID_HWID_LIMIT из env как «старую базу» — лимит задаёт только выбранный тариф и явный extra_hwid.
+func (s PaymentService) tariffEffectiveCarriedExtraHwid(ctx context.Context, customer *database.Customer, purchase *database.Purchase, storedActiveExtra int) int {
+	if config.SalesMode() != "tariffs" || s.tariffRepository == nil || purchase == nil || purchase.TariffID == nil || *purchase.TariffID <= 0 {
+		return storedActiveExtra
+	}
+	newBase := s.paidHwidBaseLimit(ctx, purchase)
+	if newBase < 1 {
+		newBase = 1
+	}
+	newTariffID := *purchase.TariffID
+	var oldTariffID int64
+	if customer != nil && customer.CurrentTariffID != nil {
+		oldTariffID = *customer.CurrentTariffID
+	}
+	if oldTariffID > 0 && oldTariffID == newTariffID {
+		return storedActiveExtra
+	}
+	if oldTariffID == 0 {
+		return storedActiveExtra
+	}
+	oldBase := config.PaidHwidLimit()
+	if oldBase <= 0 {
+		oldBase = config.GetHwidFallbackDeviceLimit()
+	}
+	if oldBase < 1 {
+		oldBase = 1
+	}
+	ot, err := s.tariffRepository.GetByID(ctx, oldTariffID)
+	if err == nil && ot != nil && ot.DeviceLimit > 0 {
+		oldBase = ot.DeviceLimit
+	}
+	totalHad := oldBase + storedActiveExtra
+	if totalHad <= newBase {
+		return 0
+	}
+	return totalHad - newBase
+}
+
+func (s *PaymentService) paidHwidBaseLimit(ctx context.Context, purchase *database.Purchase) int {
+	if s.tariffRepository != nil && purchase != nil && purchase.TariffID != nil && *purchase.TariffID > 0 {
+		t, err := s.tariffRepository.GetByID(ctx, *purchase.TariffID)
+		if err == nil && t != nil && t.DeviceLimit > 0 {
+			return t.DeviceLimit
+		}
+	}
+	paidBaseLimit := config.PaidHwidLimit()
+	if paidBaseLimit <= 0 {
+		paidBaseLimit = config.GetHwidFallbackDeviceLimit()
+	}
+	return paidBaseLimit
 }
 
 func resolveDeviceLimit(userInfo *remnawave.User) int {
@@ -315,6 +504,11 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 		}
 
 		description := fmt.Sprintf("Подписка на %d %s", purchase.Month, monthString)
+		if purchase.PurchaseKind == database.PurchaseKindTariffUpgrade {
+			description = "Апгрейд тарифа (полная оплата периода + пересчёт остатка в дни)"
+		} else if purchase.IsEarlyDowngrade {
+			description = "Переход на более дешёвый тариф (полная оплата периода + пересчёт остатка в дни)"
+		}
 
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 
@@ -336,6 +530,12 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	customerFilesToUpdate := map[string]interface{}{
 		"subscription_link": user.SubscriptionUrl,
 		"expire_at":         user.ExpireAt,
+	}
+	if purchase.TariffID != nil && *purchase.TariffID > 0 {
+		customerFilesToUpdate["current_tariff_id"] = *purchase.TariffID
+		now := time.Now().UTC()
+		customerFilesToUpdate["subscription_period_start"] = now
+		customerFilesToUpdate["subscription_period_months"] = purchase.Month
 	}
 
 	err = s.customerRepository.UpdateFields(ctx, customer.ID, customerFilesToUpdate)
@@ -533,34 +733,94 @@ func (s PaymentService) createReferralBonusKeyboard(customer *database.Customer)
 	}
 }
 
-func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta) (url string, purchaseId int64, err error) {
+func applyTariffPurchaseExtras(pur *database.Purchase, extras *TariffPurchaseExtras) {
+	if extras == nil {
+		return
+	}
+	if extras.Kind != "" {
+		pur.PurchaseKind = extras.Kind
+	}
+	pur.IsEarlyDowngrade = extras.IsEarlyDowngrade
+}
+
+// ResyncTariffToSubscribers применяет актуальные squads/трафик/тег тарифа в Remnawave для активных подписчиков с этим current_tariff_id (после правки тарифа в админке).
+func (s PaymentService) ResyncTariffToSubscribers(ctx context.Context, tariffID int64) error {
+	if config.SalesMode() != "tariffs" || s.tariffRepository == nil {
+		return nil
+	}
+	tariff, err := s.tariffRepository.GetByID(ctx, tariffID)
+	if err != nil {
+		return err
+	}
+	if tariff == nil {
+		return fmt.Errorf("tariff %d not found", tariffID)
+	}
+	profile := buildRemnawaveTariffProfile(tariff)
+	customers, err := s.customerRepository.FindActiveByCurrentTariffID(ctx, tariffID)
+	if err != nil {
+		return err
+	}
+	for _, c := range customers {
+		user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfile(ctx, c.ID, c.TelegramID, 0, profile)
+		if err != nil {
+			slog.Error("resync tariff profile", "telegram_id", c.TelegramID, "error", err)
+			continue
+		}
+		base := tariff.DeviceLimit
+		if base < 1 {
+			base = 1
+		}
+		limit := base
+		if c.ExtraHwid > 0 && c.ExtraHwidExpiresAt != nil && c.ExtraHwidExpiresAt.After(time.Now()) {
+			limit = base + c.ExtraHwid
+		}
+		maxLimit := config.HwidMaxDevices()
+		if maxLimit > 0 && limit > maxLimit {
+			limit = maxLimit
+		}
+		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, c.TelegramID, limit); err != nil {
+			slog.Error("resync device limit", "telegram_id", c.TelegramID, "error", err)
+		}
+		if user != nil && user.SubscriptionUrl != "" {
+			_ = s.customerRepository.UpdateFields(ctx, c.ID, map[string]interface{}{
+				"subscription_link": user.SubscriptionUrl,
+			})
+		}
+	}
+	return nil
+}
+
+func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, months, 0, customer, meta)
+		return s.createCryptoInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, months, 0, customer, meta)
+		return s.createYookasaInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, months, 0, customer, meta)
+		return s.createTelegramInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, months, 0, customer, nil)
+		return s.createTributeInvoice(ctx, amount, months, 0, customer, nil, tariffID, extras)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
 }
 
-func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta) (url string, purchaseId int64, err error) {
+func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	if extraHwid < 0 {
 		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
 	}
+	if !config.HwidExtraDevicesEnabled() && extraHwid > 0 {
+		return "", 0, fmt.Errorf("extra hwid purchases are disabled")
+	}
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer, meta)
+		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer, meta)
+		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer, meta)
+		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, months, extraHwid, customer, nil)
+		return s.createTributeInvoice(ctx, amount, months, extraHwid, customer, nil, tariffID, extras)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
@@ -570,15 +830,18 @@ func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, 
 	if extraHwid <= 0 {
 		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
 	}
+	if !config.HwidExtraDevicesEnabled() {
+		return "", 0, fmt.Errorf("extra hwid purchases are disabled")
+	}
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
-		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer, meta)
+		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeYookasa:
-		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer, meta)
+		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeTelegram:
-		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer, meta)
+		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeTribute:
-		return s.createTributeInvoice(ctx, amount, 0, extraHwid, customer, nil)
+		return s.createTributeInvoice(ctx, amount, 0, extraHwid, customer, nil, nil, nil)
 	default:
 		return "", 0, fmt.Errorf("unknown invoice type: %s", invoiceType)
 	}
@@ -630,7 +893,7 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 	return nil
 }
 
-func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta) (url string, purchaseId int64, err error) {
+func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeCrypto,
 		Status:      database.PurchaseStatusNew,
@@ -639,7 +902,9 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
+		TariffID:    tariffID,
 	}
+	applyTariffPurchaseExtras(pur, extras)
 	if meta != nil {
 		pur.PromoCodeID = meta.PromoCodeID
 		pur.DiscountPercentApplied = meta.DiscountPercentApplied
@@ -685,7 +950,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	return invoice.BotInvoiceUrl, purchaseId, nil
 }
 
-func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta) (url string, purchaseId int64, err error) {
+func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeYookasa,
 		Status:      database.PurchaseStatusNew,
@@ -694,7 +959,9 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
+		TariffID:    tariffID,
 	}
+	applyTariffPurchaseExtras(pur, extras)
 	if meta != nil {
 		pur.PromoCodeID = meta.PromoCodeID
 		pur.DiscountPercentApplied = meta.DiscountPercentApplied
@@ -726,7 +993,7 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 	return invoice.Confirmation.ConfirmationURL, purchaseId, nil
 }
 
-func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta) (url string, purchaseId int64, err error) {
+func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeTelegram,
 		Status:      database.PurchaseStatusNew,
@@ -735,7 +1002,9 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
+		TariffID:    tariffID,
 	}
+	applyTariffPurchaseExtras(pur, extras)
 	if meta != nil {
 		pur.PromoCodeID = meta.PromoCodeID
 		pur.DiscountPercentApplied = meta.DiscountPercentApplied
@@ -828,8 +1097,8 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 	return nil
 }
 
-func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, _ *PromoMeta) (url string, purchaseId int64, err error) {
-	purchaseId, err = s.purchaseRepository.Create(ctx, &database.Purchase{
+func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, _ *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
+	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeTribute,
 		Status:      database.PurchaseStatusPending,
 		Amount:      amount,
@@ -837,7 +1106,10 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 		CustomerID:  customer.ID,
 		Month:       months,
 		ExtraHwid:   extraHwid,
-	})
+		TariffID:    tariffID,
+	}
+	applyTariffPurchaseExtras(pur, extras)
+	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
 		slog.Error("Error creating purchase", err)
 		return "", 0, err

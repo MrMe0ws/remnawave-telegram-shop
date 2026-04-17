@@ -16,9 +16,16 @@ func (h Handler) RenderAdminPanel(ctx context.Context, b *bot.Bot, msg *models.M
 		return nil
 	}
 	kb := [][]models.InlineKeyboardButton{
+		{
+			h.translation.WithButton(lang, "admin_tariffs", models.InlineKeyboardButton{CallbackData: CallbackAdminTariffs}),
+			h.translation.WithButton(lang, "admin_promos", models.InlineKeyboardButton{CallbackData: CallbackAdminPromo}),
+		},
 		{h.translation.WithButton(lang, "admin_broadcast", models.InlineKeyboardButton{CallbackData: CallbackAdminBroadcast})},
+		{
+			h.translation.WithButton(lang, "admin_stats", models.InlineKeyboardButton{CallbackData: CallbackAdminStatsRoot}),
+			h.translation.WithButton(lang, "admin_infra_billing", models.InlineKeyboardButton{CallbackData: CallbackAdminInfraRoot}),
+		},
 		{h.translation.WithButton(lang, "admin_sync", models.InlineKeyboardButton{CallbackData: CallbackAdminSync})},
-		{h.translation.WithButton(lang, "admin_promos", models.InlineKeyboardButton{CallbackData: CallbackAdminPromo})},
 		{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart})},
 	}
 	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{

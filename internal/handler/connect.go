@@ -61,10 +61,22 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 		}
 		markup = append(markup, referralAndStatusRow)
 	} else {
-		// Если нет активной подписки, добавляем кнопку "Купить"
 		markup = append(markup, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 		})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
+		})
+		var referralInactiveRow []models.InlineKeyboardButton
+		referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
+			CallbackData: CallbackReferral,
+		}))
+		if config.ServerStatusURL() != "" {
+			referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
+				URL: config.ServerStatusURL(),
+			}))
+		}
+		markup = append(markup, referralInactiveRow)
 	}
 	markup = append(markup, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
@@ -132,10 +144,22 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		}
 		markup = append(markup, referralAndStatusRow)
 	} else {
-		// Если нет активной подписки, добавляем кнопку "Купить"
 		markup = append(markup, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 		})
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
+		})
+		var referralInactiveRow []models.InlineKeyboardButton
+		referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
+			CallbackData: CallbackReferral,
+		}))
+		if config.ServerStatusURL() != "" {
+			referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
+				URL: config.ServerStatusURL(),
+			}))
+		}
+		markup = append(markup, referralInactiveRow)
 	}
 	markup = append(markup, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
@@ -143,18 +167,10 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 
 	isDisabled := true
 	displayName := buildDisplayName(update.CallbackQuery.From.FirstName, update.CallbackQuery.From.LastName, update.CallbackQuery.From.Username)
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callback.Chat.ID,
-		MessageID: callback.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      h.buildConnectText(ctx, customer, langCode, displayName),
-		LinkPreviewOptions: &models.LinkPreviewOptions{
-			IsDisabled: &isDisabled,
-		},
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: markup,
-		},
-	})
+	lp := &models.LinkPreviewOptions{IsDisabled: &isDisabled}
+	err = SendOrEditAfterInlineCallback(ctx, b, update, h.buildConnectText(ctx, customer, langCode, displayName), models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: markup,
+	}, lp)
 
 	logEditError("Error sending connect message", err)
 }
@@ -206,6 +222,15 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	info.WriteString("\n\n")
 	info.WriteString(tm.GetText(langCode, "vpn_subscription_info_title"))
 	info.WriteString("\n")
+
+	if config.SalesMode() == "tariffs" && h.tariffRepository != nil && customer.CurrentTariffID != nil && *customer.CurrentTariffID > 0 {
+		tariff, err := h.tariffRepository.GetByID(ctx, *customer.CurrentTariffID)
+		if err == nil && tariff != nil {
+			tariffLabel := escapeHTML(displayTariffName(tariff))
+			info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_current_tariff_line"), tariffLabel))
+			info.WriteString("\n")
+		}
+	}
 
 	expireAtText := tm.GetText(langCode, "vpn_not_available")
 	if customer.ExpireAt != nil {

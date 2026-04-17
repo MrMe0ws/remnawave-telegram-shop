@@ -198,6 +198,25 @@ func (r *Client) getInternalSquads(ctx context.Context) ([]internalSquadItem, er
 	return resp.Response.InternalSquads, nil
 }
 
+// InternalSquad — internal squad для выбора в админке.
+type InternalSquad struct {
+	UUID uuid.UUID
+	Name string
+}
+
+// ListInternalSquads возвращает internal squads с панели Remnawave.
+func (r *Client) ListInternalSquads(ctx context.Context) ([]InternalSquad, error) {
+	items, err := r.getInternalSquads(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]InternalSquad, len(items))
+	for i, s := range items {
+		out[i] = InternalSquad{UUID: s.UUID, Name: s.Name}
+	}
+	return out, nil
+}
+
 func filterSquadsBySelection(allSquads []internalSquadItem, selected map[uuid.UUID]uuid.UUID) []uuid.UUID {
 	if len(selected) == 0 {
 		result := make([]uuid.UUID, 0, len(allSquads))
@@ -318,11 +337,12 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 		strategy = config.TrialTrafficLimitResetStrategy()
 	}
 
+	tl := int64(trafficLimit)
 	userUpdate := &UpdateUserRequest{
 		UUID:                 &existingUser.UUID,
 		ExpireAt:             &newExpire,
 		Status:               "ACTIVE",
-		TrafficLimitBytes:    &trafficLimit,
+		TrafficLimitBytes:    &tl,
 		ActiveInternalSquads: squadIds,
 		TrafficLimitStrategy: normalizeStrategy(strategy),
 	}
@@ -394,6 +414,7 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 	}
 
 	tid := int(telegramId)
+	tl := int64(trafficLimit)
 	createReq := &CreateUserRequest{
 		Username:             username,
 		ActiveInternalSquads: squadIds,
@@ -401,7 +422,7 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		TelegramID:           &tid,
 		ExpireAt:             expireAt,
 		TrafficLimitStrategy: normalizeStrategy(strategy),
-		TrafficLimitBytes:    &trafficLimit,
+		TrafficLimitBytes:    &tl,
 	}
 	if isTrialUser {
 		trialLimit := config.TrialHwidLimit()

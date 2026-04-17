@@ -41,7 +41,7 @@ type paymentServiceMock struct {
 	purchaseIDToReturn int64
 }
 
-func (m *paymentServiceMock) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, _ *payment.PromoMeta) (string, int64, error) {
+func (m *paymentServiceMock) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, _ *payment.PromoMeta, _ *int64, _ *payment.TariffPurchaseExtras) (string, int64, error) {
 	m.createCalls++
 	m.amounts = append(m.amounts, amount)
 	m.months = append(m.months, months)

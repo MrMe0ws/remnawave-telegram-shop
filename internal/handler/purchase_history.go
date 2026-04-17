@@ -61,7 +61,7 @@ func (h Handler) PurchaseHistoryCallbackHandler(ctx context.Context, b *bot.Bot,
 		return
 	}
 
-	text := buildPurchaseHistoryText(langCode, purchases, page, totalPages)
+	text := h.buildPurchaseHistoryText(ctx, langCode, purchases, page, totalPages)
 	markup := buildPurchaseHistoryMarkup(langCode, page, totalPages)
 
 	isDisabled := true
@@ -103,7 +103,7 @@ func parseHistoryPage(data string) int {
 	return 1
 }
 
-func buildPurchaseHistoryText(langCode string, purchases []database.Purchase, page, totalPages int) string {
+func (h Handler) buildPurchaseHistoryText(ctx context.Context, langCode string, purchases []database.Purchase, page, totalPages int) string {
 	tm := translation.GetInstance()
 	title := tm.GetText(langCode, "purchase_history_title")
 	if totalPages > 1 {
@@ -126,6 +126,13 @@ func buildPurchaseHistoryText(langCode string, purchases []database.Purchase, pa
 		emoji := purchaseMethodEmoji(p.InvoiceType)
 		sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_amount"), emoji, method, amount))
 		sb.WriteString("\n")
+		if p.TariffID != nil && *p.TariffID > 0 && h.tariffRepository != nil {
+			if tr, err := h.tariffRepository.GetByID(ctx, *p.TariffID); err == nil && tr != nil {
+				tname := escapeHTML(displayTariffName(tr))
+				sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_tariff_line"), tname))
+				sb.WriteString("\n")
+			}
+		}
 		if p.ExtraHwid > 0 && p.Month > 0 {
 			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_subscription_combo"), formatMonthLabel(langCode, p.Month), p.ExtraHwid))
 		} else if p.ExtraHwid > 0 {

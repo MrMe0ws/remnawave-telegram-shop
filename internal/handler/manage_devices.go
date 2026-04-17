@@ -39,8 +39,11 @@ func (h Handler) ManageDevicesCallbackHandler(ctx context.Context, b *bot.Bot, u
 		return
 	}
 
-	if customer.ExpireAt == nil || customer.ExpireAt.Before(time.Now()) {
-		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "no_subscription"), CallbackConnect)
+	now := time.Now()
+	activeSub := customer.ExpireAt != nil && customer.ExpireAt.After(now)
+	showAddDevice := h.hasPaidSubscription(ctx, customer.ID) && config.HwidExtraDevicesEnabled() && activeSub
+	if !showAddDevice {
+		h.DevicesCallbackHandler(ctx, b, update)
 		return
 	}
 
@@ -71,11 +74,9 @@ func (h Handler) ManageDevicesCallbackHandler(ctx context.Context, b *bot.Bot, u
 	keyboard = append(keyboard, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "devices_button", models.InlineKeyboardButton{CallbackData: CallbackDevices}),
 	})
-	if h.hasPaidSubscription(ctx, customer.ID) {
-		keyboard = append(keyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "add_device_button", models.InlineKeyboardButton{CallbackData: CallbackAddDevice}),
-		})
-	}
+	keyboard = append(keyboard, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "add_device_button", models.InlineKeyboardButton{CallbackData: CallbackAddDevice}),
+	})
 	keyboard = append(keyboard, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 	})

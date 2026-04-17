@@ -21,15 +21,21 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 	return &CustomerRepository{pool: poll}
 }
 
+// customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months"
+
 type Customer struct {
-	ID                 int64      `db:"id"`
-	TelegramID         int64      `db:"telegram_id"`
-	ExpireAt           *time.Time `db:"expire_at"`
-	CreatedAt          time.Time  `db:"created_at"`
-	SubscriptionLink   *string    `db:"subscription_link"`
-	Language           string     `db:"language"`
-	ExtraHwid          int        `db:"extra_hwid"`
-	ExtraHwidExpiresAt *time.Time `db:"extra_hwid_expires_at"`
+	ID                        int64      `db:"id"`
+	TelegramID                int64      `db:"telegram_id"`
+	ExpireAt                  *time.Time `db:"expire_at"`
+	CreatedAt                 time.Time  `db:"created_at"`
+	SubscriptionLink          *string    `db:"subscription_link"`
+	Language                  string     `db:"language"`
+	ExtraHwid                 int        `db:"extra_hwid"`
+	ExtraHwidExpiresAt        *time.Time `db:"extra_hwid_expires_at"`
+	CurrentTariffID           *int64     `db:"current_tariff_id"`
+	SubscriptionPeriodStart   *time.Time `db:"subscription_period_start"`
+	SubscriptionPeriodMonths  *int       `db:"subscription_period_months"`
 }
 
 // BroadcastRecipient is a Telegram user with language for localized broadcast keyboards.
@@ -46,7 +52,7 @@ const (
 )
 
 func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDate, endDate time.Time) (*[]Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
+	buildSelect := sq.Select(customerSelectColumns).
 		From("customer").
 		Where(
 			sq.And{
@@ -80,6 +86,9 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 			&customer.Language,
 			&customer.ExtraHwid,
 			&customer.ExtraHwidExpiresAt,
+			&customer.CurrentTariffID,
+			&customer.SubscriptionPeriodStart,
+			&customer.SubscriptionPeriodMonths,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -95,7 +104,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 }
 
 func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
+	buildSelect := sq.Select(customerSelectColumns).
 		From("customer").
 		Where(sq.Eq{"id": id}).
 		PlaceholderFormat(sq.Dollar)
@@ -116,6 +125,9 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 		&customer.Language,
 		&customer.ExtraHwid,
 		&customer.ExtraHwidExpiresAt,
+		&customer.CurrentTariffID,
+		&customer.SubscriptionPeriodStart,
+		&customer.SubscriptionPeriodMonths,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -127,7 +139,7 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 }
 
 func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId int64) (*Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
+	buildSelect := sq.Select(customerSelectColumns).
 		From("customer").
 		Where(sq.Eq{"telegram_id": telegramId}).
 		PlaceholderFormat(sq.Dollar)
@@ -148,6 +160,9 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 		&customer.Language,
 		&customer.ExtraHwid,
 		&customer.ExtraHwidExpiresAt,
+		&customer.CurrentTariffID,
+		&customer.SubscriptionPeriodStart,
+		&customer.SubscriptionPeriodMonths,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -167,7 +182,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 	INSERT INTO customer (telegram_id, expire_at, language)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (telegram_id) DO UPDATE SET telegram_id = customer.telegram_id
-	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at
+	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months
 	`
 
 	row := cr.pool.QueryRow(ctx, query, customer.TelegramID, customer.ExpireAt, customer.Language)
@@ -181,6 +196,9 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 		&result.Language,
 		&result.ExtraHwid,
 		&result.ExtraHwidExpiresAt,
+		&result.CurrentTariffID,
+		&result.SubscriptionPeriodStart,
+		&result.SubscriptionPeriodMonths,
 	); err != nil {
 		return nil, fmt.Errorf("failed to find or create customer: %w", err)
 	}
@@ -232,7 +250,7 @@ func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, update
 }
 
 func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs []int64) ([]Customer, error) {
-	buildSelect := sq.Select("id", "telegram_id", "expire_at", "created_at", "subscription_link", "language", "extra_hwid", "extra_hwid_expires_at").
+	buildSelect := sq.Select(customerSelectColumns).
 		From("customer").
 		Where(sq.Eq{"telegram_id": telegramIDs}).
 		PlaceholderFormat(sq.Dollar)
@@ -260,6 +278,9 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 			&customer.Language,
 			&customer.ExtraHwid,
 			&customer.ExtraHwidExpiresAt,
+			&customer.CurrentTariffID,
+			&customer.SubscriptionPeriodStart,
+			&customer.SubscriptionPeriodMonths,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -537,4 +558,54 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	}
 
 	return out, nil
+}
+
+// FindActiveByCurrentTariffID возвращает клиентов с активной подпиской и указанным current_tariff_id.
+func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, tariffID int64) ([]Customer, error) {
+	now := time.Now().UTC()
+	buildSelect := sq.Select(customerSelectColumns).
+		From("customer").
+		Where(sq.And{
+			sq.Eq{"current_tariff_id": tariffID},
+			sq.NotEq{"expire_at": nil},
+			sq.Gt{"expire_at": now},
+		}).
+		PlaceholderFormat(sq.Dollar)
+
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build select active by tariff: %w", err)
+	}
+
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query active by tariff: %w", err)
+	}
+	defer rows.Close()
+
+	var customers []Customer
+	for rows.Next() {
+		var customer Customer
+		err = rows.Scan(
+			&customer.ID,
+			&customer.TelegramID,
+			&customer.ExpireAt,
+			&customer.CreatedAt,
+			&customer.SubscriptionLink,
+			&customer.Language,
+			&customer.ExtraHwid,
+			&customer.ExtraHwidExpiresAt,
+			&customer.CurrentTariffID,
+			&customer.SubscriptionPeriodStart,
+			&customer.SubscriptionPeriodMonths,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan customer: %w", err)
+		}
+		customers = append(customers, customer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return customers, nil
 }

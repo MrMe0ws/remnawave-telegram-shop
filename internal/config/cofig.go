@@ -55,6 +55,7 @@ type config struct {
 	hwidMaxDevices                                            int
 	trialHwidLimit                                            int
 	paidHwidLimit                                             int
+	hwidExtraDevicesEnabled                                   bool
 	miniApp                                                   string
 	enableAutoPayment                                         bool
 	healthCheckPort                                           int
@@ -72,6 +73,8 @@ type config struct {
 	trialRemnawaveTag                                         string
 	remnawaveHeaders                                          map[string]string
 	trafficLimitResetStrategy                                 string
+	salesMode                                                 string
+	rubPerStar                                                float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
 }
 
 var conf config
@@ -141,6 +144,11 @@ func HwidMaxDevices() int {
 	return conf.hwidMaxDevices
 }
 
+// HwidExtraDevicesEnabled — продажа доп. HWID-слотов (кнопки, счета с extra, отдельная оплата HWID). false не трогает уже выданные слоты в БД/Remnawave.
+func HwidExtraDevicesEnabled() bool {
+	return conf.hwidExtraDevicesEnabled
+}
+
 func TrialHwidLimit() int {
 	return conf.trialHwidLimit
 }
@@ -194,6 +202,16 @@ func TrialTrafficLimitResetStrategy() string {
 
 func TrafficLimitResetStrategy() string {
 	return conf.trafficLimitResetStrategy
+}
+
+// SalesMode: "classic" (цены из env) или "tariffs" (цены из БД).
+func SalesMode() string {
+	return conf.salesMode
+}
+
+// RubPerStar — сколько рублей стоит 1 Telegram Star (для подсказки в админке тарифов и опциональной конвертации). 0 = не использовать.
+func RubPerStar() float64 {
+	return conf.rubPerStar
 }
 func FeedbackURL() string {
 	return conf.feedbackURL
@@ -585,6 +603,7 @@ func InitConfig() {
 	conf.hwidMaxDevices = envIntDefault("HWID_MAX_DEVICE", 10)
 	conf.trialHwidLimit = envIntDefault("TRIAL_HWID_LIMIT", 1)
 	conf.paidHwidLimit = envIntDefault("PAID_HWID_LIMIT", 0)
+	conf.hwidExtraDevicesEnabled = envBoolDefault("HWID_EXTRA_DEVICES_ENABLED", true)
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")
@@ -735,4 +754,21 @@ func InitConfig() {
 	}
 
 	conf.telegramProxyURL = envStringDefault("TELEGRAM_PROXY_URL", "")
+
+	conf.salesMode = strings.ToLower(envStringDefault("SALES_MODE", "classic"))
+	if conf.salesMode != "classic" && conf.salesMode != "tariffs" {
+		panic("SALES_MODE must be 'classic' or 'tariffs'")
+	}
+
+	conf.rubPerStar = func() float64 {
+		v := strings.TrimSpace(os.Getenv("RUB_PER_STAR"))
+		if v == "" {
+			return 0
+		}
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 {
+			return 0
+		}
+		return f
+	}()
 }

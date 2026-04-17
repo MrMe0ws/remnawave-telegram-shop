@@ -16,23 +16,28 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/promo"
+	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
 )
 
 type Handler struct {
-	customerRepository *database.CustomerRepository
-	purchaseRepository *database.PurchaseRepository
-	cryptoPayClient    *cryptopay.Client
-	yookasaClient      *yookasa.Client
-	translation        *translation.Manager
-	paymentService     *payment.PaymentService
-	syncService        *sync.SyncService
-	referralRepository *database.ReferralRepository
-	cache              *cache.Cache
-	promoRepository    *database.PromoRepository
-	promoService       *promo.Service
+	customerRepository     *database.CustomerRepository
+	purchaseRepository     *database.PurchaseRepository
+	tariffRepository       *database.TariffRepository
+	cryptoPayClient        *cryptopay.Client
+	yookasaClient          *yookasa.Client
+	translation            *translation.Manager
+	paymentService         *payment.PaymentService
+	syncService            *sync.SyncService
+	referralRepository     *database.ReferralRepository
+	cache                  *cache.Cache
+	promoRepository        *database.PromoRepository
+	promoService           *promo.Service
+	remnawaveClient        *remnawave.Client
+	statsRepository        *database.StatsRepository
+	infraBillingRepository *database.InfraBillingRepository
 }
 
 func NewHandler(
@@ -41,25 +46,33 @@ func NewHandler(
 	translation *translation.Manager,
 	customerRepository *database.CustomerRepository,
 	purchaseRepository *database.PurchaseRepository,
+	tariffRepository *database.TariffRepository,
 	cryptoPayClient *cryptopay.Client,
 	yookasaClient *yookasa.Client,
 	referralRepository *database.ReferralRepository,
 	cache *cache.Cache,
 	promoRepository *database.PromoRepository,
 	promoService *promo.Service,
+	remnawaveClient *remnawave.Client,
+	statsRepository *database.StatsRepository,
+	infraBillingRepository *database.InfraBillingRepository,
 ) *Handler {
 	return &Handler{
-		syncService:        syncService,
-		paymentService:     paymentService,
-		customerRepository: customerRepository,
-		purchaseRepository: purchaseRepository,
-		cryptoPayClient:    cryptoPayClient,
-		yookasaClient:      yookasaClient,
-		translation:        translation,
-		referralRepository: referralRepository,
-		cache:              cache,
-		promoRepository:    promoRepository,
-		promoService:       promoService,
+		syncService:            syncService,
+		paymentService:         paymentService,
+		customerRepository:     customerRepository,
+		purchaseRepository:     purchaseRepository,
+		tariffRepository:       tariffRepository,
+		cryptoPayClient:        cryptoPayClient,
+		yookasaClient:          yookasaClient,
+		translation:            translation,
+		referralRepository:     referralRepository,
+		cache:                  cache,
+		promoRepository:        promoRepository,
+		promoService:           promoService,
+		remnawaveClient:        remnawaveClient,
+		statsRepository:        statsRepository,
+		infraBillingRepository: infraBillingRepository,
 	}
 }
 

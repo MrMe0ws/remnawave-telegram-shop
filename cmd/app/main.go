@@ -90,8 +90,11 @@ func main() {
 	// Создание репозиториев для работы с данными в БД
 	customerRepository := database.NewCustomerRepository(pool) // Работа с пользователями
 	purchaseRepository := database.NewPurchaseRepository(pool) // Работа с покупками
+	tariffRepository := database.NewTariffRepository(pool)     // Тарифы (SALES_MODE=tariffs)
 	referralRepository := database.NewReferralRepository(pool) // Работа с реферальной системой
 	promoRepository := database.NewPromoRepository(pool)
+	statsRepository := database.NewStatsRepository(pool)
+	infraBillingRepository := database.NewInfraBillingRepository(pool)
 
 	// Инициализация клиентов для работы с внешними сервисами
 	cryptoPayClient := cryptopay.NewCryptoPayClient(config.CryptoPayUrl(), config.CryptoPayToken())                // Криптоплатежи
@@ -121,7 +124,7 @@ func main() {
 	promoService := promo.NewService(promoRepository, customerRepository, purchaseRepository, remnawaveClient)
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient, promoService)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient, promoService)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// Проверяет оплаченные счета в CryptoPay и YooKassa
@@ -133,10 +136,11 @@ func main() {
 
 	// Инициализация сервиса уведомлений о подписках
 	subService := notification.NewSubscriptionService(customerRepository, purchaseRepository, paymentService, b, tm)
+	infraBillingNotifyService := notification.NewInfraBillingNotifyService(remnawaveClient, infraBillingRepository, b, tm)
 
 	// Настройка cron-задачи для проверки истечения подписок (каждый день в 16:00)
 	// Отправляет уведомления пользователям об истечении подписки
-	subscriptionNotificationCronScheduler := subscriptionChecker(subService)
+	subscriptionNotificationCronScheduler := subscriptionChecker(subService, infraBillingNotifyService)
 	subscriptionNotificationCronScheduler.Start()
 	defer subscriptionNotificationCronScheduler.Stop()
 
@@ -144,7 +148,7 @@ func main() {
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
 
 	// Создание главного обработчика всех команд и callback'ов бота
-	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, cryptoPayClient, yookasaClient, referralRepository, cache, promoRepository, promoService)
+	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository)
 
 	// Получение информации о боте (username и т.д.)
 	// Используем контекст с таймаутом для GetMe, чтобы избежать зависания при проблемах с сетью
@@ -249,14 +253,34 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastToggleMain, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastTogglePromo, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastToggleVPN, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastToggleBuy, bot.MatchTypeExact, h.BroadcastButtonToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastButtonsNext, bot.MatchTypeExact, h.BroadcastButtonsNextHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Админ-панель и промокоды
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackEnterPromo, bot.MatchTypeExact, h.EnterPromoCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackEnterPromo, bot.MatchTypePrefix, h.EnterPromoCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPanel, bot.MatchTypeExact, h.AdminPanelHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminBroadcast, bot.MatchTypeExact, h.AdminBroadcastShortcutHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSync, bot.MatchTypeExact, h.AdminSyncShortcutHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPromo, bot.MatchTypeExact, h.AdminPromoOpenHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminTariffs, bot.MatchTypeExact, h.AdminTariffsHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsRoot, bot.MatchTypeExact, h.AdminStatsRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsUsers, bot.MatchTypeExact, h.AdminStatsUsersHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsSubs, bot.MatchTypeExact, h.AdminStatsSubsHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsRevenue, bot.MatchTypeExact, h.AdminStatsRevenueHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsRef, bot.MatchTypeExact, h.AdminStatsRefHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsSummary, bot.MatchTypeExact, h.AdminStatsSummaryHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraRoot, bot.MatchTypeExact, h.AdminInfraRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraNodes, bot.MatchTypeExact, h.AdminInfraNodesHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraNotify, bot.MatchTypeExact, h.AdminInfraNotifyHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraHist, bot.MatchTypePrefix, h.AdminInfraHistoryHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraProv, bot.MatchTypeExact, h.AdminInfraProvidersHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraToggle, bot.MatchTypePrefix, h.AdminInfraToggleHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "ifn", bot.MatchTypePrefix, h.AdminInfraNodeCRUDRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "ifp", bot.MatchTypePrefix, h.AdminInfraProviderCRUDRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "ifh", bot.MatchTypePrefix, h.AdminInfraHistoryCRUDRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "ifb", bot.MatchTypePrefix, h.AdminInfraWizBackRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackTariffNew, bot.MatchTypeExact, h.AdminTariffNewHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "tf_", bot.MatchTypePrefix, h.AdminTariffCallbackRouter, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoRoot, bot.MatchTypeExact, h.PromoRootHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoList, bot.MatchTypePrefix, h.PromoListHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoNew, bot.MatchTypeExact, h.PromoNewMenuHandler, isAdminMiddleware)
@@ -281,7 +305,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferralList, bot.MatchTypeExact, h.ReferralListCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для покупки подписки
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypeExact, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypePrefix, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для пробного периода
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackTrial, bot.MatchTypeExact, h.TrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -290,13 +314,13 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackActivateTrial, bot.MatchTypeExact, h.ActivateTrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для возврата в главное меню
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackStart, bot.MatchTypeExact, h.StartCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackStart, bot.MatchTypePrefix, h.StartCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для продажи подписки (с префиксом, т.к. содержит параметры)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackSell, bot.MatchTypePrefix, h.SellCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для подключения устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypeExact, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypePrefix, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для управления устройствами
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackManageDevices, bot.MatchTypeExact, h.ManageDevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -360,6 +384,12 @@ func main() {
 			if handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID) {
 				return false
 			}
+			if handler.AdminTariffWizardWaiting(update.Message.From.ID) || handler.AdminTariffEditWaiting(update.Message.From.ID) {
+				return false
+			}
+			if handler.InfraBillingWizardWaiting(update.Message.From.ID) {
+				return false
+			}
 		}
 		return true
 	}, h.UserPromoMessageHandler)
@@ -373,8 +403,25 @@ func main() {
 			(handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID))
 	}, h.AdminPromoTextHandler)
 
-	// Обработчик текстовых сообщений от админа для рассылки
-	// Срабатывает только если админ в режиме ввода текста для рассылки (после /broadcast)
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			(handler.AdminTariffWizardWaiting(update.Message.From.ID) || handler.AdminTariffEditWaiting(update.Message.From.ID))
+	}, h.AdminTariffTextHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.InfraBillingWizardWaiting(update.Message.From.ID)
+	}, h.AdminInfraBillingTextHandler)
+
+	// Обработчик черновика рассылки: текст, подпись к фото или фото/файл JPEG|PNG|WebP (после выбора аудитории)
 	// НЕ обрабатывает reply-сообщения (они обрабатываются AdminReplyToUser ниже)
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		if update.Message == nil || update.Message.ReplyToMessage != nil {
@@ -383,14 +430,10 @@ func main() {
 		if update.Message.From.ID != config.GetAdminTelegramId() {
 			return false
 		}
-		content := update.Message.Text
-		if content == "" {
-			content = update.Message.Caption
-		}
-		if content == "" || strings.HasPrefix(content, "/") {
+		if !handler.BroadcastAwaitingMessageInput(update.Message.From.ID) {
 			return false
 		}
-		return true
+		return handler.BroadcastIncomingDraftMessage(update.Message)
 	}, h.BroadcastMessageHandler)
 
 	// Обработчик для неизвестных команд от пользователей
@@ -541,7 +584,7 @@ func isAdminMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 // subscriptionChecker - настраивает cron-задачу для проверки истечения подписок
 // Запускается каждый день в 16:00 (формат cron: "0 16 * * *")
 // Отправляет уведомления пользователям об истечении подписки
-func subscriptionChecker(subService *notification.SubscriptionService) *cron.Cron {
+func subscriptionChecker(subService *notification.SubscriptionService, infraNotify *notification.InfraBillingNotifyService) *cron.Cron {
 	c := cron.New()
 
 	// Добавляем задачу: каждый день в 16:00 проверять истечение подписок
@@ -549,6 +592,12 @@ func subscriptionChecker(subService *notification.SubscriptionService) *cron.Cro
 		err := subService.ProcessSubscriptionExpiration()
 		if err != nil {
 			slog.Error("Error sending subscription notifications", "error", err)
+		}
+		if infraNotify != nil {
+			ctx := context.Background()
+			if err := infraNotify.ProcessInfraBillingReminders(ctx); err != nil {
+				slog.Error("Error sending infra billing reminders", "error", err)
+			}
 		}
 	})
 
