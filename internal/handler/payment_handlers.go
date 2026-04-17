@@ -432,12 +432,8 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		}
 	}
 
-	var meta *payment.PromoMeta
-	if tariffExtras != nil && tariffExtras.Kind == database.PurchaseKindTariffUpgrade {
-		meta = nil
-	} else {
-		meta = h.checkoutPromoMeta(ctx, customer, invoiceType, &price)
-	}
+	// Скидка от pending-промокода на полную сумму счёта за выбранный период (в т.ч. апгрейд/даунгрейд тарифа).
+	meta := h.checkoutPromoMeta(ctx, customer, invoiceType, &price)
 
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, update.CallbackQuery.From.Username)
 	var paymentURL string

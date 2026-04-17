@@ -9,6 +9,7 @@ import (
 )
 
 // checkoutPromoMeta applies pending percent discount to price (Tribute excluded). Returns meta for purchase row or nil.
+// Мутирует *price — сумма уже должна быть итогом к оплате за выбранный сценарий (период, тариф, extra HWID).
 func (h Handler) checkoutPromoMeta(ctx context.Context, customer *database.Customer, invoiceType database.InvoiceType, price *int) *payment.PromoMeta {
 	if h.promoService == nil || customer == nil || invoiceType == database.InvoiceTypeTribute {
 		return nil
