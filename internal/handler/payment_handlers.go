@@ -223,7 +223,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?tid=%d", CallbackSell, tid)}),
 						},
 					},
-				})
+				}, nil)
 				logEditError("downgrade warning", err)
 				return
 			}
@@ -257,7 +257,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
 					},
 				},
-			})
+			}, nil)
 			logEditError("Error sending renew prompt", err)
 			return
 		}
@@ -359,7 +359,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	}
 	_, err = editCallbackOriginToHTMLText(ctx, b, callback, textBody, models.ParseModeHTML, models.InlineKeyboardMarkup{
 		InlineKeyboard: keyboard,
-	})
+	}, nil)
 	logEditError("Error sending sell message", err)
 }
 
@@ -491,7 +491,7 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			slog.Error("build tariff payment link", "error", sumErr)
 			textMsg = h.translation.GetText(langCode, "payment_tariff_screen_fallback")
 		}
-		message, err = editCallbackOriginToHTMLText(ctx, b, callback, textMsg, models.ParseModeHTML, replyMarkup)
+		message, err = editCallbackOriginToHTMLText(ctx, b, callback, textMsg, models.ParseModeHTML, replyMarkup, nil)
 	} else {
 		message, err = b.EditMessageReplyMarkup(ctx, &bot.EditMessageReplyMarkupParams{
 			ChatID:      callback.Chat.ID,

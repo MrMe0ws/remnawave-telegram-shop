@@ -568,7 +568,7 @@ func (s *PaymentService) clearPromoDiscountIfUsed(ctx context.Context, purchase 
 		return
 	}
 	if purchase.PromoCodeID != nil && *purchase.PromoCodeID > 0 {
-		_ = s.promoService.ClearPendingDiscountAfterSuccessfulSubscriptionPayment(ctx, customer.ID)
+		_ = s.promoService.OnSuccessfulSubscriptionDiscountPayment(ctx, purchase, customer.ID)
 	}
 }
 

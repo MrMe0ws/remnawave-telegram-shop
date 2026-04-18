@@ -62,6 +62,8 @@ const (
 	CallbackPromoStatsAll = "promo_stats_all"
 	CallbackPromoCard     = "promo_card"
 	CallbackPromoNewType  = "promo_ntype"
+	CallbackPromoDiscKind       = "promo_dk"
+	CallbackPromoSubDaysScope   = "promo_sds"
 	CallbackPromoDel      = "promo_del"
 	CallbackPromoDelYes   = "promo_yes"
 	CallbackPromoToggle   = "promo_toggle"
@@ -72,5 +74,8 @@ const (
 	CallbackPromoEditMax       = "promo_em"
 	CallbackPromoEditSubDays   = "promo_esd"
 	CallbackPromoEditTrialDays = "promo_etd"
+	CallbackPromoEditSubsTariff    = "promo_xts"
+	CallbackPromoEditSubsTariffSet = "promo_xta"
+	CallbackPromoEditDiscPay       = "promo_edp"
 	CallbackEnterPromo         = "enter_promo"
 )

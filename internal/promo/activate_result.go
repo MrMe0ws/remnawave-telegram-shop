@@ -25,6 +25,7 @@ const (
 	ActivateErrInactive
 	ActivateErrNotFound
 	ActivateErrPendingDiscount
+	ActivateErrTariffMismatch
 )
 
 // ClassifyActivateError maps validation errors to UI kind (generic = neutral fail + back).
@@ -42,6 +43,8 @@ func ClassifyActivateError(err error) ActivateErrKind {
 		return ActivateErrNotFound
 	case "pending discount":
 		return ActivateErrPendingDiscount
+	case "tariff mismatch":
+		return ActivateErrTariffMismatch
 	default:
 		return ActivateErrGeneric
 	}

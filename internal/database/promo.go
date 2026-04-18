@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,9 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
+
+// PendingDiscountUnlimitedPayments — значение subscription_payments_remaining: безлимит оплат до истечения TTL.
+const PendingDiscountUnlimitedPayments = -1
 
 const (
 	PromoTypeSubscriptionDays = "subscription_days"
@@ -35,6 +39,8 @@ type PromoCode struct {
 	RequireCustomerInDB        bool       `db:"require_customer_in_db"`
 	AllowTrialWithoutPayment   bool       `db:"allow_trial_without_payment"`
 	CreatedAt                  time.Time  `db:"created_at"`
+	DiscountMaxSubscriptionPaymentsPerCustomer int    `db:"discount_max_subscription_payments_per_customer"`
+	TariffID                   *int64     `db:"tariff_id"`
 }
 
 type PromoRedemption struct {
@@ -52,6 +58,7 @@ type PendingDiscount struct {
 	ExpiresAt           *time.Time `db:"expires_at"`
 	UntilFirstPurchase  bool       `db:"until_first_purchase"`
 	CreatedAt           time.Time  `db:"created_at"`
+	SubscriptionPaymentsRemaining int `db:"subscription_payments_remaining"`
 }
 
 type PromoRepository struct {
@@ -68,11 +75,13 @@ func (r *PromoRepository) Create(ctx context.Context, p *PromoCode) (int64, erro
 			"code", "type", "subscription_days", "trial_days", "extra_hwid_delta",
 			"discount_percent", "discount_ttl_hours", "max_uses", "uses_count", "valid_until",
 			"active", "first_purchase_only", "require_customer_in_db", "allow_trial_without_payment",
+			"discount_max_subscription_payments_per_customer", "tariff_id",
 		).
 		Values(
 			p.Code, p.Type, p.SubscriptionDays, p.TrialDays, p.ExtraHwidDelta,
 			p.DiscountPercent, p.DiscountTTLHours, p.MaxUses, p.UsesCount, p.ValidUntil,
 			p.Active, p.FirstPurchaseOnly, p.RequireCustomerInDB, p.AllowTrialWithoutPayment,
+			p.DiscountMaxSubscriptionPaymentsPerCustomer, p.TariffID,
 		).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
@@ -90,6 +99,7 @@ func (r *PromoRepository) FindByID(ctx context.Context, id int64) (*PromoCode, e
 		"id", "code", "type", "subscription_days", "trial_days", "extra_hwid_delta",
 		"discount_percent", "discount_ttl_hours", "max_uses", "uses_count", "valid_until",
 		"active", "first_purchase_only", "require_customer_in_db", "allow_trial_without_payment", "created_at",
+		"discount_max_subscription_payments_per_customer", "tariff_id",
 	).From("promo_code").Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar))
 }
 
@@ -98,6 +108,7 @@ func (r *PromoRepository) FindByCode(ctx context.Context, codeUpper string) (*Pr
 		"id", "code", "type", "subscription_days", "trial_days", "extra_hwid_delta",
 		"discount_percent", "discount_ttl_hours", "max_uses", "uses_count", "valid_until",
 		"active", "first_purchase_only", "require_customer_in_db", "allow_trial_without_payment", "created_at",
+		"discount_max_subscription_payments_per_customer", "tariff_id",
 	).From("promo_code").Where(sq.Eq{"code": codeUpper}).PlaceholderFormat(sq.Dollar))
 }
 
@@ -108,16 +119,22 @@ func (r *PromoRepository) scanOne(ctx context.Context, builder sq.SelectBuilder)
 	}
 	row := r.pool.QueryRow(ctx, sqlStr, args...)
 	var p PromoCode
+	var tid sql.NullInt64
 	err = row.Scan(
 		&p.ID, &p.Code, &p.Type, &p.SubscriptionDays, &p.TrialDays, &p.ExtraHwidDelta,
 		&p.DiscountPercent, &p.DiscountTTLHours, &p.MaxUses, &p.UsesCount, &p.ValidUntil,
 		&p.Active, &p.FirstPurchaseOnly, &p.RequireCustomerInDB, &p.AllowTrialWithoutPayment, &p.CreatedAt,
+		&p.DiscountMaxSubscriptionPaymentsPerCustomer, &tid,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if tid.Valid {
+		v := tid.Int64
+		p.TariffID = &v
 	}
 	return &p, nil
 }
@@ -133,6 +150,7 @@ func (r *PromoRepository) List(ctx context.Context, offset, limit int) ([]PromoC
 		"id", "code", "type", "subscription_days", "trial_days", "extra_hwid_delta",
 		"discount_percent", "discount_ttl_hours", "max_uses", "uses_count", "valid_until",
 		"active", "first_purchase_only", "require_customer_in_db", "allow_trial_without_payment", "created_at",
+		"discount_max_subscription_payments_per_customer", "tariff_id",
 	).From("promo_code").OrderBy("id DESC").Offset(uint64(offset)).Limit(uint64(limit)).PlaceholderFormat(sq.Dollar)
 	sqlStr, args, err := builder.ToSql()
 	if err != nil {
@@ -146,12 +164,18 @@ func (r *PromoRepository) List(ctx context.Context, offset, limit int) ([]PromoC
 	var list []PromoCode
 	for rows.Next() {
 		var p PromoCode
+		var tid sql.NullInt64
 		if err := rows.Scan(
 			&p.ID, &p.Code, &p.Type, &p.SubscriptionDays, &p.TrialDays, &p.ExtraHwidDelta,
 			&p.DiscountPercent, &p.DiscountTTLHours, &p.MaxUses, &p.UsesCount, &p.ValidUntil,
 			&p.Active, &p.FirstPurchaseOnly, &p.RequireCustomerInDB, &p.AllowTrialWithoutPayment, &p.CreatedAt,
+			&p.DiscountMaxSubscriptionPaymentsPerCustomer, &tid,
 		); err != nil {
 			return nil, 0, err
+		}
+		if tid.Valid {
+			v := tid.Int64
+			p.TariffID = &v
 		}
 		list = append(list, p)
 	}
@@ -253,20 +277,27 @@ LIMIT $2`
 func (r *PromoRepository) FindByCodeForUpdate(ctx context.Context, tx pgx.Tx, codeUpper string) (*PromoCode, error) {
 	q := `SELECT id, code, type, subscription_days, trial_days, extra_hwid_delta,
 		discount_percent, discount_ttl_hours, max_uses, uses_count, valid_until,
-		active, first_purchase_only, require_customer_in_db, allow_trial_without_payment, created_at
+		active, first_purchase_only, require_customer_in_db, allow_trial_without_payment, created_at,
+		discount_max_subscription_payments_per_customer, tariff_id
 		FROM promo_code WHERE code = $1 FOR UPDATE`
 	row := tx.QueryRow(ctx, q, codeUpper)
 	var p PromoCode
+	var tid sql.NullInt64
 	err := row.Scan(
 		&p.ID, &p.Code, &p.Type, &p.SubscriptionDays, &p.TrialDays, &p.ExtraHwidDelta,
 		&p.DiscountPercent, &p.DiscountTTLHours, &p.MaxUses, &p.UsesCount, &p.ValidUntil,
 		&p.Active, &p.FirstPurchaseOnly, &p.RequireCustomerInDB, &p.AllowTrialWithoutPayment, &p.CreatedAt,
+		&p.DiscountMaxSubscriptionPaymentsPerCustomer, &tid,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if tid.Valid {
+		v := tid.Int64
+		p.TariffID = &v
 	}
 	return &p, nil
 }
@@ -275,20 +306,27 @@ func (r *PromoRepository) FindByCodeForUpdate(ctx context.Context, tx pgx.Tx, co
 func (r *PromoRepository) FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id int64) (*PromoCode, error) {
 	q := `SELECT id, code, type, subscription_days, trial_days, extra_hwid_delta,
 		discount_percent, discount_ttl_hours, max_uses, uses_count, valid_until,
-		active, first_purchase_only, require_customer_in_db, allow_trial_without_payment, created_at
+		active, first_purchase_only, require_customer_in_db, allow_trial_without_payment, created_at,
+		discount_max_subscription_payments_per_customer, tariff_id
 		FROM promo_code WHERE id = $1 FOR UPDATE`
 	row := tx.QueryRow(ctx, q, id)
 	var p PromoCode
+	var tid sql.NullInt64
 	err := row.Scan(
 		&p.ID, &p.Code, &p.Type, &p.SubscriptionDays, &p.TrialDays, &p.ExtraHwidDelta,
 		&p.DiscountPercent, &p.DiscountTTLHours, &p.MaxUses, &p.UsesCount, &p.ValidUntil,
 		&p.Active, &p.FirstPurchaseOnly, &p.RequireCustomerInDB, &p.AllowTrialWithoutPayment, &p.CreatedAt,
+		&p.DiscountMaxSubscriptionPaymentsPerCustomer, &tid,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
+	}
+	if tid.Valid {
+		v := tid.Int64
+		p.TariffID = &v
 	}
 	return &p, nil
 }
@@ -314,11 +352,11 @@ func (r *PromoRepository) DecrementUses(ctx context.Context, tx pgx.Tx, promoID 
 }
 
 func (r *PromoRepository) GetPendingDiscountByCustomerID(ctx context.Context, customerID int64) (*PendingDiscount, error) {
-	q := `SELECT id, customer_id, promo_code_id, percent, expires_at, until_first_purchase, created_at
+	q := `SELECT id, customer_id, promo_code_id, percent, expires_at, until_first_purchase, created_at, subscription_payments_remaining
 		FROM customer_pending_discount WHERE customer_id = $1`
 	row := r.pool.QueryRow(ctx, q, customerID)
 	var d PendingDiscount
-	err := row.Scan(&d.ID, &d.CustomerID, &d.PromoCodeID, &d.Percent, &d.ExpiresAt, &d.UntilFirstPurchase, &d.CreatedAt)
+	err := row.Scan(&d.ID, &d.CustomerID, &d.PromoCodeID, &d.Percent, &d.ExpiresAt, &d.UntilFirstPurchase, &d.CreatedAt, &d.SubscriptionPaymentsRemaining)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -328,17 +366,40 @@ func (r *PromoRepository) GetPendingDiscountByCustomerID(ctx context.Context, cu
 	return &d, nil
 }
 
-func (r *PromoRepository) UpsertPendingDiscount(ctx context.Context, tx pgx.Tx, customerID, promoCodeID int64, percent int, expiresAt *time.Time, untilFirst bool) error {
+func (r *PromoRepository) UpsertPendingDiscount(ctx context.Context, tx pgx.Tx, customerID, promoCodeID int64, percent int, expiresAt *time.Time, untilFirst bool, subscriptionPaymentsRemaining int) error {
 	_, err := tx.Exec(ctx, `
-INSERT INTO customer_pending_discount (customer_id, promo_code_id, percent, expires_at, until_first_purchase)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO customer_pending_discount (customer_id, promo_code_id, percent, expires_at, until_first_purchase, subscription_payments_remaining)
+VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (customer_id) DO UPDATE SET
   promo_code_id = EXCLUDED.promo_code_id,
   percent = EXCLUDED.percent,
   expires_at = EXCLUDED.expires_at,
   until_first_purchase = EXCLUDED.until_first_purchase,
+  subscription_payments_remaining = EXCLUDED.subscription_payments_remaining,
   created_at = CURRENT_TIMESTAMP
-`, customerID, promoCodeID, percent, expiresAt, untilFirst)
+`, customerID, promoCodeID, percent, expiresAt, untilFirst, subscriptionPaymentsRemaining)
+	return err
+}
+
+// GetPendingDiscountByCustomerIDForUpdate блокирует строку pending discount в транзакции.
+func (r *PromoRepository) GetPendingDiscountByCustomerIDForUpdate(ctx context.Context, tx pgx.Tx, customerID int64) (*PendingDiscount, error) {
+	q := `SELECT id, customer_id, promo_code_id, percent, expires_at, until_first_purchase, created_at, subscription_payments_remaining
+		FROM customer_pending_discount WHERE customer_id = $1 FOR UPDATE`
+	row := tx.QueryRow(ctx, q, customerID)
+	var d PendingDiscount
+	err := row.Scan(&d.ID, &d.CustomerID, &d.PromoCodeID, &d.Percent, &d.ExpiresAt, &d.UntilFirstPurchase, &d.CreatedAt, &d.SubscriptionPaymentsRemaining)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &d, nil
+}
+
+// UpdatePendingDiscountRemainingTx обновляет счётчик оставшихся оплат подписки со скидкой.
+func (r *PromoRepository) UpdatePendingDiscountRemainingTx(ctx context.Context, tx pgx.Tx, customerID int64, remaining int) error {
+	_, err := tx.Exec(ctx, `UPDATE customer_pending_discount SET subscription_payments_remaining = $2 WHERE customer_id = $1`, customerID, remaining)
 	return err
 }
 

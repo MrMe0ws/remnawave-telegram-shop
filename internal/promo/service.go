@@ -97,13 +97,27 @@ func (s *Service) Activate(ctx context.Context, telegramID int64, username strin
 	if p.Type == database.PromoTypeDiscount {
 		var exp *time.Time
 		untilFirst := false
+		isMulti := p.DiscountMaxSubscriptionPaymentsPerCustomer != 1
 		if p.DiscountTTLHours != nil && *p.DiscountTTLHours == 0 {
-			untilFirst = true
+			if isMulti {
+				// Многоразовая: 0 ч = бессрочно по времени (лимит только числом оплат).
+				exp = nil
+				untilFirst = false
+			} else {
+				// Одноразовая: 0 ч = до первой оплаты подписки.
+				untilFirst = true
+			}
 		} else if p.DiscountTTLHours != nil && *p.DiscountTTLHours > 0 {
 			t := time.Now().UTC().Add(time.Duration(*p.DiscountTTLHours) * time.Hour)
 			exp = &t
 		}
-		if err := s.PromoRepo.UpsertPendingDiscount(ctx, tx, customer.ID, p.ID, *p.DiscountPercent, exp, untilFirst); err != nil {
+		remaining := 1
+		if p.DiscountMaxSubscriptionPaymentsPerCustomer == 0 {
+			remaining = database.PendingDiscountUnlimitedPayments
+		} else {
+			remaining = p.DiscountMaxSubscriptionPaymentsPerCustomer
+		}
+		if err := s.PromoRepo.UpsertPendingDiscount(ctx, tx, customer.ID, p.ID, *p.DiscountPercent, exp, untilFirst, remaining); err != nil {
 			return nil, err
 		}
 	}
@@ -165,6 +179,14 @@ func (s *Service) validatePromoRow(ctx context.Context, p *database.PromoCode, c
 	case database.PromoTypeSubscriptionDays:
 		if p.SubscriptionDays == nil || *p.SubscriptionDays <= 0 {
 			return database.ValidationErrorf("bad subscription_days")
+		}
+		if p.TariffID != nil && *p.TariffID > 0 {
+			if customer.CurrentTariffID == nil {
+				return database.ValidationErrorf("tariff mismatch")
+			}
+			if *customer.CurrentTariffID != *p.TariffID {
+				return database.ValidationErrorf("tariff mismatch")
+			}
 		}
 	case database.PromoTypeTrial:
 		if p.TrialDays == nil || *p.TrialDays <= 0 {
@@ -362,7 +384,49 @@ func (s *Service) PendingDiscountForConnectUI(ctx context.Context, customerID in
 	return d.Percent, d.UntilFirstPurchase, d.ExpiresAt, true, nil
 }
 
-// ClearPendingDiscountAfterSuccessfulSubscriptionPayment removes discount after a paid subscription invoice completes.
+// OnSuccessfulSubscriptionDiscountPayment вызывается после успешной оплаты подписки (month≥1), если к счёту применяли промо-скидку.
+// Уменьшает счётчик многоразовой скидки или удаляет pending после последней оплаты; безлимитная скидка сохраняется до TTL.
+func (s *Service) OnSuccessfulSubscriptionDiscountPayment(ctx context.Context, purchase *database.Purchase, customerID int64) error {
+	if s == nil || purchase == nil || purchase.PromoCodeID == nil || *purchase.PromoCodeID == 0 {
+		return nil
+	}
+	if purchase.Month < 1 {
+		return nil
+	}
+	tx, err := s.PromoRepo.Pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	pd, err := s.PromoRepo.GetPendingDiscountByCustomerIDForUpdate(ctx, tx, customerID)
+	if err != nil {
+		return err
+	}
+	if pd == nil {
+		return tx.Commit(ctx)
+	}
+	if pd.PromoCodeID != *purchase.PromoCodeID {
+		return tx.Commit(ctx)
+	}
+
+	rem := pd.SubscriptionPaymentsRemaining
+	if rem == database.PendingDiscountUnlimitedPayments {
+		return tx.Commit(ctx)
+	}
+	if rem <= 1 {
+		if err := s.PromoRepo.DeletePendingDiscountTx(ctx, tx, customerID); err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
+	}
+	if err := s.PromoRepo.UpdatePendingDiscountRemainingTx(ctx, tx, customerID, rem-1); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// ClearPendingDiscountAfterSuccessfulSubscriptionPayment удаляет pending без учёта многоразовой логики (совместимость).
 func (s *Service) ClearPendingDiscountAfterSuccessfulSubscriptionPayment(ctx context.Context, customerID int64) error {
 	return s.PromoRepo.DeletePendingDiscount(ctx, customerID)
 }

@@ -82,7 +82,7 @@ func (h Handler) AdminStatsRootHandler(ctx context.Context, b *bot.Bot, update *
 		return
 	}
 	text := h.translation.GetText(lang, "admin_stats_menu_title") + "\n\n" + h.translation.GetText(lang, "admin_stats_menu_hint")
-	_, err := editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsRootKeyboard(lang)})
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsRootKeyboard(lang)}, nil)
 	if err != nil {
 		slog.Error("admin stats root", "error", err)
 	}
@@ -121,7 +121,7 @@ func (h Handler) AdminStatsUsersHandler(ctx context.Context, b *bot.Bot, update 
 		sign, snap.NewMonth, gr,
 	)
 	text := h.translation.GetText(lang, "admin_stats_users_title") + "\n\n" + body + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
-	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsUsers)})
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsUsers)}, nil)
 	if err != nil {
 		slog.Error("admin stats users edit", "error", err)
 	}
@@ -160,7 +160,7 @@ func (h Handler) AdminStatsSubsHandler(ctx context.Context, b *bot.Bot, update *
 		snap.SalesSubMonth,
 	)
 	text := h.translation.GetText(lang, "admin_stats_subs_title") + "\n\n" + body + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
-	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsSubs)})
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsSubs)}, nil)
 	if err != nil {
 		slog.Error("admin stats subs edit", "error", err)
 	}
@@ -222,7 +222,7 @@ func (h Handler) AdminStatsRevenueHandler(ctx context.Context, b *bot.Bot, updat
 	}
 	body := strings.Join(lines, "\n")
 	text := h.translation.GetText(lang, "admin_stats_rev_title") + "\n\n" + body + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
-	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsRevenue)})
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsRevenue)}, nil)
 	if err != nil {
 		slog.Error("admin stats revenue edit", "error", err)
 	}
@@ -274,7 +274,7 @@ func (h Handler) AdminStatsRefHandler(ctx context.Context, b *bot.Bot, update *m
 		topBlock,
 	)
 	text := h.translation.GetText(lang, "admin_stats_ref_title") + "\n\n" + body + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
-	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsRef)})
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsRef)}, nil)
 	if err != nil {
 		slog.Error("admin stats ref edit", "error", err)
 	}
@@ -330,7 +330,7 @@ func (h Handler) AdminStatsSummaryHandler(ctx context.Context, b *bot.Bot, updat
 		signS, snap.SalesSubMonth, grS,
 	)
 	text := h.translation.GetText(lang, "admin_stats_summary_title") + "\n\n" + body + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
-	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsSummary)})
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsSummary)}, nil)
 	if err != nil {
 		slog.Error("admin stats summary edit", "error", err)
 	}

@@ -199,6 +199,8 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 					if left := formatDiscountTimeLeft(langCode, *expAt, now); left != "" {
 						sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_pending_discount_timer"), left))
 					}
+				} else {
+					sb.WriteString(tm.GetText(langCode, "vpn_pending_discount_no_deadline"))
 				}
 				return sb.String()
 			}
@@ -298,6 +300,8 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 				if left := formatDiscountTimeLeft(langCode, *expAt, now); left != "" {
 					info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_pending_discount_timer"), left))
 				}
+			} else {
+				info.WriteString(tm.GetText(langCode, "vpn_pending_discount_no_deadline"))
 			}
 		}
 	}

@@ -22,7 +22,7 @@ const promoPageSize = 5
 
 type adminPromoEditState struct {
 	PromoID     int64
-	Field       string // "vald" | "maxu" | "subd" | "trd"
+	Field       string // "vald" | "maxu" | "subd" | "trd" | "dsp"
 	ChatID      int64
 	PromptMsgID int
 }
@@ -47,15 +47,18 @@ func AdminPromoEditWaiting(adminID int64) bool {
 }
 
 type adminPromoDraft struct {
-	Type          string
-	Code          string
-	SubDays       int
-	TrialDays     int
-	ExtraHwid     int
-	DiscountPct   int
-	MaxUses       int
-	ValidDays     int
-	DiscountHours int
+	Type                   string
+	DiscountKind           string // "one" | "multi"
+	Code                   string
+	SubDays                int
+	TrialDays              int
+	ExtraHwid              int
+	DiscountPct            int
+	DiscountMaxSubPayments int // многоразовая: оплат подписки на пользователя; 0 = без лимита
+	MaxUses                int
+	ValidDays              int
+	DiscountHours          int
+	TariffID               *int64
 }
 
 var adminPromoWizard = struct {
@@ -115,6 +118,16 @@ func (h Handler) promoTypeTitleLine(lang, t string) string {
 	}
 }
 
+func (h Handler) promoTypeTitleLineDraft(lang string, d *adminPromoDraft) string {
+	if d != nil && d.Type == database.PromoTypeDiscount && d.DiscountKind == "multi" {
+		return h.translation.GetText(lang, "promo_type_title_discount_multi")
+	}
+	if d != nil {
+		return h.promoTypeTitleLine(lang, d.Type)
+	}
+	return ""
+}
+
 func formatPromoUsesLine(p *database.PromoCode) string {
 	if p.MaxUses != nil && *p.MaxUses > 0 {
 		return fmt.Sprintf("%d/%d", p.UsesCount, *p.MaxUses)
@@ -129,19 +142,83 @@ func (h Handler) formatPromoValidUntil(p *database.PromoCode, lang string) strin
 	return p.ValidUntil.Format("02.01.2006 15:04")
 }
 
+// promoEditMenuTariffLine — строка про область тарифа для «дни подписки» (пусто, если не применимо).
+func (h Handler) promoEditMenuTariffLine(ctx context.Context, p *database.PromoCode, lang string) string {
+	if p.Type != database.PromoTypeSubscriptionDays || h.tariffRepository == nil {
+		return ""
+	}
+	tariffs, err := h.tariffRepository.ListActive(ctx)
+	canPick := err == nil && len(tariffs) > 0 && config.SalesMode() == "tariffs"
+	if p.TariffID == nil {
+		if !canPick {
+			return ""
+		}
+		return h.translation.GetText(lang, "promo_edit_menu_line_tariff_all")
+	}
+	tf, terr := h.tariffRepository.GetByID(ctx, *p.TariffID)
+	if terr != nil || tf == nil {
+		return fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_tariff_unknown"), *p.TariffID)
+	}
+	label := tf.Slug
+	if tf.Name != nil && strings.TrimSpace(*tf.Name) != "" {
+		label = strings.TrimSpace(*tf.Name)
+	}
+	return fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_tariff_one"), label)
+}
+
+func (h Handler) buildPromoEditMenuText(ctx context.Context, p *database.PromoCode, lang string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_title"), p.Code))
+	sb.WriteString(h.translation.GetText(lang, "promo_edit_menu_current_header"))
+	uses := formatPromoUsesLine(p)
+	until := h.formatPromoValidUntil(p, lang)
+	sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_uses"), uses))
+	sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_until"), until))
+	switch p.Type {
+	case database.PromoTypeSubscriptionDays:
+		if p.SubscriptionDays != nil {
+			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_sub_days"), *p.SubscriptionDays))
+		}
+		sb.WriteString(h.promoEditMenuTariffLine(ctx, p, lang))
+	case database.PromoTypeTrial:
+		if p.TrialDays != nil {
+			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_trial_days"), *p.TrialDays))
+		}
+	case database.PromoTypeDiscount:
+		if p.DiscountMaxSubscriptionPaymentsPerCustomer != 1 {
+			if p.DiscountMaxSubscriptionPaymentsPerCustomer == 0 {
+				sb.WriteString(h.translation.GetText(lang, "promo_edit_menu_line_disc_pay_inf"))
+			} else {
+				sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu_line_disc_pay_n"), p.DiscountMaxSubscriptionPaymentsPerCustomer))
+			}
+		}
+	}
+	sb.WriteString(h.translation.GetText(lang, "promo_edit_menu_choose_footer"))
+	return sb.String()
+}
+
 func (h Handler) formatDiscountExtraLine(p *database.PromoCode, lang string) string {
 	if p.Type != database.PromoTypeDiscount || p.DiscountPercent == nil {
 		return ""
 	}
 	pct := *p.DiscountPercent
+	var prefix string
+	if p.DiscountMaxSubscriptionPaymentsPerCustomer > 1 {
+		prefix = fmt.Sprintf(h.translation.GetText(lang, "promo_line_disc_pay_n_short"), p.DiscountMaxSubscriptionPaymentsPerCustomer) + "\n"
+	} else if p.DiscountMaxSubscriptionPaymentsPerCustomer == 0 {
+		prefix = h.translation.GetText(lang, "promo_line_disc_pay_inf_short") + "\n"
+	}
 	if p.DiscountTTLHours == nil {
-		return fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_plain"), pct)
+		return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_plain"), pct)
 	}
 	hh := *p.DiscountTTLHours
 	if hh == 0 {
-		return fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_firstpay"), pct)
+		if p.DiscountMaxSubscriptionPaymentsPerCustomer != 1 {
+			return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_multi_no_deadline"), pct)
+		}
+		return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_firstpay"), pct)
 	}
-	return fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_hours"), pct, hh)
+	return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_line_discount_hours"), pct, hh)
 }
 
 func (h Handler) formatCardDiscountLine(p *database.PromoCode, lang string) string {
@@ -149,14 +226,23 @@ func (h Handler) formatCardDiscountLine(p *database.PromoCode, lang string) stri
 		return ""
 	}
 	pct := *p.DiscountPercent
+	var prefix string
+	if p.DiscountMaxSubscriptionPaymentsPerCustomer > 1 {
+		prefix = fmt.Sprintf(h.translation.GetText(lang, "promo_card_disc_sub_pay_n"), p.DiscountMaxSubscriptionPaymentsPerCustomer) + "\n"
+	} else if p.DiscountMaxSubscriptionPaymentsPerCustomer == 0 {
+		prefix = h.translation.GetText(lang, "promo_card_disc_sub_pay_inf") + "\n"
+	}
 	if p.DiscountTTLHours == nil {
-		return fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_plain"), pct)
+		return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_plain"), pct)
 	}
 	hh := *p.DiscountTTLHours
 	if hh == 0 {
-		return fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_first"), pct)
+		if p.DiscountMaxSubscriptionPaymentsPerCustomer != 1 {
+			return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_multi_no_deadline"), pct)
+		}
+		return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_first"), pct)
 	}
-	return fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_hours"), pct, hh)
+	return prefix + fmt.Sprintf(h.translation.GetText(lang, "promo_card_discount_hours"), pct, hh)
 }
 
 func (h Handler) promoLineSummary(p *database.PromoCode, lang string) string {
@@ -175,6 +261,10 @@ func (h Handler) promoLineSummary(p *database.PromoCode, lang string) string {
 	case database.PromoTypeSubscriptionDays:
 		if p.SubscriptionDays != nil {
 			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_line_sub_days"), *p.SubscriptionDays))
+			sb.WriteString("\n")
+		}
+		if p.TariffID != nil {
+			sb.WriteString(h.translation.GetText(lang, "promo_line_sub_tariff_only"))
 			sb.WriteString("\n")
 		}
 	case database.PromoTypeTrial:
@@ -325,7 +415,7 @@ func (h Handler) PromoCardHandler(ctx context.Context, b *bot.Bot, update *model
 	h.showPromoCard(ctx, b, cb, p, true)
 }
 
-func (h Handler) buildPromoCardText(p *database.PromoCode, lang string) string {
+func (h Handler) buildPromoCardText(ctx context.Context, p *database.PromoCode, lang string) string {
 	fp := "❌"
 	if p.FirstPurchaseOnly {
 		fp = "✅"
@@ -349,6 +439,16 @@ func (h Handler) buildPromoCardText(p *database.PromoCode, lang string) string {
 		if p.SubscriptionDays != nil {
 			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_card_sub_days"), *p.SubscriptionDays))
 			sb.WriteString("\n")
+		}
+		if p.TariffID != nil && h.tariffRepository != nil {
+			if tf, err := h.tariffRepository.GetByID(ctx, *p.TariffID); err == nil && tf != nil {
+				n := tf.Slug
+				if tf.Name != nil && strings.TrimSpace(*tf.Name) != "" {
+					n = strings.TrimSpace(*tf.Name)
+				}
+				sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_card_sub_tariff"), n))
+				sb.WriteString("\n")
+			}
 		}
 	case database.PromoTypeTrial:
 		if p.TrialDays != nil {
@@ -376,7 +476,7 @@ func (h Handler) showPromoCard(ctx context.Context, b *bot.Bot, cb *models.Callb
 	lang := cb.From.LanguageCode
 	msg := cb.Message.Message
 	id := p.ID
-	text := h.buildPromoCardText(p, lang)
+	text := h.buildPromoCardText(ctx, p, lang)
 
 	kb := [][]models.InlineKeyboardButton{
 		{
@@ -663,17 +763,32 @@ func (h Handler) PromoNewTypeHandler(ctx context.Context, b *bot.Bot, update *mo
 	switch t {
 	case "sd":
 		d.Type = database.PromoTypeSubscriptionDays
+		if config.SalesMode() == "tariffs" && h.tariffRepository != nil {
+			tariffs, err := h.tariffRepository.ListActive(ctx)
+			if err == nil && len(tariffs) > 0 {
+				adminPromoWizard.step[cb.From.ID] = "sub_scope"
+				adminPromoWizard.mu.Unlock()
+				h.renderPromoSubDaysScope(ctx, b, cb, lang, tariffs)
+				return
+			}
+		}
+		adminPromoWizard.step[cb.From.ID] = "code"
 	case "tr":
 		d.Type = database.PromoTypeTrial
+		adminPromoWizard.step[cb.From.ID] = "code"
 	case "eh":
 		d.Type = database.PromoTypeExtraHwid
+		adminPromoWizard.step[cb.From.ID] = "code"
 	case "di":
 		d.Type = database.PromoTypeDiscount
+		adminPromoWizard.step[cb.From.ID] = "disc_kind"
+		adminPromoWizard.mu.Unlock()
+		h.renderPromoDiscountKind(ctx, b, cb, lang)
+		return
 	default:
 		adminPromoWizard.mu.Unlock()
 		return
 	}
-	adminPromoWizard.step[cb.From.ID] = "code"
 	adminPromoWizard.mu.Unlock()
 
 	title := h.translation.GetText(lang, "promo_new_title")
@@ -691,6 +806,205 @@ func (h Handler) PromoNewTypeHandler(ctx context.Context, b *bot.Bot, update *mo
 	})
 	if err != nil {
 		slog.Error("promo type", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+func (h Handler) renderPromoDiscountKind(ctx context.Context, b *bot.Bot, cb *models.CallbackQuery, lang string) {
+	msg := cb.Message.Message
+	title := h.translation.GetText(lang, "promo_new_title")
+	body := h.translation.GetText(lang, "promo_wizard_discount_kind_body")
+	screen := title + "\n\n" + body
+	kb := [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "promo_wizard_discount_one", models.InlineKeyboardButton{CallbackData: CallbackPromoDiscKind + "?k=o"})},
+		{h.translation.WithButton(lang, "promo_wizard_discount_multi", models.InlineKeyboardButton{CallbackData: CallbackPromoDiscKind + "?k=m"})},
+		{h.translation.WithButton(lang, "promo_wizard_cancel", models.InlineKeyboardButton{CallbackData: CallbackPromoRoot})},
+	}
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        screen,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: kb},
+	})
+	if err != nil {
+		slog.Error("promo disc kind", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+// PromoDiscountKindHandler — одноразовая или многоразовая скидка, затем экран ввода кода.
+func (h Handler) PromoDiscountKindHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() || h.promoRepository == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	k := parseCallbackData(cb.Data)["k"]
+	lang := cb.From.LanguageCode
+	msg := cb.Message.Message
+
+	adminPromoWizard.mu.Lock()
+	d := adminPromoWizard.draft[cb.From.ID]
+	if d == nil {
+		d = &adminPromoDraft{}
+		adminPromoWizard.draft[cb.From.ID] = d
+	}
+	if k == "m" {
+		d.DiscountKind = "multi"
+	} else {
+		d.DiscountKind = "one"
+	}
+	d.Type = database.PromoTypeDiscount
+	adminPromoWizard.step[cb.From.ID] = "code"
+	adminPromoWizard.mu.Unlock()
+
+	title := h.translation.GetText(lang, "promo_new_title")
+	typeLine := h.promoTypeTitleLineDraft(lang, d)
+	body := h.translation.GetText(lang, "promo_wizard_code_body")
+	screen := title + "\n\n" + typeLine + "\n\n" + body
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      screen,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+			{h.translation.WithButton(lang, "promo_wizard_cancel", models.InlineKeyboardButton{CallbackData: CallbackPromoRoot})},
+		}},
+	})
+	if err != nil {
+		slog.Error("promo disc kind pick", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+func (h Handler) renderPromoEditTariffScope(ctx context.Context, b *bot.Bot, cb *models.CallbackQuery, p *database.PromoCode, lang string, tariffs []database.Tariff) {
+	msg := cb.Message.Message
+	idStr := strconv.FormatInt(p.ID, 10)
+	title := h.translation.GetText(lang, "promo_edit_tariff_scope_title")
+	body := h.translation.GetText(lang, "promo_edit_tariff_scope_body")
+	screen := title + "\n\n"
+	if cur := strings.TrimSpace(h.promoEditMenuTariffLine(ctx, p, lang)); cur != "" {
+		screen += fmt.Sprintf(h.translation.GetText(lang, "promo_edit_tariff_scope_now"), cur)
+	}
+	screen += body
+	var kb [][]models.InlineKeyboardButton
+	kb = append(kb, []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "promo_wizard_subdays_all_tariffs", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?id=%s&a=1", CallbackPromoEditSubsTariffSet, idStr)}),
+	})
+	for _, tf := range tariffs {
+		tid := tf.ID
+		label := tf.Slug
+		if tf.Name != nil && strings.TrimSpace(*tf.Name) != "" {
+			label = strings.TrimSpace(*tf.Name)
+		}
+		kb = append(kb, []models.InlineKeyboardButton{
+			{Text: label, CallbackData: fmt.Sprintf("%s?id=%s&tid=%d", CallbackPromoEditSubsTariffSet, idStr, tid)},
+		})
+	}
+	kb = append(kb, []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackPromoEdit + "?id=" + idStr}),
+	})
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        screen,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: kb},
+	})
+	if err != nil {
+		slog.Error("promo edit tariff scope", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+func (h Handler) renderPromoSubDaysScope(ctx context.Context, b *bot.Bot, cb *models.CallbackQuery, lang string, tariffs []database.Tariff) {
+	msg := cb.Message.Message
+	title := h.translation.GetText(lang, "promo_new_title")
+	body := h.translation.GetText(lang, "promo_wizard_subdays_scope_body")
+	screen := title + "\n\n" + body
+	var kb [][]models.InlineKeyboardButton
+	kb = append(kb, []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "promo_wizard_subdays_all_tariffs", models.InlineKeyboardButton{CallbackData: CallbackPromoSubDaysScope + "?a=1"}),
+	})
+	for _, tf := range tariffs {
+		tid := tf.ID
+		label := tf.Slug
+		if tf.Name != nil && strings.TrimSpace(*tf.Name) != "" {
+			label = strings.TrimSpace(*tf.Name)
+		}
+		kb = append(kb, []models.InlineKeyboardButton{
+			{Text: label, CallbackData: fmt.Sprintf("%s?tid=%d", CallbackPromoSubDaysScope, tid)},
+		})
+	}
+	kb = append(kb, []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "promo_wizard_cancel", models.InlineKeyboardButton{CallbackData: CallbackPromoRoot}),
+	})
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        screen,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: kb},
+	})
+	if err != nil {
+		slog.Error("promo subdays scope", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+// PromoSubDaysScopeHandler — область действия бонусных дней (все тарифы или один).
+func (h Handler) PromoSubDaysScopeHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() || h.promoRepository == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	q := parseCallbackData(cb.Data)
+	lang := cb.From.LanguageCode
+	msg := cb.Message.Message
+
+	adminPromoWizard.mu.Lock()
+	d := adminPromoWizard.draft[cb.From.ID]
+	if d == nil {
+		d = &adminPromoDraft{}
+		adminPromoWizard.draft[cb.From.ID] = d
+	}
+	d.Type = database.PromoTypeSubscriptionDays
+	if q["a"] == "1" {
+		d.TariffID = nil
+	} else if tidStr := q["tid"]; tidStr != "" {
+		tid := parseInt64Safe(tidStr)
+		if tid > 0 {
+			tidCopy := tid
+			d.TariffID = &tidCopy
+		}
+	}
+	adminPromoWizard.step[cb.From.ID] = "code"
+	adminPromoWizard.mu.Unlock()
+
+	title := h.translation.GetText(lang, "promo_new_title")
+	typeLine := h.promoTypeTitleLine(lang, d.Type)
+	if d.TariffID != nil && h.tariffRepository != nil {
+		if tf, err := h.tariffRepository.GetByID(ctx, *d.TariffID); err == nil && tf != nil {
+			n := tf.Slug
+			if tf.Name != nil && strings.TrimSpace(*tf.Name) != "" {
+				n = strings.TrimSpace(*tf.Name)
+			}
+			typeLine = fmt.Sprintf(h.translation.GetText(lang, "promo_wizard_subdays_type_tariff"), n)
+		}
+	}
+	body := h.translation.GetText(lang, "promo_wizard_code_body")
+	screen := title + "\n\n" + typeLine + "\n\n" + body
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    msg.Chat.ID,
+		MessageID: msg.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      screen,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+			{h.translation.WithButton(lang, "promo_wizard_cancel", models.InlineKeyboardButton{CallbackData: CallbackPromoRoot})},
+		}},
+	})
+	if err != nil {
+		slog.Error("promo subdays scope pick", "error", err)
 	}
 	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
 }
@@ -730,6 +1044,8 @@ func (h Handler) AdminPromoTextHandler(ctx context.Context, b *bot.Bot, update *
 	}
 
 	switch step {
+	case "sub_scope", "disc_kind":
+		return
 	case "code":
 		if !promo.ValidCodePattern(text) {
 			_, _ = b.SendMessage(ctx, &bot.SendMessageParams{ChatID: adminID, Text: h.translation.GetText(lang, "promo_bad_code")})
@@ -777,12 +1093,36 @@ func (h Handler) AdminPromoTextHandler(ctx context.Context, b *bot.Bot, update *
 			d.DiscountPct = n
 		}
 		if d.Type == database.PromoTypeDiscount {
+			if d.DiscountKind == "multi" {
+				adminPromoWizard.mu.Lock()
+				adminPromoWizard.step[adminID] = "dmaxu"
+				adminPromoWizard.mu.Unlock()
+				_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+					ChatID: adminID, ParseMode: models.ParseModeHTML,
+					Text: h.translation.GetText(lang, "promo_wizard_disc_sub_payments"),
+				})
+				return
+			}
+			d.DiscountMaxSubPayments = 1
 			adminPromoWizard.mu.Lock()
 			adminPromoWizard.step[adminID] = "maxu"
 			adminPromoWizard.mu.Unlock()
 			_, _ = b.SendMessage(ctx, &bot.SendMessageParams{ChatID: adminID, Text: h.translation.GetText(lang, "promo_wizard_max_uses")})
 			return
 		}
+		adminPromoWizard.mu.Lock()
+		adminPromoWizard.step[adminID] = "maxu"
+		adminPromoWizard.mu.Unlock()
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{ChatID: adminID, Text: h.translation.GetText(lang, "promo_wizard_max_uses")})
+		return
+
+	case "dmaxu":
+		n, err := strconv.Atoi(text)
+		if err != nil || n < 0 {
+			_, _ = b.SendMessage(ctx, &bot.SendMessageParams{ChatID: adminID, Text: h.translation.GetText(lang, "promo_bad_number")})
+			return
+		}
+		d.DiscountMaxSubPayments = n
 		adminPromoWizard.mu.Lock()
 		adminPromoWizard.step[adminID] = "maxu"
 		adminPromoWizard.mu.Unlock()
@@ -816,7 +1156,10 @@ func (h Handler) AdminPromoTextHandler(ctx context.Context, b *bot.Bot, update *
 		adminPromoWizard.mu.Lock()
 		adminPromoWizard.step[adminID] = "dish"
 		adminPromoWizard.mu.Unlock()
-		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{ChatID: adminID, Text: h.translation.GetText(lang, "promo_wizard_disc_hours")})
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: adminID, ParseMode: models.ParseModeHTML,
+			Text: h.translation.GetText(lang, "promo_wizard_disc_hours"),
+		})
 		return
 
 	case "dish":
@@ -869,11 +1212,15 @@ func (h Handler) finalizePromoCreate(ctx context.Context, b *bot.Bot, adminID in
 		ValidUntil:               validUntil,
 		MaxUses:                  maxUses,
 		UsesCount:                0,
+		DiscountMaxSubscriptionPaymentsPerCustomer: 1,
 	}
 	switch d.Type {
 	case database.PromoTypeSubscriptionDays:
 		sd := d.SubDays
 		pc.SubscriptionDays = &sd
+		if d.TariffID != nil {
+			pc.TariffID = d.TariffID
+		}
 	case database.PromoTypeTrial:
 		td := d.TrialDays
 		pc.TrialDays = &td
@@ -885,6 +1232,9 @@ func (h Handler) finalizePromoCreate(ctx context.Context, b *bot.Bot, adminID in
 		pc.DiscountPercent = &dp
 		dh := d.DiscountHours
 		pc.DiscountTTLHours = &dh
+		if d.DiscountKind == "multi" {
+			pc.DiscountMaxSubscriptionPaymentsPerCustomer = d.DiscountMaxSubPayments
+		}
 	}
 	_, err := h.promoRepository.Create(ctx, pc)
 	if err != nil {
@@ -893,7 +1243,7 @@ func (h Handler) finalizePromoCreate(ctx context.Context, b *bot.Bot, adminID in
 		adminPromoReset(adminID)
 		return
 	}
-	summary := h.formatPromoSuccessSummary(lang, d, validUntil, maxUses)
+	summary := h.formatPromoSuccessSummary(ctx, lang, d, validUntil, maxUses)
 	kb := models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
 		{h.translation.WithButton(lang, "promo_to_root", models.InlineKeyboardButton{CallbackData: CallbackPromoList + "?p=0"})},
 	}}
@@ -906,7 +1256,7 @@ func (h Handler) finalizePromoCreate(ctx context.Context, b *bot.Bot, adminID in
 	adminPromoReset(adminID)
 }
 
-func (h Handler) formatPromoSuccessSummary(lang string, d *adminPromoDraft, validUntil *time.Time, maxUses *int) string {
+func (h Handler) formatPromoSuccessSummary(ctx context.Context, lang string, d *adminPromoDraft, validUntil *time.Time, maxUses *int) string {
 	untilStr := h.translation.GetText(lang, "promo_unlimited")
 	if validUntil != nil {
 		untilStr = validUntil.Format("02.01.2006 15:04")
@@ -915,7 +1265,7 @@ func (h Handler) formatPromoSuccessSummary(lang string, d *adminPromoDraft, vali
 	if maxUses != nil {
 		usesStr = fmt.Sprintf("0/%d", *maxUses)
 	}
-	typeTitle := h.promoTypeTitleLine(lang, d.Type)
+	typeTitle := h.promoTypeTitleLineDraft(lang, d)
 	var sb strings.Builder
 	sb.WriteString(h.translation.GetText(lang, "promo_create_ok_header"))
 	sb.WriteString("\n\n")
@@ -926,6 +1276,16 @@ func (h Handler) formatPromoSuccessSummary(lang string, d *adminPromoDraft, vali
 	switch d.Type {
 	case database.PromoTypeSubscriptionDays:
 		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_success_sub_days"), d.SubDays))
+		if d.TariffID != nil && h.tariffRepository != nil {
+			if tf, err := h.tariffRepository.GetByID(ctx, *d.TariffID); err == nil && tf != nil {
+				n := tf.Slug
+				if tf.Name != nil && strings.TrimSpace(*tf.Name) != "" {
+					n = strings.TrimSpace(*tf.Name)
+				}
+				sb.WriteString("\n")
+				sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_success_sub_tariff"), n))
+			}
+		}
 	case database.PromoTypeTrial:
 		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_success_trial_days"), d.TrialDays))
 	case database.PromoTypeExtraHwid:
@@ -933,8 +1293,18 @@ func (h Handler) formatPromoSuccessSummary(lang string, d *adminPromoDraft, vali
 	case database.PromoTypeDiscount:
 		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_success_disc_pct"), d.DiscountPct))
 		sb.WriteString("\n")
+		if d.DiscountKind == "multi" {
+			if d.DiscountMaxSubPayments == 0 {
+				sb.WriteString(h.translation.GetText(lang, "promo_success_disc_pay_unlimited"))
+			} else {
+				sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_success_disc_pay_n"), d.DiscountMaxSubPayments))
+			}
+			sb.WriteString("\n")
+		}
 		if d.DiscountHours > 0 {
 			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_success_disc_h"), d.DiscountHours))
+		} else if d.DiscountKind == "multi" {
+			sb.WriteString(h.translation.GetText(lang, "promo_success_disc_time_unlimited"))
 		} else {
 			sb.WriteString(h.translation.GetText(lang, "promo_success_disc_first"))
 		}
@@ -966,6 +1336,26 @@ func (h Handler) handlePromoEditText(ctx context.Context, b *bot.Bot, update *mo
 	}
 	savedText := h.translation.GetText(lang, "promo_edit_saved")
 	switch st.Field {
+	case "dsp":
+		n, err := strconv.Atoi(text)
+		if err != nil || n < 0 {
+			_, _ = b.SendMessage(ctx, &bot.SendMessageParams{ChatID: adminID, Text: h.translation.GetText(lang, "promo_bad_number")})
+			return
+		}
+		if err := h.promoRepository.UpdateFields(ctx, st.PromoID, map[string]interface{}{
+			"discount_max_subscription_payments_per_customer": n,
+		}); err != nil {
+			slog.Error("promo edit discount_max_subscription_payments_per_customer", "error", err)
+			return
+		}
+		adminPromoEditClear(adminID)
+		_, _ = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+			ChatID:      chatID,
+			MessageID:   msgID,
+			ParseMode:   models.ParseModeHTML,
+			Text:        savedText,
+			ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: savedKb},
+		})
 	case "vald":
 		n, err := strconv.Atoi(text)
 		if err != nil || n < 0 {
@@ -1068,9 +1458,7 @@ func (h Handler) PromoEditMenuHandler(ctx context.Context, b *bot.Bot, update *m
 	lang := cb.From.LanguageCode
 	msg := cb.Message.Message
 	adminPromoReset(cb.From.ID)
-	uses := formatPromoUsesLine(p)
-	until := h.formatPromoValidUntil(p, lang)
-	text := fmt.Sprintf(h.translation.GetText(lang, "promo_edit_menu"), p.Code, uses, until)
+	text := h.buildPromoEditMenuText(ctx, p, lang)
 	var kb [][]models.InlineKeyboardButton
 	kb = append(kb, []models.InlineKeyboardButton{
 		h.translation.WithButton(lang, "promo_edit_valid_until", models.InlineKeyboardButton{CallbackData: CallbackPromoEditValid + "?id=" + strconv.FormatInt(id, 10)}),
@@ -1080,10 +1468,23 @@ func (h Handler) PromoEditMenuHandler(ctx context.Context, b *bot.Bot, update *m
 		kb = append(kb, []models.InlineKeyboardButton{
 			h.translation.WithButton(lang, "promo_edit_sub_days_btn", models.InlineKeyboardButton{CallbackData: CallbackPromoEditSubDays + "?id=" + strconv.FormatInt(id, 10)}),
 		})
+		if config.SalesMode() == "tariffs" && h.tariffRepository != nil {
+			if tlist, terr := h.tariffRepository.ListActive(ctx); terr == nil && len(tlist) > 0 {
+				kb = append(kb, []models.InlineKeyboardButton{
+					h.translation.WithButton(lang, "promo_edit_tariff_btn", models.InlineKeyboardButton{CallbackData: CallbackPromoEditSubsTariff + "?id=" + strconv.FormatInt(id, 10)}),
+				})
+			}
+		}
 	case database.PromoTypeTrial:
 		kb = append(kb, []models.InlineKeyboardButton{
 			h.translation.WithButton(lang, "promo_edit_trial_days_btn", models.InlineKeyboardButton{CallbackData: CallbackPromoEditTrialDays + "?id=" + strconv.FormatInt(id, 10)}),
 		})
+	case database.PromoTypeDiscount:
+		if p.DiscountMaxSubscriptionPaymentsPerCustomer != 1 {
+			kb = append(kb, []models.InlineKeyboardButton{
+				h.translation.WithButton(lang, "promo_edit_disc_pay_btn", models.InlineKeyboardButton{CallbackData: CallbackPromoEditDiscPay + "?id=" + strconv.FormatInt(id, 10)}),
+			})
+		}
 	}
 	kb = append(kb, []models.InlineKeyboardButton{
 		h.translation.WithButton(lang, "promo_edit_max_uses_btn", models.InlineKeyboardButton{CallbackData: CallbackPromoEditMax + "?id=" + strconv.FormatInt(id, 10)}),
@@ -1176,4 +1577,105 @@ func (h Handler) PromoEditAskTrialDaysHandler(ctx context.Context, b *bot.Bot, u
 	lang := cb.From.LanguageCode
 	body := fmt.Sprintf(h.translation.GetText(lang, "promo_edit_prompt_trial_days_v2"), id)
 	h.promoEditShowPrompt(ctx, b, cb, id, "trd", body)
+}
+
+// PromoEditSubsTariffMenuHandler — смена тарифа для промо «дни подписки» (режим тарифов).
+func (h Handler) PromoEditSubsTariffMenuHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() || h.promoRepository == nil || h.tariffRepository == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	id, _ := strconv.ParseInt(parseCallbackData(cb.Data)["id"], 10, 64)
+	p, err := h.promoRepository.FindByID(ctx, id)
+	if err != nil || p == nil || p.Type != database.PromoTypeSubscriptionDays {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	tariffs, terr := h.tariffRepository.ListActive(ctx)
+	if terr != nil || len(tariffs) == 0 {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	lang := cb.From.LanguageCode
+	adminPromoReset(cb.From.ID)
+	h.renderPromoEditTariffScope(ctx, b, cb, p, lang, tariffs)
+}
+
+// PromoEditSubsTariffApplyHandler — сохранить область тарифа для промо «дни подписки».
+func (h Handler) PromoEditSubsTariffApplyHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() || h.promoRepository == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	q := parseCallbackData(cb.Data)
+	id, _ := strconv.ParseInt(q["id"], 10, 64)
+	p, err := h.promoRepository.FindByID(ctx, id)
+	if err != nil || p == nil || p.Type != database.PromoTypeSubscriptionDays {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	var tariffVal interface{}
+	if q["a"] == "1" {
+		tariffVal = nil
+	} else if tidStr := q["tid"]; tidStr != "" {
+		tid := parseInt64Safe(tidStr)
+		if tid <= 0 {
+			_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+			return
+		}
+		if h.tariffRepository != nil {
+			tf, terr := h.tariffRepository.GetByID(ctx, tid)
+			if terr != nil || tf == nil {
+				_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+				return
+			}
+		}
+		tariffVal = tid
+	} else {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	if err := h.promoRepository.UpdateFields(ctx, id, map[string]interface{}{"tariff_id": tariffVal}); err != nil {
+		slog.Error("promo edit tariff_id", "error", err)
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	adminPromoReset(cb.From.ID)
+	lang := cb.From.LanguageCode
+	msg := cb.Message.Message
+	savedText := h.translation.GetText(lang, "promo_edit_saved")
+	savedKb := [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "promo_edit_back_to_card", models.InlineKeyboardButton{CallbackData: CallbackPromoCard + "?id=" + strconv.FormatInt(id, 10)})},
+	}
+	_, _ = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        savedText,
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: savedKb},
+	})
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+// PromoEditAskDiscPayHandler — лимит оплат подписки со скидкой на пользователя (многоразовая скидка).
+func (h Handler) PromoEditAskDiscPayHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() || h.promoRepository == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	id, _ := strconv.ParseInt(parseCallbackData(cb.Data)["id"], 10, 64)
+	p, err := h.promoRepository.FindByID(ctx, id)
+	if err != nil || p == nil || p.Type != database.PromoTypeDiscount || p.DiscountMaxSubscriptionPaymentsPerCustomer == 1 {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	lang := cb.From.LanguageCode
+	var cur string
+	if p.DiscountMaxSubscriptionPaymentsPerCustomer == 0 {
+		cur = h.translation.GetText(lang, "promo_edit_current_disc_pay_inf")
+	} else {
+		cur = strconv.Itoa(p.DiscountMaxSubscriptionPaymentsPerCustomer)
+	}
+	body := fmt.Sprintf(h.translation.GetText(lang, "promo_edit_prompt_disc_pay_v2"), cur, id)
+	h.promoEditShowPrompt(ctx, b, cb, id, "dsp", body)
 }

@@ -43,7 +43,7 @@ func SendOrEditAfterInlineCallback(ctx context.Context, b *bot.Bot, u *models.Up
 		_, err := b.SendMessage(ctx, p)
 		return err
 	}
-	_, err := editCallbackOriginToHTMLText(ctx, b, msg, text, parseMode, markup)
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, text, parseMode, markup, linkPreview)
 	return err
 }
 
@@ -64,7 +64,7 @@ func callbackMessageHasMediaLayout(msg *models.Message) bool {
 
 // editCallbackOriginToHTMLText заменяет сообщение, из которого пришёл callback, на HTML-текст с клавиатурой.
 // Для медиа-сообщений выполняется deleteMessage + sendMessage (ограничение Telegram Bot API).
-func editCallbackOriginToHTMLText(ctx context.Context, b *bot.Bot, msg *models.Message, text string, parseMode models.ParseMode, markup models.ReplyMarkup) (*models.Message, error) {
+func editCallbackOriginToHTMLText(ctx context.Context, b *bot.Bot, msg *models.Message, text string, parseMode models.ParseMode, markup models.ReplyMarkup, linkPreview *models.LinkPreviewOptions) (*models.Message, error) {
 	if msg == nil {
 		return nil, nil
 	}
@@ -72,18 +72,26 @@ func editCallbackOriginToHTMLText(ctx context.Context, b *bot.Bot, msg *models.M
 	mid := msg.ID
 	if callbackMessageHasMediaLayout(msg) {
 		_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{ChatID: chatID, MessageID: mid})
-		return b.SendMessage(ctx, &bot.SendMessageParams{
+		p := &bot.SendMessageParams{
 			ChatID:      chatID,
 			Text:        text,
 			ParseMode:   parseMode,
 			ReplyMarkup: markup,
-		})
+		}
+		if linkPreview != nil {
+			p.LinkPreviewOptions = linkPreview
+		}
+		return b.SendMessage(ctx, p)
 	}
-	return b.EditMessageText(ctx, &bot.EditMessageTextParams{
+	editParams := &bot.EditMessageTextParams{
 		ChatID:      chatID,
 		MessageID:   mid,
 		Text:        text,
 		ParseMode:   parseMode,
 		ReplyMarkup: markup,
-	})
+	}
+	if linkPreview != nil {
+		editParams.LinkPreviewOptions = linkPreview
+	}
+	return b.EditMessageText(ctx, editParams)
 }
