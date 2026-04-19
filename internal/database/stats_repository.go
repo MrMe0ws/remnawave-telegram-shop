@@ -29,6 +29,19 @@ type AdminTopReferrer struct {
 	PaidReferees int64
 }
 
+// AdminTariffStat метрики по одному тарифу (SALES_MODE=tariffs).
+type AdminTariffStat struct {
+	TariffID          int64
+	DisplayName       string
+	SalesToday        int64
+	SalesWeek         int64
+	SalesMonth        int64
+	SubsRevenueMonth  float64
+	RevenueToday      float64
+	RevenueAll        float64
+	ActivePaidUsers   int64
+}
+
 // AdminStatsSnapshot снимок метрик на момент запроса.
 type AdminStatsSnapshot struct {
 	CapturedAt time.Time
@@ -65,6 +78,8 @@ type AdminStatsSnapshot struct {
 	RefBonusDaysWeek  int64
 	RefBonusDaysMonth int64
 	TopReferrers      []AdminTopReferrer
+
+	TariffBreakdown []AdminTariffStat
 }
 
 func utcDayStart(t time.Time) time.Time {
@@ -233,12 +248,204 @@ WHERE EXISTS (
 	out.RefBonusDaysMonth = refMonth
 	out.RefBonusDaysAll = refAll
 
-	top, err := s.topReferrers(ctx, 5)
+	top, err := s.topReferrers(ctx, 10)
 	if err != nil {
 		return nil, err
 	}
 	out.TopReferrers = top
 
+	if config.SalesMode() == "tariffs" {
+		tb, err := s.loadTariffBreakdown(ctx, now, today0, weekAgo, monthStart, monthEnd)
+		if err != nil {
+			return nil, err
+		}
+		out.TariffBreakdown = tb
+	}
+
+	return out, nil
+}
+
+func (s *StatsRepository) loadTariffBreakdown(ctx context.Context, now, today0, weekAgo, monthStart, monthEnd time.Time) ([]AdminTariffStat, error) {
+	qTariffs := `
+SELECT id, COALESCE(NULLIF(TRIM(name), ''), slug) AS disp, sort_order
+FROM tariff
+ORDER BY sort_order ASC, id ASC`
+	rows, err := s.pool.Query(ctx, qTariffs)
+	if err != nil {
+		return nil, fmt.Errorf("stats list tariffs: %w", err)
+	}
+	type tarRow struct {
+		id    int64
+		name  string
+		order int
+	}
+	var order []tarRow
+	for rows.Next() {
+		var r tarRow
+		if err := rows.Scan(&r.id, &r.name, &r.order); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		order = append(order, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(order) == 0 {
+		return nil, nil
+	}
+
+	salesWhere := fmt.Sprintf(`(%s) AND p.tariff_id IS NOT NULL`, sqlSubPurchase)
+	revCond := fmt.Sprintf(`p.status = 'paid' AND p.paid_at IS NOT NULL AND %s AND p.tariff_id IS NOT NULL`, sqlRubCurrency)
+
+	salesQ := fmt.Sprintf(`
+SELECT p.tariff_id,
+  COUNT(*) FILTER (WHERE p.paid_at >= $1 AND p.paid_at < $2) AS d,
+  COUNT(*) FILTER (WHERE p.paid_at >= $3 AND p.paid_at < $2) AS w,
+  COUNT(*) FILTER (WHERE p.paid_at >= $4 AND p.paid_at < $5) AS m
+FROM purchase p
+WHERE %s
+GROUP BY p.tariff_id`, salesWhere)
+
+	type saleAgg struct{ d, w, m int64 }
+	salesMap := make(map[int64]saleAgg)
+	srows, err := s.pool.Query(ctx, salesQ, today0, now, weekAgo, monthStart, monthEnd)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff sales: %w", err)
+	}
+	for srows.Next() {
+		var tid int64
+		var a saleAgg
+		if err := srows.Scan(&tid, &a.d, &a.w, &a.m); err != nil {
+			srows.Close()
+			return nil, err
+		}
+		salesMap[tid] = a
+	}
+	srows.Close()
+	if err := srows.Err(); err != nil {
+		return nil, err
+	}
+
+	revTodayQ := fmt.Sprintf(`
+SELECT p.tariff_id, COALESCE(SUM(p.amount), 0)::float8
+FROM purchase p
+WHERE p.paid_at >= $1 AND p.paid_at < $2 AND %s
+GROUP BY p.tariff_id`, revCond)
+	revToday := map[int64]float64{}
+	rtRows, err := s.pool.Query(ctx, revTodayQ, today0, now)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff rev today: %w", err)
+	}
+	for rtRows.Next() {
+		var tid int64
+		var sum float64
+		if err := rtRows.Scan(&tid, &sum); err != nil {
+			rtRows.Close()
+			return nil, err
+		}
+		revToday[tid] = sum
+	}
+	rtRows.Close()
+	if err := rtRows.Err(); err != nil {
+		return nil, err
+	}
+
+	revAllQ := fmt.Sprintf(`
+SELECT p.tariff_id, COALESCE(SUM(p.amount), 0)::float8
+FROM purchase p
+WHERE %s
+GROUP BY p.tariff_id`, revCond)
+	revAll := map[int64]float64{}
+	raRows, err := s.pool.Query(ctx, revAllQ)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff rev all: %w", err)
+	}
+	for raRows.Next() {
+		var tid int64
+		var sum float64
+		if err := raRows.Scan(&tid, &sum); err != nil {
+			raRows.Close()
+			return nil, err
+		}
+		revAll[tid] = sum
+	}
+	raRows.Close()
+	if err := raRows.Err(); err != nil {
+		return nil, err
+	}
+
+	subsMonthQ := fmt.Sprintf(`
+SELECT p.tariff_id, COALESCE(SUM(p.amount), 0)::float8
+FROM purchase p
+WHERE p.paid_at >= $1 AND p.paid_at < $2
+  AND (%s)
+  AND (%s)
+  AND p.tariff_id IS NOT NULL
+GROUP BY p.tariff_id`, sqlSubPurchase, sqlRubCurrency)
+	subsMonth := map[int64]float64{}
+	smRows, err := s.pool.Query(ctx, subsMonthQ, monthStart, monthEnd)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff subs month rev: %w", err)
+	}
+	for smRows.Next() {
+		var tid int64
+		var sum float64
+		if err := smRows.Scan(&tid, &sum); err != nil {
+			smRows.Close()
+			return nil, err
+		}
+		subsMonth[tid] = sum
+	}
+	smRows.Close()
+	if err := smRows.Err(); err != nil {
+		return nil, err
+	}
+
+	activeQ := `
+SELECT c.current_tariff_id, COUNT(*)::bigint
+FROM customer c
+WHERE c.expire_at IS NOT NULL AND c.expire_at > NOW()
+  AND c.current_tariff_id IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM purchase p
+    WHERE p.customer_id = c.id AND p.status = 'paid' AND p.month > 0
+  )
+GROUP BY c.current_tariff_id`
+	activeMap := map[int64]int64{}
+	arows, err := s.pool.Query(ctx, activeQ)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff active paid: %w", err)
+	}
+	for arows.Next() {
+		var tid, n int64
+		if err := arows.Scan(&tid, &n); err != nil {
+			arows.Close()
+			return nil, err
+		}
+		activeMap[tid] = n
+	}
+	arows.Close()
+	if err := arows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]AdminTariffStat, 0, len(order))
+	for _, tr := range order {
+		sa := salesMap[tr.id]
+		out = append(out, AdminTariffStat{
+			TariffID:         tr.id,
+			DisplayName:      tr.name,
+			SalesToday:       sa.d,
+			SalesWeek:        sa.w,
+			SalesMonth:       sa.m,
+			SubsRevenueMonth: subsMonth[tr.id],
+			RevenueToday:     revToday[tr.id],
+			RevenueAll:       revAll[tr.id],
+			ActivePaidUsers:  activeMap[tr.id],
+		})
+	}
 	return out, nil
 }
 

@@ -264,7 +264,7 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 	}
 
 	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
-		description := fmt.Sprintf("Оплата подписки +%d", purchase.ExtraHwid)
+		description := buildRubReceiptDescription(0, purchase.ExtraHwid, nil)
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
 			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
@@ -493,22 +493,8 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
 		slog.Debug("Attempting to send moynalog receipt", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 
-		var monthString string
-		switch purchase.Month {
-		case 1:
-			monthString = "месяц"
-		case 2, 3, 4:
-			monthString = "месяца"
-		default:
-			monthString = "месяцев"
-		}
-
-		description := fmt.Sprintf("Подписка на %d %s", purchase.Month, monthString)
-		if purchase.PurchaseKind == database.PurchaseKindTariffUpgrade {
-			description = "Апгрейд тарифа (полная оплата периода + пересчёт остатка в дни)"
-		} else if purchase.IsEarlyDowngrade {
-			description = "Переход на более дешёвый тариф (полная оплата периода + пересчёт остатка в дни)"
-		}
+		rcExtras := &TariffPurchaseExtras{Kind: purchase.PurchaseKind, IsEarlyDowngrade: purchase.IsEarlyDowngrade}
+		description := buildRubReceiptDescription(purchase.Month, purchase.ExtraHwid, rcExtras)
 
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 
@@ -743,6 +729,40 @@ func applyTariffPurchaseExtras(pur *database.Purchase, extras *TariffPurchaseExt
 	pur.IsEarlyDowngrade = extras.IsEarlyDowngrade
 }
 
+func rubMonthWord(months int) string {
+	switch months {
+	case 1:
+		return "месяц"
+	case 2, 3, 4:
+		return "месяца"
+	default:
+		return "месяцев"
+	}
+}
+
+// buildRubReceiptDescription одна строка для чека YooKassa и «Мой Налог» (рус.).
+func buildRubReceiptDescription(months, extraHwid int, extras *TariffPurchaseExtras) string {
+	ms := rubMonthWord(months)
+	if months > 0 && extraHwid > 0 {
+		return fmt.Sprintf("Подписка на %d %s + %d устр.", months, ms, extraHwid)
+	}
+	if extraHwid > 0 && months <= 0 {
+		return fmt.Sprintf("Оплата дополнительного устройства +%d", extraHwid)
+	}
+	if extras != nil {
+		if extras.Kind == database.PurchaseKindTariffUpgrade && months > 0 {
+			return fmt.Sprintf("Улучшение тарифа (полная оплата периода на %d %s + пересчёт остатка в дни)", months, ms)
+		}
+		if extras.IsEarlyDowngrade && months > 0 {
+			return fmt.Sprintf("Понижение тарифа (полная оплата периода на %d %s + пересчёт остатка в дни)", months, ms)
+		}
+	}
+	if months > 0 {
+		return fmt.Sprintf("Подписка на %d %s", months, ms)
+	}
+	return "Оплата"
+}
+
 // ResyncTariffToSubscribers применяет актуальные squads/трафик/тег тарифа в Remnawave для активных подписчиков с этим current_tariff_id (после правки тарифа в админке).
 func (s PaymentService) ResyncTariffToSubscribers(ctx context.Context, tariffID int64) error {
 	if config.SalesMode() != "tariffs" || s.tariffRepository == nil {
@@ -972,7 +992,8 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		return "", 0, err
 	}
 
-	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), months, extraHwid, customer.ID, purchaseId)
+	invDesc := buildRubReceiptDescription(months, extraHwid, extras)
+	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), invDesc, customer.ID, purchaseId)
 	if err != nil {
 		slog.Error("Error creating invoice", err)
 		return "", 0, err

@@ -281,7 +281,13 @@ func (h Handler) promoLineSummary(p *database.PromoCode, lang string) string {
 		sb.WriteString(h.formatDiscountExtraLine(p, lang))
 		sb.WriteString("\n")
 	}
-	sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_line_until"), until))
+	if p.ValidUntil != nil && time.Now().After(*p.ValidUntil) {
+		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_line_until_expired"), until))
+	} else if p.ValidUntil != nil {
+		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "promo_line_until"), until))
+	} else {
+		sb.WriteString(until)
+	}
 	return sb.String()
 }
 

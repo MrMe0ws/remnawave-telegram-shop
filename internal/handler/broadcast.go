@@ -19,9 +19,13 @@ import (
 type BroadcastType string
 
 const (
-	BroadcastTypeAll      BroadcastType = "all"      // Всем пользователям
-	BroadcastTypeActive   BroadcastType = "active"   // Только активным
-	BroadcastTypeInactive BroadcastType = "inactive" // Неактивным
+	BroadcastTypeAll           BroadcastType = "all"            // Всем пользователям
+	BroadcastTypeActivePaid    BroadcastType = "active_paid"    // Активные платные
+	BroadcastTypeActiveTrial   BroadcastType = "active_trial"   // Активный триал
+	BroadcastTypeActiveAll     BroadcastType = "active_all"     // Все активные
+	BroadcastTypeInactivePaid  BroadcastType = "inactive_paid"
+	BroadcastTypeInactiveTrial BroadcastType = "inactive_trial"
+	BroadcastTypeInactiveAll    BroadcastType = "inactive_all"
 )
 
 // BroadcastRecipientButtons — какие inline-кнопки прикрепить к рассылке.
@@ -47,9 +51,10 @@ type BroadcastState struct {
 	pendingButtons       map[int64]BroadcastRecipientButtons
 	waitingForInput      map[int64]bool
 	waitingForButtonPick map[int64]bool
-	selectedType         map[int64]BroadcastType
-	promptMessageID      map[int64]int
-	pendingPreviewMsgID  map[int64]int
+	selectedType              map[int64]BroadcastType
+	broadcastOpenedFromAdmin  map[int64]bool
+	promptMessageID           map[int64]int
+	pendingPreviewMsgID       map[int64]int
 }
 
 func newBroadcastState() *BroadcastState {
@@ -60,9 +65,10 @@ func newBroadcastState() *BroadcastState {
 		pendingButtons:       make(map[int64]BroadcastRecipientButtons),
 		waitingForInput:      make(map[int64]bool),
 		waitingForButtonPick: make(map[int64]bool),
-		selectedType:         make(map[int64]BroadcastType),
-		promptMessageID:      make(map[int64]int),
-		pendingPreviewMsgID:  make(map[int64]int),
+		selectedType:               make(map[int64]BroadcastType),
+		broadcastOpenedFromAdmin:   make(map[int64]bool),
+		promptMessageID:            make(map[int64]int),
+		pendingPreviewMsgID:        make(map[int64]int),
 	}
 }
 
@@ -75,6 +81,7 @@ func clearBroadcastState(adminID int64) {
 	delete(broadcastState.waitingForInput, adminID)
 	delete(broadcastState.waitingForButtonPick, adminID)
 	delete(broadcastState.selectedType, adminID)
+	delete(broadcastState.broadcastOpenedFromAdmin, adminID)
 	delete(broadcastState.promptMessageID, adminID)
 	delete(broadcastState.pendingPreviewMsgID, adminID)
 	broadcastState.mu.Unlock()
@@ -187,12 +194,216 @@ func broadcastTypeToAudience(t BroadcastType) string {
 	switch t {
 	case BroadcastTypeAll:
 		return database.BroadcastAudienceAll
-	case BroadcastTypeActive:
-		return database.BroadcastAudienceActive
-	case BroadcastTypeInactive:
-		return database.BroadcastAudienceInactive
+	case BroadcastTypeActivePaid:
+		return database.BroadcastAudienceActivePaid
+	case BroadcastTypeActiveTrial:
+		return database.BroadcastAudienceActiveTrial
+	case BroadcastTypeActiveAll:
+		return database.BroadcastAudienceActiveAll
+	case BroadcastTypeInactivePaid:
+		return database.BroadcastAudienceInactivePaid
+	case BroadcastTypeInactiveTrial:
+		return database.BroadcastAudienceInactiveTrial
+	case BroadcastTypeInactiveAll:
+		return database.BroadcastAudienceInactiveAll
 	default:
 		return database.BroadcastAudienceAll
+	}
+}
+
+func (h Handler) broadcastAudienceRootKeyboard(lang string, adminID int64) [][]models.InlineKeyboardButton {
+	fromAdmin := false
+	broadcastState.mu.Lock()
+	fromAdmin = broadcastState.broadcastOpenedFromAdmin[adminID]
+	broadcastState.mu.Unlock()
+	return h.BroadcastAudienceKeyboard(lang, fromAdmin)
+}
+
+func (h Handler) broadcastActiveSegmentKeyboard(lang string) [][]models.InlineKeyboardButton {
+	return [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "broadcast_aud_active_paid", models.InlineKeyboardButton{CallbackData: CallbackBroadcastActivePaid})},
+		{h.translation.WithButton(lang, "broadcast_aud_active_trial", models.InlineKeyboardButton{CallbackData: CallbackBroadcastActiveTrial})},
+		{h.translation.WithButton(lang, "broadcast_aud_active_all", models.InlineKeyboardButton{CallbackData: CallbackBroadcastActiveAllSeg})},
+		{
+			h.translation.WithButton(lang, "broadcast_aud_back_audience", models.InlineKeyboardButton{CallbackData: CallbackBroadcastBackAudience}),
+		},
+	}
+}
+
+func (h Handler) broadcastInactiveSegmentKeyboard(lang string) [][]models.InlineKeyboardButton {
+	return [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "broadcast_aud_inactive_paid", models.InlineKeyboardButton{CallbackData: CallbackBroadcastInactivePaid})},
+		{h.translation.WithButton(lang, "broadcast_aud_inactive_trial", models.InlineKeyboardButton{CallbackData: CallbackBroadcastInactiveTrial})},
+		{h.translation.WithButton(lang, "broadcast_aud_inactive_all", models.InlineKeyboardButton{CallbackData: CallbackBroadcastInactiveAllSeg})},
+		{
+			h.translation.WithButton(lang, "broadcast_aud_back_audience", models.InlineKeyboardButton{CallbackData: CallbackBroadcastBackAudience}),
+		},
+	}
+}
+
+// BroadcastActiveMenuHandler — подменю выбора сегмента среди активных подписок.
+func (h Handler) BroadcastActiveMenuHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	adminID := config.GetAdminTelegramId()
+	if update.CallbackQuery.From.ID != adminID {
+		return
+	}
+	cb := update.CallbackQuery
+	msg := cb.Message.Message
+	if msg == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        h.translation.GetText(lang, "broadcast_choose_active_segment"),
+		ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastActiveSegmentKeyboard(lang)},
+	})
+	if err != nil {
+		slog.Error("broadcast active submenu", "error", err)
+	}
+}
+
+// BroadcastInactiveMenuHandler — подменю выбора сегмента среди неактивных.
+func (h Handler) BroadcastInactiveMenuHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	adminID := config.GetAdminTelegramId()
+	if update.CallbackQuery.From.ID != adminID {
+		return
+	}
+	cb := update.CallbackQuery
+	msg := cb.Message.Message
+	if msg == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        h.translation.GetText(lang, "broadcast_choose_inactive_segment"),
+		ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastInactiveSegmentKeyboard(lang)},
+	})
+	if err != nil {
+		slog.Error("broadcast inactive submenu", "error", err)
+	}
+}
+
+// BroadcastBackToAudienceHandler — назад к выбору «всем / активным / неактивным».
+func (h Handler) BroadcastBackToAudienceHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	adminID := config.GetAdminTelegramId()
+	if update.CallbackQuery.From.ID != adminID {
+		return
+	}
+	cb := update.CallbackQuery
+	msg := cb.Message.Message
+	if msg == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        h.translation.GetText(lang, "broadcast_choose_audience"),
+		ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastAudienceRootKeyboard(lang, adminID)},
+	})
+	if err != nil {
+		slog.Error("broadcast back audience", "error", err)
+	}
+}
+
+func segmentPickSummaryKey(cbData string) string {
+	switch cbData {
+	case CallbackBroadcastActivePaid:
+		return "broadcast_summary_active_paid"
+	case CallbackBroadcastActiveTrial:
+		return "broadcast_summary_active_trial"
+	case CallbackBroadcastActiveAllSeg:
+		return "broadcast_summary_active_all_seg"
+	case CallbackBroadcastInactivePaid:
+		return "broadcast_summary_inactive_paid"
+	case CallbackBroadcastInactiveTrial:
+		return "broadcast_summary_inactive_trial"
+	case CallbackBroadcastInactiveAllSeg:
+		return "broadcast_summary_inactive_all_seg"
+	default:
+		return "broadcast_summary_all"
+	}
+}
+
+func segmentPickBroadcastType(cbData string) BroadcastType {
+	switch cbData {
+	case CallbackBroadcastActivePaid:
+		return BroadcastTypeActivePaid
+	case CallbackBroadcastActiveTrial:
+		return BroadcastTypeActiveTrial
+	case CallbackBroadcastActiveAllSeg:
+		return BroadcastTypeActiveAll
+	case CallbackBroadcastInactivePaid:
+		return BroadcastTypeInactivePaid
+	case CallbackBroadcastInactiveTrial:
+		return BroadcastTypeInactiveTrial
+	case CallbackBroadcastInactiveAllSeg:
+		return BroadcastTypeInactiveAll
+	default:
+		return BroadcastTypeAll
+	}
+}
+
+// BroadcastSegmentPickHandler — выбор платные/триал/все для активных или неактивных.
+func (h Handler) BroadcastSegmentPickHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	adminID := config.GetAdminTelegramId()
+	if update.CallbackQuery.From.ID != adminID {
+		return
+	}
+	cb := update.CallbackQuery
+	callbackMessage := cb.Message.Message
+	if callbackMessage == nil {
+		return
+	}
+	data := cb.Data
+	broadcastType := segmentPickBroadcastType(data)
+	summaryKey := segmentPickSummaryKey(data)
+	if broadcastType == BroadcastTypeAll {
+		return
+	}
+
+	lang := cb.From.LanguageCode
+	typeText := h.translation.GetText(lang, summaryKey)
+
+	resetBroadcastDraft(adminID)
+
+	broadcastState.mu.Lock()
+	broadcastState.selectedType[adminID] = broadcastType
+	broadcastState.waitingForInput[adminID] = true
+	broadcastState.promptMessageID[adminID] = callbackMessage.ID
+	broadcastState.mu.Unlock()
+
+	prompt := fmt.Sprintf(h.translation.GetText(lang, "broadcast_enter_message"), typeText)
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    callbackMessage.Chat.ID,
+		MessageID: callbackMessage.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      prompt,
+		ReplyMarkup: &models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{},
+		},
+	})
+	if err != nil {
+		slog.Error("broadcast segment pick prompt", "error", err)
 	}
 }
 
@@ -285,12 +496,6 @@ func (h Handler) BroadcastTypeSelectHandler(ctx context.Context, b *bot.Bot, upd
 	case CallbackBroadcastAll:
 		broadcastType = BroadcastTypeAll
 		summaryKey = "broadcast_summary_all"
-	case CallbackBroadcastActive:
-		broadcastType = BroadcastTypeActive
-		summaryKey = "broadcast_summary_active"
-	case CallbackBroadcastInactive:
-		broadcastType = BroadcastTypeInactive
-		summaryKey = "broadcast_summary_inactive"
 	default:
 		return
 	}
@@ -494,10 +699,18 @@ func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, up
 	switch broadcastType {
 	case BroadcastTypeAll:
 		summaryKey = "broadcast_summary_all"
-	case BroadcastTypeActive:
-		summaryKey = "broadcast_summary_active"
-	case BroadcastTypeInactive:
-		summaryKey = "broadcast_summary_inactive"
+	case BroadcastTypeActivePaid:
+		summaryKey = "broadcast_summary_active_paid"
+	case BroadcastTypeActiveTrial:
+		summaryKey = "broadcast_summary_active_trial"
+	case BroadcastTypeActiveAll:
+		summaryKey = "broadcast_summary_active_all_seg"
+	case BroadcastTypeInactivePaid:
+		summaryKey = "broadcast_summary_inactive_paid"
+	case BroadcastTypeInactiveTrial:
+		summaryKey = "broadcast_summary_inactive_trial"
+	case BroadcastTypeInactiveAll:
+		summaryKey = "broadcast_summary_inactive_all_seg"
 	default:
 		summaryKey = "broadcast_summary_all"
 	}

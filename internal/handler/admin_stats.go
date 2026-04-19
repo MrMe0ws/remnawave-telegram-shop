@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"html"
 	"log/slog"
 	"math"
 	"sort"
@@ -110,10 +111,26 @@ func (h Handler) AdminStatsUsersHandler(ctx context.Context, b *bot.Bot, update 
 	if snap.NewMonth >= snap.NewPrevMonth {
 		sign = "+"
 	}
+	fromThem := ""
+	if config.SalesMode() == "tariffs" && len(snap.TariffBreakdown) > 0 {
+		var sb strings.Builder
+		sb.WriteString("\n\n")
+		sb.WriteString(h.translation.GetText(lang, "admin_stats_users_from_block_header"))
+		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "admin_stats_users_trials_line"), snap.TrialActive))
+		sb.WriteString("\n")
+		for _, t := range snap.TariffBreakdown {
+			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "admin_stats_users_tariff_line"),
+				html.EscapeString(t.DisplayName), t.ActivePaidUsers))
+			sb.WriteString("\n")
+		}
+		fromThem = sb.String()
+	}
 	body := fmt.Sprintf(h.translation.GetText(lang, "admin_stats_users_body"),
 		snap.TotalCustomers,
 		snap.ActiveSubscriptions,
 		actPct,
+		fromThem,
 		snap.NewToday,
 		snap.NewWeek,
 		snap.NewMonth,
@@ -149,6 +166,20 @@ func (h Handler) AdminStatsSubsHandler(ctx context.Context, b *bot.Bot, update *
 	if den > 0 {
 		conv = fmt.Sprintf("%.1f", float64(snap.PaidActive)*100/float64(den))
 	}
+	tariffSubs := ""
+	if config.SalesMode() == "tariffs" && len(snap.TariffBreakdown) > 0 {
+		var sb strings.Builder
+		sb.WriteString("\n\n")
+		sb.WriteString(h.translation.GetText(lang, "admin_stats_subs_tariff_section_header"))
+		for _, t := range snap.TariffBreakdown {
+			sb.WriteString("\n\n<b>")
+			sb.WriteString(html.EscapeString(t.DisplayName))
+			sb.WriteString(":</b>\n")
+			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "admin_stats_tariff_sales_line"),
+				t.SalesToday, t.SalesWeek, t.SalesMonth))
+		}
+		tariffSubs = sb.String()
+	}
 	body := fmt.Sprintf(h.translation.GetText(lang, "admin_stats_subs_body"),
 		totalSubs,
 		snap.TrialActive+snap.PaidActive,
@@ -158,6 +189,7 @@ func (h Handler) AdminStatsSubsHandler(ctx context.Context, b *bot.Bot, update *
 		snap.SalesSubToday,
 		snap.SalesSubWeek,
 		snap.SalesSubMonth,
+		tariffSubs,
 	)
 	text := h.translation.GetText(lang, "admin_stats_subs_title") + "\n\n" + body + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
 	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsSubs)}, nil)
@@ -193,16 +225,43 @@ func (h Handler) AdminStatsRevenueHandler(ctx context.Context, b *bot.Bot, updat
 		h.translation.GetText(lang, "admin_stats_rev_month_header"),
 		fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_line_rub"), rubStr(snap.RevenueMonthRub)),
 		fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_from_subs"), rubStr(snap.RevenueSubsMonthRub)),
+	}
+	if config.SalesMode() == "tariffs" && len(snap.TariffBreakdown) > 0 {
+		lines = append(lines, h.translation.GetText(lang, "admin_stats_rev_tariffs_split_header"))
+		for _, t := range snap.TariffBreakdown {
+			lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_tariff_line"),
+				html.EscapeString(t.DisplayName), rubStr(t.SubsRevenueMonth)))
+		}
+	}
+	lines = append(lines,
 		"",
 		h.translation.GetText(lang, "admin_stats_rev_today_header"),
 		fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_tx_n"), snap.TransactionsToday),
 		fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_line_rub"), rubStr(snap.RevenueTodayRub)),
+	)
+	if config.SalesMode() == "tariffs" && len(snap.TariffBreakdown) > 0 {
+		lines = append(lines, h.translation.GetText(lang, "admin_stats_rev_tariffs_split_header"))
+		for _, t := range snap.TariffBreakdown {
+			lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_tariff_line"),
+				html.EscapeString(t.DisplayName), rubStr(t.RevenueToday)))
+		}
+	}
+	lines = append(lines,
 		"",
 		h.translation.GetText(lang, "admin_stats_rev_all_header"),
 		fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_line_rub"), rubStr(snap.RevenueAllTimeRub)),
+	)
+	if config.SalesMode() == "tariffs" && len(snap.TariffBreakdown) > 0 {
+		lines = append(lines, h.translation.GetText(lang, "admin_stats_rev_tariffs_split_header"))
+		for _, t := range snap.TariffBreakdown {
+			lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_rev_tariff_line"),
+				html.EscapeString(t.DisplayName), rubStr(t.RevenueAll)))
+		}
+	}
+	lines = append(lines,
 		"",
 		h.translation.GetText(lang, "admin_stats_rev_methods_header"),
-	}
+	)
 	keys := make([]string, 0, len(snap.PaymentRubByInvoice))
 	for k := range snap.PaymentRubByInvoice {
 		keys = append(keys, k)

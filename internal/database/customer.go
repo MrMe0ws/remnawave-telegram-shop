@@ -46,9 +46,15 @@ type BroadcastRecipient struct {
 
 // Broadcast audience filters for GetBroadcastRecipients.
 const (
-	BroadcastAudienceAll      = "all"
-	BroadcastAudienceActive   = "active"
-	BroadcastAudienceInactive = "inactive"
+	BroadcastAudienceAll           = "all"
+	BroadcastAudienceActive        = "active" // deprecated: используйте ActiveAll
+	BroadcastAudienceInactive      = "inactive"
+	BroadcastAudienceActivePaid    = "active_paid"
+	BroadcastAudienceActiveTrial   = "active_trial"
+	BroadcastAudienceActiveAll     = "active_all"
+	BroadcastAudienceInactivePaid   = "inactive_paid"
+	BroadcastAudienceInactiveTrial  = "inactive_trial"
+	BroadcastAudienceInactiveAll    = "inactive_all"
 )
 
 func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDate, endDate time.Time) (*[]Customer, error) {
@@ -505,23 +511,26 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 		From("customer").
 		PlaceholderFormat(sq.Dollar)
 
+	activeVPN := sq.And{sq.NotEq{"expire_at": nil}, sq.Gt{"expire_at": now}}
+	inactiveVPN := sq.Or{sq.Eq{"expire_at": nil}, sq.LtOrEq{"expire_at": now}}
+	paidSubscription := sq.Expr(`EXISTS (SELECT 1 FROM purchase p WHERE p.customer_id = customer.id AND p.status = 'paid' AND p.month > 0)`)
+	noPaidSubscription := sq.Expr(`NOT EXISTS (SELECT 1 FROM purchase p WHERE p.customer_id = customer.id AND p.status = 'paid' AND p.month > 0)`)
+
 	switch audience {
 	case BroadcastAudienceAll:
 		// no extra filter
-	case BroadcastAudienceActive:
-		buildSelect = buildSelect.Where(
-			sq.And{
-				sq.NotEq{"expire_at": nil},
-				sq.Gt{"expire_at": now},
-			},
-		)
-	case BroadcastAudienceInactive:
-		buildSelect = buildSelect.Where(
-			sq.Or{
-				sq.Eq{"expire_at": nil},
-				sq.LtOrEq{"expire_at": now},
-			},
-		)
+	case BroadcastAudienceActive, BroadcastAudienceActiveAll:
+		buildSelect = buildSelect.Where(activeVPN)
+	case BroadcastAudienceInactive, BroadcastAudienceInactiveAll:
+		buildSelect = buildSelect.Where(inactiveVPN)
+	case BroadcastAudienceActivePaid:
+		buildSelect = buildSelect.Where(sq.And{activeVPN, paidSubscription})
+	case BroadcastAudienceActiveTrial:
+		buildSelect = buildSelect.Where(sq.And{activeVPN, noPaidSubscription})
+	case BroadcastAudienceInactivePaid:
+		buildSelect = buildSelect.Where(sq.And{inactiveVPN, paidSubscription})
+	case BroadcastAudienceInactiveTrial:
+		buildSelect = buildSelect.Where(sq.And{inactiveVPN, noPaidSubscription})
 	default:
 		return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
 	}

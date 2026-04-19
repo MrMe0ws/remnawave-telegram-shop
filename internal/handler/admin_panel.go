@@ -59,6 +59,9 @@ func (h Handler) AdminBroadcastShortcutHandler(ctx context.Context, b *bot.Bot, 
 	}
 	cb := update.CallbackQuery
 	clearBroadcastState(cb.From.ID)
+	broadcastState.mu.Lock()
+	broadcastState.broadcastOpenedFromAdmin[cb.From.ID] = true
+	broadcastState.mu.Unlock()
 	lang := cb.From.LanguageCode
 	msg := cb.Message.Message
 	if msg == nil {
