@@ -63,6 +63,7 @@ func (h Handler) RenewExtraHwidCallbackHandler(ctx context.Context, b *bot.Bot, 
 	paymentURL, purchaseId, err := h.paymentService.CreateHwidPurchase(ctxWithUsername, float64(amt), extra, customer, invoiceType, meta)
 	if err != nil {
 		slog.Error("Error creating renew hwid payment", "error", err)
+		h.notifyPaymentProviderUnavailable(ctx, b, update, langCode, fmt.Sprintf("%s?extra=%d&months=%d", CallbackRenewExtraHwid, extra, months))
 		return
 	}
 

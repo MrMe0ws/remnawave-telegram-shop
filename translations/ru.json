@@ -56,6 +56,7 @@
   "crypto_button": "₿ Криптовалютой",
   "card_button": "💳 СБП / Карта 💸",
   "pay_button": "💸 Оплатить",
+  "payment_provider_unavailable": "Платежная система временно не работает :( Попробуйте позже или используйте другой способ оплаты.",
   "subscription_active": "📅 Подписка действует до <b><i>%s</i></b>",
   "traffic_limit": "\n\nЛимит - %s/%s гб",
   "subscription_link": "\n\n🔗 <a href=\"%s\">Ссылка на подписку</a>",

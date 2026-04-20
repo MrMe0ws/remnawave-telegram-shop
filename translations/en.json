@@ -51,6 +51,7 @@
   "crypto_button": "₿ Crypto",
   "card_button": "💳 Bank Card",
   "pay_button": "💸 Pay",
+  "payment_provider_unavailable": "Payments are temporarily unavailable :( Please try again later or use another payment method.",
 
   "subscription_active": "📅 Subscription active until <b><i>%s</i></b>",
   "traffic_limit": "\n\nLimit - %s/%s gb",

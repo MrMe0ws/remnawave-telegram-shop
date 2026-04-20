@@ -446,6 +446,12 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 	if err != nil {
 		slog.Error("Error creating payment", err)
+		langCode := update.CallbackQuery.From.LanguageCode
+		backSell := fmt.Sprintf("%s?month=%d&amount=%d&extra=%d", CallbackSell, month, price, extra)
+		if tidStr != "" {
+			backSell = fmt.Sprintf("%s?tid=%s&month=%d&amount=%d&extra=%d", CallbackSell, tidStr, month, price, extra)
+		}
+		h.notifyPaymentProviderUnavailable(ctx, b, update, langCode, backSell)
 		return
 	}
 
@@ -658,4 +664,23 @@ func (h Handler) appendPendingDiscountToPricingHTML(ctx context.Context, lang st
 		}
 	}
 	return base + "\n\n" + note
+}
+
+// notifyPaymentProviderUnavailable сообщает о сбое платёжного провайдера и предлагает вернуться назад (отвечает на callback, чтобы снять «часики»).
+func (h Handler) notifyPaymentProviderUnavailable(ctx context.Context, b *bot.Bot, update *models.Update, langCode, backCallbackData string) {
+	if update.CallbackQuery != nil {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: update.CallbackQuery.ID,
+		})
+	}
+	text := h.translation.GetText(langCode, "payment_provider_unavailable")
+	markup := models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: backCallbackData})},
+		},
+	}
+	err := SendOrEditAfterInlineCallback(ctx, b, update, text, models.ParseModeHTML, markup, nil)
+	if err != nil {
+		logEditError("notify payment provider unavailable", err)
+	}
 }
