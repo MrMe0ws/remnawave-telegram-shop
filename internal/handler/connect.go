@@ -78,6 +78,11 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 		}
 		markup = append(markup, referralInactiveRow)
 	}
+	if config.LoyaltyEnabled() {
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "loyalty_menu_button", models.InlineKeyboardButton{CallbackData: CallbackLoyaltyRoot}),
+		})
+	}
 	markup = append(markup, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 	})
@@ -160,6 +165,11 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 			}))
 		}
 		markup = append(markup, referralInactiveRow)
+	}
+	if config.LoyaltyEnabled() {
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "loyalty_menu_button", models.InlineKeyboardButton{CallbackData: CallbackLoyaltyRoot}),
+		})
 	}
 	markup = append(markup, []models.InlineKeyboardButton{
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
@@ -253,6 +263,7 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	showDevices := false
 
 	userInfo, err := h.syncService.GetRemnawaveClient().GetUserTrafficInfo(ctx, customer.TelegramID)
+	trafficFetchErr := err
 	if err == nil && userInfo != nil {
 		trafficUsed = formatGigabytes(userInfo.UserTraffic.UsedTrafficBytes)
 		if userInfo.TrafficLimitBytes > 0 {
@@ -281,7 +292,7 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	}
 
 	trafficLine := fmt.Sprintf(tm.GetText(langCode, "vpn_traffic"), trafficUsed, trafficLimit)
-	if err == nil && userInfo != nil && userInfo.TrafficLimitBytes > 0 &&
+	if trafficFetchErr == nil && userInfo != nil && userInfo.TrafficLimitBytes > 0 &&
 		userInfo.UserTraffic.UsedTrafficBytes >= float64(userInfo.TrafficLimitBytes) {
 		trafficLine += tm.GetText(langCode, "vpn_traffic_limit_reached")
 	}
@@ -289,6 +300,29 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	if showDevices {
 		info.WriteString("\n")
 		info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_devices"), deviceCount, deviceLimit))
+	}
+
+	if config.LoyaltyEnabled() && h.loyaltyTierRepository != nil && isActive {
+		if prog, err := h.loyaltyTierRepository.ProgressForXP(ctx, customer.LoyaltyXP); err != nil {
+			slog.Error("loyalty progress connect summary", "error", err)
+		} else if prog.NextTier != nil {
+			next := prog.NextTier
+			info.WriteString("\n\n")
+			info.WriteString(fmt.Sprintf(tm.GetText(langCode, "loyalty_connect_summary_line"),
+				loyaltyTierLabelHTML(prog.CurrentTier),
+				prog.CurrentTier.DiscountPercent,
+				customer.LoyaltyXP,
+				next.XpMin,
+				loyaltyTierLabelHTML(*next),
+			))
+		} else {
+			info.WriteString("\n\n")
+			info.WriteString(fmt.Sprintf(tm.GetText(langCode, "loyalty_connect_summary_max"),
+				loyaltyTierLabelHTML(prog.CurrentTier),
+				prog.CurrentTier.DiscountPercent,
+				customer.LoyaltyXP,
+			))
+		}
 	}
 
 	if h.promoService != nil {

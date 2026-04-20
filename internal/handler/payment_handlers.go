@@ -14,6 +14,7 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/remnawave"
 )
@@ -486,7 +487,7 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 				}
 			}
 		}
-		textMsg, sumErr := h.buildTariffCheckoutSummaryHTML(ctx, langCode, tid, month, price, invoiceStars, switchBonusDays, extra, switchTariffKind)
+		textMsg, sumErr := h.buildTariffCheckoutSummaryHTML(ctx, langCode, customer, tid, month, price, invoiceStars, switchBonusDays, extra, switchTariffKind)
 		if sumErr != nil {
 			slog.Error("build tariff payment link", "error", sumErr)
 			textMsg = h.translation.GetText(langCode, "payment_tariff_screen_fallback")
@@ -605,20 +606,46 @@ func (h Handler) pricingInfoTextWithDiscount(ctx context.Context, lang string, c
 	return h.appendPendingDiscountToPricingHTML(ctx, lang, customer, base)
 }
 
-// appendPendingDiscountToPricingHTML вставляет строку про активную скидку перед блоком «Способы оплаты» / «Payment methods».
+// appendPendingDiscountToPricingHTML вставляет блоки про лояльность и промо перед «Способы оплаты» / «Payment methods».
 func (h Handler) appendPendingDiscountToPricingHTML(ctx context.Context, lang string, customer *database.Customer, base string) string {
-	if h.promoService == nil || customer == nil {
+	capPct := config.LoyaltyMaxTotalDiscountPercent()
+
+	loyaltyPct := 0
+	if config.LoyaltyEnabled() && h.loyaltyTierRepository != nil && customer != nil {
+		pct, err := h.loyaltyTierRepository.DiscountPercentForXP(ctx, customer.LoyaltyXP)
+		if err != nil {
+			slog.Error("pricing screen loyalty discount", "error", err)
+		} else {
+			loyaltyPct = pct
+		}
+	}
+
+	promoPct := 0
+	promoOK := false
+	if h.promoService != nil && customer != nil {
+		pct, _, _, ok, err := h.promoService.PendingDiscountForConnectUI(ctx, customer.ID)
+		if err != nil {
+			slog.Error("pricing screen pending discount", "error", err)
+		} else if ok && pct > 0 {
+			promoPct = pct
+			promoOK = true
+		}
+	}
+
+	var blocks []string
+	switch {
+	case loyaltyPct > 0 && promoOK:
+		total := loyalty.CombinedDiscountPercent(loyaltyPct, promoPct, capPct)
+		blocks = append(blocks, fmt.Sprintf(h.translation.GetText(lang, "buy_screen_loyalty_promo_combo_note"), loyaltyPct, promoPct, total))
+	case loyaltyPct > 0:
+		blocks = append(blocks, fmt.Sprintf(h.translation.GetText(lang, "buy_screen_loyalty_discount_note"), loyaltyPct))
+	case promoOK:
+		blocks = append(blocks, fmt.Sprintf(h.translation.GetText(lang, "buy_screen_pending_discount_note"), promoPct))
+	default:
 		return base
 	}
-	pct, _, _, ok, err := h.promoService.PendingDiscountForConnectUI(ctx, customer.ID)
-	if err != nil {
-		slog.Error("pricing screen pending discount", "error", err)
-		return base
-	}
-	if !ok || pct <= 0 {
-		return base
-	}
-	note := fmt.Sprintf(h.translation.GetText(lang, "buy_screen_pending_discount_note"), pct)
+
+	note := strings.Join(blocks, "\n\n")
 	var needles []string
 	if lang == "ru" {
 		needles = []string{"\n\n<b>Способы оплаты:</b>", "<b>Способы оплаты:</b>"}

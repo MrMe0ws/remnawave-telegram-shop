@@ -36,7 +36,7 @@ import (
 
 // Version, Commit, BuildDate - переменные версии, устанавливаются при сборке через ldflags
 var (
-	Version   = "dev"
+	Version   = "4.4.0"
 	Commit    = "none"
 	BuildDate = "unknown"
 )
@@ -95,6 +95,7 @@ func main() {
 	promoRepository := database.NewPromoRepository(pool)
 	statsRepository := database.NewStatsRepository(pool)
 	infraBillingRepository := database.NewInfraBillingRepository(pool)
+	loyaltyTierRepository := database.NewLoyaltyTierRepository(pool)
 
 	// Инициализация клиентов для работы с внешними сервисами
 	cryptoPayClient := cryptopay.NewCryptoPayClient(config.CryptoPayUrl(), config.CryptoPayToken())                // Криптоплатежи
@@ -148,7 +149,7 @@ func main() {
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
 
 	// Создание главного обработчика всех команд и callback'ов бота
-	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository)
+	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository, loyaltyTierRepository)
 
 	// Получение информации о боте (username и т.д.)
 	// Используем контекст с таймаутом для GetMe, чтобы избежать зависания при проблемах с сетью
@@ -270,6 +271,18 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSync, bot.MatchTypeExact, h.AdminSyncShortcutHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPromo, bot.MatchTypeExact, h.AdminPromoOpenHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminTariffs, bot.MatchTypeExact, h.AdminTariffsHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRoot, bot.MatchTypeExact, h.AdminLoyaltyRootHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyLevels, bot.MatchTypeExact, h.AdminLoyaltyLevelsHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyNew, bot.MatchTypeExact, h.AdminLoyaltyNewHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRecalcAsk, bot.MatchTypeExact, h.AdminLoyaltyRecalcAskHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRecalcRun, bot.MatchTypeExact, h.AdminLoyaltyRecalcRunHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRules, bot.MatchTypeExact, h.AdminLoyaltyRulesHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyCard, bot.MatchTypePrefix, h.AdminLoyaltyTierCardHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyDelAsk, bot.MatchTypePrefix, h.AdminLoyaltyDelAskHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyDelYes, bot.MatchTypePrefix, h.AdminLoyaltyDelYesHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyEditXP, bot.MatchTypePrefix, h.AdminLoyaltyEditXPAskHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyEditPct, bot.MatchTypePrefix, h.AdminLoyaltyEditPctAskHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyEditDn, bot.MatchTypePrefix, h.AdminLoyaltyEditDnAskHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsRoot, bot.MatchTypeExact, h.AdminStatsRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsUsers, bot.MatchTypeExact, h.AdminStatsUsersHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsSubs, bot.MatchTypeExact, h.AdminStatsSubsHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -315,6 +328,9 @@ func main() {
 
 	// Callback для списка рефералов
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferralList, bot.MatchTypeExact, h.ReferralListCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+
+	// Экран лояльности (Мой VPN)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackLoyaltyRoot, bot.MatchTypeExact, h.LoyaltyRootCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для покупки подписки
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypePrefix, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -402,6 +418,9 @@ func main() {
 			if handler.InfraBillingWizardWaiting(update.Message.From.ID) {
 				return false
 			}
+			if handler.AdminLoyaltyWaiting(update.Message.From.ID) {
+				return false
+			}
 		}
 		return true
 	}, h.UserPromoMessageHandler)
@@ -412,7 +431,8 @@ func main() {
 			!strings.HasPrefix(update.Message.Text, "/") &&
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
-			(handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID))
+			(handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID)) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID)
 	}, h.AdminPromoTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
@@ -421,7 +441,8 @@ func main() {
 			!strings.HasPrefix(update.Message.Text, "/") &&
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
-			(handler.AdminTariffWizardWaiting(update.Message.From.ID) || handler.AdminTariffEditWaiting(update.Message.From.ID))
+			(handler.AdminTariffWizardWaiting(update.Message.From.ID) || handler.AdminTariffEditWaiting(update.Message.From.ID)) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID)
 	}, h.AdminTariffTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
@@ -430,7 +451,17 @@ func main() {
 			!strings.HasPrefix(update.Message.Text, "/") &&
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
-			handler.InfraBillingWizardWaiting(update.Message.From.ID)
+			handler.AdminLoyaltyWaiting(update.Message.From.ID)
+	}, h.AdminLoyaltyTextHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID)
 	}, h.AdminInfraBillingTextHandler)
 
 	// Обработчик черновика рассылки: текст, подпись к фото или фото/файл JPEG|PNG|WebP (после выбора аудитории)

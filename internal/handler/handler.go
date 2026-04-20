@@ -23,21 +23,22 @@ import (
 )
 
 type Handler struct {
-	customerRepository     *database.CustomerRepository
-	purchaseRepository     *database.PurchaseRepository
-	tariffRepository       *database.TariffRepository
-	cryptoPayClient        *cryptopay.Client
-	yookasaClient          *yookasa.Client
-	translation            *translation.Manager
-	paymentService         *payment.PaymentService
-	syncService            *sync.SyncService
-	referralRepository     *database.ReferralRepository
-	cache                  *cache.Cache
-	promoRepository        *database.PromoRepository
-	promoService           *promo.Service
-	remnawaveClient        *remnawave.Client
-	statsRepository        *database.StatsRepository
-	infraBillingRepository *database.InfraBillingRepository
+	customerRepository      *database.CustomerRepository
+	purchaseRepository      *database.PurchaseRepository
+	tariffRepository        *database.TariffRepository
+	cryptoPayClient         *cryptopay.Client
+	yookasaClient           *yookasa.Client
+	translation             *translation.Manager
+	paymentService          *payment.PaymentService
+	syncService             *sync.SyncService
+	referralRepository      *database.ReferralRepository
+	cache                   *cache.Cache
+	promoRepository         *database.PromoRepository
+	promoService            *promo.Service
+	remnawaveClient         *remnawave.Client
+	statsRepository         *database.StatsRepository
+	infraBillingRepository  *database.InfraBillingRepository
+	loyaltyTierRepository   *database.LoyaltyTierRepository
 }
 
 func NewHandler(
@@ -56,6 +57,7 @@ func NewHandler(
 	remnawaveClient *remnawave.Client,
 	statsRepository *database.StatsRepository,
 	infraBillingRepository *database.InfraBillingRepository,
+	loyaltyTierRepository *database.LoyaltyTierRepository,
 ) *Handler {
 	return &Handler{
 		syncService:            syncService,
@@ -73,6 +75,7 @@ func NewHandler(
 		remnawaveClient:        remnawaveClient,
 		statsRepository:        statsRepository,
 		infraBillingRepository: infraBillingRepository,
+		loyaltyTierRepository:  loyaltyTierRepository,
 	}
 }
 

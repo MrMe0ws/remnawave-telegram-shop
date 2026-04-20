@@ -97,7 +97,7 @@ func (h Handler) buildTariffPaymentMethodsHTML(lang string) string {
 }
 
 // switchTariffKind: "" | "upgrade" | "downgrade" — для строк бонуса при смене тарифа (только если upgradeBonusDays > 0).
-func (h Handler) buildTariffCheckoutSummaryHTML(ctx context.Context, lang string, tariffID int64, month, payAmount int, invoiceStars bool, upgradeBonusDays int, extraHwid int, switchTariffKind string) (string, error) {
+func (h Handler) buildTariffCheckoutSummaryHTML(ctx context.Context, lang string, customer *database.Customer, tariffID int64, month, payAmount int, invoiceStars bool, upgradeBonusDays int, extraHwid int, switchTariffKind string) (string, error) {
 	t, err := h.tariffRepository.GetByID(ctx, tariffID)
 	if err != nil || t == nil {
 		return "", err
@@ -141,6 +141,12 @@ func (h Handler) buildTariffCheckoutSummaryHTML(ctx context.Context, lang string
 		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "payment_tariff_checkout_amount_stars"), payAmount))
 	} else {
 		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "payment_tariff_checkout_amount_rub"), payAmount))
+	}
+	if config.LoyaltyEnabled() && h.loyaltyTierRepository != nil && customer != nil {
+		if pct, err := h.loyaltyTierRepository.DiscountPercentForXP(ctx, customer.LoyaltyXP); err == nil && pct > 0 {
+			sb.WriteString("\n")
+			sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "tariff_pay_loyalty_line"), pct))
+		}
 	}
 	return sb.String(), nil
 }

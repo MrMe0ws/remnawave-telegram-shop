@@ -21,13 +21,24 @@ func (h Handler) RenderAdminPanel(ctx context.Context, b *bot.Bot, msg *models.M
 			h.translation.WithButton(lang, "admin_promos", models.InlineKeyboardButton{CallbackData: CallbackAdminPromo}),
 		},
 		{h.translation.WithButton(lang, "admin_broadcast", models.InlineKeyboardButton{CallbackData: CallbackAdminBroadcast})},
-		{
+	}
+	if config.LoyaltyEnabled() {
+		kb = append(kb, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "admin_loyalty", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyRoot}),
+		})
+	}
+	kb = append(kb,
+		[]models.InlineKeyboardButton{
 			h.translation.WithButton(lang, "admin_stats", models.InlineKeyboardButton{CallbackData: CallbackAdminStatsRoot}),
 			h.translation.WithButton(lang, "admin_infra_billing", models.InlineKeyboardButton{CallbackData: CallbackAdminInfraRoot}),
 		},
-		{h.translation.WithButton(lang, "admin_sync", models.InlineKeyboardButton{CallbackData: CallbackAdminSync})},
-		{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart})},
-	}
+		[]models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "admin_sync", models.InlineKeyboardButton{CallbackData: CallbackAdminSync}),
+		},
+		[]models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+		},
+	)
 	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:      msg.Chat.ID,
 		MessageID:   msg.ID,

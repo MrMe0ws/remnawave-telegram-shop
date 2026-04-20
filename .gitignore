@@ -350,3 +350,10 @@ AGENTS.md
 
 # Локальная заметка по релизу
 RELEASE_NOTES.md
+
+# JVM crash / replay dumps (не коммитить)
+hs_err_pid*.log
+replay_pid*.log
+
+# Локальная распаковка релиза (не дублировать репозиторий)
+remnawave-telegram-shop-4.3.6/

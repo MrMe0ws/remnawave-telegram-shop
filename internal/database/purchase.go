@@ -332,6 +332,40 @@ func (pr *PurchaseRepository) FindPaidByCustomer(ctx context.Context, customerID
 	return purchases, nil
 }
 
+// ListAllPaidForLoyaltyBackfill возвращает все успешные оплаты для полного пересчёта loyalty_xp по правилам XPRubEquivalentForPurchase.
+func (pr *PurchaseRepository) ListAllPaidForLoyaltyBackfill(ctx context.Context) ([]Purchase, error) {
+	buildSelect := sq.Select("*").
+		From("purchase").
+		Where(sq.Eq{"status": PurchaseStatusPaid}).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	rows, err := pr.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query purchases: %w", err)
+	}
+	defer rows.Close()
+
+	var purchases []Purchase
+	for rows.Next() {
+		var purchase Purchase
+		if err := rows.Scan(purchaseScanArgs(&purchase)...); err != nil {
+			return nil, fmt.Errorf("failed to scan purchase: %w", err)
+		}
+		purchases = append(purchases, purchase)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return purchases, nil
+}
+
 func (pr *PurchaseRepository) CountPaidByCustomer(ctx context.Context, customerID int64) (int, error) {
 	buildSelect := sq.Select("COUNT(*)").
 		From("purchase").

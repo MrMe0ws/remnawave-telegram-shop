@@ -22,7 +22,7 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 }
 
 // customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
-const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months"
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp"
 
 type Customer struct {
 	ID                        int64      `db:"id"`
@@ -36,6 +36,7 @@ type Customer struct {
 	CurrentTariffID           *int64     `db:"current_tariff_id"`
 	SubscriptionPeriodStart   *time.Time `db:"subscription_period_start"`
 	SubscriptionPeriodMonths  *int       `db:"subscription_period_months"`
+	LoyaltyXP                 int64      `db:"loyalty_xp"`
 }
 
 // BroadcastRecipient is a Telegram user with language for localized broadcast keyboards.
@@ -95,6 +96,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 			&customer.CurrentTariffID,
 			&customer.SubscriptionPeriodStart,
 			&customer.SubscriptionPeriodMonths,
+			&customer.LoyaltyXP,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -134,6 +136,7 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 		&customer.CurrentTariffID,
 		&customer.SubscriptionPeriodStart,
 		&customer.SubscriptionPeriodMonths,
+		&customer.LoyaltyXP,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -169,6 +172,7 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 		&customer.CurrentTariffID,
 		&customer.SubscriptionPeriodStart,
 		&customer.SubscriptionPeriodMonths,
+		&customer.LoyaltyXP,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -188,7 +192,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 	INSERT INTO customer (telegram_id, expire_at, language)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (telegram_id) DO UPDATE SET telegram_id = customer.telegram_id
-	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months
+	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp
 	`
 
 	row := cr.pool.QueryRow(ctx, query, customer.TelegramID, customer.ExpireAt, customer.Language)
@@ -205,12 +209,61 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 		&result.CurrentTariffID,
 		&result.SubscriptionPeriodStart,
 		&result.SubscriptionPeriodMonths,
+		&result.LoyaltyXP,
 	); err != nil {
 		return nil, fmt.Errorf("failed to find or create customer: %w", err)
 	}
 
 	slog.Info("user found or created in bot database", "telegramId", utils.MaskHalfInt64(result.TelegramID))
 	return &result, nil
+}
+
+// IncrementLoyaltyXP добавляет накопленный XP лояльности после успешной оплаты.
+func (cr *CustomerRepository) IncrementLoyaltyXP(ctx context.Context, customerID int64, delta int64) error {
+	if delta <= 0 {
+		return nil
+	}
+	res, err := cr.pool.Exec(ctx, `UPDATE customer SET loyalty_xp = loyalty_xp + $2 WHERE id = $1`, customerID, delta)
+	if err != nil {
+		return fmt.Errorf("increment loyalty_xp: %w", err)
+	}
+	if res.RowsAffected() == 0 {
+		return fmt.Errorf("customer not found: %d", customerID)
+	}
+	return nil
+}
+
+// ApplyLoyaltyXPFullRecalc обнуляет loyalty_xp у всех клиентов и задаёт суммы из карты (полный пересчёт XP из истории оплат).
+func (cr *CustomerRepository) ApplyLoyaltyXPFullRecalc(ctx context.Context, sums map[int64]int64) error {
+	tx, err := cr.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `UPDATE customer SET loyalty_xp = 0`); err != nil {
+		return fmt.Errorf("reset loyalty_xp: %w", err)
+	}
+	for cid, xp := range sums {
+		if xp <= 0 {
+			continue
+		}
+		if _, err := tx.Exec(ctx, `UPDATE customer SET loyalty_xp = $2 WHERE id = $1`, cid, xp); err != nil {
+			return fmt.Errorf("set loyalty_xp customer %d: %w", cid, err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CountCustomersWithLoyaltyXPAtLeast число клиентов с loyalty_xp >= threshold.
+func (cr *CustomerRepository) CountCustomersWithLoyaltyXPAtLeast(ctx context.Context, threshold int64) (int64, error) {
+	var n int64
+	err := cr.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM customer WHERE loyalty_xp >= $1`, threshold).Scan(&n)
+	return n, err
 }
 
 func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, updates map[string]interface{}) error {
@@ -287,6 +340,7 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 			&customer.CurrentTariffID,
 			&customer.SubscriptionPeriodStart,
 			&customer.SubscriptionPeriodMonths,
+			&customer.LoyaltyXP,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -607,6 +661,7 @@ func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, t
 			&customer.CurrentTariffID,
 			&customer.SubscriptionPeriodStart,
 			&customer.SubscriptionPeriodMonths,
+			&customer.LoyaltyXP,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan customer: %w", err)

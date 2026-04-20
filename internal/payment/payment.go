@@ -10,6 +10,7 @@ import (
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
@@ -321,6 +322,7 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 		return err
 	}
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
+	s.applyLoyaltyXPAfterPayment(ctx, purchase, customer)
 	return nil
 }
 
@@ -571,9 +573,23 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 		return err
 	}
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
+	s.applyLoyaltyXPAfterPayment(ctx, purchase, customer)
 	slog.Info("purchase processed", "purchase_id", utils.MaskHalfInt64(purchase.ID), "type", purchase.InvoiceType, "customer_id", utils.MaskHalfInt64(customer.ID))
 
 	return nil
+}
+
+func (s PaymentService) applyLoyaltyXPAfterPayment(ctx context.Context, purchase *database.Purchase, customer *database.Customer) {
+	if !config.LoyaltyEnabled() || purchase == nil || customer == nil {
+		return
+	}
+	gain := loyalty.XPRubEquivalentForPurchase(purchase)
+	if gain <= 0 {
+		return
+	}
+	if err := s.customerRepository.IncrementLoyaltyXP(ctx, customer.ID, gain); err != nil {
+		slog.Error("loyalty xp increment", "error", err, "customer_id", utils.MaskHalfInt64(customer.ID), "purchase_id", utils.MaskHalfInt64(purchase.ID))
+	}
 }
 
 func (s *PaymentService) clearPromoDiscountIfUsed(ctx context.Context, purchase *database.Purchase, customer *database.Customer) {

@@ -75,6 +75,11 @@ type config struct {
 	trafficLimitResetStrategy                                 string
 	salesMode                                                 string
 	rubPerStar                                                float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
+	loyaltyEnabled                                            bool
+	loyaltyMaxTotalDiscountPercent                            int // потолок суммы лояльность+промо (1–100)
+	loyaltyXPMonthFallback                                    map[int]int64 // резервный XP по purchase.month
+	loyaltyXPMinPerPurchase                                   int64         // минимум XP за оплату если сумма и month не дали XP
+	loyaltyXPBonusPerExtraHwidSlot                            int64         // бонус XP за каждый extra_hwid в строке
 }
 
 var conf config
@@ -212,6 +217,35 @@ func SalesMode() string {
 // RubPerStar — сколько рублей стоит 1 Telegram Star (для подсказки в админке тарифов и опциональной конвертации). 0 = не использовать.
 func RubPerStar() float64 {
 	return conf.rubPerStar
+}
+
+// LoyaltyEnabled — система лояльности (XP, скидки по уровням).
+func LoyaltyEnabled() bool {
+	return conf.loyaltyEnabled
+}
+
+// LoyaltyMaxTotalDiscountPercent — верхняя граница суммы процентов лояльность + промо (по умолчанию 100).
+func LoyaltyMaxTotalDiscountPercent() int {
+	return conf.loyaltyMaxTotalDiscountPercent
+}
+
+// LoyaltyMonthXPFallbackMap — копия карты «месяц подписки → резервный XP» (LOYALTY_XP_FALLBACK_BY_MONTH).
+func LoyaltyMonthXPFallbackMap() map[int]int64 {
+	out := make(map[int]int64, len(conf.loyaltyXPMonthFallback))
+	for k, v := range conf.loyaltyXPMonthFallback {
+		out[k] = v
+	}
+	return out
+}
+
+// LoyaltyXPMinPerPaidPurchase — минимальный XP за успешную покупку, если сумма и fallback по month не дали XP (LOYALTY_XP_MIN_PER_PURCHASE).
+func LoyaltyXPMinPerPaidPurchase() int64 {
+	return conf.loyaltyXPMinPerPurchase
+}
+
+// LoyaltyXPBonusPerExtraHwidSlot — добавка XP за каждый доп. слот HWID в счёте (LOYALTY_XP_BONUS_PER_EXTRA_HWID_SLOT).
+func LoyaltyXPBonusPerExtraHwidSlot() int64 {
+	return conf.loyaltyXPBonusPerExtraHwidSlot
 }
 func FeedbackURL() string {
 	return conf.feedbackURL
@@ -440,6 +474,43 @@ func envIntDefault(key string, def int) int {
 		log.Panicf("invalid int in %q: %v", key, err)
 	}
 	return i
+}
+
+func envInt64Default(key string, def int64) int64 {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	i, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+	if err != nil {
+		log.Panicf("invalid int64 in %q: %v", key, err)
+	}
+	return i
+}
+
+func parseLoyaltyMonthXPMap(s string) map[int]int64 {
+	out := make(map[int]int64)
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return out
+	}
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		kv := strings.SplitN(part, ":", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		m, err1 := strconv.Atoi(strings.TrimSpace(kv[0]))
+		x, err2 := strconv.ParseInt(strings.TrimSpace(kv[1]), 10, 64)
+		if err1 != nil || err2 != nil || m <= 0 || x < 0 {
+			continue
+		}
+		out[m] = x
+	}
+	return out
 }
 
 func envStringDefault(key string, def string) string {
@@ -771,4 +842,32 @@ func InitConfig() {
 		}
 		return f
 	}()
+
+	conf.loyaltyEnabled = envBoolDefault("LOYALTY_ENABLED", false)
+	conf.loyaltyMaxTotalDiscountPercent = envIntDefault("LOYALTY_MAX_TOTAL_DISCOUNT_PERCENT", 100)
+	if conf.loyaltyMaxTotalDiscountPercent < 1 {
+		conf.loyaltyMaxTotalDiscountPercent = 1
+	}
+	if conf.loyaltyMaxTotalDiscountPercent > 100 {
+		conf.loyaltyMaxTotalDiscountPercent = 100
+	}
+	conf.loyaltyXPMonthFallback = parseLoyaltyMonthXPMap(os.Getenv("LOYALTY_XP_FALLBACK_BY_MONTH"))
+	conf.loyaltyXPMinPerPurchase = envInt64Default("LOYALTY_XP_MIN_PER_PURCHASE", 0)
+	if conf.loyaltyXPMinPerPurchase < 0 {
+		conf.loyaltyXPMinPerPurchase = 0
+	}
+	conf.loyaltyXPBonusPerExtraHwidSlot = envInt64Default("LOYALTY_XP_BONUS_PER_EXTRA_HWID_SLOT", 0)
+	if conf.loyaltyXPBonusPerExtraHwidSlot < 0 {
+		conf.loyaltyXPBonusPerExtraHwidSlot = 0
+	}
+	if conf.loyaltyEnabled {
+		slog.Info("Loyalty program enabled", "max_total_discount_percent", conf.loyaltyMaxTotalDiscountPercent)
+		if len(conf.loyaltyXPMonthFallback) > 0 || conf.loyaltyXPMinPerPurchase > 0 || conf.loyaltyXPBonusPerExtraHwidSlot > 0 {
+			slog.Info("Loyalty XP extended rules active",
+				"month_fallback_entries", len(conf.loyaltyXPMonthFallback),
+				"min_per_purchase", conf.loyaltyXPMinPerPurchase,
+				"bonus_per_extra_hwid_slot", conf.loyaltyXPBonusPerExtraHwidSlot,
+			)
+		}
+	}
 }

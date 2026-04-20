@@ -13,6 +13,7 @@ const (
 	CallbackActivateTrial     = "activate_trial"
 	CallbackReferral          = "referral"
 	CallbackReferralList      = "referral_list"
+	CallbackLoyaltyRoot       = "loyalty_root"
 	CallbackManageDevices     = "manage_devices"
 	CallbackDevices           = "devices"
 	CallbackDeleteDevice      = "delete_device_"
@@ -46,6 +47,20 @@ const (
 	CallbackAdminSync    = "admin_sync"
 	CallbackAdminPromo   = "admin_promo"
 	CallbackAdminTariffs = "admin_tariffs"
+
+	// Админ: лояльность (префиксы ly_*)
+	CallbackAdminLoyaltyRoot       = "ly_r"
+	CallbackAdminLoyaltyLevels     = "ly_l"
+	CallbackAdminLoyaltyCard       = "ly_v" // ly_v?i=id
+	CallbackAdminLoyaltyNew        = "ly_n"
+	CallbackAdminLoyaltyDelAsk     = "ly_d"
+	CallbackAdminLoyaltyDelYes     = "ly_y"
+	CallbackAdminLoyaltyEditXP     = "ly_x"
+	CallbackAdminLoyaltyEditPct    = "ly_p"
+	CallbackAdminLoyaltyRecalcAsk  = "ly_rc"
+	CallbackAdminLoyaltyRecalcRun  = "ly_rr"
+	CallbackAdminLoyaltyRules      = "ly_rules"
+	CallbackAdminLoyaltyEditDn     = "ly_dn"
 
 	CallbackAdminStatsRoot    = "as_r"
 	CallbackAdminStatsUsers   = "as_u"
