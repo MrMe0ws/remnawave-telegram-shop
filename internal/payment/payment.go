@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/google/uuid"
 )
 
 type PaymentService struct {
@@ -152,7 +153,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 			if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
 				return err
 			}
-			return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+			if err := s.applyExtraAfterSubscription(ctx, customer, user, purchase); err != nil {
+				return err
+			}
+			return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 		}
 
 		useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
@@ -169,7 +173,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 				if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
 					return err
 				}
-				return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+				if err := s.applyExtraAfterSubscription(ctx, customer, user, purchase); err != nil {
+					return err
+				}
+				return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 			}
 		}
 		user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfile(ctx, customer.ID, customer.TelegramID, daysToAdd, profile)
@@ -179,7 +186,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
 			return err
 		}
-		return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+		if err := s.applyExtraAfterSubscription(ctx, customer, user, purchase); err != nil {
+			return err
+		}
+		return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 	}
 
 	useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
@@ -196,7 +206,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 			if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
 				return err
 			}
-			return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+			if err := s.applyExtraAfterSubscription(ctx, customer, user, purchase); err != nil {
+				return err
+			}
+			return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 		}
 	}
 	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
@@ -206,7 +219,21 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if err := s.finalizePurchase(ctx, purchase, customer, user); err != nil {
 		return err
 	}
-	return s.applyExtraAfterSubscription(ctx, customer, user, purchase)
+	if err := s.applyExtraAfterSubscription(ctx, customer, user, purchase); err != nil {
+		return err
+	}
+	return s.resetTrafficAfterSubscriptionPayment(ctx, user)
+}
+
+func (s PaymentService) resetTrafficAfterSubscriptionPayment(ctx context.Context, user *remnawave.User) error {
+	if user == nil || user.UUID == uuid.Nil {
+		return nil
+	}
+	if err := s.remnawaveClient.ResetUserTraffic(ctx, user.UUID); err != nil {
+		slog.Error("failed to reset user traffic after subscription payment", "error", err)
+		return err
+	}
+	return nil
 }
 
 func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *database.Purchase, customer *database.Customer) error {

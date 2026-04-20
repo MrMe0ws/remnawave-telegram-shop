@@ -280,7 +280,12 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 		}
 	}
 
-	info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_traffic"), trafficUsed, trafficLimit))
+	trafficLine := fmt.Sprintf(tm.GetText(langCode, "vpn_traffic"), trafficUsed, trafficLimit)
+	if err == nil && userInfo != nil && userInfo.TrafficLimitBytes > 0 &&
+		userInfo.UserTraffic.UsedTrafficBytes >= float64(userInfo.TrafficLimitBytes) {
+		trafficLine += tm.GetText(langCode, "vpn_traffic_limit_reached")
+	}
+	info.WriteString(trafficLine)
 	if showDevices {
 		info.WriteString("\n")
 		info.WriteString(fmt.Sprintf(tm.GetText(langCode, "vpn_devices"), deviceCount, deviceLimit))

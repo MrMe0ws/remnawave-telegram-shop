@@ -70,6 +70,7 @@
   "vpn_expires_at": "📅 Active until: %s",
   "vpn_days_left": "⏰ Left: %d days",
   "vpn_traffic": "📈 Traffic: %s / %s",
+  "vpn_traffic_limit_reached": " - ⚠️ LIMIT REACHED ⚠️",
   "vpn_devices": "📱 Devices: %s / %s",
   "vpn_pending_discount_line": "⚡️ Extra discount %d%% active.",
   "vpn_pending_discount_timer": "⏳ Discount valid for: %s",

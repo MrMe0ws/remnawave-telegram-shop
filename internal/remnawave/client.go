@@ -544,6 +544,16 @@ func (r *Client) DeleteUserDevice(ctx context.Context, userUuidStr string, hwid 
 	return r.doJSON(ctx, http.MethodPost, "/api/hwid/devices/delete", req, nil)
 }
 
+// ResetUserTraffic обнуляет накопленный расход трафика у пользователя в панели; лимиты и стратегия сброса не меняются.
+// POST /api/users/{uuid}/actions/reset-traffic — см. https://docs.rw/api/#tag/users-controller/POST/api/users/{uuid}/actions/reset-traffic
+func (r *Client) ResetUserTraffic(ctx context.Context, userUUID uuid.UUID) error {
+	if userUUID == uuid.Nil {
+		return nil
+	}
+	path := fmt.Sprintf("/api/users/%s/actions/reset-traffic", userUUID.String())
+	return r.doJSON(ctx, http.MethodPost, path, nil, nil)
+}
+
 func (r *Client) UpdateUserDeviceLimit(ctx context.Context, telegramId int64, newLimit int) (*User, error) {
 	users, err := r.getUsersByTelegramID(ctx, telegramId)
 	if err != nil {

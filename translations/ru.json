@@ -74,6 +74,7 @@
   "vpn_expires_at": "📅 Действует до: %s",
   "vpn_days_left": "⏰ Осталось: %d дн.",
   "vpn_traffic": "📈 Трафик: %s ГБ / %s ГБ",
+  "vpn_traffic_limit_reached": " - ⚠️ ДОСТИГНУТ ЛИМИТ в мес. ⚠️",
   "vpn_devices": "📱 Устройства: %s / %s",
   "vpn_pending_discount_line": "⚡️ Активирована доп. скидка %d%%.",
   "vpn_pending_discount_timer": "⏳ Скидка действует ещё: %s",
