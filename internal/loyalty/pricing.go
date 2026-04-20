@@ -30,11 +30,10 @@ func ApplyCombinedPercentDiscount(base int, loyaltyPct, promoPct, cap int) int {
 	return promo.ApplyPercentDiscountInt(base, total)
 }
 
-// XPRubEquivalentForPurchase начисление XP по строке purchase: ₽/Stars → XP, резерв по month и минимум (см. docs/loyalty/business-logic.md). Стоимость доп. HWID уже в purchase.amount.
+// XPRubEquivalentForPurchase начисление XP по строке purchase: ₽ или Stars×RUB_PER_STAR, затем минимум LOYALTY_XP_MIN_PER_PURCHASE. Стоимость доп. HWID уже в purchase.amount.
 func XPRubEquivalentForPurchase(p *database.Purchase) int64 {
 	cfg := XPConfig{
 		RubPerStar: config.RubPerStar(),
-		MonthXP:    config.LoyaltyMonthXPFallbackMap(),
 		MinPerPaid: config.LoyaltyXPMinPerPaidPurchase(),
 	}
 	return TotalXPForPurchase(p, cfg)

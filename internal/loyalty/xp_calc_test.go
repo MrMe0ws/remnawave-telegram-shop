@@ -28,18 +28,15 @@ func TestTotalXPForPurchase_StarsWithRate(t *testing.T) {
 	}
 }
 
-func TestTotalXPForPurchase_StarsZeroThenMonthFallback(t *testing.T) {
+func TestTotalXPForPurchase_StarsWithoutRateUsesMin(t *testing.T) {
 	p := &database.Purchase{
-		Amount:      0,
+		Amount:      5,
 		Month:       3,
 		InvoiceType: database.InvoiceTypeTelegram,
 	}
-	got := TotalXPForPurchase(p, XPConfig{
-		RubPerStar: 0,
-		MonthXP:    map[int]int64{3: 150},
-	})
-	if got != 150 {
-		t.Fatalf("got %d want 150", got)
+	got := TotalXPForPurchase(p, XPConfig{RubPerStar: 0, MinPerPaid: 7})
+	if got != 7 {
+		t.Fatalf("got %d want 7", got)
 	}
 }
 

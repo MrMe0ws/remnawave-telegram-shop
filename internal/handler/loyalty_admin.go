@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -191,22 +190,8 @@ func (h Handler) AdminLoyaltyRulesHandler(ctx context.Context, b *bot.Bot, updat
 }
 
 func (h Handler) buildAdminLoyaltyRulesHTML(lang string) string {
-	m := config.LoyaltyMonthXPFallbackMap()
-	months := make([]int, 0, len(m))
-	for k := range m {
-		months = append(months, k)
-	}
-	sort.Ints(months)
-	var fb strings.Builder
-	for _, mo := range months {
-		fb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "admin_loyalty_rules_month_line"), mo, m[mo]))
-	}
-	if fb.Len() == 0 {
-		fb.WriteString(h.translation.GetText(lang, "admin_loyalty_rules_fallback_empty"))
-	}
 	return fmt.Sprintf(h.translation.GetText(lang, "admin_loyalty_rules_body"),
 		config.RubPerStar(),
-		fb.String(),
 		config.LoyaltyXPMinPerPaidPurchase(),
 		config.LoyaltyMaxTotalDiscountPercent(),
 	)
