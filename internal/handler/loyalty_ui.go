@@ -56,17 +56,11 @@ func (h Handler) buildLoyaltyScreenHTML(ctx context.Context, customer *database.
 	}
 	cur := prog.CurrentTier
 	var b strings.Builder
-	b.WriteString(tm.GetText(lang, "loyalty_screen_title"))
-	b.WriteString("\n\n")
 	if cur.SortOrder == 0 && cur.DiscountPercent == 0 && prog.NextTier != nil {
-		b.WriteString(tm.GetText(lang, "loyalty_screen_level0_hint"))
+		b.WriteString(tm.GetText(lang, "loyalty_screen_level0_hint_short"))
 		b.WriteString("\n\n")
 	}
-	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_level_line"), loyaltyTierLabelHTML(cur)))
-	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_xp_line"), customer.LoyaltyXP))
-	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_discount_line"), cur.DiscountPercent))
+	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_head_level"), cur.SortOrder))
 	b.WriteString("\n\n")
 	if prog.NextTier != nil {
 		next := prog.NextTier
@@ -74,14 +68,54 @@ func (h Handler) buildLoyaltyScreenHTML(ctx context.Context, customer *database.
 		if need < 0 {
 			need = 0
 		}
-		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_next_level_line"),
-			loyaltyTierLabelHTML(*next), next.DiscountPercent, need))
+		ratio := loyaltySegmentProgressRatio(customer.LoyaltyXP, cur.XpMin, next.XpMin)
+		bar := loyaltyProgressBarASCII(ratio, loyaltyProgressBarWidth)
+		pct := loyaltyPercentInt(ratio)
+		earnedInLevel, spanToNext := loyaltyWithinLevelXP(customer.LoyaltyXP, cur.XpMin, next.XpMin)
+		if spanToNext <= 0 {
+			b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_xp_total_only"), customer.LoyaltyXP))
+		} else {
+			b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_xp_fraction"), earnedInLevel, spanToNext))
+		}
+		b.WriteString("\n")
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_progress_bar_line"), bar, pct))
+		b.WriteString("\n")
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_until_next"), next.SortOrder, need))
 		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_discount_emoji"), cur.DiscountPercent))
 	} else {
-		b.WriteString(tm.GetText(lang, "loyalty_screen_max_level"))
+		bar := loyaltyProgressBarASCII(1, loyaltyProgressBarWidth)
+		pct := loyaltyPercentInt(1.0)
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_xp_total_only"), customer.LoyaltyXP))
+		b.WriteString("\n")
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_progress_bar_line"), bar, pct))
+		b.WriteString("\n")
+		b.WriteString(tm.GetText(lang, "loyalty_screen_max_level_short"))
 		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_screen_discount_emoji"), cur.DiscountPercent))
 	}
+	b.WriteString("\n\n")
 	b.WriteString(tm.GetText(lang, "loyalty_screen_how_it_works"))
+	return b.String()
+}
+
+// buildLoyaltyConnectSummaryHTML — краткий блок лояльности для экрана «Мой VPN».
+func (h Handler) buildLoyaltyConnectSummaryHTML(lang string, customer *database.Customer, prog database.LoyaltyProgress) string {
+	tm := h.translation
+	cur := prog.CurrentTier
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_connect_head_level"), cur.SortOrder))
+	b.WriteString("\n")
+	var ratio float64 = 1
+	if prog.NextTier != nil {
+		next := prog.NextTier
+		ratio = loyaltySegmentProgressRatio(customer.LoyaltyXP, cur.XpMin, next.XpMin)
+	}
+	bar := loyaltyProgressBarASCII(ratio, loyaltyProgressBarWidth)
+	pct := loyaltyPercentInt(ratio)
+	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_connect_progress_bar_line"), bar, pct))
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_connect_discount"), cur.DiscountPercent))
 	return b.String()
 }
 

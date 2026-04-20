@@ -12,7 +12,9 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/utils"
 )
@@ -145,6 +147,11 @@ func (h Handler) buildPurchaseHistoryText(ctx context.Context, langCode string, 
 			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_date"), p.PaidAt.Format("02.01.2006 15:04")))
 		} else {
 			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_date"), tm.GetText(langCode, "vpn_not_available")))
+		}
+		if config.LoyaltyEnabled() {
+			xp := loyalty.XPRubEquivalentForPurchase(&p)
+			sb.WriteString("\n")
+			sb.WriteString(fmt.Sprintf(tm.GetText(langCode, "purchase_history_loyalty_xp"), xp))
 		}
 	}
 

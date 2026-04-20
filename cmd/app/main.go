@@ -125,7 +125,7 @@ func main() {
 	promoService := promo.NewService(promoRepository, customerRepository, purchaseRepository, remnawaveClient)
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient, promoService)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient, promoService, loyaltyTierRepository)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// Проверяет оплаченные счета в CryptoPay и YooKassa
@@ -277,6 +277,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRecalcAsk, bot.MatchTypeExact, h.AdminLoyaltyRecalcAskHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRecalcRun, bot.MatchTypeExact, h.AdminLoyaltyRecalcRunHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRules, bot.MatchTypeExact, h.AdminLoyaltyRulesHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyStats, bot.MatchTypeExact, h.AdminLoyaltyStatsHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyCard, bot.MatchTypePrefix, h.AdminLoyaltyTierCardHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyDelAsk, bot.MatchTypePrefix, h.AdminLoyaltyDelAskHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyDelYes, bot.MatchTypePrefix, h.AdminLoyaltyDelYesHandler, isAdminMiddleware)

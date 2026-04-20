@@ -79,7 +79,6 @@ type config struct {
 	loyaltyMaxTotalDiscountPercent                            int // потолок суммы лояльность+промо (1–100)
 	loyaltyXPMonthFallback                                    map[int]int64 // резервный XP по purchase.month
 	loyaltyXPMinPerPurchase                                   int64         // минимум XP за оплату если сумма и month не дали XP
-	loyaltyXPBonusPerExtraHwidSlot                            int64         // бонус XP за каждый extra_hwid в строке
 }
 
 var conf config
@@ -243,10 +242,6 @@ func LoyaltyXPMinPerPaidPurchase() int64 {
 	return conf.loyaltyXPMinPerPurchase
 }
 
-// LoyaltyXPBonusPerExtraHwidSlot — добавка XP за каждый доп. слот HWID в счёте (LOYALTY_XP_BONUS_PER_EXTRA_HWID_SLOT).
-func LoyaltyXPBonusPerExtraHwidSlot() int64 {
-	return conf.loyaltyXPBonusPerExtraHwidSlot
-}
 func FeedbackURL() string {
 	return conf.feedbackURL
 }
@@ -856,17 +851,12 @@ func InitConfig() {
 	if conf.loyaltyXPMinPerPurchase < 0 {
 		conf.loyaltyXPMinPerPurchase = 0
 	}
-	conf.loyaltyXPBonusPerExtraHwidSlot = envInt64Default("LOYALTY_XP_BONUS_PER_EXTRA_HWID_SLOT", 0)
-	if conf.loyaltyXPBonusPerExtraHwidSlot < 0 {
-		conf.loyaltyXPBonusPerExtraHwidSlot = 0
-	}
 	if conf.loyaltyEnabled {
 		slog.Info("Loyalty program enabled", "max_total_discount_percent", conf.loyaltyMaxTotalDiscountPercent)
-		if len(conf.loyaltyXPMonthFallback) > 0 || conf.loyaltyXPMinPerPurchase > 0 || conf.loyaltyXPBonusPerExtraHwidSlot > 0 {
+		if len(conf.loyaltyXPMonthFallback) > 0 || conf.loyaltyXPMinPerPurchase > 0 {
 			slog.Info("Loyalty XP extended rules active",
 				"month_fallback_entries", len(conf.loyaltyXPMonthFallback),
 				"min_per_purchase", conf.loyaltyXPMinPerPurchase,
-				"bonus_per_extra_hwid_slot", conf.loyaltyXPBonusPerExtraHwidSlot,
 			)
 		}
 	}

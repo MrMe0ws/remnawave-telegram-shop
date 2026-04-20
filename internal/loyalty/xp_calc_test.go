@@ -55,16 +55,15 @@ func TestTotalXPForPurchase_MinPerPaid(t *testing.T) {
 	}
 }
 
-func TestTotalXPForPurchase_ExtraHwidBonus(t *testing.T) {
+func TestTotalXPForPurchase_ExtraHwidIncludedInAmount(t *testing.T) {
+	// ExtraHwid только размечает строку; XP идёт от суммы оплаты, без отдельного бонуса за слоты.
 	p := &database.Purchase{
 		Amount:      100,
 		InvoiceType: database.InvoiceTypeYookasa,
 		ExtraHwid:   2,
 	}
-	got := TotalXPForPurchase(p, XPConfig{
-		BonusXPPerExtraHwidSlot: 25,
-	})
-	if got != 150 {
-		t.Fatalf("got %d want 150", got)
+	got := TotalXPForPurchase(p, XPConfig{})
+	if got != 100 {
+		t.Fatalf("got %d want 100", got)
 	}
 }

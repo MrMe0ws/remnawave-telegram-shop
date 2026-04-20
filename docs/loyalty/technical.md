@@ -4,7 +4,7 @@
 
 ## Связь с кодовой базой
 
-- Конфиг: `internal/config/cofig.go` — **`LOYALTY_ENABLED`**, **`LOYALTY_MAX_TOTAL_DISCOUNT_PERCENT`**, **`LOYALTY_XP_FALLBACK_BY_MONTH`**, **`LOYALTY_XP_MIN_PER_PURCHASE`**, **`LOYALTY_XP_BONUS_PER_EXTRA_HWID_SLOT`** (+ `.env.sample`). Для XP при оплате Stars использовать **`RUB_PER_STAR`**. Формула начисления за строку покупки: сумма в ₽ (или Stars×курс) → при 0 резерв по `purchase.month` → при 0 минимум из env → плюс бонус за Extra HWID-слоты (`internal/loyalty/xp_calc.go`).
+- Конфиг: `internal/config/cofig.go` — **`LOYALTY_ENABLED`**, **`LOYALTY_MAX_TOTAL_DISCOUNT_PERCENT`**, **`LOYALTY_XP_FALLBACK_BY_MONTH`**, **`LOYALTY_XP_MIN_PER_PURCHASE`** (+ `.env.sample`). Для XP при оплате Stars использовать **`RUB_PER_STAR`**. Формула начисления за строку покупки: сумма в ₽ (или Stars×курс), уже включающая доп. HWID в счёте → при 0 резерв по `purchase.month` → при 0 минимум из env (`internal/loyalty/xp_calc.go`).
 - БД: миграции `db/migrations/`; репозитории `internal/database/`.
 - Начисление XP и применение скидки лояльности: по цепочке успешной оплаты рядом с существующей логикой промо (`internal/payment`, `internal/handler`, начисление `purchase`).
 - Callback/UI: `internal/handler`, `callback_type.go`, регистрация в `cmd/app/main.go`.

@@ -266,6 +266,21 @@ func (cr *CustomerRepository) CountCustomersWithLoyaltyXPAtLeast(ctx context.Con
 	return n, err
 }
 
+// CountCustomersLoyaltyXPHalfOpen число клиентов с loyalty_xp >= minXP и (если задано) loyalty_xp < maxXPExclusive.
+// Для верхней границы последнего уровня передайте maxXPExclusive == nil.
+func (cr *CustomerRepository) CountCustomersLoyaltyXPHalfOpen(ctx context.Context, minXP int64, maxXPExclusive *int64) (int64, error) {
+	var n int64
+	var err error
+	if maxXPExclusive == nil {
+		err = cr.pool.QueryRow(ctx,
+			`SELECT COUNT(*) FROM customer WHERE loyalty_xp >= $1`, minXP).Scan(&n)
+	} else {
+		err = cr.pool.QueryRow(ctx,
+			`SELECT COUNT(*) FROM customer WHERE loyalty_xp >= $1 AND loyalty_xp < $2`, minXP, *maxXPExclusive).Scan(&n)
+	}
+	return n, err
+}
+
 func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, updates map[string]interface{}) error {
 	if len(updates) == 0 {
 		return nil

@@ -86,14 +86,14 @@ func (h Handler) AdminLoyaltyRootHandler(ctx context.Context, b *bot.Bot, update
 	} else if ok {
 		aboveZero, _ = h.customerRepository.CountCustomersWithLoyaltyXPAtLeast(ctx, thr)
 	}
-	text := fmt.Sprintf(h.translation.GetText(lang, "admin_loyalty_root_text"),
-		config.LoyaltyMaxTotalDiscountPercent(),
-		aboveZero,
-	)
+	text := fmt.Sprintf(h.translation.GetText(lang, "admin_loyalty_root_text"), aboveZero)
 	kb := [][]models.InlineKeyboardButton{
 		{h.translation.WithButton(lang, "admin_loyalty_levels", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyLevels})},
-		{h.translation.WithButton(lang, "admin_loyalty_rules", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyRules})},
-		{h.translation.WithButton(lang, "admin_loyalty_recalc", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyRecalcAsk})},
+		{h.translation.WithButton(lang, "admin_loyalty_statistics", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyStats})},
+		{
+			h.translation.WithButton(lang, "admin_loyalty_rules", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyRules}),
+			h.translation.WithButton(lang, "admin_loyalty_recalc", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyRecalcAsk}),
+		},
 		{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel})},
 	}
 	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
@@ -105,6 +105,58 @@ func (h Handler) AdminLoyaltyRootHandler(ctx context.Context, b *bot.Bot, update
 	})
 	if err != nil {
 		slog.Error("admin loyalty root", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+// AdminLoyaltyStatsHandler — распределение клиентов по текущим уровням (интервалы xp_min).
+func (h Handler) AdminLoyaltyStatsHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() || !config.LoyaltyEnabled() {
+		return
+	}
+	cb := update.CallbackQuery
+	adminLoyaltyClear(cb.From.ID)
+	msg := cb.Message.Message
+	if msg == nil || h.loyaltyTierRepository == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+	tiers, err := h.loyaltyTierRepository.ListAllOrderedByXpMinAsc(ctx)
+	if err != nil {
+		slog.Error("admin loyalty stats tiers", "error", err)
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	var sb strings.Builder
+	sb.WriteString(h.translation.GetText(lang, "admin_loyalty_stats_title"))
+	for i, t := range tiers {
+		var maxEx *int64
+		if i+1 < len(tiers) {
+			nx := tiers[i+1].XpMin
+			maxEx = &nx
+		}
+		n, cntErr := h.customerRepository.CountCustomersLoyaltyXPHalfOpen(ctx, t.XpMin, maxEx)
+		if cntErr != nil {
+			slog.Error("admin loyalty stats count", "error", cntErr, "tier", t.SortOrder)
+			_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+			return
+		}
+		sb.WriteString(fmt.Sprintf(h.translation.GetText(lang, "admin_loyalty_stats_row"),
+			t.SortOrder, t.XpMin, t.DiscountPercent, n))
+	}
+
+	kb := [][]models.InlineKeyboardButton{
+		{h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackAdminLoyaltyRoot})},
+	}
+	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:      msg.Chat.ID,
+		MessageID:   msg.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        sb.String(),
+		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: kb},
+	})
+	if err != nil {
+		slog.Error("admin loyalty stats edit", "error", err)
 	}
 	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
 }
@@ -156,7 +208,7 @@ func (h Handler) buildAdminLoyaltyRulesHTML(lang string) string {
 		config.RubPerStar(),
 		fb.String(),
 		config.LoyaltyXPMinPerPaidPurchase(),
-		config.LoyaltyXPBonusPerExtraHwidSlot(),
+		config.LoyaltyMaxTotalDiscountPercent(),
 	)
 }
 

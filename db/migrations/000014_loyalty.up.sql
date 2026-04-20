@@ -18,6 +18,6 @@ INSERT INTO loyalty_tier (sort_order, xp_min, discount_percent)
 VALUES (0, 0, 0),
        (1, 500, 2),
        (2, 1000, 4),
-       (3, 2200, 6),
-       (4, 4500, 8),
-       (5, 9000, 10);
+       (3, 2000, 6),
+       (4, 4000, 8),
+       (5, 7000, 10);

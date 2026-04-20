@@ -37,55 +37,7 @@ func (h Handler) ConnectCommandHandler(ctx context.Context, b *bot.Bot, update *
 
 	langCode := update.Message.From.LanguageCode
 
-	var markup [][]models.InlineKeyboardButton
-	if customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now()) {
-		// Если есть активная подписка, показываем кнопки подключения
-		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "manage_devices_button", models.InlineKeyboardButton{CallbackData: CallbackManageDevices}),
-		})
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
-		})
-
-		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
-		var referralAndStatusRow []models.InlineKeyboardButton
-		// Кнопка "Рефералы" всегда показывается при активной подписке
-		referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
-			CallbackData: CallbackReferral,
-		}))
-		if config.ServerStatusURL() != "" {
-			referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
-				URL: config.ServerStatusURL(),
-			}))
-		}
-		markup = append(markup, referralAndStatusRow)
-	} else {
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
-		})
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
-		})
-		var referralInactiveRow []models.InlineKeyboardButton
-		referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
-			CallbackData: CallbackReferral,
-		}))
-		if config.ServerStatusURL() != "" {
-			referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
-				URL: config.ServerStatusURL(),
-			}))
-		}
-		markup = append(markup, referralInactiveRow)
-	}
-	if config.LoyaltyEnabled() {
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "loyalty_menu_button", models.InlineKeyboardButton{CallbackData: CallbackLoyaltyRoot}),
-		})
-	}
-	markup = append(markup, []models.InlineKeyboardButton{
-		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
-	})
+	markup := h.buildConnectInlineMarkup(langCode, customer)
 
 	isDisabled := true
 	displayName := buildDisplayName(update.Message.From.FirstName, update.Message.From.LastName, update.Message.From.Username)
@@ -125,55 +77,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 
 	langCode := update.CallbackQuery.From.LanguageCode
 
-	var markup [][]models.InlineKeyboardButton
-	if customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now()) {
-		// Если есть активная подписка, показываем кнопки подключения
-		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "manage_devices_button", models.InlineKeyboardButton{CallbackData: CallbackManageDevices}),
-		})
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
-		})
-
-		// Добавляем кнопки "Рефералы" и "Статус серверов" в одном ряду
-		var referralAndStatusRow []models.InlineKeyboardButton
-		// Кнопка "Рефералы" всегда показывается при активной подписке
-		referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
-			CallbackData: CallbackReferral,
-		}))
-		if config.ServerStatusURL() != "" {
-			referralAndStatusRow = append(referralAndStatusRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
-				URL: config.ServerStatusURL(),
-			}))
-		}
-		markup = append(markup, referralAndStatusRow)
-	} else {
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
-		})
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
-		})
-		var referralInactiveRow []models.InlineKeyboardButton
-		referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{
-			CallbackData: CallbackReferral,
-		}))
-		if config.ServerStatusURL() != "" {
-			referralInactiveRow = append(referralInactiveRow, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
-				URL: config.ServerStatusURL(),
-			}))
-		}
-		markup = append(markup, referralInactiveRow)
-	}
-	if config.LoyaltyEnabled() {
-		markup = append(markup, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "loyalty_menu_button", models.InlineKeyboardButton{CallbackData: CallbackLoyaltyRoot}),
-		})
-	}
-	markup = append(markup, []models.InlineKeyboardButton{
-		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
-	})
+	markup := h.buildConnectInlineMarkup(langCode, customer)
 
 	isDisabled := true
 	displayName := buildDisplayName(update.CallbackQuery.From.FirstName, update.CallbackQuery.From.LastName, update.CallbackQuery.From.Username)
@@ -183,6 +87,51 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}, lp)
 
 	logEditError("Error sending connect message", err)
+}
+
+// buildConnectInlineMarkup — порядок клавиатуры «Мой VPN»: подключить VPN / купить → управление устройствами (только при активной подписке)
+// → статус серверов (SERVER_STATUS_URL) и лояльность (LOYALTY_ENABLED) в одном ряду → история и рефералы → назад.
+// Отдельные кнопки опускаются, если URL не задан или функция выключена.
+func (h Handler) buildConnectInlineMarkup(langCode string, customer *database.Customer) [][]models.InlineKeyboardButton {
+	now := time.Now()
+	active := customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(now)
+	var markup [][]models.InlineKeyboardButton
+
+	if active {
+		markup = append(markup, h.resolveConnectDeviceButton(langCode, customer.SubscriptionLink))
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "manage_devices_button", models.InlineKeyboardButton{CallbackData: CallbackManageDevices}),
+		})
+	} else {
+		markup = append(markup, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy}),
+		})
+	}
+
+	var statusLoyalty []models.InlineKeyboardButton
+	if config.ServerStatusURL() != "" {
+		statusLoyalty = append(statusLoyalty, h.translation.WithButton(langCode, "server_status_button", models.InlineKeyboardButton{
+			URL: config.ServerStatusURL(),
+		}))
+	}
+	if config.LoyaltyEnabled() {
+		statusLoyalty = append(statusLoyalty, h.translation.WithButton(langCode, "loyalty_menu_button", models.InlineKeyboardButton{
+			CallbackData: CallbackLoyaltyRoot,
+		}))
+	}
+	if len(statusLoyalty) > 0 {
+		markup = append(markup, statusLoyalty)
+	}
+
+	markup = append(markup, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "purchase_history_button", models.InlineKeyboardButton{CallbackData: CallbackPurchaseHistory}),
+		h.translation.WithButton(langCode, "referral_button", models.InlineKeyboardButton{CallbackData: CallbackReferral}),
+	})
+
+	markup = append(markup, []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+	})
+	return markup
 }
 
 func (h Handler) buildConnectText(ctx context.Context, customer *database.Customer, langCode, displayName string) string {
@@ -305,23 +254,9 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 	if config.LoyaltyEnabled() && h.loyaltyTierRepository != nil && isActive {
 		if prog, err := h.loyaltyTierRepository.ProgressForXP(ctx, customer.LoyaltyXP); err != nil {
 			slog.Error("loyalty progress connect summary", "error", err)
-		} else if prog.NextTier != nil {
-			next := prog.NextTier
-			info.WriteString("\n\n")
-			info.WriteString(fmt.Sprintf(tm.GetText(langCode, "loyalty_connect_summary_line"),
-				loyaltyTierLabelHTML(prog.CurrentTier),
-				prog.CurrentTier.DiscountPercent,
-				customer.LoyaltyXP,
-				next.XpMin,
-				loyaltyTierLabelHTML(*next),
-			))
 		} else {
 			info.WriteString("\n\n")
-			info.WriteString(fmt.Sprintf(tm.GetText(langCode, "loyalty_connect_summary_max"),
-				loyaltyTierLabelHTML(prog.CurrentTier),
-				prog.CurrentTier.DiscountPercent,
-				customer.LoyaltyXP,
-			))
+			info.WriteString(h.buildLoyaltyConnectSummaryHTML(langCode, customer, prog))
 		}
 	}
 

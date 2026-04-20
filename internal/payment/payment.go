@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strings"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
@@ -34,9 +35,10 @@ type PaymentService struct {
 	cryptoPayClient    *cryptopay.Client
 	yookasaClient      *yookasa.Client
 	referralRepository *database.ReferralRepository
-	cache              *cache.Cache
-	moynalogClient     *moynalog.Client
-	promoService       *promo.Service
+	cache                 *cache.Cache
+	moynalogClient        *moynalog.Client
+	promoService          *promo.Service
+	loyaltyTierRepository *database.LoyaltyTierRepository
 }
 
 // PromoMeta attaches an activated percent discount to a new purchase row (optional).
@@ -58,6 +60,7 @@ func NewPaymentService(
 	cache *cache.Cache,
 	moynalogClient *moynalog.Client,
 	promoService *promo.Service,
+	loyaltyTierRepository *database.LoyaltyTierRepository,
 ) *PaymentService {
 	return &PaymentService{
 		purchaseRepository: purchaseRepository,
@@ -72,6 +75,7 @@ func NewPaymentService(
 		cache:              cache,
 		moynalogClient:     moynalogClient,
 		promoService:       promoService,
+		loyaltyTierRepository: loyaltyTierRepository,
 	}
 }
 
@@ -373,26 +377,22 @@ func (s PaymentService) applyExtraAfterSubscription(ctx context.Context, custome
 		})
 	}
 
-	// Смена тарифа + в счёте явная докупка HWID: лимит = база нового тарифа + newExtra (из счёта).
-	// Иначе при carriedExtra>0 и newExtra>0 выражение currentLimit−carriedExtra+n даёт занижение лимита, а extra_hwid=carried+newExtra — лишние «допы» в БД и промпт продления.
+	// SALES_MODE=tariffs и в счёте есть доп. HWID: лимит = база тарифа из счёта + newExtra.
+	// Учитываем и смену тарифа, и продление того же тарифа: после CreateOrUpdateUserWithTariffProfile
+	// панель часто отдаёт currentLimit = только база тарифа; тогда currentLimit−carriedExtra+newExtra занижает лимит
+	// (например 2−2+2=2 вместо 2+2=4, с min base 1 → 3).
 	if config.SalesMode() == "tariffs" && purchase.TariffID != nil && *purchase.TariffID > 0 && s.tariffRepository != nil && newExtra > 0 {
-		var oldTID int64
-		if customer != nil && customer.CurrentTariffID != nil {
-			oldTID = *customer.CurrentTariffID
+		newLimit := paidBaseLimit + newExtra
+		if maxL := config.HwidMaxDevices(); maxL > 0 && newLimit > maxL {
+			newLimit = maxL
 		}
-		if oldTID != *purchase.TariffID {
-			newLimit := paidBaseLimit + newExtra
-			if maxL := config.HwidMaxDevices(); maxL > 0 && newLimit > maxL {
-				newLimit = maxL
-			}
-			if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit); err != nil {
-				return err
-			}
-			return s.customerRepository.UpdateFields(ctx, customer.ID, map[string]interface{}{
-				"extra_hwid":            newExtra,
-				"extra_hwid_expires_at": user.ExpireAt,
-			})
+		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, customer.TelegramID, newLimit); err != nil {
+			return err
 		}
+		return s.customerRepository.UpdateFields(ctx, customer.ID, map[string]interface{}{
+			"extra_hwid":            newExtra,
+			"extra_hwid_expires_at": user.ExpireAt,
+		})
 	}
 
 	if carriedExtra == 0 && newExtra == 0 && paidBaseLimit > 0 && currentLimit > 0 && currentLimit < paidBaseLimit {
@@ -587,8 +587,64 @@ func (s PaymentService) applyLoyaltyXPAfterPayment(ctx context.Context, purchase
 	if gain <= 0 {
 		return
 	}
+	oldXP := customer.LoyaltyXP
 	if err := s.customerRepository.IncrementLoyaltyXP(ctx, customer.ID, gain); err != nil {
 		slog.Error("loyalty xp increment", "error", err, "customer_id", utils.MaskHalfInt64(customer.ID), "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		return
+	}
+	s.maybeNotifyLoyaltyLevelUp(ctx, customer, oldXP, oldXP+gain)
+}
+
+// maybeNotifyLoyaltyLevelUp отправляет поздравление при повышении уровня (sort_order текущего tier).
+func (s PaymentService) maybeNotifyLoyaltyLevelUp(ctx context.Context, customer *database.Customer, oldXP, newXP int64) {
+	if s.telegramBot == nil || s.loyaltyTierRepository == nil || customer == nil {
+		return
+	}
+	lang := customer.Language
+	oldProg, err := s.loyaltyTierRepository.ProgressForXP(ctx, oldXP)
+	if err != nil {
+		slog.Error("loyalty progress before level-up notify", "error", err)
+		return
+	}
+	newProg, err := s.loyaltyTierRepository.ProgressForXP(ctx, newXP)
+	if err != nil {
+		slog.Error("loyalty progress after level-up notify", "error", err)
+		return
+	}
+	if newProg.CurrentTier.SortOrder <= oldProg.CurrentTier.SortOrder {
+		return
+	}
+	tm := s.translation
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_level_up_title"), newProg.CurrentTier.SortOrder))
+	b.WriteString("\n\n")
+	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_level_up_discount"), newProg.CurrentTier.DiscountPercent))
+	if newProg.NextTier != nil {
+		need := newProg.NextTier.XpMin - newXP
+		if need < 0 {
+			need = 0
+		}
+		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_level_up_until_next"), newProg.NextTier.SortOrder, need))
+	}
+	b.WriteString("\n\n")
+	b.WriteString(tm.GetText(lang, "loyalty_level_up_footer"))
+	isDisabled := true
+	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    customer.TelegramID,
+		Text:      b.String(),
+		ParseMode: models.ParseModeHTML,
+		LinkPreviewOptions: &models.LinkPreviewOptions{
+			IsDisabled: &isDisabled,
+		},
+		ReplyMarkup: models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{
+				{tm.WithButton(lang, "loyalty_level_up_main", models.InlineKeyboardButton{CallbackData: "start"})},
+			},
+		},
+	})
+	if err != nil {
+		slog.Error("loyalty level-up notify send", "error", err, "customer_id", utils.MaskHalfInt64(customer.ID))
 	}
 }
 

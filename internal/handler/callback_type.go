@@ -53,13 +53,14 @@ const (
 	CallbackAdminLoyaltyLevels     = "ly_l"
 	CallbackAdminLoyaltyCard       = "ly_v" // ly_v?i=id
 	CallbackAdminLoyaltyNew        = "ly_n"
-	CallbackAdminLoyaltyDelAsk     = "ly_d"
+	CallbackAdminLoyaltyDelAsk     = "ly_del" // не "ly_d" — префикс конфликтует с ly_dn
 	CallbackAdminLoyaltyDelYes     = "ly_y"
 	CallbackAdminLoyaltyEditXP     = "ly_x"
 	CallbackAdminLoyaltyEditPct    = "ly_p"
 	CallbackAdminLoyaltyRecalcAsk  = "ly_rc"
 	CallbackAdminLoyaltyRecalcRun  = "ly_rr"
 	CallbackAdminLoyaltyRules      = "ly_rules"
+	CallbackAdminLoyaltyStats      = "ly_st"
 	CallbackAdminLoyaltyEditDn     = "ly_dn"
 
 	CallbackAdminStatsRoot    = "as_r"
