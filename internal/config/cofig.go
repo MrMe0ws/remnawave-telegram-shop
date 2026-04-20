@@ -77,8 +77,7 @@ type config struct {
 	rubPerStar                                                float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
 	loyaltyEnabled                                            bool
 	loyaltyMaxTotalDiscountPercent                            int // потолок суммы лояльность+промо (1–100)
-	loyaltyXPMonthFallback                                    map[int]int64 // резервный XP по purchase.month
-	loyaltyXPMinPerPurchase                                   int64         // минимум XP за оплату если сумма и month не дали XP
+	loyaltyXPMinPerPurchase                                   int64 // минимум XP за оплату если сумма не дала XP
 }
 
 var conf config
@@ -228,16 +227,7 @@ func LoyaltyMaxTotalDiscountPercent() int {
 	return conf.loyaltyMaxTotalDiscountPercent
 }
 
-// LoyaltyMonthXPFallbackMap — копия карты «месяц подписки → резервный XP» (LOYALTY_XP_FALLBACK_BY_MONTH).
-func LoyaltyMonthXPFallbackMap() map[int]int64 {
-	out := make(map[int]int64, len(conf.loyaltyXPMonthFallback))
-	for k, v := range conf.loyaltyXPMonthFallback {
-		out[k] = v
-	}
-	return out
-}
-
-// LoyaltyXPMinPerPaidPurchase — минимальный XP за успешную покупку, если сумма и fallback по month не дали XP (LOYALTY_XP_MIN_PER_PURCHASE).
+// LoyaltyXPMinPerPaidPurchase — минимальный XP за успешную покупку, если сумма не дала XP (LOYALTY_XP_MIN_PER_PURCHASE).
 func LoyaltyXPMinPerPaidPurchase() int64 {
 	return conf.loyaltyXPMinPerPurchase
 }
@@ -481,31 +471,6 @@ func envInt64Default(key string, def int64) int64 {
 		log.Panicf("invalid int64 in %q: %v", key, err)
 	}
 	return i
-}
-
-func parseLoyaltyMonthXPMap(s string) map[int]int64 {
-	out := make(map[int]int64)
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return out
-	}
-	for _, part := range strings.Split(s, ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		kv := strings.SplitN(part, ":", 2)
-		if len(kv) != 2 {
-			continue
-		}
-		m, err1 := strconv.Atoi(strings.TrimSpace(kv[0]))
-		x, err2 := strconv.ParseInt(strings.TrimSpace(kv[1]), 10, 64)
-		if err1 != nil || err2 != nil || m <= 0 || x < 0 {
-			continue
-		}
-		out[m] = x
-	}
-	return out
 }
 
 func envStringDefault(key string, def string) string {
@@ -846,18 +811,14 @@ func InitConfig() {
 	if conf.loyaltyMaxTotalDiscountPercent > 100 {
 		conf.loyaltyMaxTotalDiscountPercent = 100
 	}
-	conf.loyaltyXPMonthFallback = parseLoyaltyMonthXPMap(os.Getenv("LOYALTY_XP_FALLBACK_BY_MONTH"))
 	conf.loyaltyXPMinPerPurchase = envInt64Default("LOYALTY_XP_MIN_PER_PURCHASE", 0)
 	if conf.loyaltyXPMinPerPurchase < 0 {
 		conf.loyaltyXPMinPerPurchase = 0
 	}
 	if conf.loyaltyEnabled {
 		slog.Info("Loyalty program enabled", "max_total_discount_percent", conf.loyaltyMaxTotalDiscountPercent)
-		if len(conf.loyaltyXPMonthFallback) > 0 || conf.loyaltyXPMinPerPurchase > 0 {
-			slog.Info("Loyalty XP extended rules active",
-				"month_fallback_entries", len(conf.loyaltyXPMonthFallback),
-				"min_per_purchase", conf.loyaltyXPMinPerPurchase,
-			)
+		if conf.loyaltyXPMinPerPurchase > 0 {
+			slog.Info("Loyalty XP min per purchase active", "min_per_purchase", conf.loyaltyXPMinPerPurchase)
 		}
 	}
 }

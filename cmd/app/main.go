@@ -36,7 +36,7 @@ import (
 
 // Version, Commit, BuildDate - переменные версии, устанавливаются при сборке через ldflags
 var (
-	Version   = "4.4.0"
+	Version   = "4.4.1"
 	Commit    = "none"
 	BuildDate = "unknown"
 )
