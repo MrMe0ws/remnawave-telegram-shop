@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -68,31 +69,32 @@ func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *mod
 	}
 
 	var priceButtons []models.InlineKeyboardButton
+	price1Rub := config.Price1()
 
-	if config.Price1() > 0 {
-		a := config.Price1()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_1", a, models.InlineKeyboardButton{
+	if price1Rub > 0 {
+		a := price1Rub
+		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_1", a, 1, price1Rub, models.InlineKeyboardButton{
 			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 1, a),
 		}))
 	}
 
 	if config.Price3() > 0 {
 		a := config.Price3()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_3", a, models.InlineKeyboardButton{
+		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_3", a, 3, price1Rub, models.InlineKeyboardButton{
 			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 3, a),
 		}))
 	}
 
 	if config.Price6() > 0 {
 		a := config.Price6()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_6", a, models.InlineKeyboardButton{
+		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_6", a, 6, price1Rub, models.InlineKeyboardButton{
 			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 6, a),
 		}))
 	}
 
 	if config.Price12() > 0 {
 		a := config.Price12()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_12", a, models.InlineKeyboardButton{
+		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_12", a, 12, price1Rub, models.InlineKeyboardButton{
 			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 12, a),
 		}))
 	}
@@ -125,12 +127,20 @@ func (h Handler) renderTariffMonthChoice(ctx context.Context, b *bot.Bot, update
 		slog.Error("list tariff prices", "error", err)
 		return
 	}
+	price1Rub := 0
+	for _, p := range prices {
+		if p.Months == 1 && p.AmountRub > 0 {
+			price1Rub = p.AmountRub
+			break
+		}
+	}
+
 	var priceButtons []models.InlineKeyboardButton
 	for _, p := range prices {
 		if p.AmountRub <= 0 {
 			continue
 		}
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, monthButtonKey(p.Months), p.AmountRub, models.InlineKeyboardButton{
+		priceButtons = append(priceButtons, h.monthPriceButton(langCode, monthButtonKey(p.Months), p.AmountRub, p.Months, price1Rub, models.InlineKeyboardButton{
 			CallbackData: fmt.Sprintf("%s?tid=%d&month=%d&amount=%d", CallbackSell, tariff.ID, p.Months, p.AmountRub),
 		}))
 	}
@@ -167,9 +177,27 @@ func monthButtonKey(months int) string {
 }
 
 // monthPriceButton текст кнопки периода: шаблон из ключей month_1…month_12 с одним %d (сумма в ₽).
-func (h Handler) monthPriceButton(lang, key string, amountRub int, cb models.InlineKeyboardButton) models.InlineKeyboardButton {
+// При SHOW_LONG_TERM_SAVINGS_PERCENT к периодам >1 мес добавляется (-N%) к базе «цена за 1 мес × месяцев» (price1Rub).
+func (h Handler) monthPriceButton(lang, key string, amountRub int, months int, price1Rub int, cb models.InlineKeyboardButton) models.InlineKeyboardButton {
 	cb.Text = fmt.Sprintf(h.translation.GetText(lang, key), amountRub)
+	if config.ShowLongTermSavingsPercent() && months > 1 {
+		if pct := longTermSavingsPercent(price1Rub, months, amountRub); pct > 0 {
+			cb.Text += fmt.Sprintf(" (-%d%%)", pct)
+		}
+	}
 	return cb
+}
+
+// longTermSavingsPercent — доля экономии относительно суммы N×price1Rub (месячная цена из classic или тарифа).
+func longTermSavingsPercent(price1Rub, months, totalRub int) int {
+	if months <= 1 || price1Rub <= 0 || totalRub <= 0 {
+		return 0
+	}
+	baseline := price1Rub * months
+	if totalRub >= baseline {
+		return 0
+	}
+	return int(math.Round(float64(baseline-totalRub) * 100.0 / float64(baseline)))
 }
 
 func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {

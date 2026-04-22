@@ -74,6 +74,7 @@ type config struct {
 	remnawaveHeaders                                          map[string]string
 	trafficLimitResetStrategy                                 string
 	salesMode                                                 string
+	showLongTermSavingsPercent                                bool // подписи кнопок периодов: (-N%) к 3/6/12 мес относительно цены 1 мес
 	rubPerStar                                                float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
 	loyaltyEnabled                                            bool
 	loyaltyMaxTotalDiscountPercent                            int // потолок суммы лояльность+промо (1–100)
@@ -210,6 +211,11 @@ func TrafficLimitResetStrategy() string {
 // SalesMode: "classic" (цены из env) или "tariffs" (цены из БД).
 func SalesMode() string {
 	return conf.salesMode
+}
+
+// ShowLongTermSavingsPercent — добавлять к кнопкам 3/6/12 мес экономию в % относительно покупки по месячной цене (PRICE_1 или цена 1 мес тарифа).
+func ShowLongTermSavingsPercent() bool {
+	return conf.showLongTermSavingsPercent
 }
 
 // RubPerStar — сколько рублей стоит 1 Telegram Star (для подсказки в админке тарифов и опциональной конвертации). 0 = не использовать.
@@ -790,6 +796,8 @@ func InitConfig() {
 	if conf.salesMode != "classic" && conf.salesMode != "tariffs" {
 		panic("SALES_MODE must be 'classic' or 'tariffs'")
 	}
+
+	conf.showLongTermSavingsPercent = envBoolDefault("SHOW_LONG_TERM_SAVINGS_PERCENT", false)
 
 	conf.rubPerStar = func() float64 {
 		v := strings.TrimSpace(os.Getenv("RUB_PER_STAR"))
