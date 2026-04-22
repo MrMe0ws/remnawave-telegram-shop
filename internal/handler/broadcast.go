@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -52,6 +54,8 @@ type BroadcastState struct {
 	waitingForInput      map[int64]bool
 	waitingForButtonPick map[int64]bool
 	selectedType              map[int64]BroadcastType
+	// Фильтр тарифа для платных сегментов в SALES_MODE=tariffs; nil — все платники сегмента; не в map — то же после classic.
+	selectedTariffID map[int64]*int64
 	broadcastOpenedFromAdmin  map[int64]bool
 	promptMessageID           map[int64]int
 	pendingPreviewMsgID       map[int64]int
@@ -66,6 +70,7 @@ func newBroadcastState() *BroadcastState {
 		waitingForInput:      make(map[int64]bool),
 		waitingForButtonPick: make(map[int64]bool),
 		selectedType:               make(map[int64]BroadcastType),
+		selectedTariffID:             make(map[int64]*int64),
 		broadcastOpenedFromAdmin:   make(map[int64]bool),
 		promptMessageID:            make(map[int64]int),
 		pendingPreviewMsgID:        make(map[int64]int),
@@ -81,6 +86,7 @@ func clearBroadcastState(adminID int64) {
 	delete(broadcastState.waitingForInput, adminID)
 	delete(broadcastState.waitingForButtonPick, adminID)
 	delete(broadcastState.selectedType, adminID)
+	delete(broadcastState.selectedTariffID, adminID)
 	delete(broadcastState.broadcastOpenedFromAdmin, adminID)
 	delete(broadcastState.promptMessageID, adminID)
 	delete(broadcastState.pendingPreviewMsgID, adminID)
@@ -96,10 +102,90 @@ func resetBroadcastDraft(adminID int64) {
 	delete(broadcastState.waitingForButtonPick, adminID)
 	delete(broadcastState.promptMessageID, adminID)
 	delete(broadcastState.pendingPreviewMsgID, adminID)
+	delete(broadcastState.selectedTariffID, adminID)
 	broadcastState.mu.Unlock()
 }
 
 var broadcastState = newBroadcastState()
+
+const broadcastTariffBtnMaxRunes = 52
+
+func broadcastTruncateButtonLabel(s string, maxRunes int) string {
+	s = strings.TrimSpace(s)
+	if maxRunes <= 0 || utf8.RuneCountInString(s) <= maxRunes {
+		return s
+	}
+	runes := []rune(s)
+	if len(runes) > maxRunes {
+		return string(runes[:maxRunes-1]) + "…"
+	}
+	return s
+}
+
+// broadcastAudienceSummaryLine — текст сегмента для подсказки и подтверждения рассылки.
+func (h Handler) broadcastAudienceSummaryLine(ctx context.Context, lang string, t BroadcastType, tariffID *int64) string {
+	switch t {
+	case BroadcastTypeActivePaid:
+		if tariffID != nil && h.tariffRepository != nil {
+			tr, err := h.tariffRepository.GetByID(ctx, *tariffID)
+			if err == nil && tr != nil {
+				return fmt.Sprintf(h.translation.GetText(lang, "broadcast_summary_active_paid_tariff"), escapeHTML(displayTariffName(tr)))
+			}
+		}
+		return h.translation.GetText(lang, "broadcast_summary_active_paid")
+	case BroadcastTypeInactivePaid:
+		if tariffID != nil && h.tariffRepository != nil {
+			tr, err := h.tariffRepository.GetByID(ctx, *tariffID)
+			if err == nil && tr != nil {
+				return fmt.Sprintf(h.translation.GetText(lang, "broadcast_summary_inactive_paid_tariff"), escapeHTML(displayTariffName(tr)))
+			}
+		}
+		return h.translation.GetText(lang, "broadcast_summary_inactive_paid")
+	case BroadcastTypeActiveTrial:
+		return h.translation.GetText(lang, "broadcast_summary_active_trial")
+	case BroadcastTypeActiveAll:
+		return h.translation.GetText(lang, "broadcast_summary_active_all_seg")
+	case BroadcastTypeInactiveTrial:
+		return h.translation.GetText(lang, "broadcast_summary_inactive_trial")
+	case BroadcastTypeInactiveAll:
+		return h.translation.GetText(lang, "broadcast_summary_inactive_all_seg")
+	case BroadcastTypeAll:
+		return h.translation.GetText(lang, "broadcast_summary_all")
+	default:
+		return h.translation.GetText(lang, "broadcast_summary_all")
+	}
+}
+
+func (h Handler) broadcastPaidTariffPickKeyboard(lang string, activePaidSegment bool, tariffs []database.Tariff) [][]models.InlineKeyboardButton {
+	var rows [][]models.InlineKeyboardButton
+	for i := range tariffs {
+		t := tariffs[i]
+		label := broadcastTruncateButtonLabel(displayTariffName(&t), broadcastTariffBtnMaxRunes)
+		var cb string
+		if activePaidSegment {
+			cb = CallbackBroadcastPaidTariffActivePrefix + strconv.FormatInt(t.ID, 10)
+		} else {
+			cb = CallbackBroadcastPaidTariffInactivePrefix + strconv.FormatInt(t.ID, 10)
+		}
+		rows = append(rows, []models.InlineKeyboardButton{{Text: label, CallbackData: cb}})
+	}
+	if activePaidSegment {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "broadcast_aud_paid_all_tariffs", models.InlineKeyboardButton{CallbackData: CallbackBroadcastPaidTariffActiveAll}),
+		})
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "broadcast_aud_back_segment", models.InlineKeyboardButton{CallbackData: CallbackBroadcastPaidTariffBackActiveSeg}),
+		})
+	} else {
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "broadcast_aud_paid_all_tariffs", models.InlineKeyboardButton{CallbackData: CallbackBroadcastPaidTariffInactiveAll}),
+		})
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "broadcast_aud_back_segment", models.InlineKeyboardButton{CallbackData: CallbackBroadcastPaidTariffBackInactiveSeg}),
+		})
+	}
+	return rows
+}
 
 // extractBroadcastImageFromMessage — фото как картинка или документ JPEG/PNG/WebP (отправка файлом).
 func extractBroadcastImageFromMessage(m *models.Message) (fileID string, asPhoto bool, ok bool) {
@@ -322,25 +408,6 @@ func (h Handler) BroadcastBackToAudienceHandler(ctx context.Context, b *bot.Bot,
 	}
 }
 
-func segmentPickSummaryKey(cbData string) string {
-	switch cbData {
-	case CallbackBroadcastActivePaid:
-		return "broadcast_summary_active_paid"
-	case CallbackBroadcastActiveTrial:
-		return "broadcast_summary_active_trial"
-	case CallbackBroadcastActiveAllSeg:
-		return "broadcast_summary_active_all_seg"
-	case CallbackBroadcastInactivePaid:
-		return "broadcast_summary_inactive_paid"
-	case CallbackBroadcastInactiveTrial:
-		return "broadcast_summary_inactive_trial"
-	case CallbackBroadcastInactiveAllSeg:
-		return "broadcast_summary_inactive_all_seg"
-	default:
-		return "broadcast_summary_all"
-	}
-}
-
 func segmentPickBroadcastType(cbData string) BroadcastType {
 	switch cbData {
 	case CallbackBroadcastActivePaid:
@@ -360,6 +427,120 @@ func segmentPickBroadcastType(cbData string) BroadcastType {
 	}
 }
 
+// broadcastBeginDraftPrompt — аудитория выбрана, запрашиваем текст/медиа черновика.
+func (h Handler) broadcastBeginDraftPrompt(ctx context.Context, b *bot.Bot, cb *models.CallbackQuery, broadcastType BroadcastType, tariffFilter *int64) {
+	adminID := config.GetAdminTelegramId()
+	if cb.From.ID != adminID {
+		return
+	}
+	callbackMessage := cb.Message.Message
+	if callbackMessage == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+
+	resetBroadcastDraft(adminID)
+
+	broadcastState.mu.Lock()
+	broadcastState.selectedType[adminID] = broadcastType
+	if tariffFilter != nil {
+		tid := *tariffFilter
+		broadcastState.selectedTariffID[adminID] = &tid
+	} else {
+		delete(broadcastState.selectedTariffID, adminID)
+	}
+	broadcastState.waitingForInput[adminID] = true
+	broadcastState.promptMessageID[adminID] = callbackMessage.ID
+	broadcastState.mu.Unlock()
+
+	typeText := h.broadcastAudienceSummaryLine(ctx, lang, broadcastType, tariffFilter)
+	prompt := fmt.Sprintf(h.translation.GetText(lang, "broadcast_enter_message"), typeText)
+	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+		ChatID:    callbackMessage.Chat.ID,
+		MessageID: callbackMessage.ID,
+		ParseMode: models.ParseModeHTML,
+		Text:      prompt,
+		ReplyMarkup: &models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{},
+		},
+	})
+	if err != nil {
+		slog.Error("broadcast draft prompt", "error", err)
+	}
+}
+
+// BroadcastPaidTariffCallbacksHandler — выбор тарифа для «платников» в режиме tariffs (callback префикс bc_pt_).
+func (h Handler) BroadcastPaidTariffCallbacksHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+	cb := update.CallbackQuery
+	adminID := config.GetAdminTelegramId()
+	if cb.From.ID != adminID || cb.Message.Message == nil {
+		return
+	}
+	data := cb.Data
+	lang := cb.From.LanguageCode
+	msg := cb.Message.Message
+
+	switch data {
+	case CallbackBroadcastPaidTariffBackActiveSeg:
+		_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+			ChatID:      msg.Chat.ID,
+			MessageID:   msg.ID,
+			ParseMode:   models.ParseModeHTML,
+			Text:        h.translation.GetText(lang, "broadcast_choose_active_segment"),
+			ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastActiveSegmentKeyboard(lang)},
+		})
+		if err != nil {
+			slog.Error("broadcast tariff back active", "error", err)
+		}
+		return
+	case CallbackBroadcastPaidTariffBackInactiveSeg:
+		_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+			ChatID:      msg.Chat.ID,
+			MessageID:   msg.ID,
+			ParseMode:   models.ParseModeHTML,
+			Text:        h.translation.GetText(lang, "broadcast_choose_inactive_segment"),
+			ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastInactiveSegmentKeyboard(lang)},
+		})
+		if err != nil {
+			slog.Error("broadcast tariff back inactive", "error", err)
+		}
+		return
+	}
+
+	var broadcastType BroadcastType
+	var tariffFilter *int64
+
+	switch {
+	case data == CallbackBroadcastPaidTariffActiveAll:
+		broadcastType = BroadcastTypeActivePaid
+	case data == CallbackBroadcastPaidTariffInactiveAll:
+		broadcastType = BroadcastTypeInactivePaid
+	case strings.HasPrefix(data, CallbackBroadcastPaidTariffActivePrefix):
+		idStr := strings.TrimPrefix(data, CallbackBroadcastPaidTariffActivePrefix)
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil || id <= 0 {
+			return
+		}
+		broadcastType = BroadcastTypeActivePaid
+		tariffFilter = &id
+	case strings.HasPrefix(data, CallbackBroadcastPaidTariffInactivePrefix):
+		idStr := strings.TrimPrefix(data, CallbackBroadcastPaidTariffInactivePrefix)
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil || id <= 0 {
+			return
+		}
+		broadcastType = BroadcastTypeInactivePaid
+		tariffFilter = &id
+	default:
+		return
+	}
+
+	h.broadcastBeginDraftPrompt(ctx, b, cb, broadcastType, tariffFilter)
+}
+
 // BroadcastSegmentPickHandler — выбор платные/триал/все для активных или неактивных.
 func (h Handler) BroadcastSegmentPickHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if update.CallbackQuery == nil {
@@ -376,35 +557,35 @@ func (h Handler) BroadcastSegmentPickHandler(ctx context.Context, b *bot.Bot, up
 	}
 	data := cb.Data
 	broadcastType := segmentPickBroadcastType(data)
-	summaryKey := segmentPickSummaryKey(data)
 	if broadcastType == BroadcastTypeAll {
 		return
 	}
 
-	lang := cb.From.LanguageCode
-	typeText := h.translation.GetText(lang, summaryKey)
-
-	resetBroadcastDraft(adminID)
-
-	broadcastState.mu.Lock()
-	broadcastState.selectedType[adminID] = broadcastType
-	broadcastState.waitingForInput[adminID] = true
-	broadcastState.promptMessageID[adminID] = callbackMessage.ID
-	broadcastState.mu.Unlock()
-
-	prompt := fmt.Sprintf(h.translation.GetText(lang, "broadcast_enter_message"), typeText)
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      prompt,
-		ReplyMarkup: &models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{},
-		},
-	})
-	if err != nil {
-		slog.Error("broadcast segment pick prompt", "error", err)
+	if (data == CallbackBroadcastActivePaid || data == CallbackBroadcastInactivePaid) &&
+		config.SalesMode() == "tariffs" && h.tariffRepository != nil {
+		tariffs, err := h.tariffRepository.ListActive(ctx)
+		if err != nil {
+			slog.Error("broadcast list tariffs", "error", err)
+		} else if len(tariffs) > 0 {
+			lang := cb.From.LanguageCode
+			activePaidSeg := data == CallbackBroadcastActivePaid
+			_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
+				ChatID:    callbackMessage.Chat.ID,
+				MessageID: callbackMessage.ID,
+				ParseMode: models.ParseModeHTML,
+				Text:      h.translation.GetText(lang, "broadcast_choose_paid_tariff"),
+				ReplyMarkup: &models.InlineKeyboardMarkup{
+					InlineKeyboard: h.broadcastPaidTariffPickKeyboard(lang, activePaidSeg, tariffs),
+				},
+			})
+			if err != nil {
+				slog.Error("broadcast tariff submenu", "error", err)
+			}
+			return
+		}
 	}
+
+	h.broadcastBeginDraftPrompt(ctx, b, cb, broadcastType, nil)
 }
 
 func (h Handler) broadcastToggleRow(lang string, on bool, buttonKey, callbackData string) models.InlineKeyboardButton {
@@ -488,45 +669,11 @@ func (h Handler) BroadcastTypeSelectHandler(ctx context.Context, b *bot.Bot, upd
 		return
 	}
 
-	lang := update.CallbackQuery.From.LanguageCode
-	var broadcastType BroadcastType
-	var summaryKey string
-
-	switch update.CallbackQuery.Data {
-	case CallbackBroadcastAll:
-		broadcastType = BroadcastTypeAll
-		summaryKey = "broadcast_summary_all"
-	default:
+	if update.CallbackQuery.Data != CallbackBroadcastAll {
 		return
 	}
 
-	typeText := h.translation.GetText(lang, summaryKey)
-	callbackMessage := update.CallbackQuery.Message.Message
-	if callbackMessage == nil {
-		return
-	}
-
-	resetBroadcastDraft(adminID)
-
-	broadcastState.mu.Lock()
-	broadcastState.selectedType[adminID] = broadcastType
-	broadcastState.waitingForInput[adminID] = true
-	broadcastState.promptMessageID[adminID] = callbackMessage.ID
-	broadcastState.mu.Unlock()
-
-	prompt := fmt.Sprintf(h.translation.GetText(lang, "broadcast_enter_message"), typeText)
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      prompt,
-		ReplyMarkup: &models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{},
-		},
-	})
-	if err != nil {
-		slog.Error("broadcast prompt edit", "error", err)
-	}
+	h.broadcastBeginDraftPrompt(ctx, b, update.CallbackQuery, BroadcastTypeAll, nil)
 }
 
 // BroadcastMessageHandler обрабатывает сообщение от админа с текстом или подписью к медиа после выбора аудитории
@@ -693,28 +840,13 @@ func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, up
 		draftMedia = &cp
 	}
 	broadcastState.waitingForButtonPick[adminID] = false
+	var tfSummary *int64
+	if ptr, ok := broadcastState.selectedTariffID[adminID]; ok && ptr != nil {
+		tfSummary = ptr
+	}
 	broadcastState.mu.Unlock()
 
-	var summaryKey string
-	switch broadcastType {
-	case BroadcastTypeAll:
-		summaryKey = "broadcast_summary_all"
-	case BroadcastTypeActivePaid:
-		summaryKey = "broadcast_summary_active_paid"
-	case BroadcastTypeActiveTrial:
-		summaryKey = "broadcast_summary_active_trial"
-	case BroadcastTypeActiveAll:
-		summaryKey = "broadcast_summary_active_all_seg"
-	case BroadcastTypeInactivePaid:
-		summaryKey = "broadcast_summary_inactive_paid"
-	case BroadcastTypeInactiveTrial:
-		summaryKey = "broadcast_summary_inactive_trial"
-	case BroadcastTypeInactiveAll:
-		summaryKey = "broadcast_summary_inactive_all_seg"
-	default:
-		summaryKey = "broadcast_summary_all"
-	}
-	targetText := h.translation.GetText(lang, summaryKey)
+	targetText := h.broadcastAudienceSummaryLine(ctx, lang, broadcastType, tfSummary)
 	buttonsLine := h.broadcastButtonsSummaryLine(lang, flags)
 
 	pickerMsg := cb.Message.Message
@@ -827,6 +959,10 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 	}
 	entCopy := append([]models.MessageEntity(nil), entities...)
 	flagsCopy := flags
+	var tariffFilter *int64
+	if ptr, ok := broadcastState.selectedTariffID[adminID]; ok && ptr != nil {
+		tariffFilter = ptr
+	}
 	broadcastState.mu.Unlock()
 	clearBroadcastState(adminID)
 
@@ -848,7 +984,7 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		Text:   h.translation.GetText(lang, "broadcast_started_wait"),
 	})
 
-	go h.sendBroadcast(ctx, b, adminID, messageText, entCopy, draftMedia, flagsCopy, broadcastType)
+	go h.sendBroadcast(ctx, b, adminID, messageText, entCopy, draftMedia, flagsCopy, broadcastType, tariffFilter)
 }
 
 // BroadcastCancelHandler обрабатывает отмену рассылки
@@ -913,9 +1049,13 @@ func (h Handler) BroadcastBackToAdminHandler(ctx context.Context, b *bot.Bot, up
 }
 
 // sendBroadcast отправляет сообщение пользователям пачками в зависимости от типа рассылки
-func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, entities []models.MessageEntity, media *broadcastDraftMedia, flags BroadcastRecipientButtons, broadcastType BroadcastType) {
+func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, entities []models.MessageEntity, media *broadcastDraftMedia, flags BroadcastRecipientButtons, broadcastType BroadcastType, tariffFilter *int64) {
 	audience := broadcastTypeToAudience(broadcastType)
-	recipients, err := h.customerRepository.GetBroadcastRecipients(ctx, audience)
+	var tf *int64
+	if (broadcastType == BroadcastTypeActivePaid || broadcastType == BroadcastTypeInactivePaid) && tariffFilter != nil {
+		tf = tariffFilter
+	}
+	recipients, err := h.customerRepository.GetBroadcastRecipients(ctx, audience, tf)
 	if err != nil {
 		slog.Error("error getting broadcast recipients", "error", err, "type", broadcastType)
 		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{

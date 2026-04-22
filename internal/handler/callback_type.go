@@ -36,6 +36,13 @@ const (
 	CallbackBroadcastInactiveAllSeg = "bc_aud_ia"
 	CallbackBroadcastBackAudience  = "bc_aud_b"
 	CallbackBroadcastBackAdmin     = "broadcast_back_admin"
+	// Режим tariffs: выбор тарифа для сегмента «платники» (префикс + id тарифа).
+	CallbackBroadcastPaidTariffActivePrefix   = "bc_pt_a_"
+	CallbackBroadcastPaidTariffInactivePrefix = "bc_pt_i_"
+	CallbackBroadcastPaidTariffActiveAll      = "bc_pt_aa"
+	CallbackBroadcastPaidTariffInactiveAll      = "bc_pt_ia"
+	CallbackBroadcastPaidTariffBackActiveSeg    = "bc_pt_ba"
+	CallbackBroadcastPaidTariffBackInactiveSeg = "bc_pt_bi"
 	CallbackBroadcastToggleMain = "bc_t_main"
 	CallbackBroadcastTogglePromo = "bc_t_prm"
 	CallbackBroadcastToggleVPN   = "bc_t_vpn"

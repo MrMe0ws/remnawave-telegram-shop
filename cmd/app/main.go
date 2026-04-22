@@ -250,6 +250,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastInactiveAllSeg, bot.MatchTypeExact, h.BroadcastSegmentPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastBackAudience, bot.MatchTypeExact, h.BroadcastBackToAudienceHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastBackAdmin, bot.MatchTypeExact, h.BroadcastBackToAdminHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "bc_pt_", bot.MatchTypePrefix, h.BroadcastPaidTariffCallbacksHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для подтверждения рассылки (только для админа)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastConfirm, bot.MatchTypeExact, h.BroadcastConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)

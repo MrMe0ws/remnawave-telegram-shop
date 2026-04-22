@@ -574,7 +574,8 @@ func (cr *CustomerRepository) GetInactiveTelegramIds(ctx context.Context) ([]int
 }
 
 // GetBroadcastRecipients returns telegram_id and language for mass broadcast (button labels per user).
-func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string) ([]BroadcastRecipient, error) {
+// tariffID ограничивает сегменты active_paid / inactive_paid по customer.current_tariff_id (режим tariffs).
+func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string, tariffID *int64) ([]BroadcastRecipient, error) {
 	now := time.Now()
 	buildSelect := sq.Select("telegram_id", "language").
 		From("customer").
@@ -593,11 +594,19 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	case BroadcastAudienceInactive, BroadcastAudienceInactiveAll:
 		buildSelect = buildSelect.Where(inactiveVPN)
 	case BroadcastAudienceActivePaid:
-		buildSelect = buildSelect.Where(sq.And{activeVPN, paidSubscription})
+		ap := sq.And{activeVPN, paidSubscription}
+		if tariffID != nil {
+			ap = sq.And{ap, sq.Eq{"current_tariff_id": *tariffID}}
+		}
+		buildSelect = buildSelect.Where(ap)
 	case BroadcastAudienceActiveTrial:
 		buildSelect = buildSelect.Where(sq.And{activeVPN, noPaidSubscription})
 	case BroadcastAudienceInactivePaid:
-		buildSelect = buildSelect.Where(sq.And{inactiveVPN, paidSubscription})
+		ip := sq.And{inactiveVPN, paidSubscription}
+		if tariffID != nil {
+			ip = sq.And{ip, sq.Eq{"current_tariff_id": *tariffID}}
+		}
+		buildSelect = buildSelect.Where(ip)
 	case BroadcastAudienceInactiveTrial:
 		buildSelect = buildSelect.Where(sq.And{inactiveVPN, noPaidSubscription})
 	default:

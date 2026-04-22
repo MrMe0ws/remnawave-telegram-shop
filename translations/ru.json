@@ -165,16 +165,13 @@
   "server_selection_button": "🌏 Какой сервер выбрать",
   "video_guide_button": "📺 Видеоинструкция",
   "public_offer_button": {
-    "text": "📄 Публичная оферта",
-    "style": "blue"
+    "text": "📄 Публичная оферта"
   },
   "privacy_policy_button": {
-    "text": "🔒 Политика конфиденциальности",
-    "style": "blue"
+    "text": "🔒 Политика конфиденциальности"
   },
   "terms_of_service_button": {
-    "text": "📋 Пользовательское соглашение",
-    "style": "blue"
+    "text": "📋 Пользовательское соглашение"
   },
   "manage_devices_button": {
     "text": "📱 Управление устройствами"
