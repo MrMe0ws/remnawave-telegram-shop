@@ -511,9 +511,6 @@ func (h Handler) AdminTariffTextHandler(ctx context.Context, b *bot.Bot, update 
 				tb = gb * bytesInGB()
 			}
 			_ = h.tariffRepository.UpdateTariff(ctx, editID, map[string]interface{}{"traffic_limit_bytes": tb})
-			if err := h.paymentService.ResyncTariffToSubscribers(ctx, editID); err != nil {
-				slog.Error("resync tariff subscribers", "error", err, "tariff_id", editID)
-			}
 			tid := editID
 			adminTariffReset(adminID)
 			h.sendAdminTariffFullCard(ctx, b, adminID, lang, tid, h.translation.GetText(lang, "tariff_edit_saved_traffic"))
@@ -524,9 +521,6 @@ func (h Handler) AdminTariffTextHandler(ctx context.Context, b *bot.Bot, update 
 				return
 			}
 			_ = h.tariffRepository.UpdateTariff(ctx, editID, map[string]interface{}{"device_limit": dev})
-			if err := h.paymentService.ResyncTariffToSubscribers(ctx, editID); err != nil {
-				slog.Error("resync tariff subscribers", "error", err, "tariff_id", editID)
-			}
 			tid := editID
 			adminTariffReset(adminID)
 			h.sendAdminTariffFullCard(ctx, b, adminID, lang, tid, h.translation.GetText(lang, "tariff_edit_saved_devices"))

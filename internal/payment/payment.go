@@ -862,53 +862,6 @@ func buildRubReceiptDescription(months, extraHwid int, extras *TariffPurchaseExt
 	return "Оплата"
 }
 
-// ResyncTariffToSubscribers применяет актуальные squads/трафик/тег тарифа в Remnawave для активных подписчиков с этим current_tariff_id (после правки тарифа в админке).
-func (s PaymentService) ResyncTariffToSubscribers(ctx context.Context, tariffID int64) error {
-	if config.SalesMode() != "tariffs" || s.tariffRepository == nil {
-		return nil
-	}
-	tariff, err := s.tariffRepository.GetByID(ctx, tariffID)
-	if err != nil {
-		return err
-	}
-	if tariff == nil {
-		return fmt.Errorf("tariff %d not found", tariffID)
-	}
-	profile := buildRemnawaveTariffProfile(tariff)
-	customers, err := s.customerRepository.FindActiveByCurrentTariffID(ctx, tariffID)
-	if err != nil {
-		return err
-	}
-	for _, c := range customers {
-		user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfile(ctx, c.ID, c.TelegramID, 0, profile)
-		if err != nil {
-			slog.Error("resync tariff profile", "telegram_id", c.TelegramID, "error", err)
-			continue
-		}
-		base := tariff.DeviceLimit
-		if base < 1 {
-			base = 1
-		}
-		limit := base
-		if c.ExtraHwid > 0 && c.ExtraHwidExpiresAt != nil && c.ExtraHwidExpiresAt.After(time.Now()) {
-			limit = base + c.ExtraHwid
-		}
-		maxLimit := config.HwidMaxDevices()
-		if maxLimit > 0 && limit > maxLimit {
-			limit = maxLimit
-		}
-		if _, err := s.remnawaveClient.UpdateUserDeviceLimit(ctx, c.TelegramID, limit); err != nil {
-			slog.Error("resync device limit", "telegram_id", c.TelegramID, "error", err)
-		}
-		if user != nil && user.SubscriptionUrl != "" {
-			_ = s.customerRepository.UpdateFields(ctx, c.ID, map[string]interface{}{
-				"subscription_link": user.SubscriptionUrl,
-			})
-		}
-	}
-	return nil
-}
-
 func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:

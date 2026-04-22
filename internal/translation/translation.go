@@ -68,6 +68,12 @@ func GetInstance() *Manager {
 	return instance
 }
 
+func mergeTranslations(dst Translation, src Translation) {
+	for k, v := range src {
+		dst[k] = v
+	}
+}
+
 func (tm *Manager) InitTranslations(translationsDir string, defaultLanguage string) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -81,12 +87,28 @@ func (tm *Manager) InitTranslations(translationsDir string, defaultLanguage stri
 		return fmt.Errorf("failed to read translation directory: %w", err)
 	}
 
+	type overlay struct {
+		name string
+		lang string
+	}
+	var overlays []overlay
+
 	for _, file := range files {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
 			continue
 		}
 
-		langCode := strings.TrimSuffix(file.Name(), ".json")
+		baseName := strings.TrimSuffix(file.Name(), ".json")
+		if strings.HasPrefix(baseName, "admin_") {
+			lang := strings.TrimPrefix(baseName, "admin_")
+			if lang == "" {
+				return fmt.Errorf("invalid admin overlay file name %q (expected admin_<lang>.json)", file.Name())
+			}
+			overlays = append(overlays, overlay{name: file.Name(), lang: lang})
+			continue
+		}
+
+		langCode := baseName
 		filePath := filepath.Join(translationsDir, file.Name())
 
 		content, err := os.ReadFile(filePath)
@@ -104,6 +126,29 @@ func (tm *Manager) InitTranslations(translationsDir string, defaultLanguage stri
 		}
 
 		tm.translations[langCode] = translation
+	}
+
+	for _, o := range overlays {
+		filePath := filepath.Join(translationsDir, o.name)
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to read translation file %s: %w", o.name, err)
+		}
+
+		var overlayTr Translation
+		if err := json.Unmarshal(content, &overlayTr); err != nil {
+			return fmt.Errorf("failed to parse translation file %s: %w", o.name, err)
+		}
+
+		if err := validateButtonStyles(overlayTr, o.name); err != nil {
+			return err
+		}
+
+		base, ok := tm.translations[o.lang]
+		if !ok {
+			return fmt.Errorf("overlay %s: base language %q has no %s.json — load base file first", o.name, o.lang, o.lang)
+		}
+		mergeTranslations(base, overlayTr)
 	}
 
 	if _, exists := tm.translations[tm.defaultLanguage]; !exists {
