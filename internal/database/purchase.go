@@ -366,6 +366,22 @@ func (pr *PurchaseRepository) ListAllPaidForLoyaltyBackfill(ctx context.Context)
 	return purchases, nil
 }
 
+// SumPaidRubAndCount возвращает число успешных оплат и сумму amount только в «рублёвых» строках (как в админ-статистике).
+func (pr *PurchaseRepository) SumPaidRubAndCount(ctx context.Context, customerID int64) (count int64, sumRub float64, err error) {
+	q := `
+SELECT COUNT(*), COALESCE(SUM(p.amount), 0)
+FROM purchase p
+WHERE p.customer_id = $1
+  AND p.status = 'paid'
+  AND (UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR', '') OR COALESCE(p.currency, '') = '')
+`
+	err = pr.pool.QueryRow(ctx, q, customerID).Scan(&count, &sumRub)
+	if err != nil {
+		return 0, 0, fmt.Errorf("sum paid rub for customer: %w", err)
+	}
+	return count, sumRub, nil
+}
+
 func (pr *PurchaseRepository) CountPaidByCustomer(ctx context.Context, customerID int64) (int, error) {
 	buildSelect := sq.Select("COUNT(*)").
 		From("purchase").

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"remnawave-tg-shop-bot/utils"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -22,7 +23,7 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 }
 
 // customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
-const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp"
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username"
 
 type Customer struct {
 	ID                        int64      `db:"id"`
@@ -37,6 +38,7 @@ type Customer struct {
 	SubscriptionPeriodStart   *time.Time `db:"subscription_period_start"`
 	SubscriptionPeriodMonths  *int       `db:"subscription_period_months"`
 	LoyaltyXP                 int64      `db:"loyalty_xp"`
+	TelegramUsername          *string    `db:"telegram_username"`
 }
 
 // BroadcastRecipient is a Telegram user with language for localized broadcast keyboards.
@@ -97,6 +99,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 			&customer.SubscriptionPeriodStart,
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
+			&customer.TelegramUsername,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -137,6 +140,7 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 		&customer.SubscriptionPeriodStart,
 		&customer.SubscriptionPeriodMonths,
 		&customer.LoyaltyXP,
+		&customer.TelegramUsername,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -173,6 +177,7 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 		&customer.SubscriptionPeriodStart,
 		&customer.SubscriptionPeriodMonths,
 		&customer.LoyaltyXP,
+		&customer.TelegramUsername,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -192,7 +197,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 	INSERT INTO customer (telegram_id, expire_at, language)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (telegram_id) DO UPDATE SET telegram_id = customer.telegram_id
-	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp
+	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username
 	`
 
 	row := cr.pool.QueryRow(ctx, query, customer.TelegramID, customer.ExpireAt, customer.Language)
@@ -210,6 +215,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 		&result.SubscriptionPeriodStart,
 		&result.SubscriptionPeriodMonths,
 		&result.LoyaltyXP,
+		&result.TelegramUsername,
 	); err != nil {
 		return nil, fmt.Errorf("failed to find or create customer: %w", err)
 	}
@@ -356,6 +362,7 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 			&customer.SubscriptionPeriodStart,
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
+			&customer.TelegramUsername,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -458,6 +465,25 @@ func (cr *CustomerRepository) DeleteByNotInTelegramIds(ctx context.Context, tele
 
 	return nil
 
+}
+
+// DeleteByID удаляет клиента из БД бота (связанные purchase/promo и т.п. — по CASCADE в схеме).
+func (cr *CustomerRepository) DeleteByID(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("invalid customer id")
+	}
+	q, args, err := sq.Delete("customer").Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return fmt.Errorf("failed to build delete customer sql: %w", err)
+	}
+	ct, err := cr.pool.Exec(ctx, q, args...)
+	if err != nil {
+		return fmt.Errorf("failed to delete customer: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("customer not found")
+	}
+	return nil
 }
 
 func (cr *CustomerRepository) GetAllTelegramIds(ctx context.Context) ([]int64, error) {
@@ -574,7 +600,8 @@ func (cr *CustomerRepository) GetInactiveTelegramIds(ctx context.Context) ([]int
 }
 
 // GetBroadcastRecipients returns telegram_id and language for mass broadcast (button labels per user).
-func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string) ([]BroadcastRecipient, error) {
+// tariffID ограничивает сегменты active_paid / inactive_paid по customer.current_tariff_id (режим tariffs).
+func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string, tariffID *int64) ([]BroadcastRecipient, error) {
 	now := time.Now()
 	buildSelect := sq.Select("telegram_id", "language").
 		From("customer").
@@ -593,11 +620,19 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	case BroadcastAudienceInactive, BroadcastAudienceInactiveAll:
 		buildSelect = buildSelect.Where(inactiveVPN)
 	case BroadcastAudienceActivePaid:
-		buildSelect = buildSelect.Where(sq.And{activeVPN, paidSubscription})
+		ap := sq.And{activeVPN, paidSubscription}
+		if tariffID != nil {
+			ap = sq.And{ap, sq.Eq{"current_tariff_id": *tariffID}}
+		}
+		buildSelect = buildSelect.Where(ap)
 	case BroadcastAudienceActiveTrial:
 		buildSelect = buildSelect.Where(sq.And{activeVPN, noPaidSubscription})
 	case BroadcastAudienceInactivePaid:
-		buildSelect = buildSelect.Where(sq.And{inactiveVPN, paidSubscription})
+		ip := sq.And{inactiveVPN, paidSubscription}
+		if tariffID != nil {
+			ip = sq.And{ip, sq.Eq{"current_tariff_id": *tariffID}}
+		}
+		buildSelect = buildSelect.Where(ip)
 	case BroadcastAudienceInactiveTrial:
 		buildSelect = buildSelect.Where(sq.And{inactiveVPN, noPaidSubscription})
 	default:
@@ -639,6 +674,177 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 }
 
 // FindActiveByCurrentTariffID возвращает клиентов с активной подпиской и указанным current_tariff_id.
+// CustomerListScope задаёт фильтр для админских списков клиентов.
+type CustomerListScope int
+
+const (
+	CustomerListScopeAll CustomerListScope = iota
+	CustomerListScopeInactive
+	CustomerListScopeExpiringSoon
+)
+
+func customerListWhere(scope CustomerListScope) sq.Sqlizer {
+	// Не сравнивать timestamptz с sq.Expr в LtOrEq — драйвер пытается присвоить Expr в timestamptz.
+	switch scope {
+	case CustomerListScopeInactive:
+		return sq.Expr("(customer.expire_at IS NULL OR customer.expire_at <= NOW())")
+	case CustomerListScopeExpiringSoon:
+		return sq.Expr("(customer.expire_at IS NOT NULL AND customer.expire_at > NOW() AND customer.expire_at <= NOW() + INTERVAL '7 days')")
+	default:
+		return nil
+	}
+}
+
+func customerListOrder(scope CustomerListScope) string {
+	switch scope {
+	case CustomerListScopeInactive:
+		return "expire_at ASC NULLS FIRST"
+	case CustomerListScopeExpiringSoon:
+		return "expire_at ASC"
+	default:
+		return "id DESC"
+	}
+}
+
+// CountByListScope возвращает число строк для списка с фильтром.
+func (cr *CustomerRepository) CountByListScope(ctx context.Context, scope CustomerListScope) (int64, error) {
+	buildSelect := sq.Select("COUNT(*)").
+		From("customer").
+		PlaceholderFormat(sq.Dollar)
+	if w := customerListWhere(scope); w != nil {
+		buildSelect = buildSelect.Where(w)
+	}
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("failed to build count query: %w", err)
+	}
+	var n int64
+	err = cr.pool.QueryRow(ctx, sqlStr, args...).Scan(&n)
+	return n, err
+}
+
+// ListPaged возвращает страницу клиентов для админских списков (Пользователи / неактивные / истекающие).
+func (cr *CustomerRepository) ListPaged(ctx context.Context, scope CustomerListScope, offset, limit int) ([]Customer, error) {
+	buildSelect := sq.Select(customerSelectColumns).
+		From("customer").
+		PlaceholderFormat(sq.Dollar).
+		OrderBy(customerListOrder(scope)).
+		Limit(uint64(limit)).
+		Offset(uint64(offset))
+	if w := customerListWhere(scope); w != nil {
+		buildSelect = buildSelect.Where(w)
+	}
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build list query: %w", err)
+	}
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query customers: %w", err)
+	}
+	defer rows.Close()
+
+	var customers []Customer
+	for rows.Next() {
+		var customer Customer
+		err := rows.Scan(
+			&customer.ID,
+			&customer.TelegramID,
+			&customer.ExpireAt,
+			&customer.CreatedAt,
+			&customer.SubscriptionLink,
+			&customer.Language,
+			&customer.ExtraHwid,
+			&customer.ExtraHwidExpiresAt,
+			&customer.CurrentTariffID,
+			&customer.SubscriptionPeriodStart,
+			&customer.SubscriptionPeriodMonths,
+			&customer.LoyaltyXP,
+			&customer.TelegramUsername,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan customer row: %w", err)
+		}
+		customers = append(customers, customer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate customers: %w", err)
+	}
+	return customers, nil
+}
+
+func escapeSQLLikePattern(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
+// AdminSearchMaxResults верхняя граница строк поиска в админке.
+const AdminSearchMaxResults = 24
+
+// SearchForAdmin ищет по telegram_username (ILIKE) и подстроке telegram_id (LIKE по тексту).
+func (cr *CustomerRepository) SearchForAdmin(ctx context.Context, needle string, limit int) ([]Customer, error) {
+	needle = strings.TrimSpace(needle)
+	if needle == "" {
+		return nil, nil
+	}
+	if limit <= 0 || limit > 50 {
+		limit = AdminSearchMaxResults
+	}
+	esc := escapeSQLLikePattern(needle)
+	pattern := "%" + esc + "%"
+
+	buildSelect := sq.Select(customerSelectColumns).
+		From("customer").
+		Where(sq.Or{
+			sq.Expr("telegram_username ILIKE ?", pattern),
+			sq.Expr("CAST(telegram_id AS TEXT) LIKE ?", pattern),
+		}).
+		OrderBy("id DESC").
+		Limit(uint64(limit)).
+		PlaceholderFormat(sq.Dollar)
+
+	sqlStr, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build admin search: %w", err)
+	}
+
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("admin search query: %w", err)
+	}
+	defer rows.Close()
+
+	var customers []Customer
+	for rows.Next() {
+		var customer Customer
+		err := rows.Scan(
+			&customer.ID,
+			&customer.TelegramID,
+			&customer.ExpireAt,
+			&customer.CreatedAt,
+			&customer.SubscriptionLink,
+			&customer.Language,
+			&customer.ExtraHwid,
+			&customer.ExtraHwidExpiresAt,
+			&customer.CurrentTariffID,
+			&customer.SubscriptionPeriodStart,
+			&customer.SubscriptionPeriodMonths,
+			&customer.LoyaltyXP,
+			&customer.TelegramUsername,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan admin search: %w", err)
+		}
+		customers = append(customers, customer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return customers, nil
+}
+
 func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, tariffID int64) ([]Customer, error) {
 	now := time.Now().UTC()
 	buildSelect := sq.Select(customerSelectColumns).
@@ -677,6 +883,7 @@ func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, t
 			&customer.SubscriptionPeriodStart,
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
+			&customer.TelegramUsername,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan customer: %w", err)

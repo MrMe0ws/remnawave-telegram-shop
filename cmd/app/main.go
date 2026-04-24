@@ -36,7 +36,7 @@ import (
 
 // Version, Commit, BuildDate - переменные версии, устанавливаются при сборке через ldflags
 var (
-	Version   = "4.4.0"
+	Version   = "4.4.1"
 	Commit    = "none"
 	BuildDate = "unknown"
 )
@@ -250,6 +250,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastInactiveAllSeg, bot.MatchTypeExact, h.BroadcastSegmentPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastBackAudience, bot.MatchTypeExact, h.BroadcastBackToAudienceHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastBackAdmin, bot.MatchTypeExact, h.BroadcastBackToAdminHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "bc_pt_", bot.MatchTypePrefix, h.BroadcastPaidTariffCallbacksHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для подтверждения рассылки (только для админа)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastConfirm, bot.MatchTypeExact, h.BroadcastConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -271,6 +272,55 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSync, bot.MatchTypeExact, h.AdminSyncShortcutHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPromo, bot.MatchTypeExact, h.AdminPromoOpenHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminTariffs, bot.MatchTypeExact, h.AdminTariffsHandler, isAdminMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersSubmenu, bot.MatchTypeExact, h.AdminUsersSubmenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersRoot, bot.MatchTypeExact, h.AdminUsersRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersSearch, bot.MatchTypeExact, h.AdminUsersSearchHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersStatsSection, bot.MatchTypeExact, h.AdminUsersStatsSectionHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersInactiveMenu, bot.MatchTypeExact, h.AdminUsersInactiveJumpHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersListAllPrefix, bot.MatchTypePrefix, h.AdminUsersListAllRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersListInactivePrefix, bot.MatchTypePrefix, h.AdminUsersListInactiveRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserManagePrefix, bot.MatchTypePrefix, h.AdminUserManageHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSubscriptionPrefix, bot.MatchTypePrefix, h.AdminUserSubscriptionHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserExtraHwidDecPrefix, bot.MatchTypePrefix, h.AdminUserExtraHwidDecHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserExtraHwidIncPrefix, bot.MatchTypePrefix, h.AdminUserExtraHwidIncHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserTariffMenuPrefix, bot.MatchTypePrefix, h.AdminUserTariffMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserTariffPickPrefix, bot.MatchTypePrefix, h.AdminUserTariffPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDescAskPrefix, bot.MatchTypePrefix, h.AdminUserDescriptionAskHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDescClearPrefix, bot.MatchTypePrefix, h.AdminUserDescriptionClearHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserReferralsPrefix, bot.MatchTypePrefix, h.AdminUserReferralsHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSpendPrefix, bot.MatchTypePrefix, h.AdminUserSpendHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserPaymentsPrefix, bot.MatchTypePrefix, h.AdminUserPaymentsHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserMsgHintPrefix, bot.MatchTypePrefix, h.AdminUserMsgHintHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserExtendPrefix, bot.MatchTypePrefix, h.AdminUserExtendHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserResetTrafficAskPrefix, bot.MatchTypePrefix, h.AdminUserResetTrafficAskHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserResetTrafficConfirmPrefix, bot.MatchTypePrefix, h.AdminUserResetTrafficConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserHwPresetMenuPrefix, bot.MatchTypePrefix, h.AdminUserHwPresetMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserHwPresetSetPrefix, bot.MatchTypePrefix, h.AdminUserHwPresetSetHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalOpenPrefix, bot.MatchTypePrefix, h.AdminUserCalOpenHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalNavPrefix, bot.MatchTypePrefix, h.AdminUserCalNavHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalPickPrefix, bot.MatchTypePrefix, h.AdminUserCalPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalBlankPrefix, bot.MatchTypePrefix, h.AdminUserCalBlankHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserPanelMenuPrefix, bot.MatchTypePrefix, h.AdminUserPanelMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSquadMenuPrefix, bot.MatchTypePrefix, h.AdminUserSquadMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSquadPickPrefix, bot.MatchTypePrefix, h.AdminUserSquadPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserStrategyMenuPrefix, bot.MatchTypePrefix, h.AdminUserStrategyMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserStrategySetPrefix, bot.MatchTypePrefix, h.AdminUserStrategySetHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserTrafficMenuPrefix, bot.MatchTypePrefix, h.AdminUserTrafficMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserTrafficSetPrefix, bot.MatchTypePrefix, h.AdminUserTrafficSetHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserTrafficCustomPrefix, bot.MatchTypePrefix, h.AdminUserTrafficCustomAskHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDisableAskPrefix, bot.MatchTypePrefix, h.AdminUserDisableAskHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDisableConfirmPrefix, bot.MatchTypePrefix, h.AdminUserDisableConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserEnableAskPrefix, bot.MatchTypePrefix, h.AdminUserEnableAskHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserEnableConfirmPrefix, bot.MatchTypePrefix, h.AdminUserEnableConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDeleteAskPrefix, bot.MatchTypePrefix, h.AdminUserDeleteAskHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDeleteConfirmPrefix, bot.MatchTypePrefix, h.AdminUserDeleteConfirmHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDevicesPrefix, bot.MatchTypePrefix, h.AdminUserDevicesHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserDevDelPrefix, bot.MatchTypePrefix, h.AdminUserDevDelHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSubsRoot, bot.MatchTypeExact, h.AdminSubsRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSubsListPrefix, bot.MatchTypePrefix, h.AdminSubsListRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSubsExpiring, bot.MatchTypeExact, h.AdminSubsExpiringHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSubsStatsJump, bot.MatchTypeExact, h.AdminSubsStatsJumpHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminRefRoot, bot.MatchTypeExact, h.AdminRefRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyRoot, bot.MatchTypeExact, h.AdminLoyaltyRootHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyLevels, bot.MatchTypeExact, h.AdminLoyaltyLevelsHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminLoyaltyNew, bot.MatchTypeExact, h.AdminLoyaltyNewHandler, isAdminMiddleware)
@@ -422,6 +472,15 @@ func main() {
 			if handler.AdminLoyaltyWaiting(update.Message.From.ID) {
 				return false
 			}
+			if handler.AdminUsersSearchWaiting(update.Message.From.ID) || handler.AdminUsersDMWaiting(update.Message.From.ID) {
+				return false
+			}
+			if handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) {
+				return false
+			}
+			if handler.AdminUserDescriptionWaiting(update.Message.From.ID) {
+				return false
+			}
 		}
 		return true
 	}, h.UserPromoMessageHandler)
@@ -433,7 +492,11 @@ func main() {
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
 			(handler.AdminPromoWaiting(update.Message.From.ID) || handler.AdminPromoEditWaiting(update.Message.From.ID)) &&
-			!handler.AdminLoyaltyWaiting(update.Message.From.ID)
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminPromoTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
@@ -443,7 +506,11 @@ func main() {
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
 			(handler.AdminTariffWizardWaiting(update.Message.From.ID) || handler.AdminTariffEditWaiting(update.Message.From.ID)) &&
-			!handler.AdminLoyaltyWaiting(update.Message.From.ID)
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminTariffTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
@@ -452,7 +519,11 @@ func main() {
 			!strings.HasPrefix(update.Message.Text, "/") &&
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
-			handler.AdminLoyaltyWaiting(update.Message.From.ID)
+			handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminLoyaltyTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
@@ -462,8 +533,84 @@ func main() {
 			update.Message.From.ID == config.GetAdminTelegramId() &&
 			update.Message.ReplyToMessage == nil &&
 			handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
-			!handler.AdminLoyaltyWaiting(update.Message.From.ID)
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminInfraBillingTextHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoEditWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
+			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
+	}, h.AdminUserDMMessageHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoEditWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
+			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
+	}, h.AdminUserTrafficLimitTextHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.AdminUserDescriptionWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoEditWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
+			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID)
+	}, h.AdminUserDescriptionTextHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoEditWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
+			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
+	}, h.AdminUsersSearchMessageHandler)
 
 	// Обработчик черновика рассылки: текст, подпись к фото или фото/файл JPEG|PNG|WebP (после выбора аудитории)
 	// НЕ обрабатывает reply-сообщения (они обрабатываются AdminReplyToUser ниже)

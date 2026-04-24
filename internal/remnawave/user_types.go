@@ -6,17 +6,31 @@ import (
 	"github.com/google/uuid"
 )
 
+// InternalSquadRef короткое описание internal squad из ответа панели.
+type InternalSquadRef struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
 // User represents a Remnawave user.
 type User struct {
-	UUID              uuid.UUID  `json:"uuid"`
-	Username          string     `json:"username"`
-	SubscriptionUrl   string     `json:"subscriptionUrl"`
-	ExpireAt          time.Time  `json:"expireAt"`
-	TelegramID        *int64     `json:"telegramId"`
-	Status            string     `json:"status"`
-	TrafficLimitBytes int64      `json:"trafficLimitBytes"`
-	HwidDeviceLimit   *int       `json:"hwidDeviceLimit"`
-	UserTraffic       UserTraffic `json:"userTraffic"`
+	UUID                   uuid.UUID         `json:"uuid"`
+	ShortUUID              string            `json:"shortUuid"`
+	Username               string            `json:"username"`
+	SubscriptionUrl        string            `json:"subscriptionUrl"`
+	ExpireAt               time.Time         `json:"expireAt"`
+	TelegramID             *int64            `json:"telegramId"`
+	Status                 string            `json:"status"`
+	TrafficLimitBytes      int64             `json:"trafficLimitBytes"`
+	TrafficLimitStrategy   string            `json:"trafficLimitStrategy"`
+	HwidDeviceLimit        *int              `json:"hwidDeviceLimit"`
+	Description            *string           `json:"description"`
+	Tag                    *string           `json:"tag"`
+	LastTrafficResetAt     *time.Time        `json:"lastTrafficResetAt"`
+	CreatedAt              *time.Time        `json:"createdAt"`
+	UpdatedAt              *time.Time        `json:"updatedAt"`
+	ActiveInternalSquads   []InternalSquadRef `json:"activeInternalSquads"`
+	UserTraffic            UserTraffic       `json:"userTraffic"`
 }
 
 type UserTraffic struct {
@@ -84,11 +98,12 @@ type CreateUserRequest struct {
 	TrafficLimitBytes    *int64      `json:"trafficLimitBytes,omitempty"`
 	TrafficLimitStrategy string      `json:"trafficLimitStrategy,omitempty"`
 	HwidDeviceLimit      *int        `json:"hwidDeviceLimit,omitempty"`
-	ActiveInternalSquads []uuid.UUID `json:"activeInternalSquads,omitempty"`
-	ExternalSquadUuid    *uuid.UUID  `json:"externalSquadUuid,omitempty"`
-	Tag                  *string     `json:"tag,omitempty"`
-	TelegramID           *int        `json:"telegramId,omitempty"`
-	Description          *string     `json:"description,omitempty"`
+	// nil — поле не уходит в JSON; non-nil (в т.ч. пустой слайс) — массив UUID.
+	ActiveInternalSquads *[]uuid.UUID `json:"activeInternalSquads,omitempty"`
+	ExternalSquadUuid    *uuid.UUID   `json:"externalSquadUuid,omitempty"`
+	Tag                  *string      `json:"tag,omitempty"`
+	TelegramID           *int         `json:"telegramId,omitempty"`
+	Description          *string      `json:"description,omitempty"`
 }
 
 // UpdateUserRequest is the request body for PATCH /api/users.
@@ -98,8 +113,9 @@ type UpdateUserRequest struct {
 	ExpireAt             *time.Time  `json:"expireAt,omitempty"`
 	TrafficLimitBytes    *int64      `json:"trafficLimitBytes,omitempty"`
 	TrafficLimitStrategy string      `json:"trafficLimitStrategy,omitempty"`
-	HwidDeviceLimit      *int        `json:"hwidDeviceLimit,omitempty"`
-	ActiveInternalSquads []uuid.UUID `json:"activeInternalSquads,omitempty"`
+	HwidDeviceLimit      *int         `json:"hwidDeviceLimit,omitempty"`
+	// nil — не менять сквады; &[] — снять все внутренние сквады (пустой JSON-массив).
+	ActiveInternalSquads *[]uuid.UUID `json:"activeInternalSquads,omitempty"`
 	ExternalSquadUuid    *uuid.UUID  `json:"externalSquadUuid,omitempty"`
 	Tag                  *string     `json:"tag,omitempty"`
 	Description          *string     `json:"description,omitempty"`

@@ -8,7 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func buildRemnawaveTariffProfile(t *database.Tariff) remnawave.TariffPaidProfile {
+// BuildRemnawaveTariffProfile собирает профиль Remnawave из строки тарифа (платный план).
+func BuildRemnawaveTariffProfile(t *database.Tariff) remnawave.TariffPaidProfile {
 	uuids, _ := database.ParseSquadUUIDList(t.ActiveInternalSquadUUIDs)
 	ext := uuid.Nil
 	if t.ExternalSquadUUID != nil {

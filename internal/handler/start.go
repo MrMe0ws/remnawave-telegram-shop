@@ -70,6 +70,8 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 
 	inlineKeyboard := h.buildStartKeyboard(existingCustomer, langCode)
 
+	linkPreviewOff := true
+
 	m, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
 		Text:   "🧹",
@@ -96,6 +98,9 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    update.Message.Chat.ID,
 		ParseMode: models.ParseModeHTML,
+		LinkPreviewOptions: &models.LinkPreviewOptions{
+			IsDisabled: &linkPreviewOff,
+		},
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: inlineKeyboard,
 		},
@@ -119,9 +124,11 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 
 	inlineKeyboard := h.buildStartKeyboard(existingCustomer, langCode)
 
+	linkPreviewOff := true
+	lp := &models.LinkPreviewOptions{IsDisabled: &linkPreviewOff}
 	err = SendOrEditAfterInlineCallback(ctxWithTime, b, update, h.translation.GetText(langCode, "greeting"), models.ParseModeHTML, models.InlineKeyboardMarkup{
 		InlineKeyboard: inlineKeyboard,
-	}, nil)
+	}, lp)
 	if err != nil {
 		slog.Error("Error sending /start message", err)
 	}

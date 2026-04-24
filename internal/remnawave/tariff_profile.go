@@ -79,12 +79,13 @@ func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *
 	squadIds := filterSquadsByUUIDList(squads, profile.SquadUUIDs)
 	strategy := normalizeStrategy(profile.TrafficLimitResetStrategy)
 	tl := profile.TrafficLimitBytes
+	squadsPatch := append([]uuid.UUID(nil), squadIds...)
 	userUpdate := &UpdateUserRequest{
 		UUID:                 &existingUser.UUID,
 		ExpireAt:             &newExpire,
 		Status:               "ACTIVE",
 		TrafficLimitBytes:    &tl,
-		ActiveInternalSquads: squadIds,
+		ActiveInternalSquads: &squadsPatch,
 		TrafficLimitStrategy: strategy,
 	}
 	if profile.BaseDeviceLimit > 0 {
@@ -126,9 +127,10 @@ func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int
 	strategy := normalizeStrategy(profile.TrafficLimitResetStrategy)
 	tl := profile.TrafficLimitBytes
 	tid := int(telegramID)
+	squadsCreate := append([]uuid.UUID(nil), squadIds...)
 	createReq := &CreateUserRequest{
 		Username:             username,
-		ActiveInternalSquads: squadIds,
+		ActiveInternalSquads: &squadsCreate,
 		Status:               "ACTIVE",
 		TelegramID:           &tid,
 		ExpireAt:             expireAt,

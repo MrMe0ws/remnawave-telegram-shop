@@ -293,6 +293,7 @@ func (h Handler) AddDevicePaymentCallbackHandler(ctx context.Context, b *bot.Bot
 	paymentURL, purchaseId, err := h.paymentService.CreateHwidPurchase(ctxWithUsername, float64(amt), delta, customer, invoiceType, meta)
 	if err != nil {
 		slog.Error("Error creating hwid payment", "error", err)
+		h.notifyPaymentProviderUnavailable(ctx, b, update, langCode, fmt.Sprintf("%s?target=%d", CallbackAddDevicePayment, target))
 		return
 	}
 

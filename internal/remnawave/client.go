@@ -173,6 +173,55 @@ func (r *Client) GetUsers(ctx context.Context) ([]User, error) {
 	return users, nil
 }
 
+func matchUserAdminSearch(u User, rawNeedle, needleLower string) bool {
+	if needleLower == "" {
+		return false
+	}
+	if strings.Contains(strings.ToLower(u.Username), needleLower) {
+		return true
+	}
+	if u.Description != nil {
+		desc := strings.TrimSpace(*u.Description)
+		if desc != "" && strings.Contains(strings.ToLower(desc), needleLower) {
+			return true
+		}
+	}
+	if u.Tag != nil {
+		tag := strings.TrimSpace(*u.Tag)
+		if tag != "" && strings.Contains(strings.ToLower(tag), needleLower) {
+			return true
+		}
+	}
+	if u.TelegramID != nil {
+		idStr := strconv.FormatInt(*u.TelegramID, 10)
+		if strings.Contains(idStr, rawNeedle) {
+			return true
+		}
+	}
+	return false
+}
+
+// FindUsersMatchingAdminSearch фильтрует загруженный список пользователей панели по подстроке (username, описание, тег, telegram id как текст).
+func (r *Client) FindUsersMatchingAdminSearch(ctx context.Context, needle string) ([]User, error) {
+	raw := strings.TrimSpace(needle)
+	raw = strings.TrimPrefix(raw, "@")
+	if raw == "" {
+		return nil, nil
+	}
+	nLow := strings.ToLower(raw)
+	all, err := r.GetUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []User
+	for _, u := range all {
+		if matchUserAdminSearch(u, raw, nLow) {
+			out = append(out, u)
+		}
+	}
+	return out, nil
+}
+
 // ---------------------------------------------------------------------------
 // Users — get by Telegram ID
 // ---------------------------------------------------------------------------
@@ -371,12 +420,13 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 	}
 
 	tl := int64(trafficLimit)
+	squadsCopy := append([]uuid.UUID(nil), squadIds...)
 	userUpdate := &UpdateUserRequest{
 		UUID:                 &existingUser.UUID,
 		ExpireAt:             &newExpire,
 		Status:               "ACTIVE",
 		TrafficLimitBytes:    &tl,
-		ActiveInternalSquads: squadIds,
+		ActiveInternalSquads: &squadsCopy,
 		TrafficLimitStrategy: normalizeStrategy(strategy),
 	}
 
@@ -448,9 +498,10 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 
 	tid := int(telegramId)
 	tl := int64(trafficLimit)
+	squadsCreate := append([]uuid.UUID(nil), squadIds...)
 	createReq := &CreateUserRequest{
 		Username:             username,
-		ActiveInternalSquads: squadIds,
+		ActiveInternalSquads: &squadsCreate,
 		Status:               "ACTIVE",
 		TelegramID:           &tid,
 		ExpireAt:             expireAt,
@@ -520,6 +571,33 @@ func (r *Client) GetUserTrafficInfo(ctx context.Context, telegramId int64) (*Use
 
 	user := findUserBySuffix(users, telegramId)
 	return user, nil
+}
+
+// GetUserByUUID возвращает полную карточку пользователя панели GET /api/users/{uuid}.
+func (r *Client) GetUserByUUID(ctx context.Context, userUUID uuid.UUID) (*User, error) {
+	var resp apiResponse[User]
+	path := "/api/users/" + userUUID.String()
+	if err := r.doJSON(ctx, http.MethodGet, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Response, nil
+}
+
+// PatchUser применяет PATCH /api/users (тело UpdateUserRequest).
+func (r *Client) PatchUser(ctx context.Context, req *UpdateUserRequest) (*User, error) {
+	var resp apiResponse[User]
+	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Response, nil
+}
+
+// DeleteUser удаляет пользователя в панели DELETE /api/users/{uuid}.
+func (r *Client) DeleteUser(ctx context.Context, userUUID uuid.UUID) error {
+	if userUUID == uuid.Nil {
+		return errors.New("nil user uuid")
+	}
+	return r.doJSON(ctx, http.MethodDelete, "/api/users/"+userUUID.String(), nil, nil)
 }
 
 func (r *Client) GetUserDevicesByUuid(ctx context.Context, userUuid string) ([]Device, error) {
