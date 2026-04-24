@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	adminUsersListPageSize = 16
-	adminUserPayPageSize   = 8
+	adminUsersListPageSize       = 16
+	adminUserPayPageSize         = 8
+	adminUsersPagePickChunkSize  = 12
 )
 
 var (
@@ -278,11 +279,184 @@ func (h Handler) AdminUsersListInactiveRouter(ctx context.Context, b *bot.Bot, u
 	h.adminUsersListPage(ctx, b, update, database.CustomerListScopeInactive, page, "", CallbackAdminUsersRoot)
 }
 
-func listPrefixForScope(scope database.CustomerListScope) string {
-	if scope == database.CustomerListScopeInactive {
+// listPaginationPrefix — префикс callback для ◀/▶/прямого номера страницы (не путать с «все юзеры» vs «подписки»).
+func listPaginationPrefix(scope database.CustomerListScope, listParentBack string) string {
+	switch {
+	case scope == database.CustomerListScopeInactive:
 		return CallbackAdminUsersListInactivePrefix
+	case scope == database.CustomerListScopeExpiringSoon && listParentBack == CallbackAdminSubsRoot:
+		return CallbackAdminSubsExpiringListPrefix
+	case listParentBack == CallbackAdminSubsRoot && scope == database.CustomerListScopeAll:
+		return CallbackAdminSubsListPrefix
+	default:
+		return CallbackAdminUsersListAllPrefix
 	}
-	return CallbackAdminUsersListAllPrefix
+}
+
+func adminUsersListMode(scope database.CustomerListScope, listParentBack string) string {
+	switch {
+	case scope == database.CustomerListScopeInactive:
+		return "ai"
+	case scope == database.CustomerListScopeExpiringSoon && listParentBack == CallbackAdminSubsRoot:
+		return "se"
+	case listParentBack == CallbackAdminSubsRoot && scope == database.CustomerListScopeAll:
+		return "sa"
+	default:
+		return "au"
+	}
+}
+
+func adminUsersListFromMode(mode string) (scope database.CustomerListScope, titleKey string, listParentBack string, ok bool) {
+	switch mode {
+	case "ai":
+		return database.CustomerListScopeInactive, "", CallbackAdminUsersRoot, true
+	case "se":
+		return database.CustomerListScopeExpiringSoon, "admin_subs_expiring_list_title", CallbackAdminSubsRoot, true
+	case "sa":
+		return database.CustomerListScopeAll, "admin_subs_list_title", CallbackAdminSubsRoot, true
+	case "au":
+		return database.CustomerListScopeAll, "", CallbackAdminUsersRoot, true
+	default:
+		return database.CustomerListScopeAll, "", CallbackAdminUsersRoot, false
+	}
+}
+
+func adminUsersPagePickerMarkup(lang string, h Handler, mode string, chunk, returnPg int, totalPages int) [][]models.InlineKeyboardButton {
+	var rows [][]models.InlineKeyboardButton
+	start := chunk * adminUsersPagePickChunkSize
+	end := start + adminUsersPagePickChunkSize
+	if end > totalPages {
+		end = totalPages
+	}
+	if start >= totalPages {
+		start = 0
+		end = min(adminUsersPagePickChunkSize, totalPages)
+	}
+	const cols = 6
+	var cur []models.InlineKeyboardButton
+	for p := start; p < end; p++ {
+		cur = append(cur, models.InlineKeyboardButton{
+			Text:         strconv.Itoa(p + 1),
+			CallbackData: fmt.Sprintf("%s%s%d", CallbackAdminUsersListPagePickJumpPrefix, mode, p),
+		})
+		if len(cur) >= cols {
+			rows = append(rows, cur)
+			cur = nil
+		}
+	}
+	if len(cur) > 0 {
+		rows = append(rows, cur)
+	}
+	var nav []models.InlineKeyboardButton
+	if chunk > 0 {
+		nav = append(nav, models.InlineKeyboardButton{
+			Text: "◀️",
+			CallbackData: fmt.Sprintf("%s%s%03d%04d", CallbackAdminUsersListPagePickOpenPrefix, mode, chunk-1, returnPg),
+		})
+	}
+	if end < totalPages {
+		nav = append(nav, models.InlineKeyboardButton{
+			Text: "▶️",
+			CallbackData: fmt.Sprintf("%s%s%03d%04d", CallbackAdminUsersListPagePickOpenPrefix, mode, chunk+1, returnPg),
+		})
+	}
+	if len(nav) > 0 {
+		rows = append(rows, nav)
+	}
+	rows = append(rows, []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "admin_users_page_picker_back", models.InlineKeyboardButton{
+			CallbackData: fmt.Sprintf("%s%s%d", CallbackAdminUsersListPagePickJumpPrefix, mode, returnPg),
+		}),
+	})
+	return rows
+}
+
+// AdminUsersListPagePickerOpenHandler — сетка выбора страницы по нажатию «N/M» в списке клиентов.
+func (h Handler) AdminUsersListPagePickerOpenHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || !isAdmin(update.CallbackQuery) {
+		return
+	}
+	cb := update.CallbackQuery
+	data := cb.Data
+	if !strings.HasPrefix(data, CallbackAdminUsersListPagePickOpenPrefix) {
+		return
+	}
+	rest := strings.TrimPrefix(data, CallbackAdminUsersListPagePickOpenPrefix)
+	if len(rest) < 9 {
+		return
+	}
+	mode := rest[:2]
+	chunk, err1 := strconv.Atoi(rest[2:5])
+	returnPg, err2 := strconv.Atoi(rest[5:9])
+	if err1 != nil || err2 != nil || chunk < 0 || returnPg < 0 {
+		return
+	}
+	scope, _, _, ok := adminUsersListFromMode(mode)
+	if !ok {
+		return
+	}
+	msg := cb.Message.Message
+	if msg == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+	total, err := h.customerRepository.CountByListScope(ctx, scope)
+	if err != nil {
+		slog.Error("admin users page picker count", "error", err)
+		return
+	}
+	totalPages := int(math.Ceil(float64(total) / float64(adminUsersListPageSize)))
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	maxChunk := (totalPages - 1) / adminUsersPagePickChunkSize
+	if maxChunk < 0 {
+		maxChunk = 0
+	}
+	if chunk > maxChunk {
+		chunk = maxChunk
+	}
+	start := chunk * adminUsersPagePickChunkSize
+	end := start + adminUsersPagePickChunkSize
+	if end > totalPages {
+		end = totalPages
+	}
+	first := start + 1
+	last := end
+	if first > last {
+		first, last = 1, 1
+	}
+	text := fmt.Sprintf(h.translation.GetText(lang, "admin_users_page_picker_body"), first, last, totalPages)
+	rows := adminUsersPagePickerMarkup(lang, h, mode, chunk, returnPg, totalPages)
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: rows}, nil)
+	if err != nil {
+		slog.Error("admin users page picker edit", "error", err)
+	}
+}
+
+// AdminUsersListPagePickerJumpHandler — переход на выбранную страницу из сетки.
+func (h Handler) AdminUsersListPagePickerJumpHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || !isAdmin(update.CallbackQuery) {
+		return
+	}
+	data := update.CallbackQuery.Data
+	if !strings.HasPrefix(data, CallbackAdminUsersListPagePickJumpPrefix) {
+		return
+	}
+	rest := strings.TrimPrefix(data, CallbackAdminUsersListPagePickJumpPrefix)
+	if len(rest) < 3 {
+		return
+	}
+	mode := rest[:2]
+	pg, err := strconv.Atoi(rest[2:])
+	if err != nil || pg < 0 {
+		return
+	}
+	scope, titleKey, listParent, ok := adminUsersListFromMode(mode)
+	if !ok {
+		return
+	}
+	h.adminUsersListPage(ctx, b, update, scope, pg, titleKey, listParent)
 }
 
 func (h Handler) adminUsersListPage(ctx context.Context, b *bot.Bot, update *models.Update, scope database.CustomerListScope, page int, titleKeyOverride string, listParentBack string) {
@@ -320,7 +494,8 @@ func (h Handler) adminUsersListPage(ctx context.Context, b *bot.Bot, update *mod
 		return
 	}
 	panelHints := h.enrichPanelUsernameHints(ctx, b, customers)
-	prefix := listPrefixForScope(scope)
+	prefix := listPaginationPrefix(scope, listParentBack)
+	mode := adminUsersListMode(scope, listParentBack)
 	titleKey := titleKeyOverride
 	if titleKey == "" {
 		switch scope {
@@ -366,9 +541,10 @@ func (h Handler) adminUsersListPage(ctx context.Context, b *bot.Bot, update *mod
 				CallbackData: fmt.Sprintf("%s%d", prefix, page-1),
 			})
 		}
+		chunk := page / adminUsersPagePickChunkSize
 		nav = append(nav, models.InlineKeyboardButton{
-			Text:         fmt.Sprintf("%d/%d", page+1, totalPages),
-			CallbackData: fmt.Sprintf("%s%d", prefix, page),
+			Text: fmt.Sprintf("%d/%d", page+1, totalPages),
+			CallbackData: fmt.Sprintf("%s%s%03d%04d", CallbackAdminUsersListPagePickOpenPrefix, mode, chunk, page),
 		})
 		if page < totalPages-1 {
 			nav = append(nav, models.InlineKeyboardButton{
@@ -1521,13 +1697,16 @@ func (h Handler) AdminUserSpendHandler(ctx context.Context, b *bot.Bot, update *
 		return
 	}
 	lang := cb.From.LanguageCode
-	n, sumRub, err := h.purchaseRepository.SumPaidRubAndCount(ctx, cust.ID)
+	rubN, sumRub, starsN, sumStars, err := h.purchaseRepository.SumPaidSpendBreakdown(ctx, cust.ID)
 	if err != nil {
 		slog.Error("admin user spend", "error", err)
 		return
 	}
 	text := h.translation.GetText(lang, "admin_user_spend_title") + "\n\n" +
-		fmt.Sprintf(h.translation.GetText(lang, "admin_user_spend_body"), n, sumRub)
+		fmt.Sprintf(h.translation.GetText(lang, "admin_user_spend_body"), rubN, sumRub, starsN, sumStars)
+	if rate := config.RubPerStar(); rate > 0 && sumStars > 0 {
+		text += "\n" + fmt.Sprintf(h.translation.GetText(lang, "admin_user_spend_stars_rub_equiv"), sumStars*rate)
+	}
 	kb := [][]models.InlineKeyboardButton{
 		{
 			h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s%d", CallbackAdminUserManagePrefix, cust.ID)}),
@@ -1757,6 +1936,17 @@ func (h Handler) AdminSubsListRouter(ctx context.Context, b *bot.Bot, update *mo
 
 func (h Handler) AdminSubsExpiringHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	h.adminUsersListPage(ctx, b, update, database.CustomerListScopeExpiringSoon, 0, "admin_subs_expiring_list_title", CallbackAdminSubsRoot)
+}
+
+func (h Handler) AdminSubsExpiringListRouter(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || !strings.HasPrefix(update.CallbackQuery.Data, CallbackAdminSubsExpiringListPrefix) {
+		return
+	}
+	page, err := strconv.Atoi(strings.TrimPrefix(update.CallbackQuery.Data, CallbackAdminSubsExpiringListPrefix))
+	if err != nil || page < 0 {
+		page = 0
+	}
+	h.adminUsersListPage(ctx, b, update, database.CustomerListScopeExpiringSoon, page, "admin_subs_expiring_list_title", CallbackAdminSubsRoot)
 }
 
 func (h Handler) AdminSubsStatsJumpHandler(ctx context.Context, b *bot.Bot, update *models.Update) {

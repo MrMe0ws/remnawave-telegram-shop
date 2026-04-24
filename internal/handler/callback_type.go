@@ -64,6 +64,9 @@ const (
 
 	CallbackAdminUsersListAllPrefix      = "aula"
 	CallbackAdminUsersListInactivePrefix = "auli"
+	// Выбор страницы списка клиентов: ulkj — перейти на стр.; ulkp — сетка (chunk 3 цифры + return 3 цифры).
+	CallbackAdminUsersListPagePickJumpPrefix = "ulkj"
+	CallbackAdminUsersListPagePickOpenPrefix = "ulkp"
 
 	CallbackAdminUserManagePrefix       = "aum"
 	CallbackAdminUserSubscriptionPrefix = "aus"
@@ -118,6 +121,8 @@ const (
 	CallbackAdminSubsRoot       = "sbr"
 	CallbackAdminSubsListPrefix = "sbl"
 	CallbackAdminSubsExpiring   = "sbe"
+	// Пагинация списка «скоро истекают» (sbe только открывает 0-ю страницу).
+	CallbackAdminSubsExpiringListPrefix = "sbx"
 	CallbackAdminSubsStatsJump  = "sbs"
 
 	CallbackAdminRefRoot = "arf"

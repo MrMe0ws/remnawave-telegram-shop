@@ -366,6 +366,8 @@
   "admin_users_list_hint": "Tap a row to open the customer card.",
   "admin_users_list_until": "until",
   "admin_users_list_empty": "No rows found.",
+  "admin_users_page_picker_body": "<b>Pick a page</b>\n\nShowing pages <b>%d–%d</b> of %d.",
+  "admin_users_page_picker_back": "⬅️ Back to list",
 
   "admin_users_stats_section_title": "📊 <b>Statistics (users section)</b>",
   "admin_users_stats_section_body": "<b>Total customers:</b> %d\n<b>With active subscription:</b> %d (%s%% of all)\n<b>Inactive VPN:</b> %d\n\n<b>Signups:</b> today %d · week %d · month %d",
@@ -481,7 +483,8 @@
   "admin_user_ref_body": "<b>Total referrals:</b> %d\n<b>Paid:</b> %d\n<b>Active VPN among referrals:</b> %d\n<b>Bonus days (per bot rules):</b> %d",
 
   "admin_user_spend_title": "<b>Payment stats</b>",
-  "admin_user_spend_body": "<b>Paid rows (RUB lines):</b> %d\n<b>Sum in ₽:</b> %.2f",
+  "admin_user_spend_body": "<b>Paid in ₽ (RUB rows):</b> %d\n<b>Sum in ₽:</b> %.2f\n\n<b>Telegram Stars payments:</b> %d\n<b>Total Stars:</b> %.0f",
+  "admin_user_spend_stars_rub_equiv": "<b>Stars ≈ ₽ (RUB_PER_STAR):</b> %.2f",
 
   "admin_user_send_hint_fmt": "<b>Message the user</b>\n\nEnsure message forwarding to admin is enabled.\nUser Telegram ID: <code>%d</code>.\nReply to the forwarded service line \"(ID: …)\" or use your usual admin DM flow.",
   "admin_user_send_dm_prompt": "<b>Message the user</b>\n\nSend your <b>next message</b> as plain text — the bot will deliver it to the user in DM.\nCancel: button below or open the user card again.",

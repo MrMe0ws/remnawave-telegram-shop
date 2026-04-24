@@ -366,20 +366,43 @@ func (pr *PurchaseRepository) ListAllPaidForLoyaltyBackfill(ctx context.Context)
 	return purchases, nil
 }
 
-// SumPaidRubAndCount возвращает число успешных оплат и сумму amount только в «рублёвых» строках (как в админ-статистике).
-func (pr *PurchaseRepository) SumPaidRubAndCount(ctx context.Context, customerID int64) (count int64, sumRub float64, err error) {
+// SumPaidSpendBreakdown возвращает по успешным оплатам клиента: счёт и сумму в рублях (RUB/RUR/пустая валюта,
+// без строк Telegram Stars) и отдельно счёт и сумму amount по Stars (invoice_type telegram или валюта STARS/XTR).
+func (pr *PurchaseRepository) SumPaidSpendBreakdown(ctx context.Context, customerID int64) (
+	rubCount int64, rubSum float64, starsCount int64, starsSum float64, err error,
+) {
 	q := `
-SELECT COUNT(*), COALESCE(SUM(p.amount), 0)
+SELECT
+  COUNT(*) FILTER (WHERE p.status = 'paid' AND NOT (
+    p.invoice_type = 'telegram'
+    OR UPPER(TRIM(COALESCE(p.currency, ''))) IN ('STARS', 'XTR')
+  ) AND (
+    UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR', '')
+    OR COALESCE(p.currency, '') = ''
+  )),
+  COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'paid' AND NOT (
+    p.invoice_type = 'telegram'
+    OR UPPER(TRIM(COALESCE(p.currency, ''))) IN ('STARS', 'XTR')
+  ) AND (
+    UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR', '')
+    OR COALESCE(p.currency, '') = ''
+  )), 0),
+  COUNT(*) FILTER (WHERE p.status = 'paid' AND (
+    p.invoice_type = 'telegram'
+    OR UPPER(TRIM(COALESCE(p.currency, ''))) IN ('STARS', 'XTR')
+  )),
+  COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'paid' AND (
+    p.invoice_type = 'telegram'
+    OR UPPER(TRIM(COALESCE(p.currency, ''))) IN ('STARS', 'XTR')
+  )), 0)
 FROM purchase p
 WHERE p.customer_id = $1
-  AND p.status = 'paid'
-  AND (UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR', '') OR COALESCE(p.currency, '') = '')
 `
-	err = pr.pool.QueryRow(ctx, q, customerID).Scan(&count, &sumRub)
+	err = pr.pool.QueryRow(ctx, q, customerID).Scan(&rubCount, &rubSum, &starsCount, &starsSum)
 	if err != nil {
-		return 0, 0, fmt.Errorf("sum paid rub for customer: %w", err)
+		return 0, 0, 0, 0, fmt.Errorf("sum paid spend breakdown for customer: %w", err)
 	}
-	return count, sumRub, nil
+	return rubCount, rubSum, starsCount, starsSum, nil
 }
 
 func (pr *PurchaseRepository) CountPaidByCustomer(ctx context.Context, customerID int64) (int, error) {
