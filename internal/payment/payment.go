@@ -126,7 +126,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		if tariff == nil {
 			return fmt.Errorf("tariff %d not found", *purchase.TariffID)
 		}
-		profile := buildRemnawaveTariffProfile(tariff)
+		profile := BuildRemnawaveTariffProfile(tariff)
 
 		// Апгрейд и досрочный даунгрейд: срок от момента оплаты. Остаток старого тарифа уже учтён в bonus
 		// (пересчёт «дневной» стоимости); нельзя прибавлять дни к текущему expire_at — иначе остаток считается дважды.

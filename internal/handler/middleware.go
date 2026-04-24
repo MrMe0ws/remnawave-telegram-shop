@@ -46,6 +46,11 @@ func (h Handler) CreateCustomerIfNotExistMiddleware(next bot.HandlerFunc) bot.Ha
 			updates := map[string]interface{}{
 				"language": langCode,
 			}
+			if update.Message != nil && update.Message.From.Username != "" {
+				updates["telegram_username"] = update.Message.From.Username
+			} else if update.CallbackQuery != nil && update.CallbackQuery.From.Username != "" {
+				updates["telegram_username"] = update.CallbackQuery.From.Username
+			}
 
 			err = h.customerRepository.UpdateFields(ctx, existingCustomer.ID, updates)
 			if err != nil {

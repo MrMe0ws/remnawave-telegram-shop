@@ -554,8 +554,8 @@ func InitConfig() {
 			return "month" // По умолчанию месяц
 		}
 		v = strings.ToLower(v)
-		if v != "day" && v != "week" && v != "month" && v != "never" {
-			panic("TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY must be one of: day, week, month, never")
+		if v != "day" && v != "week" && v != "month" && v != "month_rolling" && v != "never" {
+			panic("TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY must be one of: day, week, month, month_rolling, never")
 		}
 		return v
 	}()
@@ -566,8 +566,8 @@ func InitConfig() {
 			return "month" // По умолчанию месяц
 		}
 		v = strings.ToLower(v)
-		if v != "day" && v != "week" && v != "month" && v != "never" {
-			panic("TRAFFIC_LIMIT_RESET_STRATEGY must be one of: day, week, month, never")
+		if v != "day" && v != "week" && v != "month" && v != "month_rolling" && v != "never" {
+			panic("TRAFFIC_LIMIT_RESET_STRATEGY must be one of: day, week, month, month_rolling, never")
 		}
 		return v
 	}()

@@ -55,6 +55,73 @@ const (
 	CallbackAdminPromo   = "admin_promo"
 	CallbackAdminTariffs = "admin_tariffs"
 
+	// Админ: пользователи и подписки (Bedolaga-style; короткие callback).
+	CallbackAdminUsersSubmenu      = "au_sm"
+	CallbackAdminUsersRoot         = "au_u"
+	CallbackAdminUsersSearch       = "au_sh"
+	CallbackAdminUsersStatsSection = "au_sec"
+	CallbackAdminUsersInactiveMenu = "au_in"
+
+	CallbackAdminUsersListAllPrefix      = "aula"
+	CallbackAdminUsersListInactivePrefix = "auli"
+
+	CallbackAdminUserManagePrefix       = "aum"
+	CallbackAdminUserSubscriptionPrefix = "aus"
+	CallbackAdminUserReferralsPrefix    = "aur"
+	CallbackAdminUserSpendPrefix        = "aut"
+	CallbackAdminUserPaymentsPrefix     = "aup"
+
+	CallbackAdminUserMsgHintPrefix = "aug"
+
+	CallbackAdminUserExtendPrefix = "axe"
+
+	// Сброс трафика: atq = подтверждение, atc = выполнить (префикс + id клиента).
+	CallbackAdminUserResetTrafficAskPrefix    = "atq"
+	CallbackAdminUserResetTrafficConfirmPrefix = "atc"
+
+	CallbackAdminUserHwPresetMenuPrefix = "ahm"
+	CallbackAdminUserHwPresetSetPrefix  = "ahp"
+
+	// Календарь срока подписки: acl открыть, acn месяц, acp выбрать день, acb пустая ячейка.
+	CallbackAdminUserCalOpenPrefix  = "acl"
+	CallbackAdminUserCalNavPrefix   = "acn"
+	CallbackAdminUserCalPickPrefix  = "acp"
+	CallbackAdminUserCalBlankPrefix = "acb"
+
+	// Расширенные настройки панели: apm меню, asq сквад, ats/att стратегия, atl/atg лимит трафика, arq/arc отключить, ueq/uec включить, ayq/ayc удалить.
+	CallbackAdminUserPanelMenuPrefix    = "apm"
+	CallbackAdminUserSquadMenuPrefix    = "asl"
+	CallbackAdminUserSquadPickPrefix    = "asq"
+	CallbackAdminUserStrategyMenuPrefix = "ats"
+	CallbackAdminUserStrategySetPrefix  = "att"
+	CallbackAdminUserTrafficMenuPrefix  = "atl"
+	CallbackAdminUserTrafficSetPrefix   = "atg"
+	CallbackAdminUserTrafficCustomPrefix  = "atx"
+	CallbackAdminUserDisableAskPrefix    = "arq"
+	CallbackAdminUserDisableConfirmPrefix = "arc"
+	CallbackAdminUserEnableAskPrefix     = "ueq"
+	CallbackAdminUserEnableConfirmPrefix = "uec"
+	CallbackAdminUserDeleteAskPrefix      = "ayq"
+	CallbackAdminUserDeleteConfirmPrefix  = "ayc"
+
+	CallbackAdminUserDevicesPrefix = "adv"
+	CallbackAdminUserDevDelPrefix  = "adx"
+
+	// Доп. HWID в БД (ehm/ehp + id), тариф (utm меню, utp + id_tariffId), описание в панели (uds запрос текста, udc очистка).
+	CallbackAdminUserExtraHwidDecPrefix = "ehm"
+	CallbackAdminUserExtraHwidIncPrefix = "ehp"
+	CallbackAdminUserTariffMenuPrefix   = "utm"
+	CallbackAdminUserTariffPickPrefix   = "utp"
+	CallbackAdminUserDescAskPrefix      = "uds"
+	CallbackAdminUserDescClearPrefix    = "udc"
+
+	CallbackAdminSubsRoot       = "sbr"
+	CallbackAdminSubsListPrefix = "sbl"
+	CallbackAdminSubsExpiring   = "sbe"
+	CallbackAdminSubsStatsJump  = "sbs"
+
+	CallbackAdminRefRoot = "arf"
+
 	// Админ: лояльность (префиксы ly_*)
 	CallbackAdminLoyaltyRoot       = "ly_r"
 	CallbackAdminLoyaltyLevels     = "ly_l"
