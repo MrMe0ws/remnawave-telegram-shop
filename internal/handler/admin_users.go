@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	adminUsersListPageSize = 8
+	adminUsersListPageSize = 16
 	adminUserPayPageSize   = 8
 )
 
@@ -456,20 +456,6 @@ func adminUserListButtonLabel(h Handler, lang string, c *database.Customer, now 
 				pu = string([]rune(pu)[:16]) + "…"
 			}
 			base = fmt.Sprintf("%s %s · %s", statusEmoji, pu, idTail)
-		}
-	}
-	maxLen := 56
-	tm := translation.GetInstance()
-	if len([]rune(base)) >= maxLen {
-		return base
-	}
-	if c.ExpireAt != nil {
-		line := fmt.Sprintf("\n%s %s",
-			tm.GetText(lang, "admin_users_list_until"),
-			c.ExpireAt.In(now.Location()).Format("02.01.06"))
-		runes := []rune(base + line)
-		if len(runes) <= maxLen {
-			base += line
 		}
 	}
 	return base
