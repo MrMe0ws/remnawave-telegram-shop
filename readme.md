@@ -4,7 +4,8 @@
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/eff4a209-873c-400e-9ff3-2ad7facf6c51" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/96d96a7f-4316-427c-b9c8-781c6f7213d7" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/216cdcbe-f88e-4830-a799-a8ae86585720" />
-<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/17655790-b395-4afc-8710-3e07e97abf39" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/ebe300a8-55f0-4569-86ec-3af160a24bb4" />
+
 
 
 ## 🚀 Улучшенные Возможности
