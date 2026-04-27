@@ -97,13 +97,10 @@ Telegram бот для продажи подписок с интеграцией
 
 В проект добавляется web-кабинет — SPA + API, запускаемые в том же процессе, что и бот. Включается флагом `CABINET_ENABLED=true` в `.env`, по умолчанию **выключен** и никак не влияет на работу бота.
 
-**Пошаговая инструкция для администратора** (миграции, сборка SPA, env, Telegram, брендинг, smoke): [`documentation/cabinet-mode-setup.md`](documentation/cabinet-mode-setup.md).
-
-- Поддомен и домен: `cabinet.example.com` → `proxy_pass http://127.0.0.1:<HEALTH_CHECK_PORT>` (подробный nginx/TLS — в локальной копии `docs/cabinet/deploy-guide-simple.md`, если вы ведёте каталог `docs/` у себя).
+- **Как включить режим кабинета** (миграции, сборка SPA, env, Telegram, брендинг, smoke): [`documentation/cabinet-mode-setup.md`](documentation/cabinet-mode-setup.md). Переменные `CABINET_*` — в **`.env.sample`**. Технические материалы (ТЗ, план, nginx) при необходимости ведите у себя в `docs/cabinet/` (в шаблоне репозитория каталог `/docs/` в `.gitignore` и может не попадать в git).
+- Поддомен и домен: `cabinet.example.com` → `proxy_pass http://127.0.0.1:<HEALTH_CHECK_PORT>` (пример nginx/TLS — в локальной копии `docs/cabinet/deploy-guide-simple.md`, если она у вас есть).
 - Авторизация: email + пароль, Google OAuth2, Telegram Login 2.0 (OIDC для web) + Telegram Mini App `initData` (встроенный путь внутри Telegram).
 - Синхронизация с ботом: аккаунт сайта и профиль Telegram связываются в одну запись `customer`; web-only пользователи получают synthetic `telegram_id` вне реального Telegram-диапазона и дополнительно помечаются колонкой `customer.is_web_only` — Telegram Bot API к ним никогда не вызывается.
-- Документация для пользователей репозитория: **`documentation/cabinet-mode-setup.md`**. Технические материалы (ТЗ, план, деплой) при необходимости ведите у себя в `docs/cabinet/` (в шаблоне `.gitignore` папка `/docs/` может быть исключена из коммитов).
-- Переменные окружения с префиксом `CABINET_*` описаны в `.env.sample`.
 
 Статус: выполнены этапы 0–10 (включая hardening: метрики Prometheus, CSP/HSTS по контексту, правка регистрации `/link/*` без платежей). Краткий обзор:
 
