@@ -4,7 +4,7 @@
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/eff4a209-873c-400e-9ff3-2ad7facf6c51" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/96d96a7f-4316-427c-b9c8-781c6f7213d7" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/216cdcbe-f88e-4830-a799-a8ae86585720" />
-<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/17655790-b395-4afc-8710-3e07e97abf39" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/ebe300a8-55f0-4569-86ec-3af160a24bb4" />
 
 
 ## 🚀 Улучшенные Возможности
@@ -32,6 +32,7 @@
 - **📋 Список рефералов**: Отображение активных/неактивных рефералов
 - **🎫 Промокоды**: ввод кода пользователем (дни подписки, триал, доп. устройства, скидка %), админка создания и управления промокодами, pending-скидка на следующую оплату, подсказки в «Мой VPN» и на экране тарифов
 - **📦 Режим нескольких тарифов (`SALES_MODE=tariffs`)**: цены и лимиты (трафик, устройства, squads, описание) из PostgreSQL; пошаговый сценарий «Купить» (выбор тарифа → период → способ оплаты → оплата); админка тарифов; опциональное описание тарифа для экранов покупки и карточки в админке
+- **👥 Админ — «Пользователи»** (`ADMIN_TELEGRAM_ID`): списки всех / неактивных, поиск, карточка; оплаты и сводка в ₽ + Stars (оценка Stars в ₽ при `RUB_PER_STAR`); ветка **«Подписки»** (все / скоро истекают); пагинация с выбором страницы. При **`SALES_MODE=tariffs`** — смена тарифа, доп. HWID, описание, устройства, настройки панели (squads, трафик, срок подписки и др.).
 - **📈 Админ-статистика** (при заданном `ADMIN_TELEGRAM_ID`): раздел **«Статистика»** в админ-панели — пользователи, подписки, доходы в ₽ (фильтр по RUB/RUR/пустой валюте), реферальные начисления **в днях**, общая сводка; данные из PostgreSQL, кнопки «Обновить» / «Назад».
 - **💎 Лояльность** (`LOYALTY_ENABLED`): XP по успешным оплатам (1 ₽ эквивалента ≈ 1 XP, Stars через `RUB_PER_STAR`), уровни и скидки в таблице `loyalty_tier` (миграция `000014_loyalty`), админка уровней и **пересчёт XP из истории `purchase`**, пользовательский экран в «Мой VPN». Подробнее — `docs/loyalty/` и `AGENTS.md`.
 
@@ -92,6 +93,68 @@ Telegram бот для продажи подписок с интеграцией
 - **Промокоды**: пользовательский сценарий активации и админ-раздел (при настроенном `ADMIN_TELEGRAM_ID`), миграция БД `000007_promo_codes`
 - **Админ-статистика**: при `ADMIN_TELEGRAM_ID` в админ-панели — раздел со сводками по БД (пользователи, подписки, доходы в ₽, рефералы в днях, общая сводка)
 
+## Web-кабинет (опционально, в разработке)
+
+В проект добавляется web-кабинет — SPA + API, запускаемые в том же процессе, что и бот. Включается флагом `CABINET_ENABLED=true` в `.env`, по умолчанию **выключен** и никак не влияет на работу бота.
+
+**Пошаговая инструкция для администратора** (миграции, сборка SPA, env, Telegram, брендинг, smoke): [`documentation/cabinet-mode-setup.md`](documentation/cabinet-mode-setup.md).
+
+- Поддомен и домен: `cabinet.example.com` → `proxy_pass http://127.0.0.1:<HEALTH_CHECK_PORT>` (подробный nginx/TLS — в локальной копии `docs/cabinet/deploy-guide-simple.md`, если вы ведёте каталог `docs/` у себя).
+- Авторизация: email + пароль, Google OAuth2, Telegram Login 2.0 (OIDC для web) + Telegram Mini App `initData` (встроенный путь внутри Telegram).
+- Синхронизация с ботом: аккаунт сайта и профиль Telegram связываются в одну запись `customer`; web-only пользователи получают synthetic `telegram_id` вне реального Telegram-диапазона и дополнительно помечаются колонкой `customer.is_web_only` — Telegram Bot API к ним никогда не вызывается.
+- Документация для пользователей репозитория: **`documentation/cabinet-mode-setup.md`**. Технические материалы (ТЗ, план, деплой) при необходимости ведите у себя в `docs/cabinet/` (в шаблоне `.gitignore` папка `/docs/` может быть исключена из коммитов).
+- Переменные окружения с префиксом `CABINET_*` описаны в `.env.sample`.
+
+Статус: выполнены этапы 0–10 (включая hardening: метрики Prometheus, CSP/HSTS по контексту, правка регистрации `/link/*` без платежей). Краткий обзор:
+
+| Этап | Содержание |
+|------|-----------|
+| 0 | Скелет: `/cabinet/api/healthz`, SPA-заглушка, `go:embed` |
+| 0.5 | Аудит `customer.telegram_id` |
+| 1 | Миграция `000017_cabinet_schema`, synthetic telegram_id, startup-check |
+| 2 | Auth-стек: Argon2id + JWT HS256 + refresh-ротация, CSRF, rate-limit, SMTP |
+| 2.5 | `GET /me`, `PUT /me/language` |
+| 3 | Bootstrap web-only customer, `cabinet_account_customer_link` |
+| 4 | Публичная витрина `GET /tariffs` |
+| 5 | Checkout + оплаты (YooKassa, CryptoPay), `Idempotency-Key` |
+| 6 | `GET /me/subscription`: expire_at, link, tariff, loyalty_xp |
+| 7 | Google OAuth (PKCE) + Telegram Login (MiniApp) |
+| 8 | Link/Merge Telegram ↔ web customer: dry-run preview, атомарный merge, `cabinet_merge_audit` |
+| **9a** | **Фронтенд: `web/cabinet/` — Vite 6 + React 19 + Tailwind 3, страницы auth, dark/light тема, RU/EN i18n, `dist/` в `go:embed`** |
+| **9b** | **Dashboard (статус подписки + copy-link + loyalty), витрина тарифов (classic/tariffs mode), checkout (YooKassa/CryptoPay) + страница статуса оплаты с polling** |
+| **9c** | **Настройки (пароль, язык, Google, Telegram link через OAuth 2.0), страница merge preview/confirm, автологин Mini App по `initData`, `PUT /me/password` на бэкенде** |
+| **10** | **Метрики `GET /cabinet/api/metrics` (+ опциональный Basic-auth), CSP для SPA / security headers для API, маскирование IP/UA в логах, CI: `go build` + тесты кабинета + `scripts/cabinet-forbid-sensitive-slogs.sh`** |
+
+**Релиз / домен:** после смены домена кабинета обязательно обновите настройки в BotFather:
+- `/setdomain` для Mini App / совместимости web-login.
+- Telegram Login 2.0 (OIDC): trusted origin + redirect URI (например, `https://cabinet.example.com/cabinet/api/auth/telegram/callback`).
+- Переменные кабинета: `CABINET_TELEGRAM_WEB_AUTH_MODE`, `CABINET_TELEGRAM_OIDC_CLIENT_ID`, `CABINET_TELEGRAM_OIDC_CLIENT_SECRET`, `CABINET_TELEGRAM_OIDC_REDIRECT_URL`, `CABINET_TELEGRAM_LOGIN_BOT_USERNAME`.
+Метрики: переменные `CABINET_METRICS_*` в `.env.sample`.
+
+### Telegram Auth 2.0 (micro guide)
+
+1. В BotFather откройте раздел **Login Widget / OpenID Connect** для вашего бота.
+2. Заполните в `.env`:
+   - `CABINET_TELEGRAM_WEB_AUTH_MODE` = `oidc` (или `widget`, если нужен legacy Login Widget 1.0).
+   - `CABINET_TELEGRAM_OIDC_CLIENT_ID` = `Client ID` из BotFather.
+   - `CABINET_TELEGRAM_OIDC_CLIENT_SECRET` = `Client Secret` из BotFather.
+   - `CABINET_TELEGRAM_OIDC_REDIRECT_URL` = `https://<ваш_домен>/cabinet/api/auth/telegram/callback`.
+3. В BotFather добавьте:
+   - **Redirect URI**: точно тот же URL, что в `CABINET_TELEGRAM_OIDC_REDIRECT_URL`.
+   - **Trusted Origin**: `https://<ваш_домен>` (без path).
+4. Для Mini App оставьте `/setdomain` на тот же хост кабинета.
+5. Перезапустите сервис и проверьте web-вход «Войти через Telegram».
+
+Режимы `CABINET_TELEGRAM_WEB_AUTH_MODE`:
+- `oidc` — только Telegram OAuth 2.0 (web).
+- `widget` — только legacy Telegram Login Widget 1.0 (web).
+
+Важно:
+- Совпадение `redirect_uri` должно быть **побайтно точным** (схема, хост, path, слеши).
+- Ошибка `redirect_uri required` обычно означает, что Redirect URI не добавлен в BotFather или не совпадает с тем, что уходит в запросе.
+
+Быстрый smoke (бот с `CABINET_ENABLED=true`): `curl -fsS http://127.0.0.1:$HEALTH_CHECK_PORT/cabinet/api/healthz` и при настроенных метриках — `curl -fsS -u user:pass .../cabinet/api/metrics | head`.
+
 ## Промокоды
 
 ### Для пользователей
@@ -104,7 +167,7 @@ Telegram бот для продажи подписок с интеграцией
 ### Для администратора
 
 - Задайте **`ADMIN_TELEGRAM_ID`** — у этого пользователя в главном меню появляется кнопка **«Админ»**.
-- В админ-панели доступны: **рассылка**, **статистика** (сводки по пользователям, подпискам, доходам, рефералам и общий обзор), **синхронизация с Remnawave**, раздел **«Промокоды»** (список с пагинацией, создание промокода мастером, карточка промокода: редактирование, статистика, вкл/выкл, режим «только первая покупка», удаление), а при `SALES_MODE=tariffs` — ещё **управление тарифами**; при **`LOYALTY_ENABLED=true`** — раздел **«Лояльность»** (уровни и пороги XP, полный пересчёт XP из успешных оплат).
+- В админ-панели доступны: **рассылка**, **«Пользователи»** (списки, поиск, карточка, подписки/оплаты; при `tariffs` — операции с тарифом и панелью), **статистика** (сводки по пользователям, подпискам, доходам, рефералам и общий обзор), **синхронизация с Remnawave**, **«Промокоды»** (список с пагинацией, мастер создания, карточка: правки, статистика, вкл/выкл, «только первая покупка», удаление), при `SALES_MODE=tariffs` — **тарифы**; при **`LOYALTY_ENABLED=true`** — **«Лояльность»** (уровни, пересчёт XP из оплат).
 
 ### База данных и обновление
 
@@ -259,7 +322,7 @@ Telegram бот для продажи подписок с интеграцией
 | `PUBLIC_OFFER_URL`                   | URL публичной оферты (опционально) - если установлен, кнопка "📄 Публичная оферта" отображается в разделе "Помощь"                                            |
 | `PRIVACY_POLICY_URL`                 | URL политики конфиденциальности (опционально) - если установлен, кнопка "🔒 Политика конфиденциальности" отображается в разделе "Помощь"                      |
 | `TERMS_OF_SERVICE_URL`               | URL пользовательского соглашения (опционально) - если установлен, кнопка "📋 Пользовательское соглашение" отображается в разделе "Помощь"                     |
-| `ADMIN_TELEGRAM_ID`                  | ID telegram админа; у этого пользователя в главном меню кнопка «Админ» (рассылка, статистика, синхронизация, промокоды; при `SALES_MODE=tariffs` — тарифы). Схема промокодов — миграция `000007_promo_codes` |
+| `ADMIN_TELEGRAM_ID`                  | ID telegram админа; кнопка «Админ»: рассылка, **пользователи**, статистика, синхронизация, промокоды; при `SALES_MODE=tariffs` — тарифы; при лояльности — раздел лояльности. Промокоды — миграция `000007_promo_codes` |
 | `BLOCKED_TELEGRAM_IDS`               | Список Telegram ID, разделенных запятыми, для блокировки доступа к боту (например, "123456789,987654321")                                                     |
 | `WHITELISTED_TELEGRAM_IDS`           | Список Telegram ID, разделенных запятыми, которые обходят все проверки на подозрительных пользователей (например, "111111111,222222222,333333333")            |
 | `TRIAL_TRAFFIC_LIMIT`                | Максимально разрешенный трафик в гб для пробных подписок                                                                                                      |

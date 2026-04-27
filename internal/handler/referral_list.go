@@ -99,6 +99,12 @@ func buildReferralDisplayList(ctx context.Context, b *bot.Bot, referrals []datab
 	return result
 }
 
+// TODO(cabinet-web-only): после Этапа 1 добавить раннюю ветку
+//   if utils.IsSyntheticTelegramID(telegramID) { return "web-client" }
+// чтобы не ходить в Telegram API для web-only рефери.
+// Плюс — продуктовый вопрос: форма реферальной ссылки для web-only клиента
+// (сейчас t.me/<bot>?start=ref_<7e18+N>). См. docs/cabinet/audit-telegram-id.md,
+// разделы 1.5 и 3.3.
 func getReferralDisplayName(ctx context.Context, b *bot.Bot, telegramID int64) string {
 	chat, err := b.GetChat(ctx, &bot.GetChatParams{ChatID: telegramID})
 	if err == nil && chat != nil {

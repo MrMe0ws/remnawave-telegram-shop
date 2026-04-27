@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><title>Telegram-аккаунт привязан</title></head>
+<body style="font-family:sans-serif;max-width:560px;margin:40px auto;color:#222">
+  <h2 style="color:#0088cc">Telegram успешно привязан</h2>
+  {{if eq .MergeResult "merged"}}
+  <p>Ваш Telegram-аккаунт привязан к кабинету. История покупок и лояльность объединены с вашим Telegram-профилем.</p>
+  {{else if eq .MergeResult "linked"}}
+  <p>Ваш Telegram-аккаунт успешно привязан к кабинету.</p>
+  {{else}}
+  <p>Ваш кабинет уже был связан с этим Telegram-аккаунтом.</p>
+  {{end}}
+  <p style="color:#666;font-size:13px">Если вы не выполняли эту операцию, свяжитесь с поддержкой немедленно.</p>
+</body>
+</html>

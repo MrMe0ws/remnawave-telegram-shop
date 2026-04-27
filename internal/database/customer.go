@@ -23,7 +23,8 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 }
 
 // customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
-const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username"
+// Порядок столбцов синхронизирован со всеми Scan-вызовами и с struct Customer.
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only"
 
 type Customer struct {
 	ID                        int64      `db:"id"`
@@ -39,6 +40,10 @@ type Customer struct {
 	SubscriptionPeriodMonths  *int       `db:"subscription_period_months"`
 	LoyaltyXP                 int64      `db:"loyalty_xp"`
 	TelegramUsername          *string    `db:"telegram_username"`
+	// IsWebOnly помечает клиента, созданного через web-кабинет (нет реального
+	// Telegram-контакта). Для таких клиентов не должны выполняться вызовы
+	// Telegram Bot API — см. utils.IsSyntheticTelegramID и docs/cabinet/audit-telegram-id.md.
+	IsWebOnly bool `db:"is_web_only"`
 }
 
 // BroadcastRecipient is a Telegram user with language for localized broadcast keyboards.
@@ -68,6 +73,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 				sq.NotEq{"expire_at": nil},
 				sq.GtOrEq{"expire_at": startDate},
 				sq.LtOrEq{"expire_at": endDate},
+				sq.Eq{"is_web_only": false},
 			},
 		).
 		PlaceholderFormat(sq.Dollar)
@@ -100,6 +106,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
 			&customer.TelegramUsername,
+			&customer.IsWebOnly,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -141,6 +148,7 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 		&customer.SubscriptionPeriodMonths,
 		&customer.LoyaltyXP,
 		&customer.TelegramUsername,
+		&customer.IsWebOnly,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -178,6 +186,7 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 		&customer.SubscriptionPeriodMonths,
 		&customer.LoyaltyXP,
 		&customer.TelegramUsername,
+		&customer.IsWebOnly,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -197,7 +206,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 	INSERT INTO customer (telegram_id, expire_at, language)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (telegram_id) DO UPDATE SET telegram_id = customer.telegram_id
-	RETURNING id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username
+	RETURNING ` + customerSelectColumns + `
 	`
 
 	row := cr.pool.QueryRow(ctx, query, customer.TelegramID, customer.ExpireAt, customer.Language)
@@ -216,11 +225,64 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 		&result.SubscriptionPeriodMonths,
 		&result.LoyaltyXP,
 		&result.TelegramUsername,
+		&result.IsWebOnly,
 	); err != nil {
 		return nil, fmt.Errorf("failed to find or create customer: %w", err)
 	}
 
 	slog.Info("user found or created in bot database", "telegramId", utils.MaskHalfInt64(result.TelegramID))
+	return &result, nil
+}
+
+// ErrWebOnlyCollision — попытка bootstrap'нуть web-only customer на telegram_id,
+// который уже занят обычным (is_web_only=FALSE) клиентом. Это нарушает инвариант
+// synthetic-диапазона (startup-check должен был поймать заранее). Возвращается
+// из CreateWebOnly вместо молчаливого «перехвата» чужой строки.
+var ErrWebOnlyCollision = errors.New("customer: synthetic telegram_id is occupied by a real customer")
+
+// CreateWebOnly идемпотентно создаёт customer для web-кабинета с is_web_only=TRUE.
+//
+// Применяется bootstrap-сервисом после регистрации cabinet_account:
+// telegram_id передаётся из utils.SyntheticTelegramID(accountID). При повторном
+// вызове (link упал между INSERT customer и INSERT link) возвращает ту же строку.
+//
+// Если на этот telegram_id уже есть не-web-only клиент (что возможно только
+// при сломанном startup-check) — возвращается ErrWebOnlyCollision, чтобы bootstrap
+// не «украл» реального клиента.
+func (cr *CustomerRepository) CreateWebOnly(ctx context.Context, telegramID int64, language string) (*Customer, error) {
+	if language == "" {
+		language = "ru"
+	}
+	query := `
+	INSERT INTO customer (telegram_id, language, is_web_only)
+	VALUES ($1, $2, TRUE)
+	ON CONFLICT (telegram_id) DO UPDATE SET telegram_id = customer.telegram_id
+	RETURNING ` + customerSelectColumns
+
+	row := cr.pool.QueryRow(ctx, query, telegramID, language)
+	var result Customer
+	if err := row.Scan(
+		&result.ID,
+		&result.TelegramID,
+		&result.ExpireAt,
+		&result.CreatedAt,
+		&result.SubscriptionLink,
+		&result.Language,
+		&result.ExtraHwid,
+		&result.ExtraHwidExpiresAt,
+		&result.CurrentTariffID,
+		&result.SubscriptionPeriodStart,
+		&result.SubscriptionPeriodMonths,
+		&result.LoyaltyXP,
+		&result.TelegramUsername,
+		&result.IsWebOnly,
+	); err != nil {
+		return nil, fmt.Errorf("failed to create web-only customer: %w", err)
+	}
+
+	if !result.IsWebOnly {
+		return nil, fmt.Errorf("%w: telegram_id=%d", ErrWebOnlyCollision, telegramID)
+	}
 	return &result, nil
 }
 
@@ -237,6 +299,33 @@ func (cr *CustomerRepository) IncrementLoyaltyXP(ctx context.Context, customerID
 		return fmt.Errorf("customer not found: %d", customerID)
 	}
 	return nil
+}
+
+// DevCabinetResetTelegramToSynthetic вызывается только из dev-эндпоинта кабинета:
+// при реальном telegram_id у связанного customer подменяет его на SyntheticTelegramID(accountID),
+// обнуляет telegram_username и выставляет is_web_only (как у web-only клиента).
+func (cr *CustomerRepository) DevCabinetResetTelegramToSynthetic(ctx context.Context, customerID, accountID int64) (updated bool, err error) {
+	cust, err := cr.FindById(ctx, customerID)
+	if err != nil {
+		return false, fmt.Errorf("dev reset tg: find customer: %w", err)
+	}
+	if cust == nil {
+		return false, nil
+	}
+	if utils.IsSyntheticTelegramID(cust.TelegramID) {
+		return false, nil
+	}
+	syn := utils.SyntheticTelegramID(accountID)
+	tag, err := cr.pool.Exec(ctx, `
+		UPDATE customer
+		SET telegram_id = $1, telegram_username = NULL, is_web_only = TRUE
+		WHERE id = $2`,
+		syn, customerID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("dev reset tg: update: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // ApplyLoyaltyXPFullRecalc обнуляет loyalty_xp у всех клиентов и задаёт суммы из карты (полный пересчёт XP из истории оплат).
@@ -363,6 +452,7 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
 			&customer.TelegramUsername,
+			&customer.IsWebOnly,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -443,6 +533,10 @@ func (cr *CustomerRepository) UpdateBatch(ctx context.Context, customers []Custo
 	return nil
 }
 
+// DeleteByNotInTelegramIds удаляет строки customer, которых нет в списке telegram_id
+// из Remnawave-синхронизации. Web-only клиенты кабинета (is_web_only=TRUE) не трогаем —
+// у них нет telegram_id в ответе панели, иначе каждый Sync стирал бы кабинетских пользователей.
+// См. docs/cabinet/audit-telegram-id.md, раздел 1.6.
 func (cr *CustomerRepository) DeleteByNotInTelegramIds(ctx context.Context, telegramIDs []int64) error {
 	var buildDelete sq.DeleteBuilder
 	if len(telegramIDs) == 0 {
@@ -450,7 +544,10 @@ func (cr *CustomerRepository) DeleteByNotInTelegramIds(ctx context.Context, tele
 	} else {
 		buildDelete = sq.Delete("customer").
 			PlaceholderFormat(sq.Dollar).
-			Where(sq.NotEq{"telegram_id": telegramIDs})
+			Where(sq.And{
+				sq.NotEq{"telegram_id": telegramIDs},
+				sq.Eq{"is_web_only": false},
+			})
 	}
 
 	sqlStr, args, err := buildDelete.ToSql()
@@ -601,6 +698,7 @@ func (cr *CustomerRepository) GetInactiveTelegramIds(ctx context.Context) ([]int
 
 // GetBroadcastRecipients returns telegram_id and language for mass broadcast (button labels per user).
 // tariffID ограничивает сегменты active_paid / inactive_paid по customer.current_tariff_id (режим tariffs).
+// Web-only клиенты кабинета исключаются (нет доставки в Telegram).
 func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string, tariffID *int64) ([]BroadcastRecipient, error) {
 	now := time.Now()
 	buildSelect := sq.Select("telegram_id", "language").
@@ -638,6 +736,8 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	default:
 		return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
 	}
+
+	buildSelect = buildSelect.Where(sq.Eq{"is_web_only": false})
 
 	sqlStr, args, err := buildSelect.ToSql()
 	if err != nil {
@@ -761,6 +861,7 @@ func (cr *CustomerRepository) ListPaged(ctx context.Context, scope CustomerListS
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
 			&customer.TelegramUsername,
+			&customer.IsWebOnly,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
@@ -833,6 +934,7 @@ func (cr *CustomerRepository) SearchForAdmin(ctx context.Context, needle string,
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
 			&customer.TelegramUsername,
+			&customer.IsWebOnly,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan admin search: %w", err)
@@ -884,6 +986,7 @@ func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, t
 			&customer.SubscriptionPeriodMonths,
 			&customer.LoyaltyXP,
 			&customer.TelegramUsername,
+			&customer.IsWebOnly,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan customer: %w", err)
@@ -894,4 +997,41 @@ func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, t
 		return nil, err
 	}
 	return customers, nil
+}
+
+// CabinetAccountEmailsByCustomerIDs — email из cabinet_account по связке
+// cabinet_account_customer_link (для подписей web-клиентов в админке бота).
+func (cr *CustomerRepository) CabinetAccountEmailsByCustomerIDs(ctx context.Context, customerIDs []int64) (map[int64]string, error) {
+	out := make(map[int64]string)
+	if len(customerIDs) == 0 {
+		return out, nil
+	}
+	qb := sq.Select("l.customer_id", "a.email").
+		From("cabinet_account_customer_link l").
+		Join("cabinet_account a ON a.id = l.account_id").
+		Where(sq.Eq{"l.customer_id": customerIDs}).
+		PlaceholderFormat(sq.Dollar)
+	sqlStr, args, err := qb.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build cabinet account emails: %w", err)
+	}
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query cabinet account emails: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int64
+		var email *string
+		if err := rows.Scan(&cid, &email); err != nil {
+			return nil, fmt.Errorf("scan cabinet email: %w", err)
+		}
+		if email != nil && strings.TrimSpace(*email) != "" {
+			out[cid] = strings.TrimSpace(*email)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

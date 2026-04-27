@@ -48,7 +48,7 @@
   "tariff_selected_devices_line": "📱 Устройств: %d",
   "tariff_selected_description_line": "📝 %s",
   "tariff_choose_period": "<b>Выберите период:</b>",
-  "tariff_payment_methods_text": "<b>Способы оплаты:</b>\n💸 СБП и Банковской картой 💳\n⭐️ Звёзды Telegram",
+  "tariff_payment_methods_text": "<b>Способы оплаты:</b>\n💸 СБП и Банковской картой 💳\n⭐️ Звёзды Telegram - появляются после 1 оплаты",
   "month_1": "1 мес - %d₽",
   "month_3": "3 мес - %d₽",
   "month_6": "6 мес - %d₽",

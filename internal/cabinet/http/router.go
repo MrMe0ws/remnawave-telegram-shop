@@ -1,0 +1,876 @@
+// Package cabinethttp собирает HTTP-роуты web-кабинета:
+//   - API под /cabinet/api/*  (JSON, CORS, auth/me/payments endpoints);
+//   - SPA под /cabinet/*      (статикa из internal/cabinet/web/dist через go:embed).
+//
+// Регистрация происходит через Mount(ctx, mux, pool), чтобы кабинет жил на том
+// же http.ServeMux, что и существующий healthcheck бота, — один процесс, один
+// порт, никаких отдельных серверов.
+package cabinethttp
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/fs"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v4/pgxpool"
+
+	"remnawave-tg-shop-bot/internal/cabinet/auth/jwt"
+	googleoauth "remnawave-tg-shop-bot/internal/cabinet/auth/oauth"
+	"remnawave-tg-shop-bot/internal/cabinet/auth/password"
+	"remnawave-tg-shop-bot/internal/cabinet/auth/ratelimit"
+	"remnawave-tg-shop-bot/internal/cabinet/auth/service"
+	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
+	"remnawave-tg-shop-bot/internal/cabinet/http/handlers"
+	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
+	"remnawave-tg-shop-bot/internal/cabinet/linking"
+	"remnawave-tg-shop-bot/internal/cabinet/mail"
+	cabmetrics "remnawave-tg-shop-bot/internal/cabinet/metrics"
+	"remnawave-tg-shop-bot/internal/cabinet/payments"
+	"remnawave-tg-shop-bot/internal/cabinet/repository"
+	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
+	"remnawave-tg-shop-bot/internal/cabinet/web"
+	"remnawave-tg-shop-bot/internal/config"
+	"remnawave-tg-shop-bot/internal/database"
+	botpayment "remnawave-tg-shop-bot/internal/payment"
+	"remnawave-tg-shop-bot/internal/promo"
+	"remnawave-tg-shop-bot/internal/remnawave"
+)
+
+// Mount регистрирует роуты кабинета в переданном mux. Возвращает ошибку, если
+// встроенная SPA недоступна (ломаный go:embed) или если нельзя собрать
+// зависимости сервиса.
+//
+// ctx нужен, чтобы rate-limiter'ы могли очищать устаревшие бакеты по сигналу
+// shutdown'а процесса. Это «сетевая» для rate-limiter'ов, не для API-запросов —
+// контекст самого HTTP-запроса живёт отдельно.
+//
+// paymentService может быть nil — тогда эндпоинты /cabinet/api/payments/*
+// не регистрируются. Это нужно для окружений, где оплаты целиком выключены
+// (например, локальная разработка без YooKassa/CryptoPay).
+// Mount регистрирует роуты кабинета.
+// rw — клиент Remnawave API; может быть nil (тогда merge-шаг обновления RW пропускается).
+func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentService *botpayment.PaymentService, rw *remnawave.Client, promoService *promo.Service) error {
+	spaFS, err := web.FS()
+	if err != nil {
+		return err
+	}
+	if pool == nil {
+		return fmt.Errorf("cabinet http: pool is required")
+	}
+
+	cabmetrics.StartGaugeRefresh(ctx, pool, 5*time.Minute)
+
+	// Репозитории поверх pgxpool. Создаются один раз за процесс.
+	accountRepo := repository.NewAccountRepo(pool)
+	identityRepo := repository.NewIdentityRepo(pool)
+	sessionRepo := repository.NewSessionRepo(pool)
+	evRepo := repository.NewEmailVerificationRepo(pool)
+	prRepo := repository.NewPasswordResetRepo(pool)
+	linkRepo := repository.NewAccountCustomerLinkRepo(pool)
+
+	// CustomerRepository живёт в пакете бота; передаём тот же pool, чтобы link
+	// и customer писались в одну базу. Bootstrap создаётся здесь, а не внутри
+	// auth/service — так тот же сервис переиспользуется будущим merge-сервисом.
+	customerRepo := database.NewCustomerRepository(pool)
+	referralRepo := database.NewReferralRepository(pool)
+	customerBootstrap := bootstrap.NewCustomerBootstrap(customerRepo, linkRepo, referralRepo)
+
+	// TariffRepository — только для tariffs-режима; в classic-режиме catalog
+	// ходит только в env. Создаём всегда и отдаём catalog'у: он сам выбирает
+	// ветку по config.SalesMode().
+	tariffRepo := database.NewTariffRepository(pool)
+	catalogSvc := cabsvc.NewCatalog(tariffRepo)
+
+	// LoyaltyTier — опционально: нужно только /me/subscription, чтобы отдать
+	// display_name текущего уровня. Ошибки в этой таблице не должны ломать API.
+	loyaltyRepo := database.NewLoyaltyTierRepository(pool)
+	purchaseRepo := database.NewPurchaseRepository(pool)
+	subscriptionSvc := cabsvc.NewSubscription(customerRepo, tariffRepo, loyaltyRepo, linkRepo, customerBootstrap, rw, purchaseRepo)
+
+	// SMTP + mailer. Если SMTP не настроен — DryRun, чтобы сервис работал в dev.
+	mailerSender := mail.NewSender(mail.Config{
+		Host:     cabcfg.SMTPHost(),
+		Port:     cabcfg.SMTPPort(),
+		Username: cabcfg.SMTPUser(),
+		Password: cabcfg.SMTPPassword(),
+		From:     cabcfg.MailFrom(),
+		UseTLS:   cabcfg.SMTPTLS(),
+		DryRun:   !cabcfg.SMTPEnabled(),
+	})
+	mailer := mail.NewMailer(mailerSender)
+
+	// JWT issuer. Issuer = хост кабинета — так access-токен нельзя использовать
+	// в другом сервисе, если они разделяют секрет (хотя у нас secret уникален).
+	accessTTL := time.Duration(cabcfg.AccessTTLMinutes()) * time.Minute
+	refreshTTL := time.Duration(cabcfg.RefreshTTLDays()) * 24 * time.Hour
+	jwtIssuer := jwt.NewIssuer(cabcfg.JWTSecret(), accessTTL, cabcfg.PublicURL())
+
+	// Auth service.
+	authSvc := service.New(service.Config{
+		PublicURL:         cabcfg.PublicURL(),
+		CookieDomain:      cabcfg.CookieDomain(),
+		RefreshCookiePath: "/cabinet/api/auth",
+		AccessTTL:         accessTTL,
+		RefreshTTL:        refreshTTL,
+		EmailVerifyTTL:    24 * time.Hour,
+		PasswordResetTTL:  30 * time.Minute,
+		DefaultLanguage:   "ru",
+		AntiEnumLatency:   300 * time.Millisecond,
+		PasswordParams:    password.DefaultParams(),
+		PasswordPolicy:    password.DefaultPolicy(),
+	}, accountRepo, identityRepo, sessionRepo, evRepo, prRepo, jwtIssuer, mailer, customerBootstrap)
+	authSvc.SetTelegramCustomerLookup(customerRepo, linkRepo)
+
+	// Google OAuth (опционально).
+	oauthStateStore := googleoauth.NewStateStore()
+	oauthStateStore.RunGC(ctx)
+	var oauthHandler *handlers.OAuthHandler
+	if cabcfg.GoogleEnabled() {
+		googleProvider := googleoauth.NewGoogleProvider(
+			cabcfg.GoogleClientID(),
+			cabcfg.GoogleClientSecret(),
+			cabcfg.GoogleRedirectURL(),
+			oauthStateStore,
+		)
+		authSvc.SetGoogle(ctx, googleProvider)
+		oauthHandler = handlers.NewOAuth(authSvc, cabcfg.CookieDomain())
+	}
+
+	// Telegram HMAC (Mini App initData + Login Widget 1.0): токены задаём всегда, если они
+	// есть в окружении. CABINET_TELEGRAM_WEB_AUTH_MODE=oidc касается только веб-OAuth 2.0,
+	// иначе POST /auth/telegram (miniapp) получает 501 из-за пустых telegramTokens.
+	cabTelegramWidgetToken := cabcfg.TelegramLoginBotToken()
+	if cabTelegramWidgetToken == "" {
+		cabTelegramWidgetToken = config.TelegramToken()
+	}
+	if strings.TrimSpace(cabTelegramWidgetToken) != "" || strings.TrimSpace(config.TelegramToken()) != "" {
+		authSvc.SetTelegramTokens(cabTelegramWidgetToken, config.TelegramToken())
+	}
+	if cabcfg.TelegramWidgetEnabled() {
+		if oauthHandler == nil {
+			oauthHandler = handlers.NewOAuth(authSvc, cabcfg.CookieDomain())
+		}
+	}
+	if cabcfg.TelegramOIDCEnabled() {
+		tgOIDCStore := googleoauth.NewTelegramOIDCStateStore()
+		tgOIDCProvider := googleoauth.NewTelegramOIDCProvider(
+			cabcfg.TelegramOIDCClientID(),
+			cabcfg.TelegramOIDCClientSecret(),
+			cabcfg.TelegramOIDCRedirectURL(),
+			tgOIDCStore,
+		)
+		authSvc.SetTelegramOIDC(ctx, tgOIDCProvider)
+		if oauthHandler == nil {
+			oauthHandler = handlers.NewOAuth(authSvc, cabcfg.CookieDomain())
+		}
+	}
+
+	tgWidgetBot := ""
+	if cabcfg.TelegramWidgetEnabled() {
+		tgWidgetBot = cabcfg.TelegramLoginBotUsername()
+	}
+	authHandler := handlers.NewAuth(
+		authSvc,
+		cabcfg.CookieDomain(),
+		cabcfg.GoogleEnabled(),
+		tgWidgetBot,
+		cabcfg.TelegramOIDCEnabled(),
+		cabcfg.TelegramWebAuthMode(),
+	)
+	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
+		paymentService, rw, customerRepo, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.TelegramOIDCEnabled(), cabcfg.DevTelegramUnlinkEnabled())
+	tariffsHandler := handlers.NewTariffs(catalogSvc)
+	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
+
+	activityHandler := handlers.NewCabinetActivity(linkRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
+	var promoCodesHandler *handlers.PromoCodesHandler
+	if promoService != nil {
+		promoCodesHandler = handlers.NewPromoCodes(customerBootstrap, customerRepo, linkRepo, promoService)
+	}
+
+	// Платёжный слой кабинета: собираем, только если бот прокинул PaymentService.
+	var paymentsHandler *handlers.PaymentsHandler
+	if paymentService != nil {
+		checkoutRepo := repository.NewCheckoutRepo(pool)
+		checkoutCfg := payments.DefaultConfig()
+		checkoutCfg.PublicURL = cabcfg.PublicURL()
+		checkoutSvc := payments.NewCheckoutService(
+			checkoutCfg,
+			checkoutRepo, linkRepo, customerRepo, purchaseRepo, tariffRepo, accountRepo,
+			customerBootstrap, paymentService,
+			loyaltyRepo, promoService,
+		)
+		paymentsHandler = handlers.NewPayments(checkoutSvc)
+	}
+
+	// Merge/Link service — Этап 8.
+	nonceStore := linking.NewNonceStore()
+	claimStore := linking.NewClaimStore()
+	nonceStore.RunGC(ctx)
+	claimStore.RunGC(ctx)
+	mergeAuditRepo := repository.NewMergeAuditRepo(pool)
+	mergeService := linking.New(
+		pool, nonceStore, claimStore,
+		customerRepo, linkRepo, mergeAuditRepo, accountRepo, identityRepo,
+		mailer, cabTelegramWidgetToken,
+		rw,
+	)
+	linkHandler := handlers.NewLink(mergeService)
+
+	// Rate-limiters — по одному на правило (см. mvp-tz.md 8.3).
+	loginIPLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Minute})
+	loginEmailLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Hour})
+	registerIPLim := ratelimit.New(ratelimit.Rule{Count: 3, Interval: time.Hour})
+	forgotEmailLim := ratelimit.New(ratelimit.Rule{Count: 3, Interval: time.Hour})
+	resendVerifyAcctLim := ratelimit.New(ratelimit.Rule{Count: 3, Interval: time.Hour})
+	// Платёжный лимитер: 20 запросов/минуту на account. Ключ — account_id,
+	// потому что пользователь не должен страдать от NAT'а общего IP (а в
+	// кабинет он уже авторизован, так что account_id точнее IP).
+	paymentsAcctLim := ratelimit.New(ratelimit.Rule{Count: 20, Interval: time.Minute})
+	// Подписка: 60 rpm/аккаунт — с запасом под polling статуса после оплаты
+	// (UI дёргает раз в 3–5 сек на /checkout → /payments/:id/status → /me/subscription).
+	subscriptionAcctLim := ratelimit.New(ratelimit.Rule{Count: 60, Interval: time.Minute})
+
+	deleteAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
+	trialActivateAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
+
+	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim} {
+		lim.RunGC(ctx)
+	}
+
+	// Rate-limiters для OAuth/Telegram.
+	// Google: 20/ч/IP — дорогой flow с внешним запросом к Google; IP достаточно
+	// (нет авторизации до callback'а).
+	oauthIPLim := ratelimit.New(ratelimit.Rule{Count: 20, Interval: time.Hour})
+	// Telegram: 10/min/IP — простой POST, но HMAC-проверка дешёвая.
+	telegramIPLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
+	// Link/Merge: 10/min/account — защита от brute-force на confirm + flood на merge.
+	linkAcctLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
+
+	for _, lim := range []*ratelimit.Limiter{oauthIPLim, telegramIPLim, linkAcctLim} {
+		lim.RunGC(ctx)
+	}
+
+	// API-mux.
+	api := http.NewServeMux()
+	api.Handle("/cabinet/api/metrics", wrapMetricsBasicAuth(cabmetrics.Handler()))
+
+	registerAPIRoutes(api, authHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, jwtIssuer,
+		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
+		oauthIPLim, telegramIPLim, linkAcctLim)
+
+	// 404 JSON на любой неизвестный /cabinet/api/*.
+	api.HandleFunc("/cabinet/api/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "not found"})
+	})
+
+	// Внешняя цепочка для API: request_id/recover/logger/CORS/security/http metrics.
+	apiChain := middleware.Chain(
+		api,
+		middleware.RequestID(),
+		middleware.Recover(),
+		middleware.Logger(),
+		middleware.CORS(cabcfg.AllowedOrigins()),
+		middleware.SecurityHeadersAPI(),
+		middleware.HTTPMetrics(),
+	)
+
+	// SPA chain — без CORS (same-origin).
+	spa := buildSPAHandler(spaFS)
+	spaChain := middleware.Chain(
+		spa,
+		middleware.RequestID(),
+		middleware.Recover(),
+		middleware.Logger(),
+		middleware.SecurityHeadersSPA(),
+		middleware.HTTPMetrics(),
+	)
+
+	mux.Handle("/cabinet/api/", apiChain)
+	mux.Handle("/cabinet/", spaChain)
+
+	// Часто открывают кабинет как https://host/login без префикса /cabinet — иначе 404.
+	registerCabinetRootRedirects(mux)
+	return nil
+}
+
+// registerCabinetRootRedirects — GET/HEAD /login, /register → /cabinet/… (сохраняем query).
+func registerCabinetRootRedirects(mux *http.ServeMux) {
+	type pair struct{ from, to string }
+	for _, p := range []pair{
+		{"/login", "/cabinet/login"},
+		{"/register", "/cabinet/register"},
+	} {
+		from, to := p.from, p.to
+		mux.HandleFunc(from, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet && r.Method != http.MethodHead {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			target := to
+			if q := r.URL.RawQuery; q != "" {
+				target += "?" + q
+			}
+			http.Redirect(w, r, target, http.StatusFound)
+		})
+	}
+}
+
+// registerAPIRoutes регистрирует конкретные эндпоинты. Вынесено отдельно, чтобы
+// Mount не раздувался и чтобы было видно, какой middleware применён к какому роуту.
+//
+// paymentsHandler может быть nil — если PaymentService в процесс не
+// прокинут, роуты /payments/* просто не регистрируются, и общий 404-хендлер
+// /cabinet/api/ их закроет JSON-ом.
+func registerAPIRoutes(
+	api *http.ServeMux,
+	auth *handlers.AuthHandler,
+	me *handlers.MeHandler,
+	tariffs *handlers.TariffsHandler,
+	subscription *handlers.SubscriptionHandler,
+	activity *handlers.CabinetActivityHandler,
+	promocodes *handlers.PromoCodesHandler,
+	oauthH *handlers.OAuthHandler,
+	pay *handlers.PaymentsHandler,
+	link *handlers.LinkHandler,
+	jwtIssuer *jwt.Issuer,
+	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
+	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
+) {
+	// Healthz — без middleware, открыт всем.
+	api.HandleFunc("/cabinet/api/healthz", healthz)
+
+	// GET /auth/bootstrap — флаги OAuth/Telegram для SPA (логин до выдачи JWT).
+	api.Handle("/cabinet/api/auth/bootstrap",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(auth.AuthBootstrap),
+		}),
+	)
+
+	// GET /public/brand-logo — статичный логотип с диска (CABINET_BRAND_LOGO_FILE), без auth.
+	if p := cabcfg.BrandLogoFile(); p != "" {
+		api.Handle("/cabinet/api/public/brand-logo",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: http.HandlerFunc(handlers.ServeBrandLogo(p)),
+			}),
+		)
+	}
+
+	// GET /tariffs — публичная витрина. Без RequireAuth: показывается на
+	// странице логина/регистрации; чтения из БД минимальные, rate-limit не
+	// ставим (есть кэш на клиенте и Cache-Control в ответе).
+	api.Handle("/cabinet/api/tariffs",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(tariffs.List),
+		}),
+	)
+
+	// POST /auth/register (rate-limit 3/h/IP).
+	api.Handle("/cabinet/api/auth/register",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.Register),
+			middleware.RateLimit(registerIPLim, ipKey("register")),
+		)),
+	)
+
+	// POST /auth/login (rate-limit 5/min/IP + 10/h/email).
+	api.Handle("/cabinet/api/auth/login",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.Login),
+			middleware.RateLimit(loginIPLim, ipKey("login")),
+			middleware.RateLimit(loginEmailLim, emailBodyKey("login")),
+		)),
+	)
+
+	// POST /auth/refresh. Без rate-limit (rotation сама по себе ограничивает
+	// злоупотребление — два запроса подряд триггерят reuse detection).
+	// CSRF обязателен: атакующий с чужого origin'а не сможет прочитать
+	// csrf_token cookie и подставить его в X-CSRF-Token.
+	api.Handle("/cabinet/api/auth/refresh",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.Refresh),
+			middleware.CSRF(),
+		)),
+	)
+
+	// POST /auth/logout. Идемпотентный, но тоже мутирующий — CSRF нужен, чтобы
+	// кто-то с чужого origin'а не «разлогинил» пользователя через CSRF-атаку.
+	api.Handle("/cabinet/api/auth/logout",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.Logout),
+			middleware.CSRF(),
+		)),
+	)
+
+	// POST /auth/password/forgot (rate-limit 3/h/email).
+	api.Handle("/cabinet/api/auth/password/forgot",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.ForgotPassword),
+			middleware.RateLimit(forgotEmailLim, emailBodyKey("forgot")),
+		)),
+	)
+
+	// POST /auth/password/reset.
+	api.Handle("/cabinet/api/auth/password/reset", onlyPOST(http.HandlerFunc(auth.ResetPassword)))
+
+	// POST /auth/email/verify/confirm.
+	api.Handle("/cabinet/api/auth/email/verify/confirm", onlyPOST(http.HandlerFunc(auth.ConfirmEmail)))
+
+	// ======== Защищённые эндпоинты (RequireAuth + CSRF для мутирующих) ========
+
+	// GET /me.
+	api.Handle("/cabinet/api/me",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.Me),
+				middleware.RequireAuth(jwtIssuer),
+			),
+		}),
+	)
+
+	// PUT /me/language.
+	api.Handle("/cabinet/api/me/language",
+		methodRouter(map[string]http.Handler{
+			http.MethodPut: middleware.Chain(
+				http.HandlerFunc(me.PutLanguage),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.CSRF(),
+			),
+		}),
+	)
+
+	// PUT /me/password — смена пароля (новая сессия в ответе).
+	api.Handle("/cabinet/api/me/password",
+		methodRouter(map[string]http.Handler{
+			http.MethodPut: middleware.Chain(
+				http.HandlerFunc(me.PutPassword),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.CSRF(),
+			),
+		}),
+	)
+
+	// POST /me/email/verify/resend.
+	api.Handle("/cabinet/api/me/email/verify/resend",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.ResendVerifyEmail),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(resendVerifyAcctLim, accountKey("resend_verify")),
+		)),
+	)
+
+	// POST /me/telegram/unlink-dev — только при CABINET_DEV_TELEGRAM_UNLINK=true (иначе 404).
+	api.Handle("/cabinet/api/me/telegram/unlink-dev",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.PostTelegramUnlinkDev),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+		)),
+	)
+	api.Handle("/cabinet/api/me/telegram/link/start",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.TelegramLinkOIDCStart),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(oauthIPLim, accountKey("telegram_link_oidc_start")),
+			),
+		}),
+	)
+
+	// POST /me/account/delete — удаление аккаунта кабинета (тело: {"confirm":"DELETE"}).
+	api.Handle("/cabinet/api/me/account/delete",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.PostAccountDelete),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(deleteAcctLim, accountKey("delete_account")),
+		)),
+	)
+
+	// GET /me/trial — trial-параметры (дни/лимиты) и возможность активации.
+	api.Handle("/cabinet/api/me/trial",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.GetTrial),
+				middleware.RequireAuth(jwtIssuer),
+			),
+		}),
+	)
+
+	// POST /me/trial/activate — активация пробного периода.
+	api.Handle("/cabinet/api/me/trial/activate",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.PostTrialActivate),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(trialActivateAcctLim, accountKey("trial_activate")),
+		)),
+	)
+	api.Handle("/cabinet/api/me/devices",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.GetDevices),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("devices")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/me/devices/delete",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.DeleteDevice),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireVerifiedEmail(),
+			middleware.CSRF(),
+			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_delete")),
+		)),
+	)
+
+	// OAuth/Telegram маршруты включаются только если хотя бы один провайдер настроен.
+	if oauthH != nil {
+		// GET /auth/google/start — редирект на Google. Rate-limit 20/ч/IP.
+		api.Handle("/cabinet/api/auth/google/start",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.GoogleStart),
+					middleware.RateLimit(oauthIPLim, ipKey("google_start")),
+				),
+			}),
+		)
+		// GET /auth/google/callback — обмен code → сессия (или pending link).
+		api.Handle("/cabinet/api/auth/google/callback",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.GoogleCallback),
+					middleware.RateLimit(oauthIPLim, ipKey("google_callback")),
+				),
+			}),
+		)
+		// GET /auth/google/confirm?token=... — подтверждение привязки по ссылке из письма.
+		api.Handle("/cabinet/api/auth/google/confirm",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.GoogleLinkConfirm),
+					middleware.RateLimit(oauthIPLim, ipKey("google_confirm")),
+				),
+			}),
+		)
+		// POST /auth/telegram — Widget или MiniApp. Rate-limit 10/min/IP.
+		api.Handle("/cabinet/api/auth/telegram",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(oauthH.TelegramLogin),
+				middleware.RateLimit(telegramIPLim, ipKey("telegram_login")),
+			)),
+		)
+		api.Handle("/cabinet/api/auth/telegram/start",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.TelegramOIDCStart),
+					middleware.RateLimit(oauthIPLim, ipKey("telegram_oidc_start")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/auth/telegram/callback",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.TelegramOIDCCallback),
+					middleware.RateLimit(oauthIPLim, ipKey("telegram_oidc_callback")),
+				),
+			}),
+		)
+	}
+
+	// GET /me/subscription. Требует подтверждённого email:
+	// subscription_link — по сути секрет, это барьер против утечек с
+	// неподтверждённых (и потенциально угнанных) почт.
+	api.Handle("/cabinet/api/me/subscription",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(subscription.Get),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("subscription")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/me/loyalty",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(subscription.Loyalty),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("loyalty")),
+			),
+		}),
+	)
+
+	if activity != nil {
+		api.Handle("/cabinet/api/me/referrals",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(activity.GetReferrals),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("referrals")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/me/purchases",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(activity.GetPurchases),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("purchases")),
+				),
+			}),
+		)
+	}
+
+	if promocodes != nil {
+		api.Handle("/cabinet/api/promocodes/state",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(promocodes.GetState),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("promocodes_state")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/promocodes/apply",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(promocodes.Apply),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.CSRF(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("promocodes_apply")),
+			)),
+		)
+	}
+
+	// Платёжный слой — только если бот прокинул PaymentService.
+	if pay != nil {
+		// POST /payments/checkout. RequireAuth + CSRF + 20/min/account.
+		api.Handle("/cabinet/api/payments/checkout",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(pay.Checkout),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.CSRF(),
+				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+			)),
+		)
+
+		// GET /payments/preview — расчёт суммы (upgrade/downgrade как у бота), без CSRF.
+		api.Handle("/cabinet/api/payments/preview",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(pay.Preview),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+				),
+			}),
+		)
+
+		// GET /payments/{id}/status. Префиксный маршрут на ServeMux — сам хендлер
+		// разбирает :id из пути. Без CSRF (идемпотентный GET), но тот же 20/min/account.
+		api.Handle("/cabinet/api/payments/",
+			middleware.Chain(
+				http.HandlerFunc(pay.Status),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+			),
+		)
+	}
+
+	// ======== Link / Merge (Этап 8) ========
+	// Все маршруты требуют RequireAuth + CSRF (мутирующие POST) + 10/min/account.
+
+	// POST /link/telegram/start — генерация nonce для Telegram Widget.
+	api.Handle("/cabinet/api/link/telegram/start",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(link.TelegramStart),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(linkAcctLim, accountKey("link_tg_start")),
+		)),
+	)
+
+	// POST /link/telegram/confirm — валидация Telegram payload + nonce.
+	api.Handle("/cabinet/api/link/telegram/confirm",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(link.TelegramConfirm),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(linkAcctLim, accountKey("link_tg_confirm")),
+		)),
+	)
+
+	// POST /link/merge/preview — dry-run merge, требует confirmed claim.
+	api.Handle("/cabinet/api/link/merge/preview",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(link.MergePreview),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(linkAcctLim, accountKey("link_merge_preview")),
+		)),
+	)
+
+	// POST /link/merge/confirm — реальный merge (Idempotency-Key header обязателен).
+	api.Handle("/cabinet/api/link/merge/confirm",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(link.MergeConfirm),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(linkAcctLim, accountKey("link_merge_confirm")),
+		)),
+	)
+}
+
+// ============================================================================
+// Helpers: rate-limit key-функции и method-гварды
+// ============================================================================
+
+// ipKey возвращает функцию, формирующую ключ <route>:<ip>.
+func ipKey(route string) middleware.KeyFunc {
+	return func(r *http.Request) string {
+		ip := middleware.ClientIP(r)
+		if ip == "" {
+			return ""
+		}
+		return route + ":" + ip
+	}
+}
+
+// emailBodyKey читает JSON-поле `email` из тела запроса для построения ключа
+// <route>:<email>. Тело после чтения пересоздаётся, чтобы следующий handler
+// смог его прочитать заново.
+func emailBodyKey(route string) middleware.KeyFunc {
+	return func(r *http.Request) string {
+		raw, err := readAndRestoreBody(r, 64*1024)
+		if err != nil || len(raw) == 0 {
+			return ""
+		}
+		var body struct {
+			Email string `json:"email"`
+		}
+		if err := json.Unmarshal(raw, &body); err != nil {
+			return ""
+		}
+		email := strings.ToLower(strings.TrimSpace(body.Email))
+		if email == "" {
+			return ""
+		}
+		return route + ":" + email
+	}
+}
+
+// accountKey берёт account_id из JWT claims (должен быть после RequireAuth!).
+func accountKey(route string) middleware.KeyFunc {
+	return func(r *http.Request) string {
+		claims := middleware.AuthClaims(r)
+		if claims == nil {
+			return ""
+		}
+		return fmt.Sprintf("%s:%d", route, claims.AccountID)
+	}
+}
+
+// readAndRestoreBody читает тело запроса и кладёт его обратно через buffer,
+// чтобы следующий handler тоже смог прочитать JSON. 64 KiB лимит — защита
+// от DoS на rate-limit middleware.
+func readAndRestoreBody(r *http.Request, limit int64) ([]byte, error) {
+	r.Body = http.MaxBytesReader(nil, r.Body, limit)
+	defer func() { _ = r.Body.Close() }()
+	// Читаем всё целиком; тело маленькое (≤64 KiB), это нормально.
+	buf := make([]byte, 0, 512)
+	tmp := make([]byte, 512)
+	for {
+		n, err := r.Body.Read(tmp)
+		if n > 0 {
+			buf = append(buf, tmp[:n]...)
+		}
+		if err != nil {
+			break
+		}
+	}
+	r.Body = io.NopCloser(bytes.NewReader(buf))
+	return buf, nil
+}
+
+// onlyPOST отбивает любой метод, кроме POST. Удобный помощник — у http.ServeMux
+// из Go 1.22 есть {METHOD} в pattern'ах, но тогда мы завязываемся на точный
+// шаблон без префиксов, а здесь mux общий и без этого.
+func onlyPOST(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+// methodRouter выбирает handler по HTTP-методу. Для 2-3 методов на эндпоинт —
+// проще, чем отдельный mux на каждую пару.
+func methodRouter(handlers map[string]http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h, ok := handlers[r.Method]; ok {
+			h.ServeHTTP(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+}
+
+func healthz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "name": "cabinet-api"})
+}
+
+// ============================================================================
+// SPA (из старой версии Mount)
+// ============================================================================
+
+func buildSPAHandler(spaFS fs.FS) http.Handler {
+	fileServer := http.FileServer(http.FS(spaFS))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		trimmed := strings.TrimPrefix(r.URL.Path, "/cabinet")
+		if trimmed == "" || trimmed == "/" {
+			serveIndex(w, r, spaFS)
+			return
+		}
+		if _, err := fs.Stat(spaFS, strings.TrimPrefix(trimmed, "/")); err != nil {
+			serveIndex(w, r, spaFS)
+			return
+		}
+		http.StripPrefix("/cabinet", fileServer).ServeHTTP(w, r)
+	})
+}
+
+func serveIndex(w http.ResponseWriter, _ *http.Request, spaFS fs.FS) {
+	data, err := fs.ReadFile(spaFS, "index.html")
+	if err != nil {
+		http.Error(w, "cabinet SPA is not built", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}

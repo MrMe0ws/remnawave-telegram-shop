@@ -21,6 +21,9 @@ import (
 // ErrNotFound is returned when the API responds with 404.
 var ErrNotFound = errors.New("not found")
 
+// ErrUserNotFound — в панели нет пользователя с данным telegram_id (пустой ответ поиска).
+var ErrUserNotFound = errors.New("user not found")
+
 // ctxKey is an unexported type for context keys in this package.
 type ctxKey string
 
@@ -471,6 +474,11 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 	return &resp.Response, nil
 }
 
+// TODO(cabinet-web-only): после Этапа 3 (CustomerBootstrapService) для клиентов
+// с customer.IsWebOnly=true username должен формироваться как
+// `cabinet_<cabinet_account_id>` (а не `<customer_id>_<synthetic_tg_id>`),
+// а поле createReq.TelegramID должно оставаться nil.
+// См. docs/cabinet/audit-telegram-id.md, разделы 3.1 и 3.2.
 func (r *Client) createUser(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
 	expireAt := time.Now().UTC().AddDate(0, 0, days)
 	username := generateUsername(customerId, telegramId)
@@ -548,7 +556,7 @@ func (r *Client) GetUserInfo(ctx context.Context, telegramId int64) (string, int
 		return "", 0, err
 	}
 	if len(users) == 0 {
-		return "", 0, errors.New("user not found")
+		return "", 0, ErrUserNotFound
 	}
 
 	user := findUserBySuffix(users, telegramId)
@@ -566,7 +574,7 @@ func (r *Client) GetUserTrafficInfo(ctx context.Context, telegramId int64) (*Use
 		return nil, err
 	}
 	if len(users) == 0 {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 
 	user := findUserBySuffix(users, telegramId)
@@ -638,7 +646,7 @@ func (r *Client) UpdateUserDeviceLimit(ctx context.Context, telegramId int64, ne
 		return nil, err
 	}
 	if len(users) == 0 {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 	user := findUserBySuffix(users, telegramId)
 	if newLimit <= 0 {

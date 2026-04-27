@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme */
+    --connect-device-inner-bg: 210 40% 96%;
+    --connect-device-inner-bg-hover: 210 35% 91%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    --primary: 174 72% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 174 72% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 174 72% 36%;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --connect-device-inner-bg: 215 55% 15%;
+    --connect-device-inner-bg-hover: 215 50% 18%;
+    --background: 225 48% 9%;
+    --foreground: 210 40% 96%;
+    --card: 221 49% 13%;
+    --card-foreground: 210 40% 96%;
+    --border: 222 37% 20%;
+    --input: 222 37% 20%;
+    --primary: 198 89% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 40% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 222 40% 16%;
+    --muted-foreground: 214 24% 63%;
+    --accent: 198 89% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 198 89% 50%;
+    --radius: 0.625rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(900px 420px at 14% -8%, rgba(14, 169, 241, 0.14), transparent 58%),
+      radial-gradient(760px 360px at 88% -12%, rgba(14, 169, 241, 0.09), transparent 62%);
+    background-attachment: fixed;
+  }
+
+  /* Smooth scrollbar in dark mode */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out both;
+  }
+
+  /* Вращающаяся «conic»-окантовка (яркая дуга, противоположная сторона тусклая). */
+  @property --connect-border-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+  }
+
+  .connect-device-cta {
+    position: relative;
+    display: block;
+    border-radius: 0.75rem;
+    padding: 2px;
+    background: conic-gradient(
+      from var(--connect-border-angle),
+      rgba(14, 169, 241, 0.95),
+      rgba(14, 169, 241, 0.2) 16%,
+      transparent 28%,
+      transparent 72%,
+      rgba(14, 169, 241, 0.2) 84%,
+      rgba(14, 169, 241, 0.95)
+    );
+    animation: connect-border-spin 2.8s linear infinite;
+    box-shadow: 0 0 20px rgba(14, 169, 241, 0.12);
+  }
+
+  .connect-device-cta-inner {
+    border-radius: 0.625rem;
+    background: hsl(var(--connect-device-inner-bg));
+  }
+
+  .connect-device-cta:hover .connect-device-cta-inner {
+    background: hsl(var(--connect-device-inner-bg-hover));
+  }
+}
+
+@keyframes connect-border-spin {
+  to {
+    --connect-border-angle: 360deg;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

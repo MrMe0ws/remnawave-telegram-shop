@@ -2,6 +2,7 @@ package cryptopay
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,27 @@ import (
 type CryptoPayApi interface {
 	CreateInvoice(invoiceReq *InvoiceRequest) (*InvoiceResponse, error)
 	GetInvoices(status, fiat, asset, invoiceIds string, offset, limit int) (*[]InvoiceResponse, error)
+}
+
+// ctxKey изолирует ключи контекста от внешних пакетов.
+type ctxKey string
+
+const (
+	// CtxKeyPaidBtnURL — если задан, используется вместо config.BotURL() как
+	// paid_btn_url в CryptoPay-инвойсе. Используется web-кабинетом, чтобы после
+	// оплаты пользователь возвращался на /cabinet/payment/status/:id.
+	CtxKeyPaidBtnURL ctxKey = "cryptopay.paid_btn_url"
+)
+
+// PaidBtnURLFromCtx читает переопределение paid_btn_url, если оно проставлено.
+func PaidBtnURLFromCtx(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if v, ok := ctx.Value(CtxKeyPaidBtnURL).(string); ok {
+		return v
+	}
+	return ""
 }
 
 type Client struct {

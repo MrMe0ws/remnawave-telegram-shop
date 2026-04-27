@@ -11,6 +11,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/utils"
@@ -135,8 +136,14 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 }
 
 func (h Handler) resolveConnectButton(lang string) []models.InlineKeyboardButton {
-	// Кнопка "Мой VPN" всегда открывает подменю подключения
-	// В подменю кнопка "подключить устройство" будет использовать MINI_APP_URL если он указан
+	// При включённом кабинете «Мой VPN» сразу открывает WebApp кабинета (тот же функционал, что подменю).
+	if u := cabcfg.MiniAppEntryURL(); u != "" {
+		return []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{
+				WebApp: &models.WebAppInfo{URL: u},
+			}),
+		}
+	}
 	return []models.InlineKeyboardButton{
 		h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 	}

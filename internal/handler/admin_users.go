@@ -17,6 +17,7 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
+	"remnawave-tg-shop-bot/utils"
 )
 
 const (
@@ -563,15 +564,70 @@ func (h Handler) adminUsersListPage(ctx context.Context, b *bot.Bot, update *mod
 	}
 }
 
+// adminCustomerWebCabinetDisplay — web-кабинет / synthetic telegram_id: показываем id_email без домена.
+func adminCustomerWebCabinetDisplay(c *database.Customer) bool {
+	return c != nil && (c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID))
+}
+
+// sanitizeEmailLocalForAdminLabel — локальная часть email: нижний регистр, без +tag, точки убраны, только [a-z0-9_].
+func sanitizeEmailLocalForAdminLabel(email string) string {
+	email = strings.TrimSpace(strings.ToLower(email))
+	at := strings.LastIndex(email, "@")
+	if at <= 0 {
+		return ""
+	}
+	local := email[:at]
+	if plus := strings.Index(local, "+"); plus >= 0 {
+		local = local[:plus]
+	}
+	local = strings.ReplaceAll(local, ".", "")
+	var b strings.Builder
+	for _, r := range local {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '_':
+			b.WriteRune('_')
+		}
+	}
+	return b.String()
+}
+
+func formatCabinetWebAdminLabel(customerID int64, accountEmail string) string {
+	local := sanitizeEmailLocalForAdminLabel(accountEmail)
+	if local == "" {
+		return fmt.Sprintf("%d_web", customerID)
+	}
+	return fmt.Sprintf("%d_%s", customerID, local)
+}
+
 // enrichPanelUsernameHints — для строки списка, если в БД нет @username: сначала Telegram (GetChat), иначе логин панели Remnawave.
 func (h Handler) enrichPanelUsernameHints(ctx context.Context, b *bot.Bot, customers []database.Customer) []string {
 	out := make([]string, len(customers))
+	var webIDs []int64
 	for i := range customers {
-		if customers[i].TelegramUsername != nil && strings.TrimSpace(*customers[i].TelegramUsername) != "" {
+		if adminCustomerWebCabinetDisplay(&customers[i]) {
+			webIDs = append(webIDs, customers[i].ID)
+		}
+	}
+	emailByCustomer, err := h.customerRepository.CabinetAccountEmailsByCustomerIDs(ctx, webIDs)
+	if err != nil {
+		slog.Warn("admin: cabinet emails for web labels", "error", err)
+		emailByCustomer = nil
+	}
+	for i := range customers {
+		c := &customers[i]
+		if adminCustomerWebCabinetDisplay(c) {
+			if em, ok := emailByCustomer[c.ID]; ok && strings.TrimSpace(em) != "" {
+				out[i] = formatCabinetWebAdminLabel(c.ID, em)
+				continue
+			}
+		}
+		if c.TelegramUsername != nil && strings.TrimSpace(*c.TelegramUsername) != "" {
 			continue
 		}
-		if b != nil {
-			if chat, err := b.GetChat(ctx, &bot.GetChatParams{ChatID: customers[i].TelegramID}); err == nil && chat != nil {
+		if b != nil && !utils.IsSyntheticTelegramID(c.TelegramID) {
+			if chat, err := b.GetChat(ctx, &bot.GetChatParams{ChatID: c.TelegramID}); err == nil && chat != nil {
 				if un := strings.TrimSpace(chat.Username); un != "" {
 					out[i] = "@" + strings.TrimPrefix(un, "@")
 					continue
@@ -584,7 +640,7 @@ func (h Handler) enrichPanelUsernameHints(ctx context.Context, b *bot.Bot, custo
 				}
 			}
 		}
-		u, err := h.remnawaveClient.GetUserTrafficInfo(ctx, customers[i].TelegramID)
+		u, err := h.remnawaveClient.GetUserTrafficInfo(ctx, c.TelegramID)
 		if err != nil || u == nil || strings.TrimSpace(u.Username) == "" {
 			continue
 		}
@@ -613,7 +669,14 @@ func adminUserListButtonLabel(h Handler, lang string, c *database.Customer, now 
 		short = short[:15] + "…"
 	}
 	base := fmt.Sprintf("%s · %s", statusEmoji, short)
-	if c.TelegramUsername != nil && strings.TrimSpace(*c.TelegramUsername) != "" {
+	// Web / synthetic: подпись из кабинета (customer_id + локальная часть email), без домена.
+	if adminCustomerWebCabinetDisplay(c) && panelUsernameHint != "" {
+		pu := strings.TrimSpace(panelUsernameHint)
+		if len([]rune(pu)) > 22 {
+			pu = string([]rune(pu)[:20]) + "…"
+		}
+		base = fmt.Sprintf("%s %s · %s", statusEmoji, pu, idTail)
+	} else if c.TelegramUsername != nil && strings.TrimSpace(*c.TelegramUsername) != "" {
 		u := strings.TrimSpace(*c.TelegramUsername)
 		if len([]rune(u)) > 14 {
 			u = string([]rune(u)[:12]) + "…"
@@ -939,6 +1002,16 @@ func (h Handler) AdminUserManageHandler(ctx context.Context, b *bot.Bot, update 
 
 // adminUserCardTitleHTML — заголовок карточки: @username из БД, иначе имя из Telegram API, иначе числовой ID.
 func (h Handler) adminUserCardTitleHTML(ctx context.Context, b *bot.Bot, cust *database.Customer) string {
+	if adminCustomerWebCabinetDisplay(cust) {
+		emails, err := h.customerRepository.CabinetAccountEmailsByCustomerIDs(ctx, []int64{cust.ID})
+		if err == nil {
+			if em, ok := emails[cust.ID]; ok && strings.TrimSpace(em) != "" {
+				return escapeHTML(formatCabinetWebAdminLabel(cust.ID, em))
+			}
+		} else {
+			slog.Warn("admin user card: cabinet email lookup", "customer_id", cust.ID, "error", err)
+		}
+	}
 	if cust.TelegramUsername != nil {
 		u := strings.TrimSpace(*cust.TelegramUsername)
 		if u != "" {
@@ -946,7 +1019,7 @@ func (h Handler) adminUserCardTitleHTML(ctx context.Context, b *bot.Bot, cust *d
 			return "@" + escapeHTML(u)
 		}
 	}
-	if b != nil {
+	if b != nil && !utils.IsSyntheticTelegramID(cust.TelegramID) {
 		chat, err := b.GetChat(ctx, &bot.GetChatParams{ChatID: cust.TelegramID})
 		if err == nil && chat != nil {
 			if un := strings.TrimSpace(chat.Username); un != "" {
@@ -959,6 +1032,9 @@ func (h Handler) adminUserCardTitleHTML(ctx context.Context, b *bot.Bot, cust *d
 				return escapeHTML(nick)
 			}
 		}
+	}
+	if adminCustomerWebCabinetDisplay(cust) {
+		return escapeHTML(fmt.Sprintf("%d_web", cust.ID))
 	}
 	return escapeHTML(strconv.FormatInt(cust.TelegramID, 10))
 }
@@ -1856,6 +1932,14 @@ func (h Handler) AdminUserDMMessageHandler(ctx context.Context, b *bot.Bot, upda
 		return
 	}
 	adminUsersDMClear(adminID)
+	// TODO(cabinet-web-only): после Этапа 1 добавить перед SendMessage:
+	//   if utils.IsSyntheticTelegramID(targetTG) {
+	//       // ответить админу "admin_user_dm_unavailable_webonly"
+	//       return
+	//   }
+	// Плюс идеально — прятать саму кнопку «Написать пользователю» при
+	// cust.IsWebOnly в adminUsersDMSet/карточке пользователя.
+	// См. docs/cabinet/audit-telegram-id.md, раздел 1.4.
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: targetTG,
 		Text:   txt,

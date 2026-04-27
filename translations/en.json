@@ -39,7 +39,7 @@
   "tariff_selected_devices_line": "• Devices: %d",
   "tariff_selected_description_line": "📝 %s",
   "tariff_choose_period": "<b>Choose a period:</b>",
-  "tariff_payment_methods_text": "<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars",
+  "tariff_payment_methods_text": "<b>Payment methods:</b>\n💸 Bank card\n⭐ Telegram Stars - after 1 payment",
   "month_1": "1 mo – %d ₽",
   "month_3": "3 mo – %d ₽",
   "month_6": "6 mo – %d ₽",

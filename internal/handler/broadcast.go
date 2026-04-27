@@ -15,6 +15,7 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/utils"
 )
 
 // BroadcastType определяет тип рассылки
@@ -1089,6 +1090,9 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		batch := recipients[i:end]
 
 		for _, rec := range batch {
+			if utils.IsSyntheticTelegramID(rec.TelegramID) {
+				continue
+			}
 			markup := h.buildBroadcastReplyMarkup(rec.Language, flags)
 			var err error
 			if media != nil {

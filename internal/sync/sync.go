@@ -83,6 +83,8 @@ func (s SyncService) Sync() {
 		}
 	}
 
+	// Web-only customer (кабинет) не попадает в telegramIDs из панели; удаление
+	// «лишних» строк в репозитории не трогает is_web_only=TRUE.
 	err = s.customerRepository.DeleteByNotInTelegramIds(ctx, telegramIDs)
 	if err != nil {
 		slog.Error("Error while deleting users")

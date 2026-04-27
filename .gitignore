@@ -361,3 +361,9 @@ remnawave-telegram-shop-4.3.6/
 # Локальная документация в корне репозитория
 /docs/
 /remnawave-bedolaga-telegram-bot-main/
+
+# Локальный тест логотипа кабинета в корне репозитория
+/vpn_cat.png
+
+# Настройки редактора (локально)
+.vscode/

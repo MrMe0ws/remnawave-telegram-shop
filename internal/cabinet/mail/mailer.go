@@ -1,0 +1,146 @@
+package mail
+
+import (
+	"bytes"
+	"context"
+	"embed"
+	"fmt"
+	"html/template"
+)
+
+//go:embed templates/*.html
+var templatesFS embed.FS
+
+// Mailer — высокоуровневый API для отправки писем кабинета (verify, reset,
+// duplicate register). Знает о шаблонах и о выборе языка — вызывающий код
+// передаёт только модель (адрес, URL, TTL).
+type Mailer struct {
+	sender *Sender
+	tpls   *template.Template
+}
+
+// NewMailer компилит все шаблоны на старте. Если шаблоны повреждены, функция
+// panic'нет — это намеренно, такой баг ловим в CI/тестах, не в рантайме.
+func NewMailer(sender *Sender) *Mailer {
+	tpls := template.Must(template.ParseFS(templatesFS, "templates/*.html"))
+	return &Mailer{sender: sender, tpls: tpls}
+}
+
+// VerifyEmailData — контекст шаблона email_verify_*.
+type VerifyEmailData struct {
+	VerifyURL string
+	TTLHuman  string // "24 часа" / "24 hours"
+}
+
+// SendVerifyEmail отправляет письмо подтверждения email.
+func (m *Mailer) SendVerifyEmail(ctx context.Context, toEmail, language string, data VerifyEmailData) error {
+	tplName := pickTemplate("email_verify", language)
+	subject := subjectFor("email_verify", language)
+	return m.render(ctx, tplName, subject, toEmail, data)
+}
+
+// DuplicateRegisterData — контекст шаблона duplicate_register_*.
+type DuplicateRegisterData struct {
+	LoginURL string
+}
+
+// SendDuplicateRegister отправляет письмо «кто-то пытался зарегаться на ваш email».
+// Часть защиты от account-enumeration: сервис отвечает пользователю «успех»,
+// реальный аккаунт получает это письмо.
+func (m *Mailer) SendDuplicateRegister(ctx context.Context, toEmail, language string, data DuplicateRegisterData) error {
+	tplName := pickTemplate("duplicate_register", language)
+	subject := subjectFor("duplicate_register", language)
+	return m.render(ctx, tplName, subject, toEmail, data)
+}
+
+// PasswordResetData — контекст шаблона password_reset_*.
+type PasswordResetData struct {
+	ResetURL string
+	TTLHuman string
+}
+
+// SendPasswordReset отправляет письмо со ссылкой на сброс пароля.
+func (m *Mailer) SendPasswordReset(ctx context.Context, toEmail, language string, data PasswordResetData) error {
+	tplName := pickTemplate("password_reset", language)
+	subject := subjectFor("password_reset", language)
+	return m.render(ctx, tplName, subject, toEmail, data)
+}
+
+// GoogleLinkConfirmData — контекст шаблона google_link_confirm_*.
+type GoogleLinkConfirmData struct {
+	ConfirmURL string
+}
+
+// TelegramLinkedData — контекст шаблона telegram_linked_*.
+type TelegramLinkedData struct {
+	MergeResult string // "linked" | "merged" | "noop"
+}
+
+// SendTelegramLinked уведомляет пользователя об успешной привязке / слиянии
+// Telegram-аккаунта с веб-кабинетом.
+func (m *Mailer) SendTelegramLinked(ctx context.Context, toEmail, language, mergeResult string) error {
+	tplName := pickTemplate("telegram_linked", language)
+	subject := subjectFor("telegram_linked", language)
+	return m.render(ctx, tplName, subject, toEmail, TelegramLinkedData{MergeResult: mergeResult})
+}
+
+// SendGoogleLinkConfirm отправляет письмо подтверждения привязки Google.
+// Вызывается, когда Google-email совпадает с уже существующим cabinet_account.
+func (m *Mailer) SendGoogleLinkConfirm(ctx context.Context, toEmail, language string, confirmURL string) error {
+	tplName := pickTemplate("google_link_confirm", language)
+	subject := subjectFor("google_link_confirm", language)
+	return m.render(ctx, tplName, subject, toEmail, GoogleLinkConfirmData{ConfirmURL: confirmURL})
+}
+
+func (m *Mailer) render(ctx context.Context, tplName, subject, toEmail string, data any) error {
+	var buf bytes.Buffer
+	if err := m.tpls.ExecuteTemplate(&buf, tplName, data); err != nil {
+		return fmt.Errorf("mail: render %s: %w", tplName, err)
+	}
+	return m.sender.Send(ctx, toEmail, subject, buf.String(), "")
+}
+
+// pickTemplate возвращает имя файла-шаблона для заданной категории + языка.
+// Если язык не поддержан — fallback на ru (дефолт проекта).
+func pickTemplate(base, language string) string {
+	switch language {
+	case "en":
+		return base + "_en.html"
+	default:
+		return base + "_ru.html"
+	}
+}
+
+// subjectFor возвращает локализованный subject. Вынесено в код (а не в
+// шаблоны), чтобы subject нельзя было случайно сломать HTML-форматированием.
+func subjectFor(kind, language string) string {
+	switch kind {
+	case "email_verify":
+		if language == "en" {
+			return "Verify your email"
+		}
+		return "Подтверждение email"
+	case "duplicate_register":
+		if language == "en" {
+			return "Someone tried to register with your email"
+		}
+		return "Попытка регистрации на ваш email"
+	case "password_reset":
+		if language == "en" {
+			return "Password reset"
+		}
+		return "Сброс пароля"
+	case "google_link_confirm":
+		if language == "en" {
+			return "Confirm Google account link"
+		}
+		return "Подтверждение привязки Google"
+	case "telegram_linked":
+		if language == "en" {
+			return "Telegram account linked"
+		}
+		return "Telegram-аккаунт привязан"
+	default:
+		return "Cabinet notification"
+	}
+}

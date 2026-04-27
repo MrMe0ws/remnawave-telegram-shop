@@ -8,6 +8,7 @@ import (
 	"remnawave-tg-shop-bot/internal/handler"
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/translation"
+	"remnawave-tg-shop-bot/utils"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -148,6 +149,9 @@ func (s *SubscriptionService) getDaysUntilExpiration(now time.Time, expireAt tim
 }
 
 func (s *SubscriptionService) sendNotification(ctx context.Context, customer database.Customer) error {
+	if customer.IsWebOnly || utils.IsSyntheticTelegramID(customer.TelegramID) {
+		return nil
+	}
 	expireDate := customer.ExpireAt.Format("02.01.2006")
 
 	messageText := fmt.Sprintf(

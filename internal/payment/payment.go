@@ -8,6 +8,7 @@ import (
 	"math"
 	"strings"
 	"remnawave-tg-shop-bot/internal/cache"
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
@@ -24,6 +25,16 @@ import (
 	"github.com/go-telegram/bot/models"
 	"github.com/google/uuid"
 )
+
+// skipTelegramCustomerDM — для web-only / synthetic telegram_id нет TG-чата;
+// любой SendMessage/DeleteMessage по ChatID=telegram_id даст «chat not found».
+// См. docs/cabinet/audit-telegram-id.md §1.3.
+func skipTelegramCustomerDM(c *database.Customer) bool {
+	if c == nil {
+		return true
+	}
+	return c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID)
+}
 
 type PaymentService struct {
 	purchaseRepository *database.PurchaseRepository
@@ -103,7 +114,7 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		purchase.ExtraHwid = 0
 	}
 
-	if messageId, b := s.cache.Get(purchase.ID); b {
+	if messageId, b := s.cache.Get(purchase.ID); b && !skipTelegramCustomerDM(customer) {
 		_, err = s.telegramBot.DeleteMessage(ctx, &bot.DeleteMessageParams{
 			ChatID:    customer.TelegramID,
 			MessageID: messageId,
@@ -164,13 +175,18 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 			return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 		}
 
+		// Первый платёж «поверх» триала без current_tariff_id: при trialAddsToPaid=false
+		// срок от момента оплаты (не стакаем к expire_at). Если тариф уже привязан —
+		// это продление/оплата с тарифом, даже при paidCount==0 (промо/админ/расхождение
+		// счётчиков) продлеваем от expire в Remnawave, как в боте.
 		useFromNow := !config.TrialAddsToPaid() && customer.ExpireAt != nil && customer.ExpireAt.After(time.Now())
 		if useFromNow {
 			paidCount, err := s.purchaseRepository.CountPaidSubscriptionsByCustomer(ctx, customer.ID)
 			if err != nil {
 				return err
 			}
-			if paidCount == 0 {
+			noPaidTariffYet := customer.CurrentTariffID == nil || *customer.CurrentTariffID == 0
+			if paidCount == 0 && noPaidTariffYet {
 				user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(ctx, customer.ID, customer.TelegramID, daysToAdd, profile)
 				if err != nil {
 					return err
@@ -203,7 +219,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		if err != nil {
 			return err
 		}
-		if paidCount == 0 {
+		noPaidTariffYet := customer.CurrentTariffID == nil || *customer.CurrentTariffID == 0
+		if paidCount == 0 && noPaidTariffYet {
 			user, err := s.remnawaveClient.CreateOrUpdateUserFromNow(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
 			if err != nil {
 				return err
@@ -314,16 +331,18 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 		}
 	}
 
-	successText := fmt.Sprintf(s.translation.GetText(customer.Language, "hwid_change_success_paid"), currentLimit, newLimit, int(math.Ceil(purchase.Amount)))
-	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: customer.TelegramID,
-		Text:   successText,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: s.createConnectKeyboard(customer),
-		},
-	})
-	if err != nil {
-		return err
+	if !skipTelegramCustomerDM(customer) {
+		successText := fmt.Sprintf(s.translation.GetText(customer.Language, "hwid_change_success_paid"), currentLimit, newLimit, int(math.Ceil(purchase.Amount)))
+		_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: customer.TelegramID,
+			Text:   successText,
+			ReplyMarkup: models.InlineKeyboardMarkup{
+				InlineKeyboard: s.createConnectKeyboard(customer),
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
 	s.applyLoyaltyXPAfterPayment(ctx, purchase, customer)
@@ -558,15 +577,17 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 		return err
 	}
 
-	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: customer.TelegramID,
-		Text:   s.translation.GetText(customer.Language, "subscription_activated"),
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: s.createConnectKeyboard(customer),
-		},
-	})
-	if err != nil {
-		return err
+	if !skipTelegramCustomerDM(customer) {
+		_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: customer.TelegramID,
+			Text:   s.translation.GetText(customer.Language, "subscription_activated"),
+			ReplyMarkup: models.InlineKeyboardMarkup{
+				InlineKeyboard: s.createConnectKeyboard(customer),
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := s.applyReferralBonus(ctx, purchase, customer); err != nil {
@@ -629,6 +650,9 @@ func (s PaymentService) maybeNotifyLoyaltyLevelUp(ctx context.Context, customer 
 	}
 	b.WriteString("\n\n")
 	b.WriteString(tm.GetText(lang, "loyalty_level_up_footer"))
+	if skipTelegramCustomerDM(customer) {
+		return
+	}
 	isDisabled := true
 	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    customer.TelegramID,
@@ -660,11 +684,19 @@ func (s *PaymentService) clearPromoDiscountIfUsed(ctx context.Context, purchase 
 func (s PaymentService) createConnectKeyboard(customer *database.Customer) [][]models.InlineKeyboardButton {
 	var inlineCustomerKeyboard [][]models.InlineKeyboardButton
 
-	// Кнопка "Мой VPN" всегда открывает подменю подключения
-	// В подменю кнопка "подключить устройство" будет использовать MINI_APP_URL если он указан
-	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
-		s.translation.WithButton(customer.Language, "connect_button", models.InlineKeyboardButton{CallbackData: "connect"}),
-	})
+	var connectRow []models.InlineKeyboardButton
+	if u := cabcfg.MiniAppEntryURL(); u != "" {
+		connectRow = []models.InlineKeyboardButton{
+			s.translation.WithButton(customer.Language, "connect_button", models.InlineKeyboardButton{
+				WebApp: &models.WebAppInfo{URL: u},
+			}),
+		}
+	} else {
+		connectRow = []models.InlineKeyboardButton{
+			s.translation.WithButton(customer.Language, "connect_button", models.InlineKeyboardButton{CallbackData: "connect"}),
+		}
+	}
+	inlineCustomerKeyboard = append(inlineCustomerKeyboard, connectRow)
 
 	inlineCustomerKeyboard = append(inlineCustomerKeyboard, []models.InlineKeyboardButton{
 		s.translation.WithButton(customer.Language, "back_button", models.InlineKeyboardButton{CallbackData: "start"}),
@@ -781,6 +813,9 @@ func (s PaymentService) sendReferralBonusMessage(ctx context.Context, customer *
 	if days <= 0 {
 		return nil
 	}
+	if skipTelegramCustomerDM(customer) {
+		return nil
+	}
 	_, err := s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    customer.TelegramID,
 		ParseMode: models.ParseModeHTML,
@@ -796,6 +831,9 @@ func (s PaymentService) sendReferralFirstBonusMessage(ctx context.Context, custo
 	if days <= 0 {
 		return nil
 	}
+	if skipTelegramCustomerDM(customer) {
+		return nil
+	}
 	_, err := s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    customer.TelegramID,
 		ParseMode: models.ParseModeHTML,
@@ -808,12 +846,17 @@ func (s PaymentService) sendReferralFirstBonusMessage(ctx context.Context, custo
 }
 
 func (s PaymentService) createReferralBonusKeyboard(customer *database.Customer) [][]models.InlineKeyboardButton {
+	lang := customer.Language
+	connectBtn := models.InlineKeyboardButton{CallbackData: "connect"}
+	if u := cabcfg.MiniAppEntryURL(); u != "" {
+		connectBtn = models.InlineKeyboardButton{WebApp: &models.WebAppInfo{URL: u}}
+	}
 	return [][]models.InlineKeyboardButton{
 		{
-			s.translation.WithButton(customer.Language, "referral_button", models.InlineKeyboardButton{CallbackData: "referral"}),
+			s.translation.WithButton(lang, "referral_button", models.InlineKeyboardButton{CallbackData: "referral"}),
 		},
 		{
-			s.translation.WithButton(customer.Language, "connect_button", models.InlineKeyboardButton{CallbackData: "connect"}),
+			s.translation.WithButton(lang, "connect_button", connectBtn),
 		},
 	}
 }
@@ -953,13 +996,15 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 	}); err != nil {
 		return err
 	}
-	_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    telegramId,
-		ParseMode: models.ParseModeHTML,
-		Text:      s.translation.GetText(customer.Language, "tribute_cancelled"),
-	})
-	if err != nil {
-		slog.Error("Error sending message about tribute cancelled", err, "telegram_id", utils.MaskHalfInt64(telegramId))
+	if !utils.IsSyntheticTelegramID(telegramId) && !customer.IsWebOnly {
+		_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:    telegramId,
+			ParseMode: models.ParseModeHTML,
+			Text:      s.translation.GetText(customer.Language, "tribute_cancelled"),
+		})
+		if err != nil {
+			slog.Error("Error sending message about tribute cancelled", err, "telegram_id", utils.MaskHalfInt64(telegramId))
+		}
 	}
 	slog.Info("Canceled tribute purchase", "purchase_id", utils.MaskHalfInt64(tributePurchase.ID), "telegram_id", utils.MaskHalfInt64(telegramId))
 	return nil
@@ -992,6 +1037,10 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	if extraHwid > 0 {
 		description = fmt.Sprintf("Extra devices +%d", extraHwid)
 	}
+	paidBtnURL := cryptopay.PaidBtnURLFromCtx(ctx)
+	if paidBtnURL == "" {
+		paidBtnURL = config.BotURL()
+	}
 	invoice, err := s.cryptoPayClient.CreateInvoice(&cryptopay.InvoiceRequest{
 		CurrencyType:   "fiat",
 		Fiat:           "RUB",
@@ -1000,7 +1049,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		Payload:        fmt.Sprintf("purchaseId=%d&username=%s", purchaseId, username),
 		Description:    description,
 		PaidBtnName:    "callback",
-		PaidBtnUrl:     config.BotURL(),
+		PaidBtnUrl:     paidBtnURL,
 	})
 	if err != nil {
 		slog.Error("Error creating invoice", err)

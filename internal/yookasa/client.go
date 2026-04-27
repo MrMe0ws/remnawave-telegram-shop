@@ -25,6 +25,46 @@ type YookasaAPI interface {
 	GetPayment(ctx context.Context, paymentID uuid.UUID) (*Payment, error)
 }
 
+// ctxKey изолирует ключи контекста от внешних пакетов.
+type ctxKey string
+
+const (
+	// CtxKeyReturnURL — если задан в контексте, используется как
+	// confirmation.return_url вместо config.BotURL(). Используется web-кабинетом
+	// для возврата пользователя на /cabinet/payment/status/:id.
+	CtxKeyReturnURL ctxKey = "yookasa.return_url"
+	// CtxKeyReceiptEmail — если задан, переопределяет receipt.customer.email
+	// (по умолчанию config.YookasaEmail()). Используется кабинетом для
+	// отправки чека на email клиента, когда он подтверждён.
+	CtxKeyReceiptEmail ctxKey = "yookasa.receipt_email"
+	// CtxKeyIdempotenceKey — если задан, используется как HTTP-заголовок
+	// Idempotence-Key. Без override клиент продолжает генерировать uuid,
+	// чтобы не ломать существующие вызовы из бота.
+	CtxKeyIdempotenceKey ctxKey = "yookasa.idempotence_key"
+)
+
+// returnURLFromCtx возвращает переопределение из контекста, либо пустую строку.
+func returnURLFromCtx(ctx context.Context) string {
+	if v, ok := ctx.Value(CtxKeyReturnURL).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func receiptEmailFromCtx(ctx context.Context) string {
+	if v, ok := ctx.Value(CtxKeyReceiptEmail).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func idempotenceKeyFromCtx(ctx context.Context) string {
+	if v, ok := ctx.Value(CtxKeyIdempotenceKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
@@ -47,10 +87,13 @@ func (c *Client) CreateInvoice(ctx context.Context, amount int, description stri
 		Value:    strconv.Itoa(amount),
 		Currency: "RUB",
 	}
+
+	email := receiptEmailFromCtx(ctx)
+	if email == "" {
+		email = config.YookasaEmail()
+	}
 	receipt := &Receipt{
-		Customer: &Customer{
-			Email: config.YookasaEmail(),
-		},
+		Customer: &Customer{Email: email},
 		Items: []Item{
 			{
 				VatCode:        1,
@@ -70,15 +113,23 @@ func (c *Client) CreateInvoice(ctx context.Context, amount int, description stri
 		"username":   username,
 	}
 
+	returnURL := returnURLFromCtx(ctx)
+	if returnURL == "" {
+		returnURL = config.BotURL()
+	}
+
 	paymentRequest := NewPaymentRequest(
 		rub,
-		config.BotURL(),
+		returnURL,
 		description,
 		receipt,
 		metaData,
 	)
 
-	idempotencyKey := uuid.New().String()
+	idempotencyKey := idempotenceKeyFromCtx(ctx)
+	if idempotencyKey == "" {
+		idempotencyKey = uuid.New().String()
+	}
 
 	payment, err := c.CreatePayment(ctx, paymentRequest, idempotencyKey)
 	if err != nil {

@@ -11,6 +11,9 @@ import (
 	"os"
 	"os/signal"
 	"remnawave-tg-shop-bot/internal/cache"
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
+	cabinethttp "remnawave-tg-shop-bot/internal/cabinet/http"
+	cabstartup "remnawave-tg-shop-bot/internal/cabinet/startup"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
@@ -82,6 +85,18 @@ func main() {
 	err = database.RunMigrations(ctx, &database.MigrationConfig{Direction: "up", MigrationsPath: "./db/migrations", Steps: 0}, pool)
 	if err != nil {
 		panic(err)
+	}
+
+	// Инициализация конфигурации web-кабинета. Делаем сразу после миграций,
+	// чтобы startup-check мог обратиться к уже созданной колонке customer.is_web_only
+	// и чтобы падать рано при невалидных CABINET_* переменных.
+	cabcfg.InitConfig()
+	if cabcfg.IsEnabled() {
+		if err := cabstartup.VerifySyntheticIDRange(ctx, pool, cabcfg.WebTelegramIDBase()); err != nil {
+			panic(fmt.Errorf("cabinet startup check failed: %w", err))
+		}
+		slog.Info("cabinet startup check passed",
+			"web_tg_id_base", cabcfg.WebTelegramIDBase())
 	}
 
 	// Инициализация кэша (TTL 30 минут) для временного хранения данных
@@ -674,6 +689,17 @@ func main() {
 		mux.Handle(config.GetTributeWebHookUrl(), tributeHandler.WebHookHandler())
 	}
 
+	// Web-кабинет: при CABINET_ENABLED=true регистрируем /cabinet/api/*
+	// и /cabinet/* на том же mux и том же порту, что и healthcheck.
+	// cabcfg.InitConfig() вызван ранее (сразу после миграций), здесь только
+	// монтируем роуты.
+	if cabcfg.IsEnabled() {
+		if err := cabinethttp.Mount(ctx, mux, pool, paymentService, remnawaveClient, promoService); err != nil {
+			panic(fmt.Errorf("failed to mount cabinet routes: %w", err))
+		}
+		slog.Info("cabinet routes mounted", "prefix", "/cabinet")
+	}
+
 	// Запуск HTTP сервера в отдельной горутине
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", config.GetHealthCheckPort()),
@@ -889,11 +915,11 @@ func checkYookasaInvoice(
 			if errors.Is(err, yookasa.ErrPaymentNotFound) {
 				slog.Warn("YooKassa invoice not found, canceling purchase", "invoiceId", purchase.YookasaID, "purchaseId", purchase.ID)
 				if cancelErr := paymentService.CancelYookassaPayment(purchase.ID); cancelErr != nil {
-					slog.Error("Error canceling invoice after not found", "invoiceId", purchase.YookasaID, "purchaseId", purchase.ID, cancelErr)
+					slog.Error("Error canceling invoice after not found", "invoiceId", purchase.YookasaID, "purchaseId", purchase.ID, "error", cancelErr)
 				}
 				continue
 			}
-			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, err)
+			slog.Error("Error getting invoice", "invoiceId", purchase.YookasaID, "error", err)
 			continue
 		}
 
@@ -901,7 +927,7 @@ func checkYookasaInvoice(
 		if invoice.IsCancelled() {
 			err := paymentService.CancelYookassaPayment(purchase.ID)
 			if err != nil {
-				slog.Error("Error canceling invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, err)
+				slog.Error("Error canceling invoice", "invoiceId", invoice.ID, "purchaseId", purchase.ID, "error", err)
 			}
 			continue
 		}
@@ -915,13 +941,13 @@ func checkYookasaInvoice(
 		// Извлекаем ID покупки из метаданных счета
 		purchaseId, err := strconv.Atoi(invoice.Metadata["purchaseId"])
 		if err != nil {
-			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, err)
+			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, "error", err)
 		}
 		// Передаем username в контексте для логирования
 		ctxWithValue := context.WithValue(ctx, remnawave.CtxKeyUsername, invoice.Metadata["username"])
 		err = paymentService.ProcessPurchaseById(ctxWithValue, int64(purchaseId))
 		if err != nil {
-			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, err)
+			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, "error", err)
 		} else {
 			slog.Info("Invoice processed", "invoiceId", invoice.ID, "purchaseId", purchaseId)
 		}
@@ -982,7 +1008,7 @@ func checkCryptoPayInvoice(
 			ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, username)
 			err = paymentService.ProcessPurchaseById(ctxWithUsername, int64(purchaseID))
 			if err != nil {
-				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, err)
+				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID, "error", err)
 			} else {
 				slog.Info("Invoice processed", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID)
 			}

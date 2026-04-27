@@ -14,6 +14,7 @@ import (
 	"github.com/go-telegram/bot/models"
 	"github.com/google/uuid"
 
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/translation"
@@ -91,6 +92,7 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 
 // buildConnectInlineMarkup — порядок клавиатуры «Мой VPN»: подключить VPN / купить → управление устройствами (только при активной подписке)
 // → статус серверов (SERVER_STATUS_URL) и лояльность (LOYALTY_ENABLED) в одном ряду → история и рефералы → назад.
+// Кнопка «Подключить VPN»: при включённом кабинете WebApp на MiniAppEntryURL; иначе MINI_APP_URL или ссылка подписки.
 // Отдельные кнопки опускаются, если URL не задан или функция выключена.
 func (h Handler) buildConnectInlineMarkup(langCode string, customer *database.Customer) [][]models.InlineKeyboardButton {
 	now := time.Now()
@@ -355,7 +357,13 @@ func escapeHTML(value string) string {
 func (h Handler) resolveConnectDeviceButton(lang string, subscriptionLink *string) []models.InlineKeyboardButton {
 	var inlineKeyboard []models.InlineKeyboardButton
 
-	if config.GetMiniAppURL() != "" {
+	if u := cabcfg.MiniAppEntryURL(); u != "" {
+		inlineKeyboard = []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "connect_device_button", models.InlineKeyboardButton{WebApp: &models.WebAppInfo{
+				URL: u,
+			}}),
+		}
+	} else if config.GetMiniAppURL() != "" {
 		// Если указан MINI_APP_URL, используем его
 		inlineKeyboard = []models.InlineKeyboardButton{
 			h.translation.WithButton(lang, "connect_device_button", models.InlineKeyboardButton{WebApp: &models.WebAppInfo{
