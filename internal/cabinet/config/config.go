@@ -353,7 +353,7 @@ func InitConfig() {
 		if resolved := resolveBrandLogoFile(logoFileRaw); resolved != "" {
 			conf.brandLogoFile = resolved
 		} else {
-			slog.Warn("CABINET_BRAND_LOGO_FILE: file not found (cwd, binary dir, CABINET_BRAND_LOGO_FILE_BASE)",
+			slog.Warn("CABINET_BRAND_LOGO_FILE: file not found — проверьте путь или volume (см. documentation/cabinet-mode-setup.md)",
 				"path", logoFileRaw,
 			)
 		}
@@ -380,9 +380,8 @@ func InitConfig() {
 	)
 }
 
-// resolveBrandLogoFile ищет файл логотипа: абсолютный путь, затем относительно cwd,
-// каталога исполняемого файла (удобно в Docker, когда WORKDIR=/ а бинарь в /app),
-// CABINET_BRAND_LOGO_FILE_BASE, снова cwd через filepath.Abs.
+// resolveBrandLogoFile ищет файл логотипа: абсолютный путь как есть; относительный —
+// каталог бинарника, cwd, затем filepath.Abs (от cwd).
 func resolveBrandLogoFile(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -402,7 +401,6 @@ func resolveBrandLogoFile(raw string) string {
 	}
 
 	rel := filepath.Clean(raw)
-	// В Docker cwd часто «/», а бинарь лежит в /app — файл рядом с бинарником ищем в первую очередь.
 	if exe, err := os.Executable(); err == nil {
 		if p := try(filepath.Join(filepath.Dir(exe), rel)); p != "" {
 			return p
@@ -416,11 +414,6 @@ func resolveBrandLogoFile(raw string) string {
 	if p, err := filepath.Abs(raw); err == nil {
 		if q := try(p); q != "" {
 			return q
-		}
-	}
-	if base := strings.TrimSpace(os.Getenv("CABINET_BRAND_LOGO_FILE_BASE")); base != "" {
-		if p := try(filepath.Join(base, rel)); p != "" {
-			return p
 		}
 	}
 	return ""

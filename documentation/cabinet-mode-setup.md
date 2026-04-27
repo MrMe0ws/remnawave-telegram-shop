@@ -52,7 +52,7 @@ npm run build
 
 - `CABINET_BRAND_NAME` — текст в шапке и в футере страниц входа.
 - `CABINET_BRAND_LOGO_URL` — URL картинки или путь относительно `CABINET_PUBLIC_URL`.
-- `CABINET_BRAND_LOGO_FILE` — файл на диске процесса бота; отдаётся по `GET …/cabinet/api/public/brand-logo`. Относительный путь ищется **рядом с бинарником**, затем из cwd; в Docker при `WORKDIR=/` положите файл рядом с бинарём или задайте `CABINET_BRAND_LOGO_FILE_BASE` (см. `.env.sample`).
+- `CABINET_BRAND_LOGO_FILE` — файл на диске процесса бота; отдаётся по `GET …/cabinet/api/public/brand-logo`. Удобнее задать **абсолютный путь** внутри контейнера (например `/vpn_cat.png`) и смонтировать файл томом (`./vpn_cat.png:/vpn_cat.png:ro`). Относительный путь: каталог бинарника, затем cwd (см. `.env.sample`).
 
 Иконка вкладки браузера подставляется из того же URL, что и логотип (если задан).
 
