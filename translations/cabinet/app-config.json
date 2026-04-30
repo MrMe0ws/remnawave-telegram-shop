@@ -1,0 +1,1030 @@
+{
+  "config": {
+    "additionalLocales": [
+      "ru"
+    ],
+    "branding": {
+      "name": "MEOWS VPN",
+      "logoUrl": "https://meows.gg/img/main/meowsvpn.jpg",
+      "supportUrl": "https://t.me/Meows_support_bot"
+    }
+  },
+  "platforms": {
+    "ios": [
+      {
+        "id": "happ",
+        "name": "Happ",
+        "isFeatured": true,
+        "urlScheme": "happ://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
+              "buttonText": {
+                "en": "RU App Store",
+                "fa": "اپ استور روسیه",
+                "ru": "App Store для России"
+              }
+            },
+            {
+              "buttonLink": "https://apps.apple.com/us/app/happ-proxy-utility/id6504287215",
+              "buttonText": {
+                "en": "Global App Store",
+                "fa": "اپ استور جهانی",
+                "ru": "Глобальный App Store"
+              }
+            }
+          ],
+          "description": {
+            "en": "Open the page in App Store and install the app.\n\nLaunch it, in the VPN configuration permission window click Allow and enter your passcode.",
+            "fa": "صفحه را در App Store باز کنید و برنامه را نصب کنید. آن را اجرا کنید، در پنجره مجوز پیکربندی VPN روی Allow کلیک کنید و رمز عبور خود را وارد کنید.",
+            "ru": "Откройте страницу в App Store и установите приложение.\n\nЗапустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below — the app will open and the subscription will be added automatically",
+            "fa": "برای افزودن خودکار اشتراک روی دکمه زیر کلیک کنید - برنامه باز خواهد شد",
+            "ru": "Нажмите кнопку ниже — приложение откроется и подписка добавится автоматически."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Happ, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Happ به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "In the main section, click the large power button in the center to connect to VPN.\n\nDon't forget to select a server from the server list. If needed, choose another server from the server list.",
+            "fa": "در بخش اصلی، دکمه بزرگ روشن/خاموش در مرکز را برای اتصال به VPN کلیک کنید. فراموش نکنید که یک سرور را از لیست سرورها انتخاب کنید. در صورت نیاز، سرور دیگری را از لیست سرورها انتخاب کنید.",
+            "ru": "Выберите сервер и нажмите большую кнопку включения в центре для подключения к VPN.\n\nПри необходимости выберите другой сервер из списка серверов."
+          }
+        }
+      },
+      {
+        "id": "clash mi",
+        "name": "Clash Mi",
+        "isFeatured": true,
+        "urlScheme": "clash://install-config?overwrite=no&name=Remnawave&url=",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://apps.apple.com/app/clash-mi/id6744321968",
+              "buttonText": {
+                "en": "Open in App Store",
+                "fa": "Открыть в App Store",
+                "ru": "Открыть в App Store"
+              }
+            }
+          ],
+          "description": {
+            "en": "Open the page in App Store and install the app.\n\nLaunch it, in the VPN configuration permission window click Allow and enter your passcode.",
+            "fa": "Откройте страницу в App Store и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль.",
+            "ru": "Откройте страницу в App Store и установите приложение.\n\nЗапустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below — the app will open and the subscription will be added automatically",
+            "fa": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически.",
+            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Clash Mi, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Clash Mi به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Clash Mi перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "On the main Dashboard page, click the Enabled button to connect to the VPN.",
+            "fa": "На главной странице Dashboard нажми кнопку Enabled для подключения к VPN.",
+            "ru": "На главной странице Dashboard нажми кнопку Enabled для подключения к VPN."
+          }
+        }
+      },
+      {
+        "id": "v2raytun",
+        "name": "v2RayTun",
+        "isFeatured": false,
+        "urlScheme": "v2raytun://import/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://apps.apple.com/en/app/v2raytun/id6476628951",
+              "buttonText": {
+                "en": "Download App Store",
+                "fa": "دانلود ",
+                "ru": "Открыть в App Store"
+              }
+            }
+          ],
+          "description": {
+            "en": "Download and install",
+            "fa": "دانلود و نصب v2RayTun",
+            "ru": "Откройте страницу в App Store и установите приложение.\n\nЗапустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Tap the button to import configuration",
+            "fa": "برای وارد کردن پیکربندی روی دکمه ضربه بزنید",
+            "ru": "Нажмите кнопку ниже — приложение откроется и подписка добавится автоматически."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In v2RayTun, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در v2RayTun به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В v2RayTun перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Open Clash Meta and tap on Connect",
+            "fa": "Clash Meta را باز کنید و روی اتصال ضربه بزنید",
+            "ru": "В главном разделе нажмите большую кнопку включения в центре для подключения к VPN.\n\nНе забудьте выбрать сервер в списке серверов. При необходимости выберите другой сервер из списка серверов.\n\nВ разделе Сервисы выберите сервисы и сайты для исключения из VPN."
+          }
+        }
+      }
+    ],
+    "android": [
+      {
+        "id": "happ",
+        "name": "Happ",
+        "isFeatured": true,
+        "urlScheme": "happ://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://play.google.com/store/apps/details?id=com.happproxy",
+              "buttonText": {
+                "en": "Open in Google Play",
+                "fa": "باز کردن در Google Play",
+                "ru": "Открыть в Google Play"
+              }
+            },
+            {
+              "buttonLink": "https://github.com/Happ-proxy/happ-android/releases/latest/download/Happ.apk",
+              "buttonText": {
+                "en": "Download APK",
+                "fa": "دانلود APK",
+                "ru": "Скачать APK"
+              }
+            }
+          ],
+          "description": {
+            "en": "Open the page in Google Play and install the app.\n\nOr install the app directly from the APK file if Google Play is not working.",
+            "fa": "صفحه را در Google Play باز کنید و برنامه را نصب کنید. یا برنامه را مستقیماً از فایل APK نصب کنید، اگر Google Play کار نمی کند.",
+            "ru": "Откройте страницу в Google Play и установите приложение.\n\nИли установите приложение из APK файла напрямую, если Google Play не работает."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Нажмите кнопку ниже, чтобы добавить подписку"
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Happ, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Happ به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Open the app and connect to the server",
+            "fa": "برنامه را باز کنید و به سرور متصل شوید",
+            "ru": "Выберите сервер и нажмите большую кнопку включения в центре для подключения к VPN.\n\nПри необходимости выберите другой сервер из списка серверов."
+          }
+        }
+      },
+      {
+        "id": "flclashx",
+        "name": "FlClashX",
+        "isFeatured": true,
+        "urlScheme": "flclash://install-config?url=",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/pluralplay/FlClashX/releases/tag/v0.2.1",
+              "buttonText": {
+                "en": "Download APK",
+                "fa": "دانلود APK",
+                "ru": "Скачать APK"
+              }
+            }
+          ],
+          "description": {
+            "en": "Open the page in Google Play and install the app. Or install the app directly from the APK file if Google Play is not working.",
+            "fa": "صفحه را در Google Play باز کنید و برنامه را نصب کنید. یا برنامه را مستقیماً از فایل APK نصب کنید، اگر Google Play کار نمی کند.",
+            "ru": "Установите приложение из APK файла напрямую."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below — the app will open and the subscription will be added automatically",
+            "fa": "برای افزودن خودکار اشتراک روی دکمه زیر کلیک کنید - برنامه باز خواهد شد",
+            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In FlClashX, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در FlClashX به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В FlClashX перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "On the Dashboard page, select the added profile and click the Enable button in the bottom right corner to connect to the VPN.",
+            "fa": "در صفحه اصلی داشبورد، پروفایل اضافه‌شده را انتخاب کنید و روی دکمه فعال‌سازی در گوشه پایین سمت راست کلیک کنید تا به VPN متصل شوید.",
+            "ru": "На главной странице Dashboard выберите добавленный профиль и нажмите кнопку Включить в правом нижнем углу для подключения к VPN."
+          }
+        }
+      },
+      {
+        "id": "v2raytun",
+        "name": "v2RayTun",
+        "isFeatured": false,
+        "urlScheme": "v2rayn://import/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://play.google.com/store/apps/details?id=com.v2raytun.android",
+              "buttonText": {
+                "en": "Download",
+                "fa": "دانلود APK",
+                "ru": "Открыть в Google Play"
+              }
+            }
+          ],
+          "description": {
+            "en": "Download and install",
+            "fa": "دانلود و نصب v2RayTun",
+            "ru": "Откройте страницу в Google Play и установите приложение."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Tap the button to import configuration",
+            "fa": "برای وارد کردن پیکربندی روی دکمه ضربه بزنید",
+            "ru": "Нажмите кнопку ниже, чтобы добавить подписку"
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In v2RayTun, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در v2RayTun به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В v2RayTun перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Open Clash Meta and tap on Connect",
+            "fa": "Clash Meta را باز کنید و روی اتصال ضربه بزنید",
+            "ru": "Откройте приложение и подключитесь к серверу.\n\nВ разделе Сервисы выберите сервисы и сайты для исключения из VPN.\n\nВ разделе Маршрутизация можно настроить VPN только на необходимые приложения или наоборот исключить приложение из VPN соединения."
+          }
+        },
+        "isNeedBase64Encoding": false
+      },
+      {
+        "id": "v2rayng",
+        "name": "v2rayNG",
+        "isFeatured": false,
+        "urlScheme": "v2rayng://install-config?name=Remnawave&url=",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/2dust/v2rayNG/releases/download/1.10.4/v2rayNG_1.10.7_universal.apk",
+              "buttonText": {
+                "en": "Download APK",
+                "fa": "دانلود APK",
+                "ru": "Скачать APK"
+              }
+            }
+          ],
+          "description": {
+            "en": "Download and install v2rayNG APK",
+            "fa": "دانلود و نصب v2rayNG APK",
+            "ru": "Скачайте и установите v2rayNG APK"
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below — the app will open and the subscription will be added automatically",
+            "fa": "برای افزودن خودکار اشتراک روی دکمه زیر کلیک کنید - برنامه باز خواهد شد",
+            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In v2rayNG, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در v2rayNG به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В v2rayNG перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Select the required server and click the Enable button in the bottom right corner.",
+            "fa": "سرور موردنظر را انتخاب کنید و روی دکمه فعال‌سازی در گوشه پایین سمت راست کلیک کنید.",
+            "ru": "Выберите требуемый сервер и нажмите кнопку Включить в правом нижнем углу"
+          }
+        }
+      }
+    ],
+    "macos": [
+    {
+      "id": "happ",
+      "name": "Happ",
+      "isFeatured": true,
+      "urlScheme": "happ://add/",
+      "installationStep": {
+        "buttons": [
+          {
+            "buttonLink": "https://github.com/Happ-proxy/happ-desktop/releases",
+            "buttonText": {
+              "en": "macOS",
+              "fa": "مک (اینتل)",
+              "ru": "macOS"
+            }
+          }
+        ],
+        "description": {
+          "en": "Choose the version for your device, click the button below and install the app.",
+          "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
+          "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
+        }
+      },
+      "addSubscriptionStep": {
+        "description": {
+          "en": "Click the button below to add subscription",
+          "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+          "ru": "Запустите программу.\n\nНажмите кнопку ниже, чтобы добавить подписку. После нажатия кнопки подписка автоматически добавится в программу."
+        }
+      },
+      "additionalAfterAddSubscriptionStep": {
+        "buttons": [
+          {
+            "buttonLink": "https://t.me/VPN_meows_news/44",
+            "buttonText": {
+              "en": "VIDEO INSTRUCTION",
+              "fa": "ویدیو راهنما",
+              "ru": "ВИДЕО ИНСТРУКЦИЯ"
+            }
+          }
+        ],
+        "title": {
+          "en": "If the subscription is not added",
+          "fa": "اگر اشتراک در برنامه نصب نشده است",
+          "ru": "Если подписка не добавилась"
+        },
+        "description": {
+          "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+          "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+          "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+        }
+      },
+      "connectAndUseStep": {
+        "description": {
+          "en": "Once you've added your subscription, simply tap the big power button in the center of the screen.\n\nThe app will automatically select the fastest server with the lowest latency, but you can choose any other from the list below if you wish.\n",
+          "fa": "После добавления подписки просто нажмите большую кнопку включения по центру экрана. Приложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n",
+          "ru": "После добавления подписки просто нажмите большую кнопку включения по центру экрана.\n\nПриложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n\nПрограмма легко настраивается и подстраивается под ваши нужды — рекомендую покопаться в настройках и подробнее с ней познакомиться 🙂"
+        }
+      }
+    }
+    ],
+    "linux": [
+      {
+        "id": "koala clash",
+        "name": "Koala Clash",
+        "isFeatured": true,
+        "urlScheme": "clash://install-config?url=",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/coolcoala/clash-verge-rev-lite/releases/",
+              "buttonText": {
+                "en": "Linux",
+                "fa": "لینوکس",
+                "ru": "Linux"
+              }
+            }
+          ],
+          "description": {
+            "en": "Choose the version for your device, click the button below and install the app.",
+            "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
+            "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Запустите программу.\n\nНажмите кнопку ниже, чтобы добавить подписку. После нажатия кнопки подписка автоматически добавится в программу."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Koala Clash перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Once you've added your subscription, simply tap the big power button in the center of the screen.\n\nThe app will automatically select the fastest server with the lowest latency, but you can choose any other from the list below if you wish.\n",
+            "fa": "После добавления подписки просто нажмите большую кнопку включения по центру экрана. Приложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n",
+            "ru": "После добавления подписки просто нажмите большую кнопку включения по центру экрана.\n\nПриложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n\nПрограмма легко настраивается и подстраивается под ваши нужды — рекомендую покопаться в настройках и подробнее с ней познакомиться 🙂"
+          }
+        }
+      },
+      {
+        "id": "happ",
+        "name": "Happ",
+        "isFeatured": true,
+        "urlScheme": "happ://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/Happ-proxy/happ-desktop/releases",
+              "buttonText": {
+                "en": "Linux",
+                "fa": "لینوکس",
+                "ru": "Linux"
+              }
+            }
+          ],
+          "description": {
+            "en": "Choose the version for your device, click the button below and install the app.",
+            "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
+            "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Запустите программу.\n\nНажмите кнопку ниже, чтобы добавить подписку. После нажатия кнопки подписка автоматически добавится в программу."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Once you've added your subscription, simply tap the big power button in the center of the screen.\n\nThe app will automatically select the fastest server with the lowest latency, but you can choose any other from the list below if you wish.\n",
+            "fa": "После добавления подписки просто нажмите большую кнопку включения по центру экрана. Приложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n",
+            "ru": "После добавления подписки просто нажмите большую кнопку включения по центру экрана.\n\nПриложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n\nПрограмма легко настраивается и подстраивается под ваши нужды — рекомендую покопаться в настройках и подробнее с ней познакомиться 🙂"
+          }
+        }
+      }
+    ],
+    "windows": [
+      {
+        "id": "koala clash",
+        "name": "Koala Clash",
+        "isFeatured": true,
+        "urlScheme": "clash://install-config?url=",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/coolcoala/clash-verge-rev-lite/releases/",
+              "buttonText": {
+                "en": "Windows",
+                "fa": "ویندوز",
+                "ru": "Windows"
+              }
+            }
+          ],
+          "description": {
+            "en": "Choose the version for your device, click the button below and install the app.",
+            "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
+            "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Запустите программу.\n\nНажмите кнопку ниже, чтобы добавить подписку. После нажатия кнопки подписка автоматически добавится в программу."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Koala Clash перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Once you've added your subscription, simply tap the big power button in the center of the screen.\n\nThe app will automatically select the fastest server with the lowest latency, but you can choose any other from the list below if you wish.\n",
+            "fa": "После добавления подписки просто нажмите большую кнопку включения по центру экрана. Приложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n",
+            "ru": "После добавления подписки просто нажмите большую кнопку включения по центру экрана.\n\nПриложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n\nПрограмма легко настраивается и подстраивается под ваши нужды — рекомендую покопаться в настройках и подробнее с ней познакомиться 🙂"
+          }
+        }
+      },
+      {
+        "id": "flclash",
+        "name": "FlClashX",
+        "isFeatured": true,
+        "urlScheme": "flclash://install-config?url=",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/pluralplay/FlClashX/releases/tag/v0.2.1",
+              "buttonText": {
+                "en": "Windows",
+                "fa": "ویندوز",
+                "ru": "Windows"
+              }
+            }
+          ],
+          "description": {
+            "en": "Choose the version for your device, click the button below and install the app.",
+            "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
+            "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Нажмите кнопку ниже, чтобы добавить подписку"
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add a subscription manually:\n\n1. Click the Get link button on this page in the upper right corner\n2. Copy the link\n3. In FlClash, go to the Profiles section\n4. Click the + button\n5. Select the URL\n6. Paste your copied link and click Send",
+            "fa": "اگر بعد از کلیک روی دکمه هیچ اتفاقی نیفتاد، اشتراکی را به صورت دستی اضافه کنید. روی دکمه دریافت لینک در این صفحه در گوشه سمت راست بالا کلیк کنید، لینک را کپی کنید. در FlClash به بخش Profiles بروید، دکمه + را کلیک کنید، URL را انتخاب کنید، پیوند کپی شده خود را جایگذاری کنید و روی ارسال کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите на этой странице кнопку Получить ссылку в правом верхнем углу\n2. Скопируйте ссылку\n3. В FlClash перейдите в раздел Профили\n4. Нажмите кнопку +\n5. Выберите URL\n6. Вставьте вашу скопированную ссылку и нажмите Отправить"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Select the added profile in the Profiles section.\n\nIn the Dashboard, click the enable button in the lower right corner, and then turn on the switch next to the TUN item.\n\nAfter launching, in the Proxy section, you can change the choice of the server to which you will be connected.",
+            "fa": "نمایه اضافه شده را در قسمت پروفایل ها انتخاب کنید. در داشبورد، روی دکمه فعال کردن در گوشه پایین سمت راست کلیک کنید و سپس سوئیچ کنار مورد TUN را روشن کنید. پس از راه اندازی در قسمت Proxy می توانید انتخاب سروری که به آن متصل خواهید شد را تغییر دهید.",
+            "ru": "Выберите добавленный профиль в разделе Профили.\n\nНа Главной стр. нажмите кнопку включить в правом нижнем углу.\n\nПосле запуска в разделе Прокси вы можете изменить выбор сервера к которому вас подключит."
+          }
+        }
+      },
+      {
+        "id": "happ",
+        "name": "Happ",
+        "isFeatured": true,
+        "urlScheme": "happ://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/Happ-proxy/happ-desktop/releases",
+              "buttonText": {
+                "en": "Windows",
+                "fa": "ویندوز",
+                "ru": "Windows"
+              }
+            }
+          ],
+          "description": {
+            "en": "Choose the version for your device, click the button below and install the app.",
+            "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
+            "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Запустите программу.\n\nНажмите кнопку ниже, чтобы добавить подписку. После нажатия кнопки подписка автоматически добавится в программу."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Once you've added your subscription, simply tap the big power button in the center of the screen.\n\nThe app will automatically select the fastest server with the lowest latency, but you can choose any other from the list below if you wish.\n",
+            "fa": "После добавления подписки просто нажмите большую кнопку включения по центру экрана. Приложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n",
+            "ru": "После добавления подписки просто нажмите большую кнопку включения по центру экрана.\n\nПриложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n\nПрограмма легко настраивается и подстраивается под ваши нужды — рекомендую покопаться в настройках и подробнее с ней познакомиться 🙂"
+          }
+        }
+      },
+      {
+        "id": "v2rayn",
+        "name": "v2rayN",
+        "isFeatured": false,
+        "urlScheme": "",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://telegra.ph/Windows-07-01-3",
+              "buttonText": {
+                "en": "GUIDE",
+                "fa": "GUIDE",
+                "ru": "ГАЙД"
+              }
+            }
+          ],
+          "description": {
+            "en": "УСТАРЕВШИЙ МЕТОД! НЕ РЕКОМЕНДУЮ! Подробный гайд с картинками по кнопке ниже",
+            "fa": "-",
+            "ru": "УСТАРЕВШИЙ МЕТОД! НЕ РЕКОМЕНДУЮ! Подробный гайд с картинками по кнопке ниже"
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "-",
+            "fa": "Авто добавление подписки не работает в данном методе, смотрите гайд выше",
+            "ru": "Авто добавление подписки не работает в данном методе, смотрите гайд выше"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "-",
+            "fa": "-",
+            "ru": "-"
+          }
+        },
+        "isNeedBase64Encoding": false
+      }
+    ],
+    "androidTV": [
+      {
+        "id": "happ",
+        "name": "Happ",
+        "isFeatured": true,
+        "urlScheme": "happ://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://play.google.com/store/apps/details?id=com.happproxy",
+              "buttonText": {
+                "en": "Open in Google Play",
+                "fa": "باز کردن در Google Play",
+                "ru": "Открыть в Google Play"
+              }
+            },
+            {
+              "buttonLink": "https://github.com/Happ-proxy/happ-android/releases/latest/download/Happ.apk",
+              "buttonText": {
+                "en": "Download APK",
+                "fa": "دانلود APK",
+                "ru": "Скачать APK"
+              }
+            }
+          ],
+          "description": {
+            "en": "Open the page in Google Play and install the app.\n\nOr install the app directly from the APK file if Google Play is not working.",
+            "fa": "صفحه را در Google Play باز کنید و برنامه را نصب کنید. یا برنامه را مستقیماً از فایل APK نصب کنید، اگر Google Play کار نمی کند.",
+            "ru": "Откройте страницу в Google Play и установите приложение.\n\nИли установите приложение из APK файла напрямую, если Google Play не работает."
+          }
+        },
+        "additionalBeforeAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/25",
+              "buttonText": {
+                "en": "In Russian",
+                "fa": "به زبان روسی",
+                "ru": "Инструкция от VPN Meows"
+              }
+            },
+            {
+              "buttonLink": "https://www.happ.su/main/ru/faq/android-tv",
+              "buttonText": {
+                "en": "In English",
+                "fa": "به زبان انگلیسی",
+                "ru": "Инструкция от разработчиков"
+              }
+            }
+          ],
+          "description": {
+            "en": "Detailed instructions to help you set up Happ on your device.",
+            "fa": "راهنمای دقیق برای کمک به تنظیم Happ روی دستگاه شما.",
+            "ru": "Подробные инструкции, чтобы помочь вам настроить Happ на вашем устройстве."
+          },
+          "title": {
+            "en": "Installation instructions",
+            "fa": "دستورالعمل نصب",
+            "ru": "Инструкции по установке"
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
+            "ru": "Нажмите кнопку ниже, чтобы добавить подписку"
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "en": "VIDEO INSTRUCTION",
+                "fa": "ویدیو راهنما",
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "en": "If the subscription is not added",
+            "fa": "اگر اشتراک در برنامه نصب نشده است",
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Happ, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
+            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Happ به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
+            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Нажмите внизу страницы кнопку «Ссылки»\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Open the app and connect to the server",
+            "fa": "برنامه را باز کنید و به سرور متصل شوید",
+            "ru": "Откройте приложение и подключитесь к серверу"
+          }
+        }
+      }
+    ],
+    "appleTV": [
+      {
+        "id": "happ",
+        "name": "Happ",
+        "isFeatured": true,
+        "urlScheme": "happ://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://apps.apple.com/us/app/happ-proxy-utility-for-tv/id6748297274",
+              "buttonText": {
+                "en": "App Store",
+                "fa": "App Store",
+                "ru": "App Store",
+                "zh": "App Store",
+                "fr": "App Store"
+              }
+            }
+          ],
+          "description": {
+            "en": "Open the page in the App Store on your Apple TV and install the app. Launch it, allow VPN configuration if prompted, and enter your passcode if required.",
+            "fa": "صفحه را در App Store بر روی Apple TV باز کنید و برنامه را نصب کنید. آن را اجرا کنید، در صورت درخواست مجوز پیکربندی VPN را بدهید و در صورت نیاز رمز عبور خود را وارد کنید.",
+            "ru": "Откройте страницу в App Store на Apple TV и установите приложение. \nЗапустите его, предоставьте разрешение на VPN-конфигурацию, если потребуется, и введите свой пароль.",
+            "zh": "在 Apple TV 的 App Store 打开页面并安装应用。启动后，如有提示请允许 VPN 配置，并在需要时输入您的密码。",
+            "fr": "Open the page in the App Store on your Apple TV and install the app. Launch it, allow VPN configuration if prompted, and enter your passcode if required."
+          }
+        },
+        "additionalBeforeAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://www.happ.su/main/ru/faq/android-tv",
+              "buttonText": {
+                "en": "In Russian",
+                "fa": "به زبان روسی",
+                "ru": "На русском",
+                "zh": "俄语",
+                "fr": "In Russian"
+              }
+            },
+            {
+              "buttonLink": "https://www.happ.su/main/faq/android-tv",
+              "buttonText": {
+                "en": "In English",
+                "fa": "به زبان انگلیسی",
+                "ru": "На английском",
+                "zh": "英语",
+                "fr": "In English"
+              }
+            }
+          ],
+          "description": {
+            "en": "Detailed instructions to help you set up Happ on your device.",
+            "fa": "راهنمای دقیق برای کمک به تنظیم Happ روی دستگاه شما.",
+            "ru": "Подробные инструкции, чтобы помочь вам настроить Happ на вашем устройстве.",
+            "zh": "详细说明，帮助您在设备上设置 Happ。",
+            "fr": "Detailed instructions to help you set up Happ on your device."
+          },
+          "title": {
+            "en": "Installation instructions",
+            "fa": "دستورالعمل نصب",
+            "ru": "Инструкции по установке",
+            "zh": "安装说明",
+            "fr": "Installation instructions"
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "en": "Click the button below to add subscription, if you opened the subscription page on your TV",
+            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید، اگر صفحه اشتراک را روی تلویزیون باز کرده‌اید",
+            "ru": "Нажмите кнопку ниже, чтобы добавить подписку, если вы открыли страницу подписки на телевизоре",
+            "zh": "如果你已在电视上打开订阅页面，点击下方按钮以添加订阅",
+            "fr": "Click the button below to add subscription, if you opened the subscription page on your TV."
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "en": "Open the app and connect to the server",
+            "fa": "برنامه را باز کنید و به سرور متصل شوید",
+            "ru": "Откройте приложение и подключитесь к серверу",
+            "zh": "打开应用并连接到服务器",
+            "fr": "Ouvre l’app et connecte‑toi au serveur."
+          }
+        }
+      }
+    ]
+  }
+}

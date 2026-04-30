@@ -22,8 +22,10 @@ type Referral struct {
 }
 
 type RefereeSummary struct {
-	TelegramID int64
-	Active     bool
+	TelegramID        int64
+	Active            bool
+	TelegramUsername  *string
+	Email             *string
 }
 
 type ReferralStats struct {
@@ -155,9 +157,11 @@ func (r *ReferralRepository) CountActiveReferralsByReferrer(ctx context.Context,
 }
 
 func (r *ReferralRepository) FindRefereeSummariesByReferrer(ctx context.Context, referrerID int64) ([]RefereeSummary, error) {
-	query := sq.Select("r.referee_id", "c.expire_at").
+	query := sq.Select("r.referee_id", "c.expire_at", "c.telegram_username", "a.email").
 		From("referral r").
 		Join("customer c ON c.telegram_id = r.referee_id").
+		LeftJoin("cabinet_account_customer_link l ON l.customer_id = c.id").
+		LeftJoin("cabinet_account a ON a.id = l.account_id").
 		Where(sq.Eq{"r.referrer_id": referrerID}).
 		OrderBy("r.used_at DESC").
 		PlaceholderFormat(sq.Dollar)
@@ -177,11 +181,18 @@ func (r *ReferralRepository) FindRefereeSummariesByReferrer(ctx context.Context,
 	for rows.Next() {
 		var refereeID int64
 		var expireAt *time.Time
-		if err := rows.Scan(&refereeID, &expireAt); err != nil {
+		var telegramUsername *string
+		var email *string
+		if err := rows.Scan(&refereeID, &expireAt, &telegramUsername, &email); err != nil {
 			return nil, fmt.Errorf("failed to scan referral list row: %w", err)
 		}
 		active := expireAt != nil && expireAt.After(time.Now())
-		list = append(list, RefereeSummary{TelegramID: refereeID, Active: active})
+		list = append(list, RefereeSummary{
+			TelegramID:       refereeID,
+			Active:          active,
+			TelegramUsername: telegramUsername,
+			Email:           email,
+		})
 	}
 	if rows.Err() != nil {
 		return nil, fmt.Errorf("error iterating referral list rows: %w", rows.Err())

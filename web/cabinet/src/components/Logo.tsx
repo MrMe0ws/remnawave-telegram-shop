@@ -9,9 +9,10 @@ interface LogoProps {
 }
 
 const sizes = {
-  sm: { icon: 18, img: 'h-[18px] w-[18px]', text: 'text-base' },
-  md: { icon: 24, img: 'h-6 w-6', text: 'text-xl' },
-  lg: { icon: 32, img: 'h-8 w-8', text: 'text-2xl' },
+  // sm — шапка кабинета: название 1.5rem (как text-2xl в дефолтном Tailwind)
+  sm: { icon: 38, img: 'h-[38px] w-[38px]', text: 'text-[1.5rem] leading-tight' },
+  md: { icon: 38, img: 'h-[38px] w-[38px]', text: 'text-xl' },
+  lg: { icon: 38, img: 'h-[38px] w-[38px]', text: 'text-2xl' },
 }
 
 const defaultName = 'Cabinet'
@@ -31,18 +32,20 @@ export function Logo({ className, size = 'md' }: LogoProps) {
 
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
-      <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 p-1.5">
-        {showImg ? (
+      {showImg ? (
+        <div className="flex shrink-0 items-center justify-center">
           <img
             src={logoUrl}
             alt=""
-            className={cn('object-contain', img)}
+            className={cn('block rounded-full bg-black object-contain', img)}
             onError={() => setImgErr(true)}
           />
-        ) : (
+        </div>
+      ) : (
+        <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 p-1.5">
           <Shield size={icon} className="text-primary" strokeWidth={1.75} />
-        )}
-      </div>
+        </div>
+      )}
       <span className={cn('font-semibold tracking-tight', text)}>{name}</span>
     </div>
   )

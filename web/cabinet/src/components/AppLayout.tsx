@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   Home,
   Sparkles,
@@ -13,6 +12,7 @@ import {
   TicketPercent,
   Info,
   Users,
+  LogOut,
 } from 'lucide-react'
 
 import { Logo } from './Logo'
@@ -20,6 +20,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -60,16 +61,12 @@ function overflowActive(pathname: string, to: string): boolean {
   return pathname === to || pathname.startsWith(`${to}/`)
 }
 
-const PULL_REFRESH_PX = 72
-
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
-  const qc = useQueryClient()
+  const logout = useAuthStore((s) => s.logout)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const pullRef = useRef({ y0: 0, armed: false })
 
   useEffect(() => {
     if (!menuOpen) return
@@ -86,42 +83,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     setMenuOpen(false)
   }, [location.pathname])
 
-  // Pull-down внизу скролла (мобилка): инвалидация кэша React Query — «обновить данные».
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const onStart = (e: TouchEvent) => {
-      if (el.scrollTop > 0) return
-      pullRef.current.y0 = e.touches[0].clientY
-      pullRef.current.armed = true
-    }
-    const onMove = (e: TouchEvent) => {
-      if (!pullRef.current.armed || el.scrollTop > 0) return
-      const dy = e.touches[0].clientY - pullRef.current.y0
-      if (dy > PULL_REFRESH_PX) {
-        pullRef.current.armed = false
-        void qc.invalidateQueries()
-        window.location.reload()
-      }
-    }
-    const onEnd = () => {
-      pullRef.current.armed = false
-    }
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchmove', onMove, { passive: true })
-    el.addEventListener('touchend', onEnd)
-    return () => {
-      el.removeEventListener('touchstart', onStart)
-      el.removeEventListener('touchmove', onMove)
-      el.removeEventListener('touchend', onEnd)
-    }
-  }, [qc])
-
   return (
     <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background">
       <header className="z-50 isolate shrink-0 border-b border-border bg-card/60 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-4">
-          <Logo size="sm" />
+        <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
+          <Link
+            to="/dashboard"
+            className="flex min-w-0 shrink-0 items-center rounded-md outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Logo size="sm" />
+          </Link>
 
           <nav
             className="hidden sm:flex flex-1 items-center justify-center gap-0.5 min-w-0 overflow-x-auto py-0.5"
@@ -190,6 +161,19 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </Link>
                     )
                   })}
+                  <div className="my-1 border-t border-border/70" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      logout()
+                    }}
+                  >
+                    <LogOut className="size-4 shrink-0" strokeWidth={1.75} />
+                    {t('nav.logout')}
+                  </button>
                 </div>
               )}
             </div>
@@ -197,11 +181,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       </header>
 
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y"
-      >
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-8">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden touch-pan-y">
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
           {children}
         </div>
       </div>

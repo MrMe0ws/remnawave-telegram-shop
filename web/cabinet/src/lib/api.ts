@@ -38,15 +38,29 @@ export interface AuthTokenResponse {
 /** Ответ GET /auth/bootstrap — до JWT, для экрана логина. */
 export interface AuthBootstrapResponse {
   google_oauth_enabled: boolean
+  yandex_oauth_enabled?: boolean
+  vk_oauth_enabled?: boolean
   telegram_widget_bot?: string
   telegram_oidc_enabled?: boolean
   telegram_web_auth_mode?: 'widget' | 'oidc'
+  turnstile_enabled?: boolean
+  turnstile_site_key?: string
   /** URL из env бота (SUPPORT_URL, BOT_URL и т.д.), только непустые. */
   site_links?: Record<string, string>
   /** CABINET_BRAND_NAME; по умолчанию на фронте — Cabinet. */
   brand_name?: string
   /** Полный или относительный URL логотипа для <img src>. */
   brand_logo_url?: string
+  /** PWA feature flag + names from CABINET_PWA_* */
+  pwa_enabled?: boolean
+  pwa_app_name?: string
+  pwa_short_name?: string
+  /** Доступные провайдеры оплаты по backend-конфигурации env. */
+  payment_providers?: {
+    yookassa?: boolean
+    cryptopay?: boolean
+    telegram?: boolean
+  }
 }
 
 export interface MeResponse {
@@ -57,16 +71,24 @@ export interface MeResponse {
   providers: string[]
   has_telegram_link: boolean
   has_password: boolean
+  /** true, если задан пароль (сценарии входа/привязки «как через почту»). */
+  can_use_email_password_login?: boolean
   customer_id?: number | null
   telegram_widget_bot?: string
   google_oauth_enabled: boolean
+  yandex_oauth_enabled?: boolean
+  vk_oauth_enabled?: boolean
   telegram_oidc_enabled?: boolean
-  /** true, если включён CABINET_DEV_TELEGRAM_UNLINK — см. devTelegramUnlink(). */
-  dev_telegram_unlink?: boolean
   /** ISO 8601 — дата регистрации аккаунта кабинета. */
   registered_at?: string
+  /** Управляет видимостью блока удаления аккаунта в профиле. */
+  can_delete_account_ui?: boolean
   /** Числовой Telegram user id, если известен. */
   telegram_id?: number | null
+  /** Маска почты из OAuth identity (без sub). */
+  google_masked_email?: string | null
+  yandex_masked_email?: string | null
+  vk_masked_email?: string | null
 }
 
 export interface MergeCustomerSnapshot {
@@ -76,11 +98,14 @@ export interface MergeCustomerSnapshot {
   extra_hwid: number
   is_web_only: boolean
   has_subscription: boolean
+  current_tariff_id?: number | null
 }
 
 export interface MergePreviewResponse {
   customer_web?: MergeCustomerSnapshot
   customer_tg?: MergeCustomerSnapshot
+  /** Email-peer merge при привязанном Telegram: customer_web=peer, customer_tg=текущий; UI меняет местами карточки. */
+  ui_swap_sides?: boolean
   merged_expire_at?: string | null
   merged_loyalty_xp: number
   merged_extra_hwid: number
@@ -89,6 +114,8 @@ export interface MergePreviewResponse {
   is_noop: boolean
   is_dangerous: boolean
   danger_reason?: string
+  requires_subscription_choice?: boolean
+  claim_expires_at?: string
 }
 
 export interface MergeConfirmResponse {
@@ -261,6 +288,21 @@ export interface LoyaltyDashboardResponse {
   first_discount_xp_min?: number | null
 }
 
+export interface LoyaltyHistoryItem {
+  purchase_id: number
+  paid_at?: string
+  xp_gained: number
+  amount: number
+  currency: string
+  invoice_type: string
+  purchase_kind: string
+  running_xp: number
+}
+
+export interface LoyaltyHistoryResponse {
+  items: LoyaltyHistoryItem[]
+}
+
 export interface TrialInfoResponse {
   enabled: boolean
   can_activate: boolean
@@ -271,13 +313,17 @@ export interface TrialInfoResponse {
 
 export interface CheckoutResponse {
   payment_url: string
-  cabinet_checkout_id: number
+  checkout_id: number
   purchase_id: number
   status: string
+  provider?: string
+  reused?: boolean
 }
 
 /** GET /payments/preview — сумма и сценарий как при создании счёта (апгрейд/даунгрейд). */
 export interface PaymentPreviewResponse {
+  amount: number
+  currency: 'RUB' | 'STARS' | string
   amount_rub: number
   sales_mode: string
   scenario: string
@@ -308,7 +354,7 @@ export interface ReferralsStatsResponse {
 export interface ReferralsResponse {
   referrer_telegram_id: number
   stats: ReferralsStatsResponse
-  referees: { telegram_id_masked: string; active: boolean }[]
+  referees: { telegram_id_masked: string; telegram_username?: string | null; email?: string | null; active: boolean }[]
   bot_start_link?: string
   cabinet_register_link?: string
   referral_mode: string
@@ -462,15 +508,25 @@ export const api = {
     return res.json() as Promise<AuthBootstrapResponse>
   },
 
-  login: (email: string, password: string) =>
-    request<AuthTokenResponse>('POST', '/auth/login', { email, password }),
+  login: (email: string, password: string, turnstileToken?: string) =>
+    request<AuthTokenResponse>(
+      'POST',
+      '/auth/login',
+      { email, password },
+      turnstileToken ? { 'X-Turnstile-Token': turnstileToken } : undefined,
+    ),
 
-  register: (email: string, password: string, referralCode?: string) =>
-    request<{ message?: string }>('POST', '/auth/register', {
-      email,
-      password,
-      ...(referralCode ? { referral_code: referralCode } : {}),
-    }),
+  register: (email: string, password: string, referralCode?: string, turnstileToken?: string) =>
+    request<{ message?: string }>(
+      'POST',
+      '/auth/register',
+      {
+        email,
+        password,
+        ...(referralCode ? { referral_code: referralCode } : {}),
+      },
+      turnstileToken ? { 'X-Turnstile-Token': turnstileToken } : undefined,
+    ),
 
   logout: () =>
     request<void>('POST', '/auth/logout'),
@@ -517,8 +573,22 @@ export const api = {
   resendVerifyEmail: () =>
     request<void>('POST', '/me/email/verify/resend'),
 
-  forgotPassword: (email: string) =>
-    request<void>('POST', '/auth/password/forgot', { email }),
+  /** Повторная отправка кода подтверждения email без JWT (после регистрации). */
+  resendVerifyEmailPublic: (email: string, turnstileToken?: string) =>
+    request<void>(
+      'POST',
+      '/auth/email/verify/resend-public',
+      { email },
+      turnstileToken ? { 'X-Turnstile-Token': turnstileToken } : undefined,
+    ),
+
+  forgotPassword: (email: string, turnstileToken?: string) =>
+    request<void>(
+      'POST',
+      '/auth/password/forgot',
+      { email },
+      turnstileToken ? { 'X-Turnstile-Token': turnstileToken } : undefined,
+    ),
 
   resetPassword: (token: string, newPassword: string) =>
     request<{ message?: string }>('POST', '/auth/password/reset', { token, new_password: newPassword }),
@@ -536,22 +606,40 @@ export const api = {
       new_password: newPassword,
     }),
 
-  /** Только при dev_telegram_unlink на /me: снимает identity telegram и при необходимости сбрасывает customer.telegram_id. */
-  devTelegramUnlink: () =>
-    request<{ ok: boolean; deleted: number; customer_telegram_reset?: boolean }>(
-      'POST',
-      '/me/telegram/unlink-dev',
-    ),
+  /** Мягкое снятие привязки google/yandex/vk/email (Telegram отключён на бэкенде). */
+  identityUnlink: (provider: 'google' | 'yandex' | 'vk' | 'telegram' | 'email') =>
+    request<{ ok: boolean; soft_unlinked?: boolean; rows?: number }>('POST', '/me/identities/unlink', {
+      provider,
+    }),
 
-  /** Удаление аккаунта кабинета; confirm должен быть ровно `DELETE`. */
-  deleteAccount: (confirm: string) =>
-    request<{ message: string }>('POST', '/me/account/delete', { confirm }),
+  /** Привязка email+пароля к текущему аккаунту (OAuth/Telegram). */
+  linkEmail: (email: string, password: string, passwordConfirm: string) =>
+    request<{ status: string; reason_code?: string; masked_email?: string; message?: string }>('POST', '/me/email/link', {
+      email,
+      password,
+      password_confirm: passwordConfirm,
+    }),
+  /** Подтверждение merge-кода (если email занят OAuth-only аккаунтом без пароля). */
+  confirmEmailMergeCode: (code: string) =>
+    request<{ status: string; reason_code?: string; masked_email?: string }>('POST', '/me/email/link/verify-code', { code }),
+
+  /** Удаление аккаунта кабинета (необратимо). */
+  deleteAccount: () =>
+    request<{ message: string }>('POST', '/me/account/delete'),
 
   // Subscription
   subscription: () =>
     request<SubscriptionResponse>('GET', '/me/subscription'),
 
   loyalty: () => request<LoyaltyDashboardResponse>('GET', '/me/loyalty'),
+
+  loyaltyHistory: (params?: { limit?: number; offset?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.offset != null) q.set('offset', String(params.offset))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<LoyaltyHistoryResponse>('GET', `/me/loyalty/history${suffix}`)
+  },
 
   referrals: () =>
     request<ReferralsResponse>('GET', '/me/referrals'),
@@ -598,10 +686,11 @@ export const api = {
     return request<CheckoutResponse>('POST', '/payments/checkout', body, { 'Idempotency-Key': idempotencyKey })
   },
 
-  paymentPreview: (period: number, tariffId?: number | null) => {
+  paymentPreview: (period: number, tariffId?: number | null, provider?: string) => {
     const q = new URLSearchParams()
     q.set('period', String(period))
     if (tariffId != null && tariffId > 0) q.set('tariff_id', String(tariffId))
+    if (provider) q.set('provider', provider)
     return request<PaymentPreviewResponse>('GET', `/payments/preview?${q.toString()}`)
   },
 
@@ -633,11 +722,11 @@ export const api = {
   mergePreview: () =>
     request<MergePreviewResponse>('POST', '/link/merge/preview'),
 
-  mergeConfirm: (idempotencyKey: string, force = false) =>
+  mergeConfirm: (idempotencyKey: string, opts?: { force?: boolean; keep_subscription?: 'web' | 'tg' }) =>
     request<MergeConfirmResponse>(
       'POST',
       '/link/merge/confirm',
-      { force },
+      { force: opts?.force ?? false, keep_subscription: opts?.keep_subscription },
       { 'Idempotency-Key': idempotencyKey },
     ),
 
@@ -684,5 +773,94 @@ export const api = {
       return
     }
     throw new ApiError(res.status, 'telegram link start failed')
+  },
+
+  /**
+   * Привязка Google к текущему аккаунту: JSON с redirect_url (аналогично Telegram OIDC link).
+   */
+  startGoogleOAuthLink: async (): Promise<void> => {
+    const run = (token: string) => {
+      const csrf = readCsrfCookie()
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      }
+      if (csrf) headers['X-CSRF-Token'] = csrf
+      return fetch(`${BASE}/me/google/link/start`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      })
+    }
+    let token = _authRef?.getAccessToken()
+    if (!token) throw new ApiError(401, 'not signed in')
+    let res = await run(token)
+    if (res.status === 401) {
+      const newTok = await doRefresh()
+      if (!newTok) {
+        _authRef?.logout()
+        throw new ApiError(401, 'Session expired')
+      }
+      res = await run(newTok)
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new ApiError(res.status, text || 'google link start failed')
+    }
+    const data = (await res.json().catch(() => null)) as { redirect_url?: string } | null
+    const url = data?.redirect_url?.trim()
+    if (url) {
+      window.location.assign(url)
+      return
+    }
+    throw new ApiError(res.status, 'google link start failed')
+  },
+  startYandexOAuthLink: async (): Promise<void> => {
+    const run = (token: string) => {
+      const csrf = readCsrfCookie()
+      const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+      if (csrf) headers['X-CSRF-Token'] = csrf
+      return fetch(`${BASE}/me/yandex/link/start`, { method: 'GET', headers, credentials: 'include' })
+    }
+    let token = _authRef?.getAccessToken()
+    if (!token) throw new ApiError(401, 'not signed in')
+    let res = await run(token)
+    if (res.status === 401) {
+      const newTok = await doRefresh()
+      if (!newTok) {
+        _authRef?.logout()
+        throw new ApiError(401, 'Session expired')
+      }
+      res = await run(newTok)
+    }
+    if (!res.ok) throw new ApiError(res.status, (await res.text().catch(() => '')) || 'yandex link start failed')
+    const data = (await res.json().catch(() => null)) as { redirect_url?: string } | null
+    const u = data?.redirect_url?.trim()
+    if (!u) throw new ApiError(res.status, 'yandex link start failed')
+    window.location.assign(u)
+  },
+  startVKOAuthLink: async (): Promise<void> => {
+    const run = (token: string) => {
+      const csrf = readCsrfCookie()
+      const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+      if (csrf) headers['X-CSRF-Token'] = csrf
+      return fetch(`${BASE}/me/vk/link/start`, { method: 'GET', headers, credentials: 'include' })
+    }
+    let token = _authRef?.getAccessToken()
+    if (!token) throw new ApiError(401, 'not signed in')
+    let res = await run(token)
+    if (res.status === 401) {
+      const newTok = await doRefresh()
+      if (!newTok) {
+        _authRef?.logout()
+        throw new ApiError(401, 'Session expired')
+      }
+      res = await run(newTok)
+    }
+    if (!res.ok) throw new ApiError(res.status, (await res.text().catch(() => '')) || 'vk link start failed')
+    const data = (await res.json().catch(() => null)) as { redirect_url?: string } | null
+    const u = data?.redirect_url?.trim()
+    if (!u) throw new ApiError(res.status, 'vk link start failed')
+    window.location.assign(u)
   },
 }

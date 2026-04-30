@@ -31,6 +31,12 @@ import (
 type oauthGoogleProviderWrapper struct {
 	p *googleoauth.GoogleProvider
 }
+type oauthYandexProviderWrapper struct {
+	p *googleoauth.YandexProvider
+}
+type oauthVKProviderWrapper struct {
+	p *googleoauth.VKProvider
+}
 
 type oauthTelegramOIDCWrapper struct {
 	p *googleoauth.TelegramOIDCProvider
@@ -42,6 +48,8 @@ type oauthTelegramOIDCWrapper struct {
 
 // ErrGoogleDisabled — Google OAuth не настроен.
 var ErrGoogleDisabled = errors.New("auth: google oauth disabled")
+var ErrYandexDisabled = errors.New("auth: yandex oauth disabled")
+var ErrVKDisabled = errors.New("auth: vk oauth disabled")
 
 // ErrTelegramDisabled — Telegram-токен не прокинут.
 var ErrTelegramDisabled = errors.New("auth: telegram login disabled")
@@ -49,6 +57,23 @@ var ErrTelegramDisabled = errors.New("auth: telegram login disabled")
 // ErrGoogleLinkRequired — Google email совпадает с существующим аккаунтом.
 // Требуется подтверждение через email перед привязкой.
 var ErrGoogleLinkRequired = errors.New("auth: google link confirmation required")
+
+// ErrGoogleLinkSessionMismatch — привязка Google: refresh-сессия не совпадает с account_id в OAuth state.
+var ErrGoogleLinkSessionMismatch = errors.New("auth: google link session mismatch")
+
+// ErrGoogleLinkedElsewhere — этот Google (sub) уже привязан к другому аккаунту кабинета.
+var ErrGoogleLinkedElsewhere = errors.New("auth: google account already linked elsewhere")
+
+// ErrGoogleMergeRequired — Google уже у другого аккаунта; создан merge-claim, нужно открыть merge-flow.
+var ErrGoogleMergeRequired = errors.New("auth: google merge required")
+var ErrYandexMergeRequired = errors.New("auth: yandex merge required")
+var ErrVKMergeRequired = errors.New("auth: vk merge required")
+
+// ErrGoogleLinkEmailConflict — email из Google уже принадлежит другому аккаунту кабинета.
+var ErrGoogleLinkEmailConflict = errors.New("auth: google email belongs to another cabinet account")
+var ErrYandexLinkEmailConflict = errors.New("auth: yandex email belongs to another cabinet account")
+var ErrVKLinkEmailConflict = errors.New("auth: vk email belongs to another cabinet account")
+
 var ErrTelegramOIDCDisabled = errors.New("auth: telegram oidc disabled")
 
 // ============================================================================
@@ -129,6 +154,14 @@ func (s *Service) SetGoogle(ctx context.Context, p *googleoauth.GoogleProvider) 
 	s.linkStore.runGC(ctx)
 }
 
+func (s *Service) SetYandex(ctx context.Context, p *googleoauth.YandexProvider) {
+	s.yandexProvider = &oauthYandexProviderWrapper{p: p}
+}
+
+func (s *Service) SetVK(ctx context.Context, p *googleoauth.VKProvider) {
+	s.vkProvider = &oauthVKProviderWrapper{p: p}
+}
+
 func (s *Service) SetTelegramOIDC(ctx context.Context, p *googleoauth.TelegramOIDCProvider) {
 	if p == nil {
 		s.telegramOIDC = nil
@@ -193,7 +226,23 @@ func (s *Service) GoogleStart(referralCode string) (string, error) {
 	if s.googleProvider == nil {
 		return "", ErrGoogleDisabled
 	}
-	res, err := s.googleProvider.p.Start(referralCode)
+	res, err := s.googleProvider.p.Start(referralCode, 0)
+	if err != nil {
+		return "", err
+	}
+	return res.RedirectURL, nil
+}
+
+// GoogleLinkStart — URL редиректа на Google для привязки к уже существующему account_id
+// (account_id кладётся в server-side OAuth state; в callback проверяется refresh-cookie).
+func (s *Service) GoogleLinkStart(accountID int64) (string, error) {
+	if accountID <= 0 {
+		return "", fmt.Errorf("%w: bad account id", ErrInvalidInput)
+	}
+	if s.googleProvider == nil {
+		return "", ErrGoogleDisabled
+	}
+	res, err := s.googleProvider.p.Start("", accountID)
 	if err != nil {
 		return "", err
 	}
@@ -209,6 +258,42 @@ type GoogleLinkContext struct {
 type GoogleCallbackResult struct {
 	Pair    *TokenPair         // !=nil при успехе (новый/существующий аккаунт)
 	LinkCtx *GoogleLinkContext // !=nil при ErrGoogleLinkRequired
+	// SuccessRedirect — при успешной привязке Google к текущему аккаунту: браузерный редирект (вместо JSON).
+	SuccessRedirect string
+	// WasLinkAttempt — true, если OAuth state был «link»; при ошибке хендлер может редиректить в SPA с query.
+	WasLinkAttempt bool
+}
+
+type ResolveIdentityStatus string
+
+const (
+	IdentityLinkedToCurrent ResolveIdentityStatus = "already_linked"
+	IdentityLinkedToOther   ResolveIdentityStatus = "occupied_by_other_user"
+	IdentityFree            ResolveIdentityStatus = "identity_new"
+)
+
+type ResolveIdentityResult struct {
+	Status    ResolveIdentityStatus
+	AccountID int64
+}
+
+// ResolveIdentity — единая проверка identity по (provider, provider_user_id)
+// для Google/Telegram: уже у текущего, у другого, или свободна.
+func (s *Service) ResolveIdentity(ctx context.Context, currentAccountID int64, provider, providerUserID string) (*ResolveIdentityResult, error) {
+	ident, err := s.ids.FindByProvider(ctx, provider, providerUserID)
+	if err == nil {
+		if currentAccountID > 0 && ident.AccountID == currentAccountID {
+			return &ResolveIdentityResult{Status: IdentityLinkedToCurrent, AccountID: ident.AccountID}, nil
+		}
+		if currentAccountID > 0 && ident.AccountID != currentAccountID {
+			return &ResolveIdentityResult{Status: IdentityLinkedToOther, AccountID: ident.AccountID}, nil
+		}
+		return &ResolveIdentityResult{Status: IdentityLinkedToCurrent, AccountID: ident.AccountID}, nil
+	}
+	if errors.Is(err, repository.ErrNotFound) {
+		return &ResolveIdentityResult{Status: IdentityFree}, nil
+	}
+	return nil, fmt.Errorf("resolve identity: %w", err)
 }
 
 // GoogleCallback обрабатывает code + state от Google и выдаёт сессию.
@@ -219,14 +304,14 @@ type GoogleCallbackResult struct {
 //  3. Нет совпадений → новый аккаунт + identity → login.
 func (s *Service) GoogleCallback(
 	ctx context.Context,
-	state, code, userAgent, ip string,
+	state, code, userAgent, ip, refreshFromCookie string,
 ) (GoogleCallbackResult, error) {
 	var empty GoogleCallbackResult
 	if s.googleProvider == nil {
 		return empty, ErrGoogleDisabled
 	}
 
-	info, referralRaw, err := s.googleProvider.p.Callback(ctx, state, code)
+	info, referralRaw, linkAccountID, err := s.googleProvider.p.Callback(ctx, state, code)
 	if err != nil {
 		if errors.Is(err, googleoauth.ErrStateInvalid) {
 			return empty, ErrInvalidToken
@@ -234,10 +319,17 @@ func (s *Service) GoogleCallback(
 		return empty, fmt.Errorf("google callback: %w", err)
 	}
 
+	if linkAccountID > 0 {
+		return s.googleOAuthLinkFlow(ctx, info, referralRaw, linkAccountID, refreshFromCookie, userAgent, ip)
+	}
+
 	// 1. Identity уже существует → логиним.
-	ident, err := s.ids.FindByProvider(ctx, repository.ProviderGoogle, info.Sub)
-	if err == nil {
-		acc, err := s.accounts.FindByID(ctx, ident.AccountID)
+	resolved, err := s.ResolveIdentity(ctx, 0, repository.ProviderGoogle, info.Sub)
+	if err != nil {
+		return empty, fmt.Errorf("google callback: resolve identity: %w", err)
+	}
+	if resolved.Status == IdentityLinkedToCurrent && resolved.AccountID > 0 {
+		acc, err := s.accounts.FindByID(ctx, resolved.AccountID)
 		if err != nil {
 			return empty, fmt.Errorf("google callback: load account: %w", err)
 		}
@@ -250,10 +342,8 @@ func (s *Service) GoogleCallback(
 		if err != nil {
 			return empty, err
 		}
+		s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderGoogle, info.Sub)
 		return GoogleCallbackResult{Pair: pair}, nil
-	}
-	if !errors.Is(err, repository.ErrNotFound) {
-		return empty, fmt.Errorf("google callback: find identity: %w", err)
 	}
 
 	// 2. Identity не найдена. Проверяем email.
@@ -310,7 +400,137 @@ func (s *Service) GoogleCallback(
 	if err != nil {
 		return empty, err
 	}
+	s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderGoogle, info.Sub)
 	return GoogleCallbackResult{Pair: pair}, nil
+}
+
+func isPGUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "23505") ||
+		strings.Contains(msg, "unique_violation") ||
+		strings.Contains(msg, "duplicate key")
+}
+
+// googleOAuthLinkFlow — привязка Google к аккаунту linkAccount_id (после OAuth).
+func (s *Service) googleOAuthLinkFlow(
+	ctx context.Context,
+	info *googleoauth.GoogleUserInfo,
+	referralRaw string,
+	linkAccountID int64,
+	refreshFromCookie, userAgent, ip string,
+) (GoogleCallbackResult, error) {
+	_ = referralRaw
+	linkMeta := GoogleCallbackResult{WasLinkAttempt: true}
+
+	sessAccID, err := s.accountIDFromValidRefresh(ctx, refreshFromCookie)
+	if err != nil {
+		return linkMeta, err
+	}
+	if sessAccID != linkAccountID {
+		return linkMeta, ErrGoogleLinkSessionMismatch
+	}
+
+	resolved, err := s.ResolveIdentity(ctx, linkAccountID, repository.ProviderGoogle, info.Sub)
+	if err != nil {
+		return linkMeta, fmt.Errorf("google link: resolve identity: %w", err)
+	}
+	if resolved.Status == IdentityLinkedToCurrent {
+		acc, err := s.accounts.FindByID(ctx, linkAccountID)
+		if err != nil {
+			return linkMeta, fmt.Errorf("google link: load account: %w", err)
+		}
+		if acc.Status != repository.AccountStatusActive {
+			return linkMeta, ErrInvalidCredentials
+		}
+		_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
+		s.ensureCustomer(ctx, acc.ID, acc.Language)
+		pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+		if err != nil {
+			return linkMeta, err
+		}
+		s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderGoogle, info.Sub)
+		linkMeta.Pair = pair
+		linkMeta.SuccessRedirect = "/cabinet/accounts?google_linked=1"
+		return linkMeta, nil
+	}
+	if resolved.Status == IdentityLinkedToOther {
+		if s.saveMergeEmailPeerClaim == nil {
+			return linkMeta, ErrGoogleLinkedElsewhere
+		}
+		if err := s.saveMergeEmailPeerClaim(ctx, linkAccountID, resolved.AccountID); err != nil {
+			return linkMeta, fmt.Errorf("google link: save merge claim: %w", err)
+		}
+		return linkMeta, ErrGoogleMergeRequired
+	}
+
+	normEmail := normalizeEmail(info.Email)
+	if normEmail != "" {
+		existingAcc, err := s.accounts.FindByEmail(ctx, normEmail)
+		if err == nil && existingAcc.ID != linkAccountID {
+			return linkMeta, ErrGoogleLinkEmailConflict
+		}
+		if err != nil && !errors.Is(err, repository.ErrNotFound) {
+			return linkMeta, fmt.Errorf("google link: find by email: %w", err)
+		}
+	}
+
+	acc, err := s.accounts.FindByID(ctx, linkAccountID)
+	if err != nil {
+		return linkMeta, fmt.Errorf("google link: load account: %w", err)
+	}
+	if acc.Status != repository.AccountStatusActive {
+		return linkMeta, ErrInvalidCredentials
+	}
+
+	rawProfile, _ := json.Marshal(info)
+	if _, err := s.ids.Create(ctx, acc.ID, repository.ProviderGoogle, info.Sub, info.Email, rawProfile); err != nil {
+		if isPGUniqueViolation(err) {
+			ident2, e2 := s.ids.FindByProvider(ctx, repository.ProviderGoogle, info.Sub)
+			if e2 == nil && ident2.AccountID == acc.ID {
+				_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
+				s.ensureCustomer(ctx, acc.ID, acc.Language)
+				pair, ierr := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+				if ierr != nil {
+					return linkMeta, ierr
+				}
+				s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderGoogle, info.Sub)
+				linkMeta.Pair = pair
+				linkMeta.SuccessRedirect = "/cabinet/accounts?google_linked=1"
+				return linkMeta, nil
+			}
+			if s.saveMergeEmailPeerClaim == nil {
+				return linkMeta, ErrGoogleLinkedElsewhere
+			}
+			if err := s.saveMergeEmailPeerClaim(ctx, linkAccountID, ident2.AccountID); err != nil {
+				return linkMeta, fmt.Errorf("google link: save merge claim after unique: %w", err)
+			}
+			return linkMeta, ErrGoogleMergeRequired
+		}
+		return linkMeta, fmt.Errorf("google link: create identity: %w", err)
+	}
+
+	if info.EmailVerified && normEmail != "" && acc.Email != nil && normalizeEmail(*acc.Email) == normEmail && !acc.EmailVerified() {
+		if err := s.accounts.MarkEmailVerified(ctx, acc.ID); err != nil {
+			slog.Warn("google link: mark email verified", "error", err)
+		}
+		if fresh, ferr := s.accounts.FindByID(ctx, acc.ID); ferr == nil {
+			acc = fresh
+		}
+	}
+
+	_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
+	s.ensureCustomer(ctx, acc.ID, acc.Language)
+	pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	if err != nil {
+		return linkMeta, err
+	}
+	s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderGoogle, info.Sub)
+	linkMeta.Pair = pair
+	linkMeta.SuccessRedirect = "/cabinet/accounts?google_linked=1"
+	return linkMeta, nil
 }
 
 // GoogleLinkConfirm — пользователь кликнул ссылку из письма; привязываем
@@ -336,7 +556,263 @@ func (s *Service) GoogleLinkConfirm(ctx context.Context, token, userAgent, ip st
 	}
 	_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
 	s.ensureCustomer(ctx, acc.ID, acc.Language)
-	return s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	if err != nil {
+		return nil, err
+	}
+	s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderGoogle, link.googleSub)
+	return pair, nil
+}
+
+type YandexCallbackResult = GoogleCallbackResult
+type VKCallbackResult = GoogleCallbackResult
+
+func (s *Service) YandexStart(referralCode string) (string, error) {
+	if s.yandexProvider == nil {
+		return "", ErrYandexDisabled
+	}
+	res, err := s.yandexProvider.p.Start(referralCode, 0)
+	if err != nil {
+		return "", err
+	}
+	return res.RedirectURL, nil
+}
+
+func (s *Service) VKStart(referralCode string) (string, error) {
+	if s.vkProvider == nil {
+		return "", ErrVKDisabled
+	}
+	res, err := s.vkProvider.p.Start(referralCode, 0)
+	if err != nil {
+		return "", err
+	}
+	return res.RedirectURL, nil
+}
+
+func (s *Service) YandexLinkStart(accountID int64) (string, error) {
+	if accountID <= 0 {
+		return "", fmt.Errorf("%w: bad account id", ErrInvalidInput)
+	}
+	if s.yandexProvider == nil {
+		return "", ErrYandexDisabled
+	}
+	res, err := s.yandexProvider.p.Start("", accountID)
+	if err != nil {
+		return "", err
+	}
+	return res.RedirectURL, nil
+}
+
+func (s *Service) VKLinkStart(accountID int64) (string, error) {
+	if accountID <= 0 {
+		return "", fmt.Errorf("%w: bad account id", ErrInvalidInput)
+	}
+	if s.vkProvider == nil {
+		return "", ErrVKDisabled
+	}
+	res, err := s.vkProvider.p.Start("", accountID)
+	if err != nil {
+		return "", err
+	}
+	return res.RedirectURL, nil
+}
+
+func (s *Service) YandexCallback(ctx context.Context, state, code, userAgent, ip, refreshFromCookie string) (YandexCallbackResult, error) {
+	var empty YandexCallbackResult
+	if s.yandexProvider == nil {
+		return empty, ErrYandexDisabled
+	}
+	info, referralRaw, linkAccountID, err := s.yandexProvider.p.Callback(ctx, state, code)
+	if err != nil {
+		if errors.Is(err, googleoauth.ErrStateInvalid) {
+			return empty, ErrInvalidToken
+		}
+		return empty, fmt.Errorf("yandex callback: %w", err)
+	}
+	pid := strings.TrimSpace(info.ID)
+	email := normalizeEmail(strings.TrimSpace(info.DefaultEmail))
+	if email == "" {
+		email = normalizeEmail(strings.TrimSpace(info.Email))
+	}
+	rawProfile, _ := json.Marshal(info)
+
+	if linkAccountID > 0 {
+		return s.oauthLinkFlowGeneric(ctx, linkAccountID, refreshFromCookie, repository.ProviderYandex, pid, email, rawProfile, userAgent, ip, "yandex")
+	}
+	return s.oauthLoginFlowGeneric(ctx, repository.ProviderYandex, pid, email, rawProfile, referralRaw, userAgent, ip, "yandex")
+}
+
+func (s *Service) VKCallback(ctx context.Context, state, code, userAgent, ip, refreshFromCookie string) (VKCallbackResult, error) {
+	var empty VKCallbackResult
+	if s.vkProvider == nil {
+		return empty, ErrVKDisabled
+	}
+	info, referralRaw, linkAccountID, err := s.vkProvider.p.Callback(ctx, state, code)
+	if err != nil {
+		if errors.Is(err, googleoauth.ErrStateInvalid) {
+			return empty, ErrInvalidToken
+		}
+		return empty, fmt.Errorf("vk callback: %w", err)
+	}
+	pid := strconv.FormatInt(info.ID, 10)
+	email := normalizeEmail(strings.TrimSpace(info.Email))
+	rawProfile, _ := json.Marshal(info)
+	if linkAccountID > 0 {
+		return s.oauthLinkFlowGeneric(ctx, linkAccountID, refreshFromCookie, repository.ProviderVK, pid, email, rawProfile, userAgent, ip, "vk")
+	}
+	return s.oauthLoginFlowGeneric(ctx, repository.ProviderVK, pid, email, rawProfile, referralRaw, userAgent, ip, "vk")
+}
+
+func (s *Service) oauthLoginFlowGeneric(
+	ctx context.Context,
+	provider, providerUserID, providerEmail string,
+	rawProfile []byte,
+	referralRaw, userAgent, ip, providerLog string,
+) (GoogleCallbackResult, error) {
+	var empty GoogleCallbackResult
+	resolved, err := s.ResolveIdentity(ctx, 0, provider, providerUserID)
+	if err != nil {
+		return empty, fmt.Errorf("%s callback: resolve identity: %w", providerLog, err)
+	}
+	if resolved.Status == IdentityLinkedToCurrent && resolved.AccountID > 0 {
+		acc, err := s.accounts.FindByID(ctx, resolved.AccountID)
+		if err != nil {
+			return empty, fmt.Errorf("%s callback: load account: %w", providerLog, err)
+		}
+		if acc.Status != repository.AccountStatusActive {
+			return empty, ErrInvalidCredentials
+		}
+		_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
+		s.ensureCustomer(ctx, acc.ID, acc.Language)
+		pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+		if err != nil {
+			return empty, err
+		}
+		s.reactivateIdentityAfterOAuth(ctx, acc.ID, provider, providerUserID)
+		return GoogleCallbackResult{Pair: pair}, nil
+	}
+
+	if providerEmail != "" {
+		existingAcc, err := s.accounts.FindByEmail(ctx, providerEmail)
+		if err == nil && existingAcc.Status == repository.AccountStatusActive {
+			if _, ierr := s.ids.Create(ctx, existingAcc.ID, provider, providerUserID, providerEmail, rawProfile); ierr != nil && !isPGUniqueViolation(ierr) {
+				return empty, fmt.Errorf("%s callback: create identity by email: %w", providerLog, ierr)
+			}
+			_ = s.accounts.UpdateLastLogin(ctx, existingAcc.ID)
+			s.ensureCustomer(ctx, existingAcc.ID, existingAcc.Language)
+			pair, ierr := s.issueSession(ctx, existingAcc, uuid.New(), userAgent, ip)
+			if ierr != nil {
+				return empty, ierr
+			}
+			s.reactivateIdentityAfterOAuth(ctx, existingAcc.ID, provider, providerUserID)
+			return GoogleCallbackResult{Pair: pair}, nil
+		}
+		if err != nil && !errors.Is(err, repository.ErrNotFound) {
+			return empty, fmt.Errorf("%s callback: find by email: %w", providerLog, err)
+		}
+	}
+
+	acc, err := s.accounts.Create(ctx, providerEmail, "", s.cfg.DefaultLanguage)
+	if err != nil {
+		return empty, fmt.Errorf("%s callback: create account: %w", providerLog, err)
+	}
+	if _, err := s.ids.Create(ctx, acc.ID, provider, providerUserID, providerEmail, rawProfile); err != nil {
+		return empty, fmt.Errorf("%s callback: create identity: %w", providerLog, err)
+	}
+	if providerEmail != "" && acc.Email != nil && normalizeEmail(*acc.Email) == providerEmail && !acc.EmailVerified() {
+		_ = s.accounts.MarkEmailVerified(ctx, acc.ID)
+		if fresh, ferr := s.accounts.FindByID(ctx, acc.ID); ferr == nil {
+			acc = fresh
+		}
+	}
+	s.ensureCustomer(ctx, acc.ID, acc.Language)
+	s.attachReferralBestEffort(ctx, acc.ID, acc.Language, referralRaw)
+	pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	if err != nil {
+		return empty, err
+	}
+	s.reactivateIdentityAfterOAuth(ctx, acc.ID, provider, providerUserID)
+	return GoogleCallbackResult{Pair: pair}, nil
+}
+
+func (s *Service) oauthLinkFlowGeneric(
+	ctx context.Context,
+	linkAccountID int64,
+	refreshFromCookie, provider, providerUserID, providerEmail string,
+	rawProfile []byte,
+	userAgent, ip, providerLog string,
+) (GoogleCallbackResult, error) {
+	linkMeta := GoogleCallbackResult{WasLinkAttempt: true}
+	sessAccID, err := s.accountIDFromValidRefresh(ctx, refreshFromCookie)
+	if err != nil {
+		return linkMeta, err
+	}
+	if sessAccID != linkAccountID {
+		return linkMeta, ErrGoogleLinkSessionMismatch
+	}
+	resolved, err := s.ResolveIdentity(ctx, linkAccountID, provider, providerUserID)
+	if err != nil {
+		return linkMeta, fmt.Errorf("%s link: resolve identity: %w", providerLog, err)
+	}
+	if resolved.Status == IdentityLinkedToCurrent {
+		acc, err := s.accounts.FindByID(ctx, linkAccountID)
+		if err != nil {
+			return linkMeta, fmt.Errorf("%s link: load account: %w", providerLog, err)
+		}
+		pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+		if err != nil {
+			return linkMeta, err
+		}
+		s.reactivateIdentityAfterOAuth(ctx, acc.ID, provider, providerUserID)
+		linkMeta.Pair = pair
+		linkMeta.SuccessRedirect = "/cabinet/accounts?status=linked&provider=" + provider
+		return linkMeta, nil
+	}
+	if resolved.Status == IdentityLinkedToOther {
+		if s.saveMergeEmailPeerClaim != nil && resolved.AccountID > 0 {
+			if err := s.saveMergeEmailPeerClaim(ctx, linkAccountID, resolved.AccountID); err != nil {
+				return linkMeta, fmt.Errorf("%s link: save merge claim: %w", providerLog, err)
+			}
+			if provider == repository.ProviderYandex {
+				return linkMeta, ErrYandexMergeRequired
+			}
+			return linkMeta, ErrVKMergeRequired
+		}
+		return linkMeta, ErrGoogleLinkedElsewhere
+	}
+	if providerEmail != "" {
+		existingAcc, err := s.accounts.FindByEmail(ctx, providerEmail)
+		if err == nil && existingAcc.ID != linkAccountID {
+			if s.saveMergeEmailPeerClaim != nil {
+				if err := s.saveMergeEmailPeerClaim(ctx, linkAccountID, existingAcc.ID); err != nil {
+					return linkMeta, fmt.Errorf("%s link: save merge claim by email: %w", providerLog, err)
+				}
+				if provider == repository.ProviderYandex {
+					return linkMeta, ErrYandexMergeRequired
+				}
+				return linkMeta, ErrVKMergeRequired
+			}
+			if provider == repository.ProviderYandex {
+				return linkMeta, ErrYandexLinkEmailConflict
+			}
+			return linkMeta, ErrVKLinkEmailConflict
+		}
+	}
+	acc, err := s.accounts.FindByID(ctx, linkAccountID)
+	if err != nil {
+		return linkMeta, fmt.Errorf("%s link: load account: %w", providerLog, err)
+	}
+	if _, err := s.ids.Create(ctx, acc.ID, provider, providerUserID, providerEmail, rawProfile); err != nil {
+		return linkMeta, fmt.Errorf("%s link: create identity: %w", providerLog, err)
+	}
+	pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	if err != nil {
+		return linkMeta, err
+	}
+	s.reactivateIdentityAfterOAuth(ctx, acc.ID, provider, providerUserID)
+	linkMeta.Pair = pair
+	linkMeta.SuccessRedirect = "/cabinet/accounts?status=linked&provider=" + provider
+	return linkMeta, nil
 }
 
 // ============================================================================
@@ -428,8 +904,8 @@ type TelegramOIDCStartInput struct {
 }
 
 type TelegramOIDCCallbackResult struct {
-	Mode             googleoauth.TelegramOIDCMode
-	Pair             *TokenPair
+	Mode              googleoauth.TelegramOIDCMode
+	Pair              *TokenPair
 	HasMergeCandidate bool
 }
 
@@ -476,25 +952,93 @@ func (s *Service) linkTelegramIdentity(ctx context.Context, accountID, tgID int6
 	if accountID <= 0 || tgID <= 0 {
 		return false, fmt.Errorf("%w: bad telegram link input", ErrInvalidInput)
 	}
+	ensureCurrentLink := func() *repository.AccountCustomerLink {
+		if s.lookupLinks == nil {
+			return nil
+		}
+		link, lerr := s.lookupLinks.FindByAccountID(ctx, accountID)
+		if lerr == nil && link != nil {
+			return link
+		}
+		// Self-heal broken/missing link state before merge detection.
+		// Without this, telegram with active subscription can be silently linked
+		// as identity and skip merge screen.
+		acc, aerr := s.accounts.FindByID(ctx, accountID)
+		if aerr == nil && acc != nil {
+			s.ensureCustomer(ctx, accountID, acc.Language)
+			link2, lerr2 := s.lookupLinks.FindByAccountID(ctx, accountID)
+			if lerr2 == nil && link2 != nil {
+				return link2
+			}
+		}
+		return nil
+	}
+	// If current account already has a different customer and Telegram resolves to another customer,
+	// create merge-claim immediately (even if second customer is not linked to another cabinet account).
+	if s.lookupCustomers != nil && s.lookupLinks != nil && s.saveMergeTelegramClaim != nil {
+		curLink := ensureCurrentLink()
+		if curLink != nil {
+			tgCust, cerr := s.lookupCustomers.FindByTelegramId(ctx, tgID)
+			if cerr == nil && tgCust != nil && tgCust.ID != curLink.CustomerID {
+				if err := s.saveMergeTelegramClaim(ctx, accountID, tgID, username); err != nil {
+					return false, fmt.Errorf("telegram link: save telegram merge claim: %w", err)
+				}
+				slog.Info("claim_saved",
+					"source", "oidc",
+					"kind", "telegram",
+					"account_id", accountID,
+					"telegram_id", tgID,
+				)
+				return true, nil
+			}
+		}
+	}
 	linkedAcc := s.findAccountLinkedToTelegramCustomer(ctx, tgID)
 	if linkedAcc != nil && linkedAcc.ID != accountID {
+		if s.saveMergeEmailPeerClaim != nil {
+			if err := s.saveMergeEmailPeerClaim(ctx, accountID, linkedAcc.ID); err != nil {
+				return false, fmt.Errorf("telegram link: save merge claim: %w", err)
+			}
+			slog.Info("claim_saved",
+				"source", "oidc",
+				"kind", "email_peer",
+				"account_id", accountID,
+				"peer_account_id", linkedAcc.ID,
+				"telegram_id", tgID,
+			)
+			return true, nil
+		}
 		return false, bootstrap.ErrTelegramCustomerLinkedElsewhere
 	}
 
 	pid := strconv.FormatInt(tgID, 10)
-	ident, err := s.ids.FindByProvider(ctx, repository.ProviderTelegram, pid)
-	if err == nil {
-		if ident.AccountID != accountID {
-			return false, bootstrap.ErrTelegramCustomerLinkedElsewhere
+	resolved, err := s.ResolveIdentity(ctx, accountID, repository.ProviderTelegram, pid)
+	if err != nil {
+		return false, err
+	}
+	if resolved.Status == IdentityLinkedToOther {
+		if s.saveMergeEmailPeerClaim != nil && resolved.AccountID > 0 {
+			if err := s.saveMergeEmailPeerClaim(ctx, accountID, resolved.AccountID); err != nil {
+				return false, fmt.Errorf("telegram link: save merge claim by identity: %w", err)
+			}
+			slog.Info("claim_saved",
+				"source", "oidc",
+				"kind", "email_peer",
+				"account_id", accountID,
+				"peer_account_id", resolved.AccountID,
+				"telegram_id", tgID,
+			)
+			return true, nil
 		}
+		return false, bootstrap.ErrTelegramCustomerLinkedElsewhere
+	}
+	if resolved.Status == IdentityLinkedToCurrent {
 		acc, aerr := s.accounts.FindByID(ctx, accountID)
 		if aerr == nil && acc != nil {
 			_ = s.ensureCustomerTelegram(ctx, accountID, acc.Language, tgID)
 		}
-		return linkedAcc != nil, nil
-	}
-	if !errors.Is(err, repository.ErrNotFound) {
-		return false, err
+		// Already linked to current account; no merge flow required.
+		return false, nil
 	}
 	rawProfile, _ := json.Marshal(map[string]any{"id": tgID, "username": username})
 	if _, err := s.ids.Create(ctx, accountID, repository.ProviderTelegram, pid, "", rawProfile); err != nil {
@@ -506,7 +1050,8 @@ func (s *Service) linkTelegramIdentity(ctx context.Context, accountID, tgID int6
 			return false, err
 		}
 	}
-	return linkedAcc != nil, nil
+	// Fresh successful link to current account; no merge flow required.
+	return false, nil
 }
 
 // findAccountLinkedToTelegramCustomer — аккаунт кабинета, у которого в боте
@@ -547,10 +1092,12 @@ func preferReassignTelegramIdentity(linked, orphan *repository.Account) bool {
 func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username, referralCode, userAgent, ip string) (*TokenPair, error) {
 	pid := strconv.FormatInt(tgID, 10)
 	linkedAcc := s.findAccountLinkedToTelegramCustomer(ctx, tgID)
-
-	ident, err := s.ids.FindByProvider(ctx, repository.ProviderTelegram, pid)
-	if err == nil {
-		acc, err := s.accounts.FindByID(ctx, ident.AccountID)
+	resolved, err := s.ResolveIdentity(ctx, 0, repository.ProviderTelegram, pid)
+	if err != nil {
+		return nil, fmt.Errorf("telegram login: resolve identity: %w", err)
+	}
+	if resolved.Status == IdentityLinkedToCurrent && resolved.AccountID > 0 {
+		acc, err := s.accounts.FindByID(ctx, resolved.AccountID)
 		if err != nil {
 			return nil, fmt.Errorf("telegram login: load account: %w", err)
 		}
@@ -573,10 +1120,12 @@ func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username
 		if err := s.ensureCustomerTelegram(ctx, acc.ID, acc.Language, tgID); err != nil {
 			return nil, err
 		}
-		return s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
-	}
-	if !errors.Is(err, repository.ErrNotFound) {
-		return nil, fmt.Errorf("telegram login: find identity: %w", err)
+		pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+		if err != nil {
+			return nil, err
+		}
+		s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderTelegram, pid)
+		return pair, nil
 	}
 
 	if linkedAcc != nil {
@@ -588,7 +1137,12 @@ func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username
 		if err := s.ensureCustomerTelegram(ctx, linkedAcc.ID, linkedAcc.Language, tgID); err != nil {
 			return nil, err
 		}
-		return s.issueSession(ctx, linkedAcc, uuid.New(), userAgent, ip)
+		pair, err := s.issueSession(ctx, linkedAcc, uuid.New(), userAgent, ip)
+		if err != nil {
+			return nil, err
+		}
+		s.reactivateIdentityAfterOAuth(ctx, linkedAcc.ID, repository.ProviderTelegram, pid)
+		return pair, nil
 	}
 
 	// Новый аккаунт без email/пароля.
@@ -604,12 +1158,26 @@ func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username
 		return nil, err
 	}
 	s.attachReferralBestEffort(ctx, acc.ID, acc.Language, referralCode)
-	return s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+	if err != nil {
+		return nil, err
+	}
+	s.reactivateIdentityAfterOAuth(ctx, acc.ID, repository.ProviderTelegram, pid)
+	return pair, nil
 }
 
 // ============================================================================
 // Helpers
 // ============================================================================
+
+func (s *Service) reactivateIdentityAfterOAuth(ctx context.Context, accountID int64, provider, providerUserID string) {
+	if s.ids == nil || accountID <= 0 || provider == "" || providerUserID == "" {
+		return
+	}
+	if err := s.ids.ClearUnlinkedAtForSubject(ctx, accountID, provider, providerUserID); err != nil {
+		slog.Warn("auth: reactivate identity after oauth", "account_id", accountID, "provider", provider, "error", err.Error())
+	}
+}
 
 func mapTgErr(err error) error {
 	switch {

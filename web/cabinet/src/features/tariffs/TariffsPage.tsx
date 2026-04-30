@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -149,8 +149,17 @@ function TariffPlanCard({
 
   return (
     <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => onChoosePlan(head.slug)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onChoosePlan(head.slug)
+        }
+      }}
       className={cn(
-        'relative flex flex-col transition-shadow hover:shadow-xl',
+        'relative flex flex-col transition-all hover:shadow-[0_10px_28px_rgba(14,169,241,0.25)] hover:brightness-110 active:scale-[0.98] cursor-pointer',
         head.is_popular && 'border-primary/50 shadow-primary/10 shadow-lg',
       )}
     >
@@ -163,20 +172,27 @@ function TariffPlanCard({
         </div>
       )}
 
-      <CardHeader className="pb-2 pt-5">
+      <CardHeader className="px-4 pb-2 pt-5">
         <CardTitle className="text-lg">{head.name}</CardTitle>
-        {isCurrent && (
-          <Badge variant="secondary" className="w-fit mt-2 text-xs font-normal">
-            {t('tariffs.currentBadge')}
-          </Badge>
-        )}
         <div className="flex items-baseline gap-1 mt-2">
           <span className="text-3xl font-bold">{head.monthly_base_rub.toLocaleString('ru-RU')}</span>
           <span className="text-sm text-muted-foreground">₽{t('tariffs.perMonth')}</span>
         </div>
       </CardHeader>
 
-      <CardContent className="flex flex-col flex-1 gap-4 mt-auto">
+      {isCurrent && (
+        <div className="absolute top-4 right-4">
+          <Badge variant="secondary" className="w-fit text-xs font-normal">
+            {t('tariffs.currentBadge')}
+          </Badge>
+        </div>
+      )}
+
+      <CardContent className="flex flex-col flex-1 gap-4 mt-auto p-4 pt-0">
+        {head.description ? (
+          <TariffDescription text={head.description} className="text-[0.875rem] text-muted-foreground leading-relaxed" />
+        ) : null}
+
         <ul className="space-y-1.5 text-sm flex-1">
           <FeatureLine>
             {head.traffic_gb
@@ -189,15 +205,11 @@ function TariffPlanCard({
               : t('tariffs.devicesUnlimited')}
           </FeatureLine>
         </ul>
-        {head.description ? (
-          <TariffDescription text={head.description} className="text-xs text-muted-foreground leading-relaxed" />
-        ) : null}
 
         <Button
           className="w-full"
           variant={head.is_popular ? 'default' : 'outline'}
           type="button"
-          onClick={() => onChoosePlan(head.slug)}
         >
           {ctaLabel}
         </Button>
@@ -229,6 +241,15 @@ function TariffPeriodStep({
 
   if (!head) return null
 
+  const formatRub2 = (n: number) =>
+    n.toLocaleString('ru-RU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+
+  // Период изначально НЕ выбран — подсветка появляется только после клика.
+  const [selectedMonths, setSelectedMonths] = useState<number | null>(null)
+
   return (
     <div className="space-y-4 max-w-lg mx-auto w-full">
       <Button type="button" variant="ghost" size="sm" className="gap-1 -ml-2" onClick={onBack}>
@@ -253,15 +274,39 @@ function TariffPeriodStep({
             key={p.months}
             type="button"
             variant="outline"
-            className="h-auto min-h-11 flex-col gap-0.5 py-2.5"
-            onClick={() => onSelect(p)}
+            className={cn(
+              'h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-lg',
+              p.months === selectedMonths
+                ? 'border-[rgb(14,169,241)] bg-[rgba(14,169,241,0.08)]'
+                : 'border-[rgba(54,65,84,0.5)] bg-transparent',
+            )}
+            onClick={() => {
+              setSelectedMonths(p.months)
+              onSelect(p)
+            }}
           >
-            <span className="font-medium tabular-nums">
-              {p.months} {t('tariffs.moAbbr')}
-            </span>
-            <span className="text-xs font-normal opacity-90 tabular-nums">
-              {p.price_rub.toLocaleString('ru-RU')} ₽
-            </span>
+            {(() => {
+              const perMonthRub = p.months > 0 ? p.price_rub / p.months : 0
+              return (
+                <>
+                  <span
+                    className="text-lg leading-7 font-medium tabular-nums text-foreground dark:text-[rgb(241,245,249)]"
+                  >
+                    {pluralizeMonths(p.months)}
+                  </span>
+                  <span
+                    className="text-[0.95rem] leading-5 font-semibold tabular-nums text-primary dark:text-[rgb(81,193,245)]"
+                  >
+                    {formatRub2(p.price_rub)} ₽
+                  </span>
+                  <span
+                    className="mt-1 text-[0.7rem] leading-4 font-normal tabular-nums text-muted-foreground dark:text-[rgb(101,114,134)] tracking-[-1px]"
+                  >
+                    {formatRub2(perMonthRub)} ₽{t('tariffs.perMonth')}
+                  </span>
+                </>
+              )
+            })()}
           </Button>
         ))}
       </div>
@@ -457,7 +502,7 @@ function TariffDescription({ text, className }: { text: string; className?: stri
   const decoded = decodeHtmlEntities(String(text))
   return (
     <div className={cn(
-      '[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-1 [&_p]:whitespace-pre-line [&_li]:whitespace-pre-line',
+      '[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:whitespace-pre-line [&_blockquote]:break-words [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-1 [&_p]:whitespace-pre-line [&_li]:whitespace-pre-line',
       className,
     )}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>

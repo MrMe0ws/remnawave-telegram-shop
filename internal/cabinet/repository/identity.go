@@ -15,6 +15,8 @@ import (
 const (
 	ProviderEmail    = "email"
 	ProviderGoogle   = "google"
+	ProviderYandex   = "yandex"
+	ProviderVK       = "vk"
 	ProviderTelegram = "telegram"
 )
 
@@ -27,6 +29,8 @@ type Identity struct {
 	ProviderEmail  *string
 	RawProfileJSON []byte // jsonb как raw-байты; парсят вызывающие
 	CreatedAt      time.Time
+	// UnlinkedAt — мягкая отвязка: вход по провайдеру возможен, в настройках не показываем.
+	UnlinkedAt *time.Time
 }
 
 // IdentityRepo — репозиторий cabinet_identity.
@@ -37,7 +41,7 @@ type IdentityRepo struct {
 // NewIdentityRepo — конструктор.
 func NewIdentityRepo(pool *pgxpool.Pool) *IdentityRepo { return &IdentityRepo{pool: pool} }
 
-const identitySelectCols = "id, account_id, provider, provider_user_id, provider_email, raw_profile_json, created_at"
+const identitySelectCols = "id, account_id, provider, provider_user_id, provider_email, raw_profile_json, created_at, unlinked_at"
 
 func scanIdentity(row pgx.Row) (*Identity, error) {
 	var i Identity
@@ -49,6 +53,7 @@ func scanIdentity(row pgx.Row) (*Identity, error) {
 		&i.ProviderEmail,
 		&i.RawProfileJSON,
 		&i.CreatedAt,
+		&i.UnlinkedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -112,6 +117,57 @@ func (r *IdentityRepo) DeleteByAccountAndProvider(ctx context.Context, accountID
 		return 0, fmt.Errorf("delete identity: %w", err)
 	}
 	return tag.RowsAffected(), nil
+}
+
+// SoftUnlinkByAccountAndProvider помечает все identity account+provider как мягко отвязанные.
+func (r *IdentityRepo) SoftUnlinkByAccountAndProvider(ctx context.Context, accountID int64, provider string) (int64, error) {
+	const q = `
+		UPDATE cabinet_identity
+		   SET unlinked_at = NOW()
+		 WHERE account_id = $1 AND provider = $2 AND unlinked_at IS NULL`
+	tag, err := r.pool.Exec(ctx, q, accountID, provider)
+	if err != nil {
+		return 0, fmt.Errorf("soft unlink identity: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
+// ClearUnlinkedAtForSubject снимает мягкую отвязку у конкретной строки identity
+// (один provider_user_id — один OAuth-субъект; при нескольких Google на аккаунте
+// не трогаем другие субъекты).
+func (r *IdentityRepo) ClearUnlinkedAtForSubject(ctx context.Context, accountID int64, provider, providerUserID string) error {
+	const q = `
+		UPDATE cabinet_identity
+		   SET unlinked_at = NULL
+		 WHERE account_id = $1 AND provider = $2 AND provider_user_id = $3 AND unlinked_at IS NOT NULL`
+	_, err := r.pool.Exec(ctx, q, accountID, provider, providerUserID)
+	if err != nil {
+		return fmt.Errorf("clear identity unlinked_at: %w", err)
+	}
+	return nil
+}
+
+// ListLinkedByAccount — только «видимые» в настройках привязки (без мягко отвязанных).
+func (r *IdentityRepo) ListLinkedByAccount(ctx context.Context, accountID int64) ([]Identity, error) {
+	const q = `SELECT ` + identitySelectCols + ` FROM cabinet_identity WHERE account_id = $1 AND unlinked_at IS NULL ORDER BY id`
+	rows, err := r.pool.Query(ctx, q, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("list linked identities: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Identity
+	for rows.Next() {
+		i, err := scanIdentity(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list linked identities: %w", err)
+	}
+	return out, nil
 }
 
 // ListByAccount возвращает все identity аккаунта.

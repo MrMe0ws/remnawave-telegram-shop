@@ -5,7 +5,7 @@ type Theme = 'dark' | 'light'
 function getInitialTheme(): Theme {
   const saved = localStorage.getItem('cab_theme') as Theme | null
   if (saved) return saved
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return 'dark'
 }
 
 function applyTheme(theme: Theme) {

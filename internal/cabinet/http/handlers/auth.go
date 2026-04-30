@@ -27,6 +27,8 @@ type AuthHandler struct {
 	svc                  *service.Service
 	cookieDomain         string
 	googleOAuthEnabled   bool
+	yandexOAuthEnabled   bool
+	vkOAuthEnabled       bool
 	telegramLoginBotUser string // username без @ для Login Widget; "" — вход через Telegram не настроен
 	telegramOIDCEnabled  bool
 	telegramWebAuthMode  string
@@ -38,6 +40,8 @@ func NewAuth(
 	svc *service.Service,
 	cookieDomain string,
 	googleOAuthEnabled bool,
+	yandexOAuthEnabled bool,
+	vkOAuthEnabled bool,
 	telegramLoginBotUser string,
 	telegramOIDCEnabled bool,
 	telegramWebAuthMode string,
@@ -45,6 +49,8 @@ func NewAuth(
 	return &AuthHandler{
 		svc: svc, cookieDomain: cookieDomain,
 		googleOAuthEnabled:   googleOAuthEnabled,
+		yandexOAuthEnabled:   yandexOAuthEnabled,
+		vkOAuthEnabled:       vkOAuthEnabled,
 		telegramLoginBotUser: telegramLoginBotUser,
 		telegramOIDCEnabled:  telegramOIDCEnabled,
 		telegramWebAuthMode:  telegramWebAuthMode,
@@ -119,9 +125,23 @@ func cabinetSiteLinks() map[string]string {
 // Публичные флаги для страницы логина: какие альтернативные провайдеры доступны.
 func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 	body := map[string]any{
-		"google_oauth_enabled": h.googleOAuthEnabled,
-		"telegram_oidc_enabled": h.telegramOIDCEnabled,
+		"google_oauth_enabled":   h.googleOAuthEnabled,
+		"yandex_oauth_enabled":   h.yandexOAuthEnabled,
+		"vk_oauth_enabled":       h.vkOAuthEnabled,
+		"telegram_oidc_enabled":  h.telegramOIDCEnabled,
 		"telegram_web_auth_mode": h.telegramWebAuthMode,
+		"turnstile_enabled":      cabcfg.TurnstileEnabled(),
+		"pwa_enabled":            cabcfg.PWAEnabled(),
+		"pwa_app_name":           cabcfg.PWAAppName(),
+		"pwa_short_name":         cabcfg.PWAShortName(),
+		"payment_providers": map[string]bool{
+			"yookassa":  botcfg.IsYookasaEnabled(),
+			"cryptopay": botcfg.IsCryptoPayEnabled(),
+			"telegram":  botcfg.IsTelegramStarsEnabled(),
+		},
+	}
+	if cabcfg.TurnstileEnabled() && strings.TrimSpace(cabcfg.TurnstileSiteKey()) != "" {
+		body["turnstile_site_key"] = cabcfg.TurnstileSiteKey()
 	}
 	if h.telegramLoginBotUser != "" {
 		body["telegram_widget_bot"] = h.telegramLoginBotUser
@@ -256,8 +276,21 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // ============================================================================
-// Email verification (подтверждение без авторизации — по токену из письма)
+// Email verification (код из письма; старые ссылки с ?token= ещё поддерживаются)
 // ============================================================================
+
+// ResendVerifyEmailPublic — POST /cabinet/api/auth/email/verify/resend-public.
+// Тело как у forgot: { "email" }. Всегда 200; Turnstile + rate-limit как у forgot.
+func (h *AuthHandler) ResendVerifyEmailPublic(w http.ResponseWriter, r *http.Request) {
+	var req forgotReq
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := h.svc.ResendVerifyEmailPublic(r.Context(), req.Email); err != nil {
+		slog.Warn("resend verify public failed", "error", err)
+	}
+	writeJSON(w, http.StatusOK, messageResp{Message: "if the account exists and email is not verified, a code was sent"})
+}
 
 // ConfirmEmail — POST /cabinet/api/auth/email/verify/confirm.
 func (h *AuthHandler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {

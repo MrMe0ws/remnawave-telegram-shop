@@ -103,7 +103,7 @@
       rgba(14, 169, 241, 0.2) 84%,
       rgba(14, 169, 241, 0.95)
     );
-    animation: connect-border-spin 2.8s linear infinite;
+    animation: connect-border-spin 4s linear infinite;
     box-shadow: 0 0 20px rgba(14, 169, 241, 0.12);
   }
 

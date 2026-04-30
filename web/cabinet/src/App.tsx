@@ -21,6 +21,7 @@ import TariffsPage from '@/features/tariffs/TariffsPage'
 import CheckoutPage from '@/features/checkout/CheckoutPage'
 import PaymentStatusPage from '@/features/checkout/PaymentStatusPage'
 import SettingsPage from '@/features/settings/SettingsPage'
+import LinkEmailPage from '@/features/settings/LinkEmailPage'
 import MergePreviewPage from '@/features/settings/MergePreviewPage'
 import ProfilePage from '@/features/profile/ProfilePage'
 import ConnectionsPage from '@/features/connections/ConnectionsPage'
@@ -127,8 +128,16 @@ function AppRoutes() {
       <Route
         path="/accounts"
         element={
-          <ProtectedRoute requireVerified>
+          <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/accounts/email"
+        element={
+          <ProtectedRoute>
+            <LinkEmailPage />
           </ProtectedRoute>
         }
       />

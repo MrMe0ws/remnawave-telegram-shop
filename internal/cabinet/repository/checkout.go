@@ -15,6 +15,7 @@ import (
 const (
 	CheckoutProviderYookassa  = "yookassa"
 	CheckoutProviderCryptoPay = "cryptopay"
+	CheckoutProviderTelegram  = "telegram"
 )
 
 // CheckoutStatus — enum cabinet_checkout.status.

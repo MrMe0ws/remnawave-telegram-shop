@@ -10,12 +10,16 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError } from '@/lib/api'
+import { getTurnstileToken } from '@/lib/turnstile'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation()
+  const { data: bootstrap } = useAuthBootstrap()
 
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const [securityChecking, setSecurityChecking] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,7 +29,15 @@ export default function ForgotPasswordPage() {
     setError(null)
     setLoading(true)
     try {
-      await api.forgotPassword(email)
+      let turnstileToken: string | undefined
+      if (bootstrap?.turnstile_enabled) {
+        const siteKey = (bootstrap.turnstile_site_key ?? '').trim()
+        if (!siteKey) throw new Error('turnstile site key is missing')
+        setSecurityChecking(true)
+        turnstileToken = await getTurnstileToken(siteKey, 'forgot')
+        setSecurityChecking(false)
+      }
+      await api.forgotPassword(email, turnstileToken)
       setSent(true)
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
@@ -35,6 +47,7 @@ export default function ForgotPasswordPage() {
         setSent(true)
       }
     } finally {
+      setSecurityChecking(false)
       setLoading(false)
     }
   }
@@ -62,6 +75,11 @@ export default function ForgotPasswordPage() {
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {securityChecking && (
+                <Alert>
+                  <AlertDescription>{t('auth.securityCheckInProgress')}</AlertDescription>
                 </Alert>
               )}
               <div className="space-y-1.5">

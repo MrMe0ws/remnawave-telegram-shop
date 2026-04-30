@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -59,10 +60,55 @@ func (r *Client) createOrUpdateUserWithTariffProfile(ctx context.Context, custom
 		return nil, err
 	}
 	if len(users) == 0 {
-		return r.createUserWithTariffProfile(ctx, customerID, telegramID, days, profile)
+		user, cerr := r.createUserWithTariffProfile(ctx, customerID, telegramID, days, profile)
+		if cerr == nil {
+			return user, nil
+		}
+		// Race/legacy-case: user already exists by username, but lookup by telegram_id returned empty.
+		// Fallback to username lookup and patch existing record instead of failing payment finalization.
+		if !isPanelUsernameExistsErr(cerr) {
+			return nil, cerr
+		}
+		expected := panelUsernameFromCtx(ctx)
+		if expected == "" {
+			expected = generateUsername(customerID, telegramID)
+		}
+		existing, ferr := r.findUserByUsername(ctx, expected)
+		if ferr != nil {
+			return nil, cerr
+		}
+		if existing == nil {
+			return nil, cerr
+		}
+		return r.updateUserWithTariffProfile(ctx, existing, days, profile, baseExpire)
 	}
 	existingUser := findUserBySuffix(users, telegramID)
 	return r.updateUserWithTariffProfile(ctx, existingUser, days, profile, baseExpire)
+}
+
+func isPanelUsernameExistsErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "a019") && strings.Contains(msg, "username already exists")
+}
+
+func (r *Client) findUserByUsername(ctx context.Context, username string) (*User, error) {
+	username = strings.TrimSpace(strings.ToLower(username))
+	if username == "" {
+		return nil, nil
+	}
+	users, err := r.GetUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range users {
+		if strings.ToLower(strings.TrimSpace(users[i].Username)) == username {
+			return &users[i], nil
+		}
+	}
+	return nil, nil
 }
 
 func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *User, days int, profile TariffPaidProfile, baseExpire *time.Time) (*User, error) {
@@ -118,7 +164,10 @@ func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *
 
 func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int64, telegramID int64, days int, profile TariffPaidProfile) (*User, error) {
 	expireAt := time.Now().UTC().AddDate(0, 0, days)
-	username := generateUsername(customerID, telegramID)
+	username := panelUsernameFromCtx(ctx)
+	if username == "" {
+		username = generateUsername(customerID, telegramID)
+	}
 	squads, err := r.getInternalSquads(ctx)
 	if err != nil {
 		return nil, err

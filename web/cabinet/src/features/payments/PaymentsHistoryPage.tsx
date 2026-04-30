@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
-import { formatRub } from '@/lib/utils'
-import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
+import { formatDateTimeShort, formatRub } from '@/lib/utils'
 
 function invoiceLabel(t: (k: string) => string, invoiceType: string): string {
   switch (invoiceType) {
@@ -37,7 +36,6 @@ function kindLabel(t: (k: string) => string, kind: string): string {
 
 export default function PaymentsHistoryPage() {
   const { t } = useTranslation()
-  const { lang } = useTranslationWithLang()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['purchases'],
@@ -50,13 +48,7 @@ export default function PaymentsHistoryPage() {
 
   function formatPaid(iso?: string) {
     if (!iso) return '—'
-    return new Date(iso).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    return formatDateTimeShort(iso)
   }
 
   function formatMoney(amount: number, currency: string) {
@@ -72,7 +64,7 @@ export default function PaymentsHistoryPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-3xl">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">{t('payments.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('payments.subtitle')}</p>

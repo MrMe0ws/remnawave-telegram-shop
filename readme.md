@@ -98,6 +98,16 @@ Telegram бот для продажи подписок с интеграцией
 В проект добавляется web-кабинет — SPA + API, запускаемые в том же процессе, что и бот. Включается флагом `CABINET_ENABLED=true` в `.env`, по умолчанию **выключен** и никак не влияет на работу бота.
 
 - **Как включить режим кабинета** (миграции, сборка SPA, env, Telegram, брендинг, smoke): [`documentation/cabinet-mode-setup.md`](documentation/cabinet-mode-setup.md). Переменные `CABINET_*` — в **`.env.sample`**. Технические материалы (ТЗ, план, nginx) при необходимости ведите у себя в `docs/cabinet/` (в шаблоне репозитория каталог `/docs/` в `.gitignore` и может не попадать в git).
+- **Переход с версии без кабинета** (пошаговый upgrade, `.env`, Dockerfile/Compose, BotFather, smoke): [`documentation/cabinet-upgrade-guide.md`](documentation/cabinet-upgrade-guide.md).
+- Детализация логики кабинета:
+  - привязка/merge (`google`/`telegram`/`email`): `docs/cabinet/account-linking-and-merge.md`
+  - платежи/checkout (preview/create/finalize, Stars, idempotency): `docs/cabinet/payments-and-checkout.md`
+- Runtime-контент кабинета из `translations/cabinet/*.json`:
+  - `GET /cabinet/api/content/faq` ← `translations/cabinet/FAQ.json`
+  - `GET /cabinet/api/content/app-config` ← `translations/cabinet/app-config.json` (страница установки устройств `/cabinet/connections`)
+  - при mount `./translations:/translations` изменения этих файлов применяются без ребилда образа.
+- PWA (опционально): `CABINET_PWA_ENABLED=true` + (опционально) `CABINET_PWA_APP_NAME`, `CABINET_PWA_SHORT_NAME`.
+  Manifest отдаётся runtime-эндпоинтом `GET /cabinet/api/public/pwa-manifest.webmanifest`.
 - Поддомен и домен: `cabinet.example.com` → `proxy_pass http://127.0.0.1:<HEALTH_CHECK_PORT>` (пример nginx/TLS — в локальной копии `docs/cabinet/deploy-guide-simple.md`, если она у вас есть).
 - Авторизация: email + пароль, Google OAuth2, Telegram Login 2.0 (OIDC для web) + Telegram Mini App `initData` (встроенный путь внутри Telegram).
 - Синхронизация с ботом: аккаунт сайта и профиль Telegram связываются в одну запись `customer`; web-only пользователи получают synthetic `telegram_id` вне реального Telegram-диапазона и дополнительно помечаются колонкой `customer.is_web_only` — Telegram Bot API к ним никогда не вызывается.
@@ -121,6 +131,23 @@ Telegram бот для продажи подписок с интеграцией
 | **9b** | **Dashboard (статус подписки + copy-link + loyalty), витрина тарифов (classic/tariffs mode), checkout (YooKassa/CryptoPay) + страница статуса оплаты с polling** |
 | **9c** | **Настройки (пароль, язык, Google, Telegram link через OAuth 2.0), страница merge preview/confirm, автологин Mini App по `initData`, `PUT /me/password` на бэкенде** |
 | **10** | **Метрики `GET /cabinet/api/metrics` (+ опциональный Basic-auth), CSP для SPA / security headers для API, маскирование IP/UA в логах, CI: `go build` + тесты кабинета + `scripts/cabinet-forbid-sensitive-slogs.sh`** |
+
+### Дополнительный hardening (последние изменения)
+
+- **Turnstile в auth (опционально):** при `CABINET_TURNSTILE_ENABLED=true` backend требует `X-Turnstile-Token` для `POST /cabinet/api/auth/register`, `POST /cabinet/api/auth/login`, `POST /cabinet/api/auth/password/forgot`.
+- **SPA и Turnstile:** фронт читает `turnstile_enabled` + `turnstile_site_key` из `GET /cabinet/api/auth/bootstrap`, запрашивает токен только когда флаг включён и только для указанных auth-запросов. При `CABINET_TURNSTILE_ENABLED=false` UI работает как раньше.
+- **IP rate-limit hardening:** `ClientIP` в cabinet доверяет `X-Forwarded-For`/`X-Real-IP` только от trusted proxy (loopback/private); вне прокси используется `RemoteAddr`.
+- **Merge hardening:** для `/cabinet/api/link/merge/confirm` `Idempotency-Key` валидируется как `16..64` символов `[A-Za-z0-9._:-]`; внутренние merge-ошибки наружу не раскрываются.
+- **DB update safety:** для динамических `UpdateFields` добавлен whitelist разрешённых полей и исправлено выполнение обновления через транзакцию (`tx.Exec`).
+
+### Cabinet + Billing: последние функциональные изменения
+
+- **Google/TG link conflict → merge:** в flow привязки занятый social identity переводит пользователя в merge preview (вместо тупиковой ошибки), с `provider` в query для корректного UI.
+- **Merge provider-aware UI:** страница `/cabinet/link/merge` показывает корректный «найденный аккаунт» по `provider=google|telegram|email`; итоговый «Срок подписки» обновляется по выбранной стороне (`web`/`tg`) в реальном времени.
+- **Telegram OIDC link fix:** сценарий «email-аккаунт привязывает Telegram, который уже связан с другим профилем» теперь формирует merge-claim и ведёт в merge-flow, а не в `telegram_oidc_failed`.
+- **Checkout UX:** переход на страницу оплаты (YooKassa/CryptoPay/Stars) открывается в новой вкладке (fallback — текущая, если pop-up блокирован).
+- **Web-only username в Remnawave:** новые web-only/synthetic пользователи создаются в панели с username формата `customerID_emailLocalPart` (fallback `customerID_web`), не `customerId_syntheticTelegramId`.
+- **Самоудаление аккаунта кабинета:** `POST /cabinet/api/me/account/delete` удаляет пользователя в Remnawave (если найден), затем удаляет кабинетный аккаунт — чтобы не оставлять активную подписку в панели.
 
 **Релиз / домен:** после смены домена кабинета обязательно обновите настройки в BotFather:
 - `/setdomain` для Mini App / совместимости web-login.
@@ -320,6 +347,9 @@ Telegram бот для продажи подписок с интеграцией
 | `PRIVACY_POLICY_URL`                 | URL политики конфиденциальности (опционально) - если установлен, кнопка "🔒 Политика конфиденциальности" отображается в разделе "Помощь"                      |
 | `TERMS_OF_SERVICE_URL`               | URL пользовательского соглашения (опционально) - если установлен, кнопка "📋 Пользовательское соглашение" отображается в разделе "Помощь"                     |
 | `ADMIN_TELEGRAM_ID`                  | ID telegram админа; кнопка «Админ»: рассылка, **пользователи**, статистика, синхронизация, промокоды; при `SALES_MODE=tariffs` — тарифы; при лояльности — раздел лояльности. Промокоды — миграция `000007_promo_codes` |
+| `CABINET_TURNSTILE_ENABLED`          | Включить Cloudflare Turnstile в web-кабинете для `register/login/forgot` (`true/false`, по умолчанию `false`) |
+| `CABINET_TURNSTILE_SITE_KEY`         | Публичный ключ Turnstile (обязателен при `CABINET_TURNSTILE_ENABLED=true`) |
+| `CABINET_TURNSTILE_SECRET_KEY`       | Секретный ключ Turnstile для backend-валидации (обязателен при `CABINET_TURNSTILE_ENABLED=true`) |
 | `BLOCKED_TELEGRAM_IDS`               | Список Telegram ID, разделенных запятыми, для блокировки доступа к боту (например, "123456789,987654321")                                                     |
 | `WHITELISTED_TELEGRAM_IDS`           | Список Telegram ID, разделенных запятыми, которые обходят все проверки на подозрительных пользователей (например, "111111111,222222222,333333333")            |
 | `TRIAL_TRAFFIC_LIMIT`                | Максимально разрешенный трафик в гб для пробных подписок                                                                                                      |

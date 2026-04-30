@@ -23,6 +23,7 @@ import (
 // cabinet — набор всех параметров кабинета, заполняется в InitConfig().
 type cabinet struct {
 	enabled bool
+	profileDeleteEnabled bool
 
 	publicURL      *url.URL
 	publicURLRaw   string
@@ -44,6 +45,12 @@ type cabinet struct {
 	googleClientID     string
 	googleClientSecret string
 	googleRedirectURL  string
+	yandexClientID     string
+	yandexClientSecret string
+	yandexRedirectURL  string
+	vkClientID         string
+	vkClientSecret     string
+	vkRedirectURL      string
 
 	telegramLoginBotUsername string
 	telegramLoginBotToken  string // опционально: HMAC Login Widget / Mini App, если отличается от TELEGRAM_TOKEN
@@ -59,9 +66,6 @@ type cabinet struct {
 	metricsUser     string
 	metricsPassword string
 
-	// devTelegramUnlink — CABINET_DEV_TELEGRAM_UNLINK: POST /me/telegram/unlink-dev (только для стендов).
-	devTelegramUnlink bool
-
 	// miniAppEntryURL — абсолютный URL для Telegram WebApp (кнопки «Мой VPN», «Подключить VPN»).
 	miniAppEntryURL string
 
@@ -71,12 +75,18 @@ type cabinet struct {
 	brandLogoURLRaw string
 	// brandLogoFile — абсолютный путь к файлу на диске (CABINET_BRAND_LOGO_FILE), если валиден.
 	brandLogoFile string
+
+	// PWA flags.
+	pwaEnabled   bool
+	pwaAppName   string
+	pwaShortName string
 }
 
 var conf cabinet
 
 // IsEnabled возвращает значение CABINET_ENABLED. До InitConfig() — false.
 func IsEnabled() bool { return conf.enabled }
+func ProfileDeleteEnabled() bool { return conf.profileDeleteEnabled }
 
 // PublicURL возвращает публичный URL кабинета (например https://cabinet.example.com).
 func PublicURL() string { return conf.publicURLRaw }
@@ -121,6 +131,18 @@ func GoogleRedirectURL() string  { return conf.googleRedirectURL }
 func GoogleEnabled() bool {
 	return conf.googleClientID != "" && conf.googleClientSecret != "" && conf.googleRedirectURL != ""
 }
+func YandexClientID() string     { return conf.yandexClientID }
+func YandexClientSecret() string { return conf.yandexClientSecret }
+func YandexRedirectURL() string  { return conf.yandexRedirectURL }
+func YandexEnabled() bool {
+	return conf.yandexClientID != "" && conf.yandexClientSecret != "" && conf.yandexRedirectURL != ""
+}
+func VKClientID() string     { return conf.vkClientID }
+func VKClientSecret() string { return conf.vkClientSecret }
+func VKRedirectURL() string  { return conf.vkRedirectURL }
+func VKEnabled() bool {
+	return conf.vkClientID != "" && conf.vkClientSecret != "" && conf.vkRedirectURL != ""
+}
 
 // TelegramLoginBotUsername — username бота (без @) для Telegram Login Widget.
 func TelegramLoginBotUsername() string { return conf.telegramLoginBotUsername }
@@ -154,10 +176,6 @@ func TurnstileSecretKey() string {
 func MetricsUser() string     { return conf.metricsUser }
 func MetricsPassword() string { return conf.metricsPassword }
 
-// DevTelegramUnlinkEnabled — если true, доступен POST /cabinet/api/me/telegram/unlink-dev
-// (удаляет cabinet_identity telegram у текущего аккаунта). На проде держите false.
-func DevTelegramUnlinkEnabled() bool { return conf.devTelegramUnlink }
-
 // MiniAppEntryURL — полный URL веб-приложения кабинета для кнопок WebApp в Telegram-боте.
 // Пусто, если кабинет выключен или InitConfig ещё не вызывался.
 // Источник: CABINET_MINI_APP_URL или CABINET_PUBLIC_URL + CABINET_MINI_APP_PATH (по умолчанию /cabinet/).
@@ -173,6 +191,20 @@ func BrandName() string {
 
 // BrandLogoFile — абсолютный путь к файлу логотипа на диске (CABINET_BRAND_LOGO_FILE), или "".
 func BrandLogoFile() string { return conf.brandLogoFile }
+
+func PWAEnabled() bool { return conf.pwaEnabled }
+func PWAAppName() string {
+	if strings.TrimSpace(conf.pwaAppName) == "" {
+		return BrandName()
+	}
+	return strings.TrimSpace(conf.pwaAppName)
+}
+func PWAShortName() string {
+	if strings.TrimSpace(conf.pwaShortName) == "" {
+		return "Cabinet"
+	}
+	return strings.TrimSpace(conf.pwaShortName)
+}
 
 // BrandLogoURLForClient — URL для атрибута src у <img>: http(s), путь с /, относительный к публичному URL,
 // либо /cabinet/api/public/brand-logo при настроенном CABINET_BRAND_LOGO_FILE.
@@ -203,6 +235,7 @@ func InitConfig() {
 		slog.Info("cabinet disabled (CABINET_ENABLED=false)")
 		return
 	}
+	conf.profileDeleteEnabled = envBool("CABINET_PROFILE_DELETE_ENABLED", false)
 
 	// Public URL обязателен, если кабинет включён.
 	publicRaw := strings.TrimSpace(os.Getenv("CABINET_PUBLIC_URL"))
@@ -301,6 +334,28 @@ func InitConfig() {
 			)
 		}
 	}
+	conf.yandexClientID = strings.TrimSpace(os.Getenv("CABINET_YANDEX_CLIENT_ID"))
+	conf.yandexClientSecret = os.Getenv("CABINET_YANDEX_CLIENT_SECRET")
+	conf.yandexRedirectURL = strings.TrimSpace(os.Getenv("CABINET_YANDEX_REDIRECT_URL"))
+	if conf.yandexClientID != "" && conf.yandexRedirectURL != "" {
+		if !strings.HasPrefix(conf.yandexRedirectURL, conf.publicURLRaw) {
+			slog.Warn("CABINET_YANDEX_REDIRECT_URL does not start with CABINET_PUBLIC_URL",
+				"redirect_url", conf.yandexRedirectURL,
+				"public_url", conf.publicURLRaw,
+			)
+		}
+	}
+	conf.vkClientID = strings.TrimSpace(os.Getenv("CABINET_VK_CLIENT_ID"))
+	conf.vkClientSecret = os.Getenv("CABINET_VK_CLIENT_SECRET")
+	conf.vkRedirectURL = strings.TrimSpace(os.Getenv("CABINET_VK_CLIENT_REDIRECT_URL"))
+	if conf.vkClientID != "" && conf.vkRedirectURL != "" {
+		if !strings.HasPrefix(conf.vkRedirectURL, conf.publicURLRaw) {
+			slog.Warn("CABINET_VK_CLIENT_REDIRECT_URL does not start with CABINET_PUBLIC_URL",
+				"redirect_url", conf.vkRedirectURL,
+				"public_url", conf.publicURLRaw,
+			)
+		}
+	}
 
 	conf.telegramLoginBotUsername = strings.TrimSpace(os.Getenv("CABINET_TELEGRAM_LOGIN_BOT_USERNAME"))
 	conf.telegramLoginBotUsername = strings.TrimPrefix(conf.telegramLoginBotUsername, "@")
@@ -341,11 +396,6 @@ func InitConfig() {
 		panic("CABINET_METRICS_USER and CABINET_METRICS_PASSWORD must be both set or both empty")
 	}
 
-	conf.devTelegramUnlink = envBool("CABINET_DEV_TELEGRAM_UNLINK", false)
-	if conf.devTelegramUnlink {
-		slog.Warn("CABINET_DEV_TELEGRAM_UNLINK is enabled — dev-only Telegram unlink API is exposed; disable on production")
-	}
-
 	conf.brandName = strings.TrimSpace(os.Getenv("CABINET_BRAND_NAME"))
 	conf.brandLogoURLRaw = strings.TrimSpace(os.Getenv("CABINET_BRAND_LOGO_URL"))
 	logoFileRaw := strings.TrimSpace(os.Getenv("CABINET_BRAND_LOGO_FILE"))
@@ -359,6 +409,10 @@ func InitConfig() {
 		}
 	}
 
+	conf.pwaEnabled = envBool("CABINET_PWA_ENABLED", false)
+	conf.pwaAppName = strings.TrimSpace(os.Getenv("CABINET_PWA_APP_NAME"))
+	conf.pwaShortName = strings.TrimSpace(os.Getenv("CABINET_PWA_SHORT_NAME"))
+
 	slog.Info("cabinet config initialized",
 		"public_url", conf.publicURLRaw,
 		"mini_app_entry_url", conf.miniAppEntryURL,
@@ -369,6 +423,8 @@ func InitConfig() {
 		"web_tg_id_base", conf.webTelegramIDBase,
 		"smtp_enabled", SMTPEnabled(),
 		"google_enabled", GoogleEnabled(),
+		"yandex_enabled", YandexEnabled(),
+		"vk_enabled", VKEnabled(),
 		"telegram_web_auth_mode", conf.telegramWebAuthMode,
 		"telegram_login_bot", conf.telegramLoginBotUsername != "",
 		"telegram_login_hmac_dedicated", conf.telegramLoginBotToken != "",
@@ -377,6 +433,10 @@ func InitConfig() {
 		"metrics_basic_auth", conf.metricsUser != "",
 		"brand_name", BrandName(),
 		"brand_logo_configured", BrandLogoURLForClient() != "",
+		"pwa_enabled", conf.pwaEnabled,
+		"pwa_app_name", PWAAppName(),
+		"pwa_short_name", PWAShortName(),
+		"profile_delete_enabled", conf.profileDeleteEnabled,
 	)
 }
 

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Telegram account linked</title></head>
+<head><meta charset="UTF-8"><title>Sign-in method updated</title></head>
 <body style="font-family:sans-serif;max-width:560px;margin:40px auto;color:#222">
-  <h2 style="color:#0088cc">Telegram successfully linked</h2>
+  <h2 style="color:#0088cc">Accounts merged successfully</h2>
   {{if eq .MergeResult "merged"}}
-  <p>Your Telegram account has been linked to the cabinet. Purchase history and loyalty points have been merged from your Telegram profile.</p>
+  <p>Your sign-in methods and profile data were successfully merged in the cabinet.</p>
   {{else if eq .MergeResult "linked"}}
-  <p>Your Telegram account has been successfully linked to the cabinet.</p>
+  <p>Your sign-in method has been successfully linked to the cabinet.</p>
   {{else}}
-  <p>Your cabinet was already connected to this Telegram account.</p>
+  <p>The changes had already been applied earlier.</p>
   {{end}}
   <p style="color:#666;font-size:13px">If you did not perform this action, contact support immediately.</p>
 </body>

@@ -18,8 +18,6 @@ package oauth
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,9 +36,10 @@ const stateTTL = 10 * time.Minute
 
 // stateRecord — запись о незавершённом OAuth flow.
 type stateRecord struct {
-	verifier    string    // PKCE code_verifier
-	referralRaw string    // опционально: ref из /google/start?ref= (для новой регистрации)
-	expiresAt   time.Time // когда выбрасывать запись
+	verifier        string    // PKCE code_verifier
+	referralRaw     string    // опционально: ref из /google/start?ref= (для новой регистрации)
+	linkAccountID   int64     // 0 — обычный login/register; >0 — привязка Google к этому cabinet_account
+	expiresAt       time.Time // когда выбрасывать запись
 }
 
 // StateStore — thread-safe хранилище state → {verifier, expiry}.
@@ -53,31 +52,32 @@ type StateStore struct {
 // NewStateStore инициализирует пустое хранилище.
 func NewStateStore() *StateStore { return &StateStore{store: make(map[string]stateRecord)} }
 
-// Save сохраняет (state → verifier + опциональный referral).
-func (s *StateStore) Save(state, verifier, referralRaw string) {
+// Save сохраняет (state → verifier + опциональный referral + linkAccountID).
+func (s *StateStore) Save(state, verifier, referralRaw string, linkAccountID int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.store[state] = stateRecord{
-		verifier:    verifier,
-		referralRaw: referralRaw,
-		expiresAt:   time.Now().Add(stateTTL),
+		verifier:      verifier,
+		referralRaw:   referralRaw,
+		linkAccountID: linkAccountID,
+		expiresAt:     time.Now().Add(stateTTL),
 	}
 }
 
-// Pop забирает verifier и referral по state и тут же удаляет запись (одноразовое использование).
-// Возвращает ("", "", false), если state не найден или просрочен.
-func (s *StateStore) Pop(state string) (verifier string, referralRaw string, ok bool) {
+// Pop забирает verifier, referral и linkAccountID по state и тут же удаляет запись (одноразовое использование).
+// Возвращает ok=false, если state не найден или просрочен.
+func (s *StateStore) Pop(state string) (verifier string, referralRaw string, linkAccountID int64, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	rec, found := s.store[state]
 	if !found {
-		return "", "", false
+		return "", "", 0, false
 	}
 	delete(s.store, state)
 	if time.Now().After(rec.expiresAt) {
-		return "", "", false
+		return "", "", 0, false
 	}
-	return rec.verifier, rec.referralRaw, true
+	return rec.verifier, rec.referralRaw, rec.linkAccountID, true
 }
 
 // RunGC запускает горутину, которая раз в минуту удаляет просроченные state'ы.
@@ -146,7 +146,8 @@ const maxOAuthReferralLen = 128
 // Start генерирует state + PKCE verifier, сохраняет в StateStore,
 // возвращает URL для редиректа в Google.
 // referralRaw — опционально query ref (как у email-регистрации: ref_<telegram_id>).
-func (p *GoogleProvider) Start(referralRaw string) (*StartResult, error) {
+// linkAccountID — если >0, callback привяжет Google к этому аккаунту (нужна валидная refresh-сессия).
+func (p *GoogleProvider) Start(referralRaw string, linkAccountID int64) (*StartResult, error) {
 	ref := strings.TrimSpace(referralRaw)
 	if len(ref) > maxOAuthReferralLen {
 		ref = ref[:maxOAuthReferralLen]
@@ -155,15 +156,14 @@ func (p *GoogleProvider) Start(referralRaw string) (*StartResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("google oauth start: gen state: %w", err)
 	}
-	verifier, challenge, err := pkce()
-	if err != nil {
-		return nil, fmt.Errorf("google oauth start: pkce: %w", err)
-	}
-	p.store.Save(state, verifier, ref)
+	// PKCE: в AuthCodeURL нужно передать сам verifier — S256ChallengeOption
+	// внутри считает SHA256(verifier); передавать готовый challenge нельзя (двойной хеш → invalid_grant на token).
+	verifier := oauth2.GenerateVerifier()
+	p.store.Save(state, verifier, ref, linkAccountID)
 
 	authURL := p.cfg.AuthCodeURL(state,
 		oauth2.AccessTypeOnline,
-		oauth2.S256ChallengeOption(challenge),
+		oauth2.S256ChallengeOption(verifier),
 	)
 	return &StartResult{RedirectURL: authURL, State: state}, nil
 }
@@ -177,24 +177,24 @@ type GoogleUserInfo struct {
 	Picture       string `json:"picture"`
 }
 
-// Callback обменивает code на токены, проверяет state, возвращает userinfo и ref из state (если был).
-func (p *GoogleProvider) Callback(ctx context.Context, state, code string) (*GoogleUserInfo, string, error) {
-	verifier, referralRaw, ok := p.store.Pop(state)
+// Callback обменивает code на токены, проверяет state, возвращает userinfo, ref и linkAccountID из state.
+func (p *GoogleProvider) Callback(ctx context.Context, state, code string) (*GoogleUserInfo, string, int64, error) {
+	verifier, referralRaw, linkAccountID, ok := p.store.Pop(state)
 	if !ok {
-		return nil, "", ErrStateInvalid
+		return nil, "", 0, ErrStateInvalid
 	}
 	token, err := p.cfg.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
-		return nil, "", fmt.Errorf("google oauth exchange: %w", err)
+		return nil, "", 0, fmt.Errorf("google oauth exchange: %w", err)
 	}
 	info, err := fetchUserInfo(ctx, p.cfg, token)
 	if err != nil {
-		return nil, "", fmt.Errorf("google userinfo: %w", err)
+		return nil, "", 0, fmt.Errorf("google userinfo: %w", err)
 	}
 	if info.Sub == "" {
-		return nil, "", errors.New("google userinfo: empty sub")
+		return nil, "", 0, errors.New("google userinfo: empty sub")
 	}
-	return info, referralRaw, nil
+	return info, referralRaw, linkAccountID, nil
 }
 
 // ErrStateInvalid — state не найден или просрочен.
@@ -231,14 +231,3 @@ func randomHex(n int) (string, error) {
 	return fmt.Sprintf("%x", b), nil
 }
 
-// pkce генерирует PKCE verifier и challenge (S256).
-func pkce() (verifier, challenge string, err error) {
-	raw := make([]byte, 32)
-	if _, err = rand.Read(raw); err != nil {
-		return
-	}
-	verifier = base64.RawURLEncoding.EncodeToString(raw)
-	sum := sha256.Sum256([]byte(verifier))
-	challenge = base64.RawURLEncoding.EncodeToString(sum[:])
-	return
-}

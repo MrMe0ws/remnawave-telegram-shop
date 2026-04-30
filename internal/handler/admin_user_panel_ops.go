@@ -758,6 +758,24 @@ func (h Handler) AdminUserDeleteConfirmHandler(ctx context.Context, b *bot.Bot, 
 		})
 		return
 	}
+	linkedToCabinet, lerr := h.customerRepository.HasCabinetLink(ctx, cust.ID)
+	if lerr != nil {
+		slog.Error("admin delete link check", "error", lerr)
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: cb.ID,
+			Text:            h.translation.GetText(cb.From.LanguageCode, "admin_user_action_error"),
+			ShowAlert:       true,
+		})
+		return
+	}
+	if linkedToCabinet {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: cb.ID,
+			Text:            "Пользователь привязан к кабинету. Удаление из админки заблокировано.",
+			ShowAlert:       true,
+		})
+		return
+	}
 	rw, errRW := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID)
 	if errRW == nil && rw != nil {
 		if err := h.remnawaveClient.DeleteUser(ctx, rw.UUID); err != nil {

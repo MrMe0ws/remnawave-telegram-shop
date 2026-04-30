@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"remnawave-tg-shop-bot/utils"
 
 )
 
@@ -44,6 +45,11 @@ func (s SyncService) Sync() {
 			continue
 		}
 		tid := *user.TelegramID
+		// Synthetic/web-only ids must never be imported by bot sync.
+		// They belong to cabinet-only customers and can be rounded by panel side.
+		if utils.IsSyntheticTelegramID(tid) {
+			continue
+		}
 		if _, exists := telegramIDsSet[tid]; exists {
 			continue
 		}

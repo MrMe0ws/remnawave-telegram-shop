@@ -131,28 +131,19 @@ export function DeleteAccountSection({ className }: { className?: string }) {
   const navigate = useNavigate()
   const { logout } = useAuthStore()
   const [open, setOpen] = useState(false)
-  const [phrase, setPhrase] = useState('')
+  const [confirmStep, setConfirmStep] = useState(false)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
   async function submit() {
-    const p = phrase.trim()
-    if (p !== 'DELETE') {
-      setErr(t('errors.deleteAccountConfirmMismatch'))
-      return
-    }
     setErr(null)
     setLoading(true)
     try {
-      await api.deleteAccount(p)
+      await api.deleteAccount()
       logout()
       navigate('/login', { replace: true })
     } catch (e) {
-      if (e instanceof ApiError && e.status === 400) {
-        setErr(t('errors.deleteAccountConfirmMismatch'))
-      } else {
-        setErr(t('errors.deleteAccountFailed'))
-      }
+      setErr(t('errors.deleteAccountFailed'))
     } finally {
       setLoading(false)
     }
@@ -166,7 +157,7 @@ export function DeleteAccountSection({ className }: { className?: string }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {!open ? (
-          <Button type="button" variant="destructive" size="sm" onClick={() => { setOpen(true); setPhrase(''); setErr(null) }}>
+          <Button type="button" variant="destructive" size="sm" onClick={() => { setOpen(true); setConfirmStep(false); setErr(null) }}>
             {t('settings.deleteAccount.openButton')}
           </Button>
         ) : (
@@ -174,32 +165,39 @@ export function DeleteAccountSection({ className }: { className?: string }) {
             <Alert variant="destructive">
               <AlertDescription>{t('settings.deleteAccount.warning')}</AlertDescription>
             </Alert>
-            <p className="text-sm text-muted-foreground">{t('settings.deleteAccount.confirmHint')}</p>
-            <Input
-              value={phrase}
-              onChange={(e) => { setPhrase(e.target.value); setErr(null) }}
-              placeholder={t('settings.deleteAccount.confirmPlaceholder')}
-              autoComplete="off"
-              spellCheck={false}
-            />
             {err && (
               <Alert variant="destructive">
                 <AlertDescription>{err}</AlertDescription>
               </Alert>
             )}
+            {confirmStep ? (
+              <p className="text-sm text-muted-foreground">{t('settings.deleteAccount.areYouSure')}</p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => { setOpen(false); setPhrase(''); setErr(null) }}
+                onClick={() => { setOpen(false); setConfirmStep(false); setErr(null) }}
                 disabled={loading}
               >
                 {t('settings.deleteAccount.cancel')}
               </Button>
-              <Button type="button" variant="destructive" size="sm" loading={loading} onClick={() => void submit()}>
-                {t('settings.deleteAccount.submit')}
-              </Button>
+              {!confirmStep ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => { setConfirmStep(true); setErr(null) }}
+                  disabled={loading}
+                >
+                  {t('settings.deleteAccount.submit')}
+                </Button>
+              ) : (
+                <Button type="button" variant="destructive" size="sm" loading={loading} onClick={() => void submit()}>
+                  {t('settings.deleteAccount.submitForever')}
+                </Button>
+              )}
             </div>
           </>
         )}

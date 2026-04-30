@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, Copy, Check, LogOut } from 'lucide-react'
+import { ChevronRight, Copy, Check } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
+import { api } from '@/lib/api'
 import { formatDate, maskEmail } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { ChangePasswordCollapsible, DeleteAccountSection } from '@/features/profile/account-security'
@@ -14,17 +16,24 @@ import { ChangePasswordCollapsible, DeleteAccountSection } from '@/features/prof
 export default function ProfilePage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
-  const { user, fetchMe, logout } = useAuthStore()
+  const { user, fetchMe } = useAuthStore()
   const [copied, setCopied] = useState(false)
+  const { data: referrals } = useQuery({
+    queryKey: ['referrals'],
+    queryFn: () => api.referrals(),
+    staleTime: 60_000,
+    retry: 1,
+  })
 
   useEffect(() => {
     void fetchMe()
   }, [fetchMe])
 
   const refUrl =
-    user?.telegram_id != null && Number.isFinite(user.telegram_id)
+    referrals?.cabinet_register_link ||
+    (user?.telegram_id != null && Number.isFinite(user.telegram_id)
       ? `${window.location.origin}/cabinet/register?ref=ref_${user.telegram_id}`
-      : null
+      : null)
 
   async function copyRef() {
     if (!refUrl) return
@@ -33,8 +42,11 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const emailMethodLinked = Boolean(user?.can_use_email_password_login)
   const emailDisplay =
-    user?.email && String(user.email).trim() !== '' ? maskEmail(String(user.email)) : '—'
+    emailMethodLinked && user?.email && String(user.email).trim() !== ''
+      ? maskEmail(String(user.email))
+      : '—'
 
   return (
     <AppLayout>
@@ -129,17 +141,8 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        <DeleteAccountSection />
+        {user?.can_delete_account_ui ? <DeleteAccountSection /> : null}
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full gap-2"
-          onClick={() => logout()}
-        >
-          <LogOut className="size-4" />
-          {t('nav.logout')}
-        </Button>
       </div>
     </AppLayout>
   )
@@ -156,3 +159,4 @@ function ProfileRow({ label, value, hint }: { label: string; value: string; hint
     </div>
   )
 }
+

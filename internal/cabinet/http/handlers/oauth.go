@@ -4,23 +4,27 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	googleoauth "remnawave-tg-shop-bot/internal/cabinet/auth/oauth"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/service"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
+	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	cabmetrics "remnawave-tg-shop-bot/internal/cabinet/metrics"
 )
 
 // OAuthHandler — эндпоинты /cabinet/api/auth/google/* и /cabinet/api/auth/telegram.
 //
 // Google-флоу:
-//   GET  /auth/google/start         → редирект на Google
-//   GET  /auth/google/callback      → обмен code, login или link-required
-//   GET  /auth/google/confirm       → подтверждение привязки по email-токену
+//
+//	GET  /auth/google/start         → редирект на Google
+//	GET  /auth/google/callback      → обмен code, login или link-required
+//	GET  /auth/google/confirm       → подтверждение привязки по email-токену
 //
 // Telegram-флоу:
-//   POST /auth/telegram             → Widget или MiniApp (поле source)
+//
+//	POST /auth/telegram             → Widget или MiniApp (поле source)
 type OAuthHandler struct {
 	svc          *service.Service
 	cookieDomain string
@@ -56,11 +60,12 @@ func (h *OAuthHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
 // GoogleCallback — GET /cabinet/api/auth/google/callback?code=...&state=...
 // Обменивает code, создаёт/находит аккаунт и выдаёт сессию.
 //
-// Возможные ответы:
-//   200 OK  — login ok, body содержит access_token + csrf_token
-//   202 Accepted  — email совпадает с существующим аккаунтом;
-//                   письмо отправлено, body: {"action":"link_required","masked_email":"u***@…"}
-//   401/500 — ошибка
+// Возможные ответы (браузерный redirect_uri — всегда редирект в SPA, не JSON):
+//
+//	302 → /cabinet/dashboard — вход/регистрация ok (Set-Cookie: refresh)
+//	302 → /cabinet/login?google_link=pending&masked_email=… — нужно подтверждение по письму
+//	302 → /cabinet/accounts?google_link_error=… — привязка Google к сессии (ошибка)
+//	400/403/500 — ошибка без редиректа
 func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
@@ -71,14 +76,38 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.svc.GoogleCallback(r.Context(), state, code,
-		r.UserAgent(), clientIP(r))
+		r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
 	if err != nil {
+		if result.WasLinkAttempt {
+			to := "/cabinet/accounts?status=error&reason_code=google_link_unknown"
+			switch {
+			case errors.Is(err, service.ErrInvalidToken):
+				to = "/cabinet/accounts?status=error&reason_code=google_link_session_invalid"
+			case errors.Is(err, service.ErrGoogleLinkSessionMismatch):
+				to = "/cabinet/accounts?status=error&reason_code=google_link_session_mismatch"
+			case errors.Is(err, service.ErrGoogleMergeRequired):
+				to = "/cabinet/link/merge?status=merge_required&reason_code=google_merge_candidate_detected&auto=1&provider=google"
+			case errors.Is(err, service.ErrGoogleLinkedElsewhere):
+				to = "/cabinet/accounts?status=error&reason_code=social_account_occupied&provider=google"
+			case errors.Is(err, service.ErrGoogleLinkEmailConflict):
+				to = "/cabinet/accounts?status=error&reason_code=email_conflict_with_another_account&provider=google"
+			case errors.Is(err, service.ErrInvalidCredentials):
+				to = "/cabinet/accounts?status=error&reason_code=account_blocked"
+			}
+			cabmetrics.RecordAuth("google_callback", "link_flow_error")
+			http.Redirect(w, r, to, http.StatusFound)
+			return
+		}
 		if errors.Is(err, service.ErrGoogleLinkRequired) && result.LinkCtx != nil {
 			cabmetrics.RecordAuth("google_callback", "link_required")
-			writeJSON(w, http.StatusAccepted, map[string]any{
-				"action":       "link_required",
-				"masked_email": result.LinkCtx.MaskedEmail,
-			})
+			// Браузер пришёл с redirect_uri на API — отдаём JSON бесполезно; ведём в SPA.
+			q := url.Values{}
+			q.Set("status", "merge_verification_required")
+			q.Set("reason_code", "google_link_email_confirmation_required")
+			if me := strings.TrimSpace(result.LinkCtx.MaskedEmail); me != "" {
+				q.Set("masked_email", me)
+			}
+			http.Redirect(w, r, "/cabinet/login?"+q.Encode(), http.StatusFound)
 			return
 		}
 		if errors.Is(err, service.ErrInvalidToken) {
@@ -104,11 +133,12 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	cabmetrics.RecordAuth("google_callback", "success")
 	setRefreshCookie(w, result.Pair, h.cookieDomain, "/cabinet/api/auth")
-	writeJSON(w, http.StatusOK, loginResp{
-		AccessToken: result.Pair.AccessToken,
-		AccessExp:   result.Pair.AccessExp.Unix(),
-		CSRFToken:   result.Pair.CSRFToken,
-	})
+	if result.SuccessRedirect != "" {
+		http.Redirect(w, r, result.SuccessRedirect, http.StatusFound)
+		return
+	}
+	// Полный редирект в SPA: иначе пользователь «застревает» на URL колбэка с сырым JSON.
+	http.Redirect(w, r, "/cabinet/dashboard", http.StatusFound)
 }
 
 // GoogleLinkConfirm — GET /cabinet/api/auth/google/confirm?token=...
@@ -120,7 +150,7 @@ func (h *OAuthHandler) GoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "missing token", http.StatusBadRequest)
 		return
 	}
-	pair, err := h.svc.GoogleLinkConfirm(r.Context(), token, r.UserAgent(), clientIP(r))
+	pair, err := h.svc.GoogleLinkConfirm(r.Context(), token, r.UserAgent(), middleware.ClientIP(r))
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidToken) {
 			cabmetrics.RecordAuth("google_link_confirm", "client_error")
@@ -139,11 +169,97 @@ func (h *OAuthHandler) GoogleLinkConfirm(w http.ResponseWriter, r *http.Request)
 	}
 	cabmetrics.RecordAuth("google_link_confirm", "success")
 	setRefreshCookie(w, pair, h.cookieDomain, "/cabinet/api/auth")
-	writeJSON(w, http.StatusOK, loginResp{
-		AccessToken: pair.AccessToken,
-		AccessExp:   pair.AccessExp.Unix(),
-		CSRFToken:   pair.CSRFToken,
-	})
+	http.Redirect(w, r, "/cabinet/dashboard", http.StatusFound)
+}
+
+func (h *OAuthHandler) YandexStart(w http.ResponseWriter, r *http.Request) {
+	ref := strings.TrimSpace(r.URL.Query().Get("ref"))
+	redirectURL, err := h.svc.YandexStart(ref)
+	if err != nil {
+		if errors.Is(err, service.ErrYandexDisabled) {
+			http.Error(w, "yandex oauth disabled", http.StatusNotImplemented)
+			return
+		}
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+func (h *OAuthHandler) YandexCallback(w http.ResponseWriter, r *http.Request) {
+	state := strings.TrimSpace(r.URL.Query().Get("state"))
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	if state == "" || code == "" {
+		http.Error(w, "missing state or code", http.StatusBadRequest)
+		return
+	}
+	result, err := h.svc.YandexCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
+	if err != nil {
+		if result.WasLinkAttempt {
+			to := "/cabinet/accounts?status=error&reason_code=yandex_link_unknown"
+			switch {
+			case errors.Is(err, service.ErrYandexMergeRequired):
+				to = "/cabinet/link/merge?status=merge_required&reason_code=yandex_merge_candidate_detected&auto=1&provider=yandex"
+			case errors.Is(err, service.ErrInvalidToken):
+				to = "/cabinet/accounts?status=error&reason_code=yandex_link_session_invalid"
+			}
+			http.Redirect(w, r, to, http.StatusFound)
+			return
+		}
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	setRefreshCookie(w, result.Pair, h.cookieDomain, "/cabinet/api/auth")
+	if result.SuccessRedirect != "" {
+		http.Redirect(w, r, result.SuccessRedirect, http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, "/cabinet/dashboard", http.StatusFound)
+}
+
+func (h *OAuthHandler) VKStart(w http.ResponseWriter, r *http.Request) {
+	ref := strings.TrimSpace(r.URL.Query().Get("ref"))
+	redirectURL, err := h.svc.VKStart(ref)
+	if err != nil {
+		if errors.Is(err, service.ErrVKDisabled) {
+			http.Error(w, "vk oauth disabled", http.StatusNotImplemented)
+			return
+		}
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+func (h *OAuthHandler) VKCallback(w http.ResponseWriter, r *http.Request) {
+	state := strings.TrimSpace(r.URL.Query().Get("state"))
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	if state == "" || code == "" {
+		http.Error(w, "missing state or code", http.StatusBadRequest)
+		return
+	}
+	result, err := h.svc.VKCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
+	if err != nil {
+		if result.WasLinkAttempt {
+			to := "/cabinet/accounts?status=error&reason_code=vk_link_unknown"
+			switch {
+			case errors.Is(err, service.ErrVKMergeRequired):
+				to = "/cabinet/link/merge?status=merge_required&reason_code=vk_merge_candidate_detected&auto=1&provider=vk"
+			case errors.Is(err, service.ErrInvalidToken):
+				to = "/cabinet/accounts?status=error&reason_code=vk_link_session_invalid"
+			}
+			http.Redirect(w, r, to, http.StatusFound)
+			return
+		}
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	setRefreshCookie(w, result.Pair, h.cookieDomain, "/cabinet/api/auth")
+	if result.SuccessRedirect != "" {
+		http.Redirect(w, r, result.SuccessRedirect, http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, "/cabinet/dashboard", http.StatusFound)
 }
 
 // ============================================================================
@@ -174,25 +290,29 @@ func (h *OAuthHandler) TelegramOIDCCallback(w http.ResponseWriter, r *http.Reque
 	state := strings.TrimSpace(r.URL.Query().Get("state"))
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
 	if state == "" || code == "" {
-		http.Redirect(w, r, "/cabinet/login?tg_error=missing_code", http.StatusFound)
+		http.Redirect(w, r, "/cabinet/login?status=error&reason_code=telegram_oidc_missing_code", http.StatusFound)
 		return
 	}
-	res, err := h.svc.TelegramOIDCCallback(r.Context(), state, code, r.UserAgent(), clientIP(r))
+	res, err := h.svc.TelegramOIDCCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r))
 	if err != nil {
 		slog.Warn("telegram oidc callback failed", "error", err)
-		http.Redirect(w, r, "/cabinet/login?tg_error=oauth_failed", http.StatusFound)
+		if errors.Is(err, bootstrap.ErrTelegramCustomerLinkedElsewhere) {
+			http.Redirect(w, r, "/cabinet/link/merge?status=merge_required&reason_code=telegram_merge_candidate_detected&auto=1&provider=telegram", http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, "/cabinet/login?status=error&reason_code=telegram_oidc_failed", http.StatusFound)
 		return
 	}
 	if res.Mode == googleoauth.TelegramOIDCModeLink {
-		to := "/cabinet/accounts?tg_linked=1"
+		to := "/cabinet/accounts?status=linked&reason_code=telegram_linked"
 		if res.HasMergeCandidate {
-			to = "/cabinet/link/merge?auto=1"
+			to = "/cabinet/link/merge?status=merge_required&reason_code=telegram_merge_candidate_detected&auto=1&provider=telegram"
 		}
 		http.Redirect(w, r, to, http.StatusFound)
 		return
 	}
 	if res.Pair == nil {
-		http.Redirect(w, r, "/cabinet/login?tg_error=oauth_failed", http.StatusFound)
+		http.Redirect(w, r, "/cabinet/login?status=error&reason_code=telegram_oidc_failed", http.StatusFound)
 		return
 	}
 	setRefreshCookie(w, res.Pair, h.cookieDomain, "/cabinet/api/auth")
@@ -233,7 +353,7 @@ func (h *OAuthHandler) TelegramLogin(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	ua := r.UserAgent()
-	ip := clientIP(r)
+	ip := middleware.ClientIP(r)
 
 	switch req.Source {
 	case "widget":
@@ -312,18 +432,4 @@ func (h *OAuthHandler) TelegramLogin(w http.ResponseWriter, r *http.Request) {
 		AccessExp:   pair.AccessExp.Unix(),
 		CSRFToken:   pair.CSRFToken,
 	})
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-// clientIP — быстрый хелпер для X-Forwarded-For / RemoteAddr.
-// Не pretend to be production-grade (нет trust-proxy list), но для rate-limit
-// достаточно.
-func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return xff
-	}
-	return r.RemoteAddr
 }

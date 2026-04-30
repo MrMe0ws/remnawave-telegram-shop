@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Logo } from './Logo'
 import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
@@ -18,8 +19,13 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4">
-        <Logo size="sm" />
+      <header className="flex items-center justify-between px-4 py-2 sm:px-5 sm:py-2.5">
+        <Link
+          to="/dashboard"
+          className="rounded-md outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Logo size="sm" />
+        </Link>
         <div className="flex items-center gap-1">
           <LangToggle />
           <ThemeToggle />

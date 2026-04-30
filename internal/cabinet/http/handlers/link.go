@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
+	"strings"
+	"unicode"
 
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/cabinet/linking"
@@ -105,7 +108,7 @@ func (h *LinkHandler) TelegramConfirm(w http.ResponseWriter, r *http.Request) {
 		Source:    req.Source,
 		Nonce:     req.Nonce,
 		UserAgent: r.UserAgent(),
-		IP:        clientIP(r),
+		IP:        middleware.ClientIP(r),
 		ID:        req.ID,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
@@ -164,16 +167,13 @@ func (h *LinkHandler) MergePreview(w http.ResponseWriter, r *http.Request) {
 
 	preview, err := h.svc.Preview(r.Context(), claims.AccountID)
 	if err != nil {
-		// Dry-run при «опасном» merge возвращает ErrDangerousConflict, но preview
-		// уже заполнен (две подписки и т.д.) — отдаём 200, UI читает is_dangerous.
-		if errors.Is(err, linking.ErrDangerousConflict) && preview != nil {
-			w.Header().Set("Cache-Control", "no-store")
-			writeJSON(w, http.StatusOK, mergePreviewToResponse(preview))
-			return
-		}
 		switch {
 		case errors.Is(err, linking.ErrNoClaimFound):
-			http.Error(w, "no telegram claim; call /link/telegram/confirm first", http.StatusUnprocessableEntity)
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{
+				"status":      "error",
+				"reason_code": "merge_claim_missing",
+				"message":     "no merge claim: confirm telegram or verify email merge first",
+			})
 		default:
 			http.Error(w, "internal error", http.StatusInternalServerError)
 		}
@@ -191,6 +191,8 @@ func (h *LinkHandler) MergePreview(w http.ResponseWriter, r *http.Request) {
 // mergeConfirmRequest — тело POST /link/merge/confirm.
 type mergeConfirmRequest struct {
 	Force bool `json:"force"`
+	// KeepSubscription — при двух подписках: "web" (текущий customer кабинета) или "tg" (найденный по Telegram).
+	KeepSubscription string `json:"keep_subscription"`
 }
 
 // MergeConfirm — выполняет реальный merge.
@@ -211,9 +213,9 @@ func (h *LinkHandler) MergeConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ikey := r.Header.Get("Idempotency-Key")
-	if ikey == "" {
+	if !validIdempotencyKey(ikey) {
 		cabmetrics.RecordMerge("client_error")
-		http.Error(w, "Idempotency-Key header required", http.StatusBadRequest)
+		http.Error(w, "Idempotency-Key must be 16-64 chars [A-Za-z0-9._:-]", http.StatusBadRequest)
 		return
 	}
 
@@ -221,42 +223,54 @@ func (h *LinkHandler) MergeConfirm(w http.ResponseWriter, r *http.Request) {
 	// DisallowUnknownFields отключаем для force — тело может быть пустым.
 	_ = decodeJSON(w, r, &req)
 
-	result, err := h.svc.Merge(r.Context(), claims.AccountID, ikey, req.Force)
+	result, err := h.svc.Merge(r.Context(), claims.AccountID, ikey, req.Force, req.KeepSubscription)
 
 	if err != nil {
 		switch {
+		case errors.Is(err, linking.ErrSubscriptionChoiceRequired):
+			cabmetrics.RecordMerge("client_error")
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"status":          "merge_blocked",
+				"reason_code":     "double_active_subscription_conflict",
+				"message":         "pass keep_subscription web or tg when both accounts have a subscription history",
+				"requires_choice": true,
+			})
+			return
 		case errors.Is(err, linking.ErrMergeAlreadyDone):
 			cabmetrics.RecordMerge("already_done")
 			// Идемпотентный повтор — возвращаем 202 с закешированным результатом.
 			if result != nil {
 				writeJSON(w, http.StatusAccepted, map[string]any{
+					"status":      "already_done",
+					"reason_code": "idempotency_key_reused",
 					"result":      "already_done",
 					"customer_id": result.CustomerID,
 				})
 			} else {
-				writeJSON(w, http.StatusAccepted, map[string]string{"result": "already_done"})
+				writeJSON(w, http.StatusAccepted, map[string]string{
+					"status":      "already_done",
+					"reason_code": "idempotency_key_reused",
+					"result":      "already_done",
+				})
 			}
 			return
 		case errors.Is(err, linking.ErrNoClaimFound):
 			cabmetrics.RecordMerge("client_error")
-			http.Error(w, "no telegram claim; call /link/telegram/confirm first", http.StatusUnprocessableEntity)
-			return
-		case errors.Is(err, linking.ErrDangerousConflict):
-			// Опасный конфликт — возвращаем 409 с preview для второго подтверждения.
-			preview, _ := h.svc.Preview(r.Context(), claims.AccountID)
-			resp := map[string]any{
-				"error":   "dangerous_conflict",
-				"message": "both customers have active subscriptions; pass force=true to proceed",
-			}
-			if preview != nil {
-				resp["preview"] = mergePreviewToResponse(preview)
-			}
-			cabmetrics.RecordMerge("conflict")
-			writeJSON(w, http.StatusConflict, resp)
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{
+				"status":      "error",
+				"reason_code": "merge_claim_missing",
+				"message":     "no merge claim: confirm telegram or verify email merge first",
+			})
 			return
 		default:
+			slog.Error("cabinet merge confirm failed",
+				"account_id", claims.AccountID,
+				"error", err,
+				"keep_subscription", req.KeepSubscription,
+				"force", req.Force,
+			)
 			cabmetrics.RecordMerge("server_error")
-			http.Error(w, "internal error: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -268,6 +282,8 @@ func (h *LinkHandler) MergeConfirm(w http.ResponseWriter, r *http.Request) {
 		cabmetrics.RecordMerge("success")
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
+		"status":          result.Result,
+		"reason_code":     "merge_committed",
 		"result":          result.Result,
 		"customer_id":     result.CustomerID,
 		"purchases_moved": result.PurchasesMoved,
@@ -280,36 +296,47 @@ func (h *LinkHandler) MergeConfirm(w http.ResponseWriter, r *http.Request) {
 // ============================================================================
 
 type mergeCustomerResp struct {
-	ID               int64  `json:"id"`
-	ExpireAt         any    `json:"expire_at"`
-	LoyaltyXP        int64  `json:"loyalty_xp"`
-	ExtraHwid        int    `json:"extra_hwid"`
-	IsWebOnly        bool   `json:"is_web_only"`
-	HasSubscription  bool   `json:"has_subscription"`
+	ID              int64 `json:"id"`
+	ExpireAt        any   `json:"expire_at"`
+	LoyaltyXP       int64 `json:"loyalty_xp"`
+	ExtraHwid       int   `json:"extra_hwid"`
+	IsWebOnly       bool  `json:"is_web_only"`
+	HasSubscription bool  `json:"has_subscription"`
+	CurrentTariffID *int64 `json:"current_tariff_id,omitempty"`
 }
 
 type mergePreviewResp struct {
-	CustomerWeb     *mergeCustomerResp `json:"customer_web,omitempty"`
-	CustomerTg      *mergeCustomerResp `json:"customer_tg,omitempty"`
-	MergedExpireAt  any                `json:"merged_expire_at"`
-	MergedLoyaltyXP int64              `json:"merged_loyalty_xp"`
-	MergedExtraHwid int                `json:"merged_extra_hwid"`
-	PurchasesMoved  int                `json:"purchases_moved"`
-	ReferralsMoved  int                `json:"referrals_moved"`
-	IsNoop          bool               `json:"is_noop"`
-	IsDangerous     bool               `json:"is_dangerous"`
-	DangerReason    string             `json:"danger_reason,omitempty"`
+	CustomerWeb *mergeCustomerResp `json:"customer_web,omitempty"`
+	CustomerTg  *mergeCustomerResp `json:"customer_tg,omitempty"`
+	// UISwapSides — см. linking.MergePreview.UISwapSides (email-peer merge + Telegram).
+	UISwapSides     bool   `json:"ui_swap_sides,omitempty"`
+	MergedExpireAt  any    `json:"merged_expire_at"`
+	MergedLoyaltyXP int64  `json:"merged_loyalty_xp"`
+	MergedExtraHwid int    `json:"merged_extra_hwid"`
+	PurchasesMoved  int    `json:"purchases_moved"`
+	ReferralsMoved  int    `json:"referrals_moved"`
+	IsNoop          bool   `json:"is_noop"`
+	IsDangerous     bool   `json:"is_dangerous"`
+	DangerReason    string `json:"danger_reason,omitempty"`
+	// RequiresSubscriptionChoice — оба customer с expire_at; нужен keep_subscription в confirm.
+	RequiresSubscriptionChoice bool `json:"requires_subscription_choice"`
+	ClaimExpiresAt             any  `json:"claim_expires_at,omitempty"`
 }
 
 func mergePreviewToResponse(p *linking.MergePreview) mergePreviewResp {
 	resp := mergePreviewResp{
-		MergedLoyaltyXP: p.MergedLoyaltyXP,
-		MergedExtraHwid: p.MergedExtraHwid,
-		PurchasesMoved:  p.PurchasesMoved,
-		ReferralsMoved:  p.ReferralsMoved,
-		IsNoop:          p.IsNoop,
-		IsDangerous:     p.IsDangerous,
-		DangerReason:    p.DangerReason,
+		MergedLoyaltyXP:            p.MergedLoyaltyXP,
+		MergedExtraHwid:            p.MergedExtraHwid,
+		PurchasesMoved:             p.PurchasesMoved,
+		ReferralsMoved:             p.ReferralsMoved,
+		IsNoop:                     p.IsNoop,
+		IsDangerous:                p.IsDangerous,
+		DangerReason:               p.DangerReason,
+		RequiresSubscriptionChoice: p.RequiresSubscriptionChoice,
+		UISwapSides:                p.UISwapSides,
+	}
+	if p.ClaimExpiresAt != nil {
+		resp.ClaimExpiresAt = p.ClaimExpiresAt.UTC()
 	}
 	if p.MergedExpireAt != nil {
 		resp.MergedExpireAt = p.MergedExpireAt.UTC()
@@ -329,6 +356,7 @@ func snapshotToResp(s *linking.CustomerSnapshot) *mergeCustomerResp {
 		LoyaltyXP: s.LoyaltyXP,
 		ExtraHwid: s.ExtraHwid,
 		IsWebOnly: s.IsWebOnly,
+		CurrentTariffID: s.CurrentTariffID,
 	}
 	if s.ExpireAt != nil {
 		r.ExpireAt = s.ExpireAt.UTC()
@@ -340,4 +368,23 @@ func snapshotToResp(s *linking.CustomerSnapshot) *mergeCustomerResp {
 func methodNotAllowed(w http.ResponseWriter, allow string) {
 	w.Header().Set("Allow", allow)
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func validIdempotencyKey(v string) bool {
+	v = strings.TrimSpace(v)
+	if len(v) < 16 || len(v) > 64 {
+		return false
+	}
+	for _, r := range v {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			continue
+		}
+		switch r {
+		case '.', '_', ':', '-':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
 }

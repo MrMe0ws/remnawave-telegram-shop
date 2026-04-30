@@ -73,6 +73,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	sessionRepo := repository.NewSessionRepo(pool)
 	evRepo := repository.NewEmailVerificationRepo(pool)
 	prRepo := repository.NewPasswordResetRepo(pool)
+	emailMergeCodesRepo := repository.NewEmailMergeVerificationRepo(pool)
 	linkRepo := repository.NewAccountCustomerLinkRepo(pool)
 
 	// CustomerRepository живёт в пакете бота; передаём тот же pool, чтобы link
@@ -125,7 +126,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		AntiEnumLatency:   300 * time.Millisecond,
 		PasswordParams:    password.DefaultParams(),
 		PasswordPolicy:    password.DefaultPolicy(),
-	}, accountRepo, identityRepo, sessionRepo, evRepo, prRepo, jwtIssuer, mailer, customerBootstrap)
+	}, accountRepo, identityRepo, sessionRepo, evRepo, prRepo, jwtIssuer, mailer, customerBootstrap, emailMergeCodesRepo)
 	authSvc.SetTelegramCustomerLookup(customerRepo, linkRepo)
 
 	// Google OAuth (опционально).
@@ -141,6 +142,34 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		)
 		authSvc.SetGoogle(ctx, googleProvider)
 		oauthHandler = handlers.NewOAuth(authSvc, cabcfg.CookieDomain())
+	}
+	if cabcfg.YandexEnabled() {
+		yandexStateStore := googleoauth.NewStateStore()
+		yandexStateStore.RunGC(ctx)
+		yandexProvider := googleoauth.NewYandexProvider(
+			cabcfg.YandexClientID(),
+			cabcfg.YandexClientSecret(),
+			cabcfg.YandexRedirectURL(),
+			yandexStateStore,
+		)
+		authSvc.SetYandex(ctx, yandexProvider)
+		if oauthHandler == nil {
+			oauthHandler = handlers.NewOAuth(authSvc, cabcfg.CookieDomain())
+		}
+	}
+	if cabcfg.VKEnabled() {
+		vkStateStore := googleoauth.NewStateStore()
+		vkStateStore.RunGC(ctx)
+		vkProvider := googleoauth.NewVKProvider(
+			cabcfg.VKClientID(),
+			cabcfg.VKClientSecret(),
+			cabcfg.VKRedirectURL(),
+			vkStateStore,
+		)
+		authSvc.SetVK(ctx, vkProvider)
+		if oauthHandler == nil {
+			oauthHandler = handlers.NewOAuth(authSvc, cabcfg.CookieDomain())
+		}
 	}
 
 	// Telegram HMAC (Mini App initData + Login Widget 1.0): токены задаём всегда, если они
@@ -180,16 +209,19 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		authSvc,
 		cabcfg.CookieDomain(),
 		cabcfg.GoogleEnabled(),
+		cabcfg.YandexEnabled(),
+		cabcfg.VKEnabled(),
 		tgWidgetBot,
 		cabcfg.TelegramOIDCEnabled(),
 		cabcfg.TelegramWebAuthMode(),
 	)
+	contentHandler := handlers.NewCabinetContentHandler()
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
-		paymentService, rw, customerRepo, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.TelegramOIDCEnabled(), cabcfg.DevTelegramUnlinkEnabled())
+		paymentService, rw, customerRepo, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 
-	activityHandler := handlers.NewCabinetActivity(linkRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
+	activityHandler := handlers.NewCabinetActivity(linkRepo, identityRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
 	var promoCodesHandler *handlers.PromoCodesHandler
 	if promoService != nil {
 		promoCodesHandler = handlers.NewPromoCodes(customerBootstrap, customerRepo, linkRepo, promoService)
@@ -222,6 +254,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		mailer, cabTelegramWidgetToken,
 		rw,
 	)
+	authSvc.SetMergeEmailPeerClaimSaver(mergeService.SaveEmailPeerClaim)
+	authSvc.SetMergeTelegramClaimSaver(mergeService.SaveTelegramOIDCClaim)
 	linkHandler := handlers.NewLink(mergeService)
 
 	// Rate-limiters — по одному на правило (см. mvp-tz.md 8.3).
@@ -230,6 +264,9 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	registerIPLim := ratelimit.New(ratelimit.Rule{Count: 3, Interval: time.Hour})
 	forgotEmailLim := ratelimit.New(ratelimit.Rule{Count: 3, Interval: time.Hour})
 	resendVerifyAcctLim := ratelimit.New(ratelimit.Rule{Count: 3, Interval: time.Hour})
+	// Подтверждение email по коду из письма (публичный POST без сессии).
+	verifyEmailConfirmIPLim := ratelimit.New(ratelimit.Rule{Count: 15, Interval: time.Minute})
+	verifyResendPublicIPLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
 	// Платёжный лимитер: 20 запросов/минуту на account. Ключ — account_id,
 	// потому что пользователь не должен страдать от NAT'а общего IP (а в
 	// кабинет он уже авторизован, так что account_id точнее IP).
@@ -241,7 +278,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	deleteAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 	trialActivateAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 
-	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim} {
+	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim} {
 		lim.RunGC(ctx)
 	}
 
@@ -262,8 +299,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	api := http.NewServeMux()
 	api.Handle("/cabinet/api/metrics", wrapMetricsBasicAuth(cabmetrics.Handler()))
 
-	registerAPIRoutes(api, authHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, jwtIssuer,
-		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
+	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, jwtIssuer,
+		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
 	// 404 JSON на любой неизвестный /cabinet/api/*.
@@ -334,6 +371,7 @@ func registerCabinetRootRedirects(mux *http.ServeMux) {
 func registerAPIRoutes(
 	api *http.ServeMux,
 	auth *handlers.AuthHandler,
+	content *handlers.CabinetContentHandler,
 	me *handlers.MeHandler,
 	tariffs *handlers.TariffsHandler,
 	subscription *handlers.SubscriptionHandler,
@@ -343,7 +381,7 @@ func registerAPIRoutes(
 	pay *handlers.PaymentsHandler,
 	link *handlers.LinkHandler,
 	jwtIssuer *jwt.Issuer,
-	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
+	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
 ) {
 	// Healthz — без middleware, открыт всем.
@@ -353,6 +391,24 @@ func registerAPIRoutes(
 	api.Handle("/cabinet/api/auth/bootstrap",
 		methodRouter(map[string]http.Handler{
 			http.MethodGet: http.HandlerFunc(auth.AuthBootstrap),
+		}),
+	)
+	// GET /content/faq — runtime JSON-контент кабинета (из /translations/cabinet/FAQ.json).
+	api.Handle("/cabinet/api/content/faq",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(content.FAQ),
+		}),
+	)
+	// GET /content/app-config — runtime JSON-гайды подключения устройств.
+	api.Handle("/cabinet/api/content/app-config",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(content.AppConfig),
+		}),
+	)
+	// GET /public/pwa-manifest.webmanifest — runtime PWA manifest из CABINET_PWA_*.
+	api.Handle("/cabinet/api/public/pwa-manifest.webmanifest",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(content.PWAManifest),
 		}),
 	)
 
@@ -378,6 +434,7 @@ func registerAPIRoutes(
 	api.Handle("/cabinet/api/auth/register",
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(auth.Register),
+			middleware.RequireTurnstile(),
 			middleware.RateLimit(registerIPLim, ipKey("register")),
 		)),
 	)
@@ -386,6 +443,7 @@ func registerAPIRoutes(
 	api.Handle("/cabinet/api/auth/login",
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(auth.Login),
+			middleware.RequireTurnstile(),
 			middleware.RateLimit(loginIPLim, ipKey("login")),
 			middleware.RateLimit(loginEmailLim, emailBodyKey("login")),
 		)),
@@ -415,15 +473,31 @@ func registerAPIRoutes(
 	api.Handle("/cabinet/api/auth/password/forgot",
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(auth.ForgotPassword),
+			middleware.RequireTurnstile(),
 			middleware.RateLimit(forgotEmailLim, emailBodyKey("forgot")),
+		)),
+	)
+
+	// POST /auth/email/verify/resend-public — повторная отправка кода без JWT (после регистрации).
+	api.Handle("/cabinet/api/auth/email/verify/resend-public",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.ResendVerifyEmailPublic),
+			middleware.RequireTurnstile(),
+			middleware.RateLimit(verifyResendPublicIPLim, ipKey("email_verify_resend_public")),
+			middleware.RateLimit(forgotEmailLim, emailBodyKey("email_verify_resend_public")),
 		)),
 	)
 
 	// POST /auth/password/reset.
 	api.Handle("/cabinet/api/auth/password/reset", onlyPOST(http.HandlerFunc(auth.ResetPassword)))
 
-	// POST /auth/email/verify/confirm.
-	api.Handle("/cabinet/api/auth/email/verify/confirm", onlyPOST(http.HandlerFunc(auth.ConfirmEmail)))
+	// POST /auth/email/verify/confirm (rate-limit по IP — защита перебора кода).
+	api.Handle("/cabinet/api/auth/email/verify/confirm",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(auth.ConfirmEmail),
+			middleware.RateLimit(verifyEmailConfirmIPLim, ipKey("email_verify_confirm")),
+		)),
+	)
 
 	// ======== Защищённые эндпоинты (RequireAuth + CSRF для мутирующих) ========
 
@@ -469,10 +543,29 @@ func registerAPIRoutes(
 		)),
 	)
 
-	// POST /me/telegram/unlink-dev — только при CABINET_DEV_TELEGRAM_UNLINK=true (иначе 404).
-	api.Handle("/cabinet/api/me/telegram/unlink-dev",
+	// POST /me/email/link — привязка email+пароля к OAuth/Telegram-аккаунту (письмо подтверждения).
+	api.Handle("/cabinet/api/me/email/link",
 		onlyPOST(middleware.Chain(
-			http.HandlerFunc(me.PostTelegramUnlinkDev),
+			http.HandlerFunc(me.PostLinkEmail),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(resendVerifyAcctLim, accountKey("email_link")),
+		)),
+	)
+	// POST /me/email/link/verify-code — подтверждение merge-кода для email-конфликта OAuth-only.
+	api.Handle("/cabinet/api/me/email/link/verify-code",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.PostLinkEmailVerifyCode),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(resendVerifyAcctLim, accountKey("email_link_verify_code")),
+		)),
+	)
+
+	// POST /me/identities/unlink — снятие привязки google|telegram (тело: {"provider":"google"}).
+	api.Handle("/cabinet/api/me/identities/unlink",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.PostIdentityUnlink),
 			middleware.RequireAuth(jwtIssuer),
 			middleware.CSRF(),
 		)),
@@ -484,6 +577,36 @@ func registerAPIRoutes(
 				middleware.RequireAuth(jwtIssuer),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(oauthIPLim, accountKey("telegram_link_oidc_start")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/me/google/link/start",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.GoogleLinkStart),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(oauthIPLim, accountKey("google_link_start")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/me/yandex/link/start",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.YandexLinkStart),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(oauthIPLim, accountKey("yandex_link_start")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/me/vk/link/start",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.VKLinkStart),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(oauthIPLim, accountKey("vk_link_start")),
 			),
 		}),
 	)
@@ -557,6 +680,38 @@ func registerAPIRoutes(
 				),
 			}),
 		)
+		api.Handle("/cabinet/api/auth/yandex/start",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.YandexStart),
+					middleware.RateLimit(oauthIPLim, ipKey("yandex_start")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/auth/yandex/callback",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.YandexCallback),
+					middleware.RateLimit(oauthIPLim, ipKey("yandex_callback")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/auth/vk/start",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.VKStart),
+					middleware.RateLimit(oauthIPLim, ipKey("vk_start")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/auth/vk/callback",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(oauthH.VKCallback),
+					middleware.RateLimit(oauthIPLim, ipKey("vk_callback")),
+				),
+			}),
+		)
 		// GET /auth/google/confirm?token=... — подтверждение привязки по ссылке из письма.
 		api.Handle("/cabinet/api/auth/google/confirm",
 			methodRouter(map[string]http.Handler{
@@ -611,6 +766,16 @@ func registerAPIRoutes(
 				middleware.RequireAuth(jwtIssuer),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("loyalty")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/me/loyalty/history",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(subscription.LoyaltyHistory),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("loyalty-history")),
 			),
 		}),
 	)

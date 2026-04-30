@@ -1,13 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, type AuthTokenResponse } from '@/lib/api'
 import { getTelegramInitData, getTelegramMiniAppStartParam } from '@/lib/utils'
+import { GoogleBrandIcon, TelegramBrandIcon, VKBrandIcon, YandexBrandIcon } from '@/components/BrandIcons'
 
 export type OAuthFlags = {
   google: boolean
+  yandex?: boolean
+  vk?: boolean
   telegramBot?: string
   telegramOIDCEnabled?: boolean
   telegramWebAuthMode?: 'widget' | 'oidc'
@@ -67,7 +70,77 @@ export function AuthSocialProviders({
   const oidcEnabled = oauth?.telegramOIDCEnabled ?? false
   const showWidget = !!bot && !inMiniApp
   const showOIDC = oidcEnabled && !inMiniApp
-  const showSocial = inMiniApp || (oauth !== null && (!!oauth.google || showWidget || showOIDC))
+  const showSocial = inMiniApp || (oauth !== null && (!!oauth.google || !!oauth.yandex || !!oauth.vk || showWidget || showOIDC))
+  const socialButtons: Array<{ key: string; label: string; icon: ReactNode; onClick: () => void; loading?: boolean }> = []
+
+  if (oauth?.google) {
+    socialButtons.push({
+      key: 'google',
+      label: t('auth.socialGoogle'),
+      icon: <GoogleBrandIcon className="size-5" />,
+      onClick: () => {
+        const ref = referralCode?.trim()
+        const start = '/cabinet/api/auth/google/start'
+        window.location.href = ref ? `${start}?ref=${encodeURIComponent(ref)}` : start
+      },
+    })
+  }
+  if (oauth?.yandex) {
+    socialButtons.push({
+      key: 'yandex',
+      label: t('auth.socialYandex'),
+      icon: <YandexBrandIcon className="size-5" />,
+      onClick: () => {
+        const ref = referralCode?.trim()
+        const start = '/cabinet/api/auth/yandex/start'
+        window.location.href = ref ? `${start}?ref=${encodeURIComponent(ref)}` : start
+      },
+    })
+  }
+  if (oauth?.vk) {
+    socialButtons.push({
+      key: 'vk',
+      label: t('auth.socialVK'),
+      icon: <VKBrandIcon className="size-5" />,
+      onClick: () => {
+        const ref = referralCode?.trim()
+        const start = '/cabinet/api/auth/vk/start'
+        window.location.href = ref ? `${start}?ref=${encodeURIComponent(ref)}` : start
+      },
+    })
+  }
+  if (inMiniApp) {
+    socialButtons.push({
+      key: 'telegram-miniapp',
+      label: t('auth.socialTelegram'),
+      icon: <TelegramBrandIcon className="size-5" />,
+      loading: miniLoading,
+      onClick: async () => {
+        setMiniLoading(true)
+        try {
+          const ref = referralCode?.trim() || getTelegramMiniAppStartParam() || undefined
+          const data = await api.telegramAuthMiniApp(getTelegramInitData(), ref)
+          await miniOkRef.current(data)
+        } catch (e) {
+          flowErrRef.current(e)
+        } finally {
+          setMiniLoading(false)
+        }
+      },
+    })
+  }
+  if (showOIDC) {
+    socialButtons.push({
+      key: 'telegram-oidc',
+      label: t('auth.socialTelegram'),
+      icon: <TelegramBrandIcon className="size-5" />,
+      onClick: () => {
+        const ref = referralCode?.trim()
+        const start = '/cabinet/api/auth/telegram/start'
+        window.location.href = ref ? `${start}?ref=${encodeURIComponent(ref)}` : start
+      },
+    })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -77,13 +150,15 @@ export function AuthSocialProviders({
         if (cancelled) return
         setOauth({
           google: b.google_oauth_enabled,
+          yandex: b.yandex_oauth_enabled ?? false,
+          vk: b.vk_oauth_enabled ?? false,
           telegramBot: b.telegram_widget_bot,
           telegramOIDCEnabled: b.telegram_oidc_enabled ?? false,
           telegramWebAuthMode: b.telegram_web_auth_mode,
         })
       } catch {
         if (cancelled) return
-        setOauth({ google: true, telegramBot: undefined, telegramOIDCEnabled: false })
+        setOauth({ google: true, yandex: false, vk: false, telegramBot: undefined, telegramOIDCEnabled: false })
       }
     })()
     return () => {
@@ -140,67 +215,32 @@ export function AuthSocialProviders({
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border" />
         </div>
-        <div className="relative flex justify-center text-xs text-muted-foreground">
+        <div className="relative flex justify-center text-xs text-[rgb(100,116,139)] dark:text-[rgb(107,114,128)]">
           <span className="bg-card px-2">{t('common.or')}</span>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {oauth?.google && (
-          <Button
-            variant="outline"
-            className="w-full"
-            type="button"
-            onClick={() => {
-              const ref = referralCode?.trim()
-              const start = '/cabinet/api/auth/google/start'
-              window.location.href = ref
-                ? `${start}?ref=${encodeURIComponent(ref)}`
-                : start
-            }}
-          >
-            <GoogleIcon />
-            {t('auth.continueWithGoogle')}
-          </Button>
-        )}
-        {inMiniApp && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            loading={miniLoading}
-            onClick={async () => {
-              setMiniLoading(true)
-              try {
-                const ref = referralCode?.trim() || getTelegramMiniAppStartParam() || undefined
-                const data = await api.telegramAuthMiniApp(getTelegramInitData(), ref)
-                await miniOkRef.current(data)
-              } catch (e) {
-                flowErrRef.current(e)
-              } finally {
-                setMiniLoading(false)
-              }
-            }}
-          >
-            {t('auth.continueWithTelegram')}
-          </Button>
-        )}
-        {showOIDC && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              const ref = referralCode?.trim()
-              const start = '/cabinet/api/auth/telegram/start'
-              window.location.href = ref ? `${start}?ref=${encodeURIComponent(ref)}` : start
-            }}
-          >
-            {t('auth.continueWithTelegram')}
-          </Button>
-        )}
+      <div className="grid grid-cols-2 gap-3">
+        {socialButtons.map((btn, i) => {
+          const isOddTail = socialButtons.length % 2 === 1 && i === socialButtons.length - 1
+          return (
+            <Button
+              key={btn.key}
+              type="button"
+              variant="outline"
+              loading={btn.loading}
+              className={`h-16 w-full flex-col justify-center gap-1 rounded-xl border-border/80 bg-card/70 hover:bg-muted/60 ${
+                isOddTail ? 'col-span-2 mx-auto max-w-[220px]' : ''
+              }`}
+              onClick={() => void btn.onClick()}
+            >
+              {btn.icon}
+              <span className="text-sm font-medium text-[rgb(100,116,139)] dark:text-[rgb(107,114,128)]">{btn.label}</span>
+            </Button>
+          )
+        })}
         {showWidget && (
-          <div className="flex min-h-[48px] w-full flex-col items-stretch justify-center gap-2">
+          <div className="col-span-2 flex min-h-[48px] w-full flex-col items-stretch justify-center gap-2">
             {tgWidgetError && (
               <Alert variant="destructive">
                 <AlertDescription>{t('auth.telegramWidgetLoadError')}</AlertDescription>
@@ -211,16 +251,5 @@ export function AuthSocialProviders({
         )}
       </div>
     </>
-  )
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
   )
 }

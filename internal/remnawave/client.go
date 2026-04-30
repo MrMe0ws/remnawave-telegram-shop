@@ -30,6 +30,9 @@ type ctxKey string
 // CtxKeyUsername is the context key used to pass the Telegram username.
 const CtxKeyUsername ctxKey = "username"
 
+// CtxKeyPanelUsername is an optional explicit username for Remnawave panel user.
+const CtxKeyPanelUsername ctxKey = "panel_username"
+
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
@@ -395,6 +398,13 @@ func usernameFromCtx(ctx context.Context) string {
 	return ""
 }
 
+func panelUsernameFromCtx(ctx context.Context) string {
+	if v, ok := ctx.Value(CtxKeyPanelUsername).(string); ok {
+		return strings.TrimSpace(v)
+	}
+	return ""
+}
+
 func (r *Client) updateUser(ctx context.Context, existingUser *User, trafficLimit int, days int, isTrialUser bool) (*User, error) {
 	return r.updateUserWithBase(ctx, existingUser, trafficLimit, days, isTrialUser, nil)
 }
@@ -481,7 +491,10 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 // См. docs/cabinet/audit-telegram-id.md, разделы 3.1 и 3.2.
 func (r *Client) createUser(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
 	expireAt := time.Now().UTC().AddDate(0, 0, days)
-	username := generateUsername(customerId, telegramId)
+	username := panelUsernameFromCtx(ctx)
+	if username == "" {
+		username = generateUsername(customerId, telegramId)
+	}
 
 	squads, err := r.getInternalSquads(ctx)
 	if err != nil {
@@ -504,17 +517,19 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		strategy = config.TrialTrafficLimitResetStrategy()
 	}
 
-	tid := int(telegramId)
 	tl := int64(trafficLimit)
 	squadsCreate := append([]uuid.UUID(nil), squadIds...)
 	createReq := &CreateUserRequest{
 		Username:             username,
 		ActiveInternalSquads: &squadsCreate,
 		Status:               "ACTIVE",
-		TelegramID:           &tid,
 		ExpireAt:             expireAt,
 		TrafficLimitStrategy: normalizeStrategy(strategy),
 		TrafficLimitBytes:    &tl,
+	}
+	if !utils.IsSyntheticTelegramID(telegramId) {
+		tid := int(telegramId)
+		createReq.TelegramID = &tid
 	}
 	if isTrialUser {
 		trialLimit := config.TrialHwidLimit()

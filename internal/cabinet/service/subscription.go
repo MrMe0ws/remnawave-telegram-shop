@@ -12,6 +12,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/utils"
 )
@@ -88,6 +89,21 @@ type SubscriptionResponse struct {
 	LoyaltyTier              *string             `json:"loyalty_tier,omitempty"`
 	// IsTrial — активная подписка без оплаченных invoice с month>0 (пробный период как в боте).
 	IsTrial bool `json:"is_trial"`
+}
+
+type LoyaltyHistoryItem struct {
+	PurchaseID    int64      `json:"purchase_id"`
+	PaidAt        *time.Time `json:"paid_at,omitempty"`
+	XPGained      int64      `json:"xp_gained"`
+	Amount        float64    `json:"amount"`
+	Currency      string     `json:"currency"`
+	InvoiceType   string     `json:"invoice_type"`
+	PurchaseKind  string     `json:"purchase_kind"`
+	RunningXP     int64      `json:"running_xp"`
+}
+
+type LoyaltyHistoryResponse struct {
+	Items []LoyaltyHistoryItem `json:"items"`
 }
 
 // Get собирает SubscriptionResponse для cabinet_account.id=accountID.
@@ -203,6 +219,79 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 	}
 
 	return resp, nil
+}
+
+func (s *Subscription) LoyaltyHistory(ctx context.Context, accountID int64, limit, offset int) (*LoyaltyHistoryResponse, error) {
+	if accountID <= 0 {
+		return nil, fmt.Errorf("subscription loyalty history: invalid account_id %d", accountID)
+	}
+	if s.purchases == nil {
+		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	link, err := s.links.FindByAccountID(ctx, accountID)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+		return nil, fmt.Errorf("subscription loyalty history: find link: %w", err)
+	}
+	if errors.Is(err, repository.ErrNotFound) {
+		if s.bootstrap == nil {
+			return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+		}
+		link, err = s.bootstrap.EnsureForAccount(ctx, accountID, "")
+		if err != nil {
+			slog.Warn("subscription loyalty history: bootstrap failed", "account_id", accountID, "error", err)
+			return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+		}
+	}
+
+	customer, err := s.customers.FindById(ctx, link.CustomerID)
+	if err != nil {
+		return nil, fmt.Errorf("subscription loyalty history: load customer %d: %w", link.CustomerID, err)
+	}
+	if customer == nil {
+		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+	}
+
+	paid, err := s.purchases.FindPaidByCustomer(ctx, customer.ID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("subscription loyalty history: list purchases: %w", err)
+	}
+	if len(paid) == 0 {
+		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+	}
+
+	items := make([]LoyaltyHistoryItem, 0, len(paid))
+	runningXP := customer.LoyaltyXP
+	for _, p := range paid {
+		gain := loyalty.XPRubEquivalentForPurchase(&p)
+		if gain <= 0 {
+			continue
+		}
+		items = append(items, LoyaltyHistoryItem{
+			PurchaseID:   p.ID,
+			PaidAt:       p.PaidAt,
+			XPGained:     gain,
+			Amount:       p.Amount,
+			Currency:     p.Currency,
+			InvoiceType:  string(p.InvoiceType),
+			PurchaseKind: string(p.PurchaseKind),
+			RunningXP:    runningXP,
+		})
+		runningXP -= gain
+		if runningXP < 0 {
+			runningXP = 0
+		}
+	}
+	return &LoyaltyHistoryResponse{Items: items}, nil
 }
 
 // resolveTariff возвращает тариф для отображения в кабинете:
