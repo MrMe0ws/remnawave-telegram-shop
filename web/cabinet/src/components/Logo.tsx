@@ -6,6 +6,8 @@ import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 interface LogoProps {
   className?: string
   size?: 'sm' | 'md' | 'lg'
+  stacked?: boolean
+  logoSizePx?: number
 }
 
 const sizes = {
@@ -17,7 +19,7 @@ const sizes = {
 
 const defaultName = 'Cabinet'
 
-export function Logo({ className, size = 'md' }: LogoProps) {
+export function Logo({ className, size = 'md', stacked = false, logoSizePx }: LogoProps) {
   const { data } = useAuthBootstrap()
   const name = (data?.brand_name?.trim() || defaultName).trim() || defaultName
   const logoUrl = data?.brand_logo_url?.trim()
@@ -28,25 +30,27 @@ export function Logo({ className, size = 'md' }: LogoProps) {
   }, [logoUrl])
 
   const { icon, img, text } = sizes[size]
+  const visualSize = logoSizePx ?? icon
   const showImg = Boolean(logoUrl && !imgErr)
 
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
+    <div className={cn('flex items-center gap-2.5', stacked && 'flex-col gap-3', className)}>
       {showImg ? (
         <div className="flex shrink-0 items-center justify-center">
           <img
             src={logoUrl}
             alt=""
-            className={cn('block rounded-full bg-black object-contain', img)}
+            className={cn('block rounded-full object-contain', img)}
+            style={{ width: visualSize, height: visualSize }}
             onError={() => setImgErr(true)}
           />
         </div>
       ) : (
         <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10 p-1.5">
-          <Shield size={icon} className="text-primary" strokeWidth={1.75} />
+          <Shield size={visualSize} className="text-primary" strokeWidth={1.75} />
         </div>
       )}
-      <span className={cn('font-semibold tracking-tight', text)}>{name}</span>
+      <span className={cn('font-semibold tracking-tight', text, stacked && 'text-center')}>{name}</span>
     </div>
   )
 }

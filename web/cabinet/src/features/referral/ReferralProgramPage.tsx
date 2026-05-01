@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Trans, useTranslation } from 'react-i18next'
-import { Copy, Check, Users, BookOpen } from 'lucide-react'
+import { Copy, Check, Users, BookOpen, Upload } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { api } from '@/lib/api'
 export default function ReferralProgramPage() {
   const { t } = useTranslation()
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const canShare = useMemo(() => typeof navigator !== 'undefined' && typeof navigator.share === 'function', [])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['referrals'],
@@ -24,6 +25,17 @@ export default function ReferralProgramPage() {
     await navigator.clipboard.writeText(text)
     setCopiedKey(key)
     setTimeout(() => setCopiedKey(null), 2000)
+  }
+
+  async function share(text: string) {
+    if (!canShare) return
+    try {
+      await navigator.share({
+        text: `${t('referralPage.shareInviteText')}\n${text}`,
+      })
+    } catch {
+      // user cancelled share sheet
+    }
   }
 
   const stats = data?.stats
@@ -103,6 +115,8 @@ export default function ReferralProgramPage() {
                     value={data.bot_start_link}
                     copied={copiedKey === 'bot'}
                     onCopy={() => void copy(data.bot_start_link!, 'bot')}
+                    canShare={canShare}
+                    onShare={() => void share(data.bot_start_link!)}
                   />
                 ) : null}
                 {data?.cabinet_register_link ? (
@@ -111,6 +125,8 @@ export default function ReferralProgramPage() {
                     value={data.cabinet_register_link}
                     copied={copiedKey === 'cab'}
                     onCopy={() => void copy(data.cabinet_register_link!, 'cab')}
+                    canShare={canShare}
+                    onShare={() => void share(data.cabinet_register_link!)}
                   />
                 ) : null}
                 {!data?.bot_start_link && !data?.cabinet_register_link ? (
@@ -147,7 +163,7 @@ export default function ReferralProgramPage() {
                               ? r.telegram_username
                               : `@${r.telegram_username}`
                             : r.email
-                              ? r.email
+                              ? maskReferralEmail(r.email)
                               : r.telegram_id_masked}
                         </span>
                         <Badge variant={r.active ? 'default' : 'secondary'}>{r.active ? t('referralPage.badgeActive') : t('referralPage.badgeInactive')}</Badge>
@@ -162,6 +178,16 @@ export default function ReferralProgramPage() {
       </div>
     </AppLayout>
   )
+}
+
+function maskReferralEmail(email: string): string {
+  const value = String(email).trim().toLowerCase()
+  const at = value.lastIndexOf('@')
+  if (at <= 0 || at >= value.length - 1) return value
+  const local = value.slice(0, at)
+  const domain = value.slice(at + 1)
+  if (local.length <= 1) return `${local}***@${domain}`
+  return `${local[0]}***${local[local.length - 1]}@${domain}`
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
@@ -181,22 +207,39 @@ function CopyRow({
   value,
   copied,
   onCopy,
+  canShare,
+  onShare,
 }: {
   label: string
   value: string
   copied: boolean
   onCopy: () => void
+  canShare: boolean
+  onShare: () => void
 }) {
   const { t } = useTranslation()
   return (
     <div className="space-y-1.5">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono truncate">{value}</div>
-        <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1" onClick={onCopy}>
-          {copied ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
-          {copied ? t('subscriptionPage.copied') : t('subscriptionPage.copyLink')}
-        </Button>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-2">
+        <div className="min-w-0 w-full rounded-lg bg-muted px-3 py-2 text-xs font-mono truncate md:flex-1">{value}</div>
+        <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
+          <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1" onClick={onCopy}>
+            {copied ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
+            {copied ? t('subscriptionPage.copied') : t('subscriptionPage.copyLink')}
+          </Button>
+          {canShare ? (
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0 gap-1 shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
+              onClick={onShare}
+            >
+              <Upload size={14} strokeWidth={1.5} />
+              {t('common.share')}
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   )

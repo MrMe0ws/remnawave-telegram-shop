@@ -178,6 +178,11 @@ type PreviewResult struct {
 	LoyaltyDiscountPct int `json:"loyalty_discount_pct,omitempty"`
 	PromoDiscountPct   int `json:"promo_discount_pct,omitempty"`
 	TotalDiscountPct   int `json:"total_discount_pct,omitempty"`
+	// TariffSwitch* — только при scenario upgrade/downgrade (активная подписка, смена тарифа).
+	TariffSwitchRemainingDays int `json:"tariff_switch_remaining_days,omitempty"` // календарных дней до expire (ceil)
+	TariffSwitchBonusDays     int `json:"tariff_switch_bonus_days,omitempty"`     // остаток в днях по дневной цене нового тарифа
+	TariffSwitchPeriodDays    int `json:"tariff_switch_period_days,omitempty"`    // месяцы × DaysInMonth
+	TariffSwitchTotalDays     int `json:"tariff_switch_total_days,omitempty"`     // период + бонус
 }
 
 // Create создаёт новый web-checkout или возвращает ранее выданный payment_url
@@ -341,6 +346,23 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		out.Scenario = tariffCheckoutScenario(kind)
 		if tp, err := s.tariffs.GetPrice(ctx, *tariffID, period); err == nil && tp != nil {
 			out.ListPriceRub = tp.AmountRub
+		}
+		if kind == payment.TariffCheckoutUpgrade || kind == payment.TariffCheckoutDowngrade {
+			if customer.CurrentTariffID != nil && *customer.CurrentTariffID > 0 {
+				tpOld, e1 := s.tariffs.GetPrice(ctx, *customer.CurrentTariffID, period)
+				tpNew, e2 := s.tariffs.GetPrice(ctx, *tariffID, period)
+				if e1 == nil && e2 == nil && tpOld != nil && tpNew != nil {
+					now := time.Now().UTC()
+					out.TariffSwitchRemainingDays = payment.UpgradeCalendarDaysRemainingCeil(customer, now)
+					out.TariffSwitchBonusDays = payment.ComputeUpgradeBonusDays(customer, tpOld, tpNew, period, now)
+					dim := config.DaysInMonth()
+					if dim <= 0 {
+						dim = 30
+					}
+					out.TariffSwitchPeriodDays = period * dim
+					out.TariffSwitchTotalDays = out.TariffSwitchPeriodDays + out.TariffSwitchBonusDays
+				}
+			}
 		}
 		s.applyPreviewDiscounts(ctx, customer, invoiceType, out)
 		return out, nil

@@ -181,7 +181,7 @@ func (h Handler) AdminUserCalOpenHandler(ctx context.Context, b *bot.Bot, update
 	ref := time.Now().UTC()
 	text := fmt.Sprintf(h.translation.GetText(lang, "admin_user_cal_title"), int(ref.Month()), ref.Year())
 	var panelExp *time.Time
-	if rw, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID); err == nil {
+	if rw, err := h.adminFindRWUserByCustomer(ctx, cust); err == nil {
 		panelExp = panelExpireFromRW(rw)
 	}
 	kb := buildExpireCalendarMarkupWithH(h, lang, cid, ref, panelExp)
@@ -214,7 +214,7 @@ func (h Handler) AdminUserCalNavHandler(ctx context.Context, b *bot.Bot, update 
 	lang := cb.From.LanguageCode
 	text := fmt.Sprintf(h.translation.GetText(lang, "admin_user_cal_title"), int(ref.Month()), ref.Year())
 	var panelExp *time.Time
-	if rw, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID); err == nil {
+	if rw, err := h.adminFindRWUserByCustomer(ctx, cust); err == nil {
 		panelExp = panelExpireFromRW(rw)
 	}
 	kb := buildExpireCalendarMarkupWithH(h, lang, cid, ref, panelExp)
@@ -251,7 +251,7 @@ func (h Handler) AdminUserCalPickHandler(ctx context.Context, b *bot.Bot, update
 	}
 	exp := time.Date(y, time.Month(mo), d, 23, 59, 59, 0, time.UTC)
 
-	rwUser, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID)
+	rwUser, err := h.adminFindRWUserByCustomer(ctx, cust)
 	if err != nil || rwUser == nil {
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
@@ -316,7 +316,7 @@ func (h Handler) AdminUserCalBlankHandler(ctx context.Context, b *bot.Bot, updat
 	lang := cb.From.LanguageCode
 	text := fmt.Sprintf(h.translation.GetText(lang, "admin_user_cal_title"), int(ref.Month()), ref.Year())
 	var panelExp *time.Time
-	if rw, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID); err == nil {
+	if rw, err := h.adminFindRWUserByCustomer(ctx, cust); err == nil {
 		panelExp = panelExpireFromRW(rw)
 	}
 	kb := buildExpireCalendarMarkupWithH(h, lang, cid, ref, panelExp)

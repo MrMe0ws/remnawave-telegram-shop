@@ -116,7 +116,7 @@ export function PWAInstallPrompt() {
   }
 
   return createPortal(
-    <div className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[900] sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[360px]">
+    <div className="fixed inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-[900] sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[360px]">
       <div className="rounded-xl border border-border bg-card shadow-2xl">
         <div className="flex items-start justify-between gap-3 p-3">
           <div className="min-w-0">

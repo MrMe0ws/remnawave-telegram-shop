@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 
 import { AuthLayout } from '@/components/AuthLayout'
+import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -121,9 +122,11 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout>
-      <Card>
-        <CardContent className="space-y-4 pt-6">
+    <AuthLayout showHeaderLogo={false}>
+      <div className="space-y-6">
+        <Logo size="sm" stacked logoSizePx={48} className="justify-center" />
+        <Card>
+          <CardContent className="space-y-4 pt-6">
           {justVerified && (
             <Alert variant="success">
               <AlertDescription>{t('auth.emailVerifiedOk')}</AlertDescription>
@@ -197,25 +200,26 @@ export default function LoginPage() {
             }}
           />
 
-          <EmailAuthTabs
-            defaultOpen={false}
-            defaultTab="login"
-            from={from}
-            referralCode={referralFromUrl || undefined}
-            googleLinkPending={googleLinkPending}
-            googleMaskedEmail={googleMaskedEmail}
-          />
-        </CardContent>
+            <EmailAuthTabs
+              defaultOpen={false}
+              defaultTab="login"
+              from={from}
+              referralCode={referralFromUrl || undefined}
+              googleLinkPending={googleLinkPending}
+              googleMaskedEmail={googleMaskedEmail}
+            />
+          </CardContent>
 
-        <CardFooter className="justify-center">
-          <p className="text-xs text-muted-foreground">
-            {t('auth.noAccount')}{' '}
-            <Link to={registerTo} className="text-primary hover:underline">
-              {t('auth.createAccount')}
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          <CardFooter className="justify-center">
+            <p className="text-xs text-muted-foreground">
+              {t('auth.noAccount')}{' '}
+              <Link to={registerTo} className="text-primary hover:underline">
+                {t('auth.createAccount')}
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
     </AuthLayout>
   )
 }

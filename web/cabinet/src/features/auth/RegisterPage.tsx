@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 
 import { AuthLayout } from '@/components/AuthLayout'
+import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -104,9 +105,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthLayout>
-      <Card>
-        <CardContent className="space-y-4 pt-6">
+    <AuthLayout showHeaderLogo={false}>
+      <div className="space-y-6">
+        <Logo size="sm" stacked logoSizePx={48} className="justify-center" />
+        <Card>
+          <CardContent className="space-y-4 pt-6">
           {botHandle && (
             <div className="text-center">
               <p className="text-[0.775rem] text-[rgb(100,116,139)] dark:text-[rgb(107,114,128)]">
@@ -168,14 +171,15 @@ export default function RegisterPage() {
             }}
           />
 
-          <EmailAuthTabs
-            defaultOpen
-            defaultTab="register"
-            from="/dashboard"
-            referralCode={referralFromUrl || undefined}
-          />
-        </CardContent>
-      </Card>
+            <EmailAuthTabs
+              defaultOpen
+              defaultTab="register"
+              from="/dashboard"
+              referralCode={referralFromUrl || undefined}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </AuthLayout>
   )
 }

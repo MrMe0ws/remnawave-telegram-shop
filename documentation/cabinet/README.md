@@ -1,27 +1,28 @@
-# Cabinet Notes (runtime)
+# Cabinet Docs Index
 
-Короткая памятка по текущему состоянию web-кабинета.
+Единая точка входа по документации web-кабинета.
 
-## Тема
+## Для владельца проекта (запуск с нуля)
 
-- Кабинет поддерживает **dark/light**.
-- Инициализация темы: `web/cabinet/src/main.tsx` (`cab_theme` + `prefers-color-scheme`).
+- Полный пошаговый гайд (домен, DNS, SSL, nginx/caddy, OAuth, Telegram auth 1.0/2.0, migrations, env, translations):
+  - `documentation/cabinet/SETUP-GUIDE-RU.md`
 
-## Runtime-контент из translations
+## Для обновления существующей установки
 
-- Файлы контента читаются backend-ом на лету из `/translations/cabinet/*`:
-  - `GET /cabinet/api/content/faq` -> `FAQ.json`
-  - `GET /cabinet/api/content/app-config` -> `app-config.json`
-- Для Docker без ребилда обязателен mount:
+- Переход на версию с кабинетом:
+  - `documentation/cabinet/cabinet-upgrade-guide.md`
+
+## Runtime и контент
+
+- Контент из `/translations/cabinet/*`:
+  - `GET /cabinet/api/content/faq` -> `translations/cabinet/FAQ.json`
+  - `GET /cabinet/api/content/app-config` -> `translations/cabinet/app-config.json`
+- Для изменения runtime-контента без ребилда используйте volume:
   - `./translations:/translations`
 
-## Страница установки устройств
+## Быстрые проверки после изменений
 
-- Маршрут: `/cabinet/connections`.
-- Данные и порядок платформ берутся из `translations/cabinet/app-config.json`.
-- Кнопка «Добавить подписку»: см. **`docs/cabinet/README.md`** (сырый URL для `happ://add/`, `v2raytun://import/`, `v2rayn://import/`; `encodeURIComponent` для схем с `?url=` / `&url=`; при `isNeedBase64Encoding=true` — Base64).
-
-## После изменений
-
-- Проверка фронта: `cd web/cabinet && npm run typecheck`
-- Для backend-роутов кабинета: `go test ./internal/cabinet/http/...`
+- Фронтенд:
+  - `cd web/cabinet && npm run typecheck && npm run build`
+- Backend cabinet:
+  - `go test ./internal/cabinet/http/...`

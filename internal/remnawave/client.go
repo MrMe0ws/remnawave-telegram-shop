@@ -317,15 +317,13 @@ func (r *Client) DecreaseSubscription(ctx context.Context, telegramId int64, tra
 // ---------------------------------------------------------------------------
 
 func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
-	users, err := r.getUsersByTelegramID(ctx, telegramId)
+	existingUser, err := r.findExistingUserForCustomer(ctx, customerId, telegramId)
 	if err != nil {
 		return nil, err
 	}
-	if len(users) == 0 {
+	if existingUser == nil {
 		return r.createUser(ctx, customerId, telegramId, trafficLimit, days, isTrialUser)
 	}
-
-	existingUser := findUserBySuffix(users, telegramId)
 	return r.updateUser(ctx, existingUser, trafficLimit, days, isTrialUser)
 }
 
@@ -336,14 +334,13 @@ func (r *Client) ExtendSubscriptionByDaysPreserveSquads(ctx context.Context, cus
 	if days <= 0 {
 		return nil, fmt.Errorf("invalid days: %d", days)
 	}
-	users, err := r.getUsersByTelegramID(ctx, telegramID)
+	existingUser, err := r.findExistingUserForCustomer(ctx, customerID, telegramID)
 	if err != nil {
 		return nil, err
 	}
-	if len(users) == 0 {
+	if existingUser == nil {
 		return r.createUser(ctx, customerID, telegramID, config.TrafficLimit(), days, false)
 	}
-	existingUser := findUserBySuffix(users, telegramID)
 	newExpire := getNewExpire(days, existingUser.ExpireAt)
 	userUpdate := &UpdateUserRequest{
 		UUID:     &existingUser.UUID,
@@ -364,15 +361,13 @@ func (r *Client) ExtendSubscriptionByDaysPreserveSquads(ctx context.Context, cus
 
 // CreateOrUpdateUserFromNow обновляет подписку, считая срок от текущего времени.
 func (r *Client) CreateOrUpdateUserFromNow(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
-	users, err := r.getUsersByTelegramID(ctx, telegramId)
+	existingUser, err := r.findExistingUserForCustomer(ctx, customerId, telegramId)
 	if err != nil {
 		return nil, err
 	}
-	if len(users) == 0 {
+	if existingUser == nil {
 		return r.createUser(ctx, customerId, telegramId, trafficLimit, days, isTrialUser)
 	}
-
-	existingUser := findUserBySuffix(users, telegramId)
 	base := time.Now().UTC().Add(-time.Second)
 	return r.updateUserWithBase(ctx, existingUser, trafficLimit, days, isTrialUser, &base)
 }
@@ -403,6 +398,46 @@ func panelUsernameFromCtx(ctx context.Context) string {
 		return strings.TrimSpace(v)
 	}
 	return ""
+}
+
+// findExistingUserForCustomer находит RW-профиль для customer.
+// Для обычных TG клиентов ищем по telegram_id.
+// Для web-only/synthetic fallback: exact panel_username (если передан) и префикс "<customer_id>_".
+func (r *Client) findExistingUserForCustomer(ctx context.Context, customerID int64, telegramID int64) (*User, error) {
+	users, err := r.getUsersByTelegramID(ctx, telegramID)
+	if err != nil {
+		return nil, err
+	}
+	if len(users) > 0 {
+		return findUserBySuffix(users, telegramID), nil
+	}
+
+	panelUsername := panelUsernameFromCtx(ctx)
+	if panelUsername != "" {
+		exact, err := r.findUserByUsername(ctx, panelUsername)
+		if err != nil {
+			return nil, err
+		}
+		if exact != nil {
+			return exact, nil
+		}
+	}
+
+	if !utils.IsSyntheticTelegramID(telegramID) {
+		return nil, nil
+	}
+
+	all, err := r.GetUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	prefix := fmt.Sprintf("%d_", customerID)
+	for i := range all {
+		if strings.HasPrefix(strings.TrimSpace(all[i].Username), prefix) {
+			return &all[i], nil
+		}
+	}
+	return nil, nil
 }
 
 func (r *Client) updateUser(ctx context.Context, existingUser *User, trafficLimit int, days int, isTrialUser bool) (*User, error) {
@@ -664,6 +699,32 @@ func (r *Client) UpdateUserDeviceLimit(ctx context.Context, telegramId int64, ne
 		return nil, ErrUserNotFound
 	}
 	user := findUserBySuffix(users, telegramId)
+	if newLimit <= 0 {
+		return nil, fmt.Errorf("invalid device limit: %d", newLimit)
+	}
+
+	req := &UpdateUserRequest{
+		UUID:            &user.UUID,
+		Status:          "ACTIVE",
+		HwidDeviceLimit: &newLimit,
+	}
+
+	var resp apiResponse[User]
+	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Response, nil
+}
+
+// UpdateUserDeviceLimitByCustomer обновляет лимит устройств с учётом web-only fallback поиска.
+func (r *Client) UpdateUserDeviceLimitByCustomer(ctx context.Context, customerID, telegramID int64, newLimit int) (*User, error) {
+	user, err := r.findExistingUserForCustomer(ctx, customerID, telegramID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
 	if newLimit <= 0 {
 		return nil, fmt.Errorf("invalid device limit: %d", newLimit)
 	}

@@ -57,9 +57,11 @@ export default function SubscriptionPage() {
   const hasRecord = hasLink || hasExpire
   const connectedDevices = Math.max(0, devices?.connected ?? 0)
   const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
+  const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
+  const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
   const deviceLimitText =
-    deviceLimitByPlan > 0
-      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimitByPlan })
+    deviceLimit > 0
+      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
       : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
 
   async function copyLink() {
@@ -112,22 +114,6 @@ export default function SubscriptionPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isExpired && (
-                  <div className="rounded-xl border border-destructive/35 bg-destructive/10 p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                        <AlertTriangle size={16} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-destructive">{t('subscriptionPage.expiredBlockTitle')}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {isExpiredByTraffic ? t('subscriptionPage.expiredTrafficHint') : t('subscriptionPage.expiredDateHint')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {sub?.expire_at && (
                   <InfoRow
                     label={t('subscriptionPage.expireAt')}
@@ -205,17 +191,18 @@ export default function SubscriptionPage() {
                     )
                   )}
                   {isExpired ? (
-                    <Link to="/tariffs" className="connect-device-cta group block rounded-xl">
-                      <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                          <AlertTriangle size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-                          <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
-                        </div>
-                        <ChevronRight size={16} className="text-muted-foreground" />
+                    <Link
+                      to="/tariffs"
+                      className="group flex items-center gap-3 rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-card-foreground transition-colors hover:bg-destructive/15"
+                    >
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                        <AlertTriangle size={16} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                        <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
                       </div>
+                      <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                     </Link>
                   ) : (
                     <Link
@@ -223,7 +210,7 @@ export default function SubscriptionPage() {
                       className="group block rounded-xl border border-border bg-muted/35 px-4 py-3 transition-colors hover:bg-muted/55"
                     >
                       <div className="flex items-center gap-3 text-card-foreground">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))]">
                           <Zap size={16} />
                         </span>
                         <div className="min-w-0 flex-1">

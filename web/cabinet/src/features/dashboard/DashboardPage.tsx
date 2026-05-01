@@ -55,9 +55,11 @@ export default function DashboardPage() {
   const isActive = !isInactive
   const connectedDevices = Math.max(0, devices?.connected ?? 0)
   const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
+  const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
+  const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
   const deviceLimitText =
-    deviceLimitByPlan > 0
-      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimitByPlan })
+    deviceLimit > 0
+      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
       : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
 
   const activateTrial = useMutation({
@@ -188,25 +190,19 @@ export default function DashboardPage() {
               </div>
 
               {isInactive && (
-                <div className="relative rounded-xl border border-destructive/45 bg-gradient-to-r from-destructive/15 via-destructive/10 to-destructive/5 p-4 shadow-[0_0_20px_rgba(220,38,38,0.2)]">
-                  <div className="pointer-events-none absolute inset-0 rounded-xl border border-destructive/35 animate-pulse" />
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                      <AlertTriangle size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-destructive">{t('dashboard.subscriptionExpiredTitle')}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {isExpiredByTraffic
-                          ? t('dashboard.subscriptionExpiredTrafficHint')
-                          : t('dashboard.subscriptionExpiredDateHint')}
-                      </p>
-                      <Button asChild size="sm" className="mt-3 border border-red-300/20 bg-red-600 text-white shadow-[0_8px_24px_rgba(220,38,38,0.32)] hover:bg-red-500 hover:shadow-[0_10px_28px_rgba(220,38,38,0.38)] dark:bg-red-700 dark:hover:bg-red-600">
-                        <Link to="/tariffs">{t('subscriptionPage.renewSubscription')}</Link>
-                      </Button>
-                    </div>
+                <Link
+                  to="/tariffs"
+                  className="group flex items-start gap-3 rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-card-foreground transition-colors hover:bg-destructive/15"
+                >
+                  <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                    <AlertTriangle size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                    <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
                   </div>
-                </div>
+                  <ChevronRight size={16} className="mt-1 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </Link>
               )}
             </CardContent>
           </Card>

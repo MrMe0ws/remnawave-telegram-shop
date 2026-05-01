@@ -92,6 +92,10 @@ export default function CheckoutPage() {
   }
 
   const monthsLabel = pluralizeMonths(tariff?.months ?? months)
+  const showTariffSwitchBreakdown =
+    preview != null &&
+    (preview.scenario === 'upgrade' || preview.scenario === 'downgrade') &&
+    typeof preview.tariff_switch_total_days === 'number'
   const providerEnabled = {
     yookassa: bootstrap?.payment_providers?.yookassa ?? true,
     cryptopay: bootstrap?.payment_providers?.cryptopay ?? true,
@@ -135,15 +139,32 @@ export default function CheckoutPage() {
                 )}
                 <SummaryRow label={t('checkout.period')} value={monthsLabel} />
                 {tariff.name && (
-                  <SummaryRow label="Plan" value={tariff.name} />
+                  <SummaryRow label={t('checkout.plan')} value={tariff.name} />
                 )}
                 {tariff.device_limit > 0 && (
-                  <SummaryRow label="Devices" value={String(tariff.device_limit)} />
+                  <SummaryRow label={t('checkout.devices')} value={String(tariff.device_limit)} />
                 )}
-                {preview?.is_early_downgrade && (
+                {showTariffSwitchBreakdown && preview && (
+                  <div className="space-y-2 rounded-lg border border-border/80 bg-muted/35 px-3 py-2.5 text-xs dark:border-border dark:bg-muted/25">
+                    <p className="font-medium text-foreground">{t('checkout.switchTitle')}</p>
+                    <SummaryRow
+                      label={t('checkout.switchRemaining')}
+                      value={t('checkout.switchDaysApprox', { days: preview.tariff_switch_remaining_days ?? 0 })}
+                    />
+                    <SummaryRow
+                      label={t('checkout.switchBonus')}
+                      value={t('checkout.switchDaysBonus', { days: preview.tariff_switch_bonus_days ?? 0 })}
+                    />
+                    <SummaryRow
+                      label={t('checkout.switchTotal')}
+                      value={t('checkout.switchDaysExact', { days: preview.tariff_switch_total_days ?? 0 })}
+                    />
+                  </div>
+                )}
+                {preview?.is_early_downgrade && !showTariffSwitchBreakdown && (
                   <p className="text-xs text-amber-700 dark:text-amber-400">{t('checkout.earlyDowngradeHint')}</p>
                 )}
-                {preview?.scenario === 'upgrade' && (
+                {preview?.scenario === 'upgrade' && !showTariffSwitchBreakdown && (
                   <p className="text-xs text-amber-700 dark:text-amber-400">{t('checkout.earlyUpgradeHint')}</p>
                 )}
                 {previewError && (

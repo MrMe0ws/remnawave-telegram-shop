@@ -334,6 +334,11 @@ export interface PaymentPreviewResponse {
   loyalty_discount_pct?: number
   promo_discount_pct?: number
   total_discount_pct?: number
+  /** Апгрейд/даунгрейд: разбивка дней (как в боте). */
+  tariff_switch_remaining_days?: number
+  tariff_switch_bonus_days?: number
+  tariff_switch_period_days?: number
+  tariff_switch_total_days?: number
 }
 
 export interface PaymentStatusResponse {

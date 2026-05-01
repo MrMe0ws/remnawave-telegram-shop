@@ -55,34 +55,13 @@ func (r *Client) CreateOrUpdateUserWithTariffProfileFromNow(ctx context.Context,
 }
 
 func (r *Client) createOrUpdateUserWithTariffProfile(ctx context.Context, customerID int64, telegramID int64, days int, profile TariffPaidProfile, baseExpire *time.Time) (*User, error) {
-	users, err := r.getUsersByTelegramID(ctx, telegramID)
+	existingUser, err := r.findExistingUserForCustomer(ctx, customerID, telegramID)
 	if err != nil {
 		return nil, err
 	}
-	if len(users) == 0 {
-		user, cerr := r.createUserWithTariffProfile(ctx, customerID, telegramID, days, profile)
-		if cerr == nil {
-			return user, nil
-		}
-		// Race/legacy-case: user already exists by username, but lookup by telegram_id returned empty.
-		// Fallback to username lookup and patch existing record instead of failing payment finalization.
-		if !isPanelUsernameExistsErr(cerr) {
-			return nil, cerr
-		}
-		expected := panelUsernameFromCtx(ctx)
-		if expected == "" {
-			expected = generateUsername(customerID, telegramID)
-		}
-		existing, ferr := r.findUserByUsername(ctx, expected)
-		if ferr != nil {
-			return nil, cerr
-		}
-		if existing == nil {
-			return nil, cerr
-		}
-		return r.updateUserWithTariffProfile(ctx, existing, days, profile, baseExpire)
+	if existingUser == nil {
+		return r.createUserWithTariffProfile(ctx, customerID, telegramID, days, profile)
 	}
-	existingUser := findUserBySuffix(users, telegramID)
 	return r.updateUserWithTariffProfile(ctx, existingUser, days, profile, baseExpire)
 }
 
@@ -175,16 +154,18 @@ func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int
 	squadIds := filterSquadsByUUIDList(squads, profile.SquadUUIDs)
 	strategy := normalizeStrategy(profile.TrafficLimitResetStrategy)
 	tl := profile.TrafficLimitBytes
-	tid := int(telegramID)
 	squadsCreate := append([]uuid.UUID(nil), squadIds...)
 	createReq := &CreateUserRequest{
 		Username:             username,
 		ActiveInternalSquads: &squadsCreate,
 		Status:               "ACTIVE",
-		TelegramID:           &tid,
 		ExpireAt:             expireAt,
 		TrafficLimitStrategy: strategy,
 		TrafficLimitBytes:    &tl,
+	}
+	if !utils.IsSyntheticTelegramID(telegramID) {
+		tid := int(telegramID)
+		createReq.TelegramID = &tid
 	}
 	if profile.BaseDeviceLimit > 0 {
 		lim := profile.BaseDeviceLimit

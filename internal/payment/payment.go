@@ -59,6 +59,19 @@ func sanitizeEmailLocalForPanel(email string) string {
 	return b.String()
 }
 
+func emailLocalPartForDescription(email string) string {
+	email = strings.TrimSpace(strings.ToLower(email))
+	at := strings.LastIndex(email, "@")
+	if at <= 0 {
+		return ""
+	}
+	local := email[:at]
+	if plus := strings.Index(local, "+"); plus >= 0 {
+		local = local[:plus]
+	}
+	return strings.TrimSpace(local)
+}
+
 func (s PaymentService) withRemnawavePanelUsername(ctx context.Context, customer *database.Customer) context.Context {
 	if customer == nil || (!customer.IsWebOnly && !utils.IsSyntheticTelegramID(customer.TelegramID)) {
 		return ctx
@@ -71,12 +84,19 @@ func (s PaymentService) withRemnawavePanelUsername(ctx context.Context, customer
 		slog.Warn("payment: load cabinet email for panel username", "customer_id", customer.ID, "error", err)
 		return ctx
 	}
-	local := sanitizeEmailLocalForPanel(emails[customer.ID])
+	email := strings.TrimSpace(emails[customer.ID])
+	local := sanitizeEmailLocalForPanel(email)
 	if local == "" {
 		local = "web"
 	}
 	panelUsername := fmt.Sprintf("%d_%s", customer.ID, local)
-	return context.WithValue(ctx, remnawave.CtxKeyPanelUsername, panelUsername)
+	ctx = context.WithValue(ctx, remnawave.CtxKeyPanelUsername, panelUsername)
+	if desc := emailLocalPartForDescription(email); desc != "" {
+		// Для web-only профилей храним local-part email в Description (без домена):
+		// это упрощает идентификацию в админке при отсутствии реального TG username.
+		ctx = context.WithValue(ctx, remnawave.CtxKeyUsername, desc)
+	}
+	return ctx
 }
 
 type PaymentService struct {

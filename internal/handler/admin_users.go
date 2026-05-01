@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/google/uuid"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
@@ -1049,17 +1048,8 @@ func (h Handler) adminUserCardBodyHTML(ctx context.Context, b *bot.Bot, lang str
 	sb.WriteString("\n")
 
 	var rw *remnawave.User
-	if uuidStr, _, err := h.remnawaveClient.GetUserInfo(ctx, cust.TelegramID); err == nil && uuidStr != "" {
-		if parsed, err := uuid.Parse(uuidStr); err == nil {
-			if detail, err := h.remnawaveClient.GetUserByUUID(ctx, parsed); err == nil {
-				rw = detail
-			}
-		}
-	}
-	if rw == nil {
-		if u, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID); err == nil {
-			rw = u
-		}
+	if u, err := h.adminFindRWUserByCustomer(ctx, cust); err == nil {
+		rw = u
 	}
 
 	if rw != nil {
@@ -1207,7 +1197,7 @@ func (h Handler) adminUserSubscriptionSubmenuText(lang string, cust *database.Cu
 func (h Handler) adminUserSubscriptionSubmenuKeyboard(ctx context.Context, lang string, cust *database.Customer) [][]models.InlineKeyboardButton {
 	id := cust.ID
 	st := ""
-	if u, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID); err == nil && u != nil {
+	if u, err := h.adminFindRWUserByCustomer(ctx, cust); err == nil && u != nil {
 		st = strings.ToUpper(strings.TrimSpace(u.Status))
 	}
 	var disableOrEnable models.InlineKeyboardButton
@@ -1391,7 +1381,7 @@ func (h Handler) AdminUserResetTrafficAskHandler(ctx context.Context, b *bot.Bot
 	}
 	lang := cb.From.LanguageCode
 	text := h.translation.GetText(lang, "admin_user_reset_traffic_confirm_text")
-	if u, errRW := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID); errRW == nil && u != nil && strings.TrimSpace(u.TrafficLimitStrategy) != "" {
+	if u, errRW := h.adminFindRWUserByCustomer(ctx, cust); errRW == nil && u != nil && strings.TrimSpace(u.TrafficLimitStrategy) != "" {
 		text += fmt.Sprintf(h.translation.GetText(lang, "admin_user_reset_traffic_current_strategy"), u.TrafficLimitStrategy)
 	}
 	kb := [][]models.InlineKeyboardButton{
@@ -1428,7 +1418,7 @@ func (h Handler) AdminUserResetTrafficConfirmHandler(ctx context.Context, b *bot
 	if err != nil || cust == nil {
 		return
 	}
-	u, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID)
+	u, err := h.adminFindRWUserByCustomer(ctx, cust)
 	if err != nil {
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
@@ -1529,7 +1519,7 @@ func (h Handler) AdminUserHwPresetSetHandler(ctx context.Context, b *bot.Bot, up
 	if err != nil || cust == nil {
 		return
 	}
-	if _, err := h.remnawaveClient.UpdateUserDeviceLimit(ctx, cust.TelegramID, limit); err != nil {
+	if _, err := h.remnawaveClient.UpdateUserDeviceLimitByCustomer(ctx, cust.ID, cust.TelegramID, limit); err != nil {
 		slog.Error("admin hw preset set", "error", err)
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
@@ -1554,9 +1544,14 @@ func (h Handler) AdminUserHwPresetSetHandler(ctx context.Context, b *bot.Bot, up
 
 // adminUserDevicesMessageAndKeyboard строит текст и клавиатуру экрана устройств (для adv и после adx).
 func (h Handler) adminUserDevicesMessageAndKeyboard(ctx context.Context, lang string, cust *database.Customer) (messageText string, keyboard [][]models.InlineKeyboardButton, err error) {
-	userUuid, deviceLimit, e := h.remnawaveClient.GetUserInfo(ctx, cust.TelegramID)
-	if e != nil {
+	rwUser, e := h.adminFindRWUserByCustomer(ctx, cust)
+	if e != nil || rwUser == nil {
 		return "", nil, e
+	}
+	userUuid := rwUser.UUID.String()
+	deviceLimit := 0
+	if rwUser.HwidDeviceLimit != nil {
+		deviceLimit = *rwUser.HwidDeviceLimit
 	}
 	if deviceLimit == 0 {
 		deviceLimit = config.GetHwidFallbackDeviceLimit()
@@ -1641,8 +1636,8 @@ func (h Handler) AdminUserDevDelHandler(ctx context.Context, b *bot.Bot, update 
 	if err != nil || cust == nil {
 		return
 	}
-	userUuid, _, err := h.remnawaveClient.GetUserInfo(ctx, cust.TelegramID)
-	if err != nil {
+	rwUser, err := h.adminFindRWUserByCustomer(ctx, cust)
+	if err != nil || rwUser == nil {
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
 			Text:            h.translation.GetText(cb.From.LanguageCode, "admin_user_action_error"),
@@ -1650,6 +1645,7 @@ func (h Handler) AdminUserDevDelHandler(ctx context.Context, b *bot.Bot, update 
 		})
 		return
 	}
+	userUuid := rwUser.UUID.String()
 	devices, err := h.remnawaveClient.GetUserDevicesByUuid(ctx, userUuid)
 	if err != nil || idx >= len(devices) {
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
