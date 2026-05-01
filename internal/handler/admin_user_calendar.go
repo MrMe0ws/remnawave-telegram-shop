@@ -249,7 +249,8 @@ func (h Handler) AdminUserCalPickHandler(ctx context.Context, b *bot.Bot, update
 	if mo < 1 || mo > 12 || d < 1 || d > 31 {
 		return
 	}
-	exp := time.Date(y, time.Month(mo), d, 23, 59, 59, 0, time.UTC)
+	now := time.Now().UTC()
+	exp := time.Date(y, time.Month(mo), d, now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
 	rwUser, err := h.adminFindRWUserByCustomer(ctx, cust)
 	if err != nil || rwUser == nil {

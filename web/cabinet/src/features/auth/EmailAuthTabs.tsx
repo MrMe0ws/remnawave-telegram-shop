@@ -190,8 +190,15 @@ export function EmailAuthTabs({
         <span className="h-px flex-1 bg-border/70" />
       </div>
 
-      {open && (
-        <div className="space-y-4">
+      <div
+        className={`grid overflow-hidden transition-[grid-template-rows,opacity,transform] duration-[400ms] ease-out ${
+          open
+            ? 'visible mt-1 grid-rows-[1fr] opacity-100 translate-y-0'
+            : 'invisible grid-rows-[0fr] opacity-0 -translate-y-1 pointer-events-none'
+        }`}
+        aria-hidden={!open}
+      >
+        <div className="space-y-4 overflow-hidden">
           <div className="flex gap-2">
             <Button
               type="button"
@@ -352,7 +359,7 @@ export function EmailAuthTabs({
             </form>
           )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
