@@ -77,6 +77,9 @@ function overflowActive(pathname: string, to: string): boolean {
   return pathname === to || pathname.startsWith(`${to}/`)
 }
 
+/** Активный пункт в выпадающем меню и нижней мобильной навигации (как у текста ссылки). */
+const navAccentActiveClass = 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]'
+
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -167,7 +170,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                     className="flex items-center"
                   >
                     <Icon
-                      className={cn('size-[18px]', isTariffs && 'tariffs-shine-icon')}
+                      className={cn(
+                        'size-[18px]',
+                        active ? 'text-foreground' : 'text-muted-foreground',
+                        isTariffs && !active && 'tariffs-shine-icon',
+                      )}
                       strokeWidth={1.75}
                     />
                     <span
@@ -217,14 +224,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                         role="menuitem"
                         className={cn(
                           'flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-muted dark:text-slate-300',
-                          active && 'bg-secondary text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]',
+                          active && cn('bg-secondary', navAccentActiveClass),
                         )}
                       >
                         <Icon
                           className={cn(
-                            'size-4 shrink-0 text-muted-foreground',
-                            isTariffs && 'tariffs-shine-icon',
-                            active && 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]',
+                            'size-4 shrink-0',
+                            !active && 'text-muted-foreground',
+                            isTariffs && !active && 'tariffs-shine-icon',
+                            active && navAccentActiveClass,
                           )}
                           strokeWidth={1.75}
                         />
@@ -256,6 +264,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {overflowNavItems.map(({ to, icon: Icon, labelKey }) => {
                 const label = t(labelKey)
                 const active = overflowActive(location.pathname, to)
+                const isTariffs = to === '/tariffs'
                 return (
                   <Link
                     key={`mobile-${to}`}
@@ -263,13 +272,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                     role="menuitem"
                     className={cn(
                       'flex items-center gap-3 pl-8 pr-4 py-3 text-base text-slate-700 hover:bg-muted dark:text-slate-300',
-                      active && 'bg-secondary text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]',
+                      active && cn('bg-secondary', navAccentActiveClass),
                     )}
                   >
                     <Icon
                       className={cn(
-                        'size-5 shrink-0 text-muted-foreground',
-                        active && 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]',
+                        'size-5 shrink-0',
+                        !active && 'text-muted-foreground',
+                        isTariffs && !active && 'tariffs-shine-icon',
+                        active && navAccentActiveClass,
                       )}
                       strokeWidth={1.75}
                     />
@@ -328,6 +339,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           {mobileBottomNavItems.map(({ to, icon: Icon, labelKey, activePrefixes }) => {
             const active = navItemActive(location.pathname, { to, icon: Icon, labelKey, activePrefixes })
             const label = t(labelKey)
+            const isTariffs = to === '/tariffs'
             return (
               <Link
                 key={`${to}-${labelKey}-mob`}
@@ -336,14 +348,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex min-w-0 flex-1 max-w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-muted-foreground transition-colors',
-                  active && 'bg-secondary text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]',
+                  active && cn('bg-secondary', navAccentActiveClass),
                 )}
               >
                 <Icon
                   className={cn(
                     'size-[20px] shrink-0',
-                    to === '/tariffs' && 'tariffs-shine-icon',
-                    active ? 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]' : 'text-muted-foreground',
+                    !active && 'text-muted-foreground',
+                    isTariffs && !active && 'tariffs-shine-icon',
+                    active && navAccentActiveClass,
                   )}
                   strokeWidth={1.75}
                 />
