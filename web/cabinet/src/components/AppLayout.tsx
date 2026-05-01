@@ -147,6 +147,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           >
             {navItems.map(({ to, icon: Icon, labelKey, activePrefixes }) => {
               const active = navItemActive(location.pathname, { to, icon: Icon, labelKey, activePrefixes })
+              const isTariffs = to === '/tariffs'
               const label = t(labelKey)
               return (
                 <Button
@@ -165,7 +166,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                     aria-label={label}
                     className="flex items-center"
                   >
-                    <Icon className="size-[18px]" strokeWidth={1.75} />
+                    <Icon
+                      className={cn('size-[18px]', isTariffs && 'tariffs-shine-icon')}
+                      strokeWidth={1.75}
+                    />
                     <span
                       className={cn(
                         'max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-500',
@@ -205,6 +209,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   {overflowNavItems.map(({ to, icon: Icon, labelKey }) => {
                     const label = t(labelKey)
                     const active = overflowActive(location.pathname, to)
+                    const isTariffs = to === '/tariffs'
                     return (
                       <Link
                         key={to}
@@ -218,6 +223,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         <Icon
                           className={cn(
                             'size-4 shrink-0 text-muted-foreground',
+                            isTariffs && 'tariffs-shine-icon',
                             active && 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]',
                           )}
                           strokeWidth={1.75}
@@ -336,6 +342,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Icon
                   className={cn(
                     'size-[20px] shrink-0',
+                    to === '/tariffs' && 'tariffs-shine-icon',
                     active ? 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]' : 'text-muted-foreground',
                   )}
                   strokeWidth={1.75}
