@@ -16,6 +16,7 @@ import (
 // CabinetActivityHandler — GET /cabinet/api/me/referrals и /cabinet/api/me/purchases.
 type CabinetActivityHandler struct {
 	links     *repository.AccountCustomerLinkRepo
+	ids       *repository.IdentityRepo
 	customers *database.CustomerRepository
 	referrals *database.ReferralRepository
 	purchases *database.PurchaseRepository
@@ -25,13 +26,14 @@ type CabinetActivityHandler struct {
 // NewCabinetActivity — конструктор.
 func NewCabinetActivity(
 	links *repository.AccountCustomerLinkRepo,
+	ids *repository.IdentityRepo,
 	customers *database.CustomerRepository,
 	referrals *database.ReferralRepository,
 	purchases *database.PurchaseRepository,
 	publicURL string,
 ) *CabinetActivityHandler {
 	return &CabinetActivityHandler{
-		links: links, customers: customers, referrals: referrals, purchases: purchases,
+		links: links, ids: ids, customers: customers, referrals: referrals, purchases: purchases,
 		publicURL: strings.TrimRight(publicURL, "/"),
 	}
 }
@@ -58,8 +60,10 @@ type referralStatsDTO struct {
 }
 
 type refereeRowDTO struct {
-	TelegramIDMasked string `json:"telegram_id_masked"`
-	Active           bool   `json:"active"`
+	TelegramIDMasked string  `json:"telegram_id_masked"`
+	TelegramUsername *string `json:"telegram_username,omitempty"`
+	Email            *string `json:"email,omitempty"`
+	Active           bool    `json:"active"`
 }
 
 type referralsResp struct {
@@ -104,6 +108,25 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 		return
 	}
 	tg := cust.TelegramID
+	// Если к cabinet-аккаунту привязан Telegram identity, для рефералки используем
+	// реальный TG id identity (а не synthetic telegram_id web-only customer).
+	if h.ids != nil {
+		if ids, ierr := h.ids.ListByAccount(r.Context(), claims.AccountID); ierr == nil {
+			for _, id := range ids {
+				if id.Provider != repository.ProviderTelegram {
+					continue
+				}
+				pid := strings.TrimSpace(id.ProviderUserID)
+				if pid == "" {
+					continue
+				}
+				if v, perr := strconv.ParseInt(pid, 10, 64); perr == nil && v > 0 {
+					tg = v
+					break
+				}
+			}
+		}
+	}
 
 	stats, err := h.referrals.GetStats(r.Context(), tg)
 	if err != nil {
@@ -122,6 +145,8 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 	for _, s := range summaries {
 		referees = append(referees, refereeRowDTO{
 			TelegramIDMasked: utils.MaskHalfInt64(s.TelegramID),
+			TelegramUsername: s.TelegramUsername,
+			Email:            s.Email,
 			Active:           s.Active,
 		})
 	}

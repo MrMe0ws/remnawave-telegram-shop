@@ -13,7 +13,7 @@ var templatesFS embed.FS
 
 // Mailer — высокоуровневый API для отправки писем кабинета (verify, reset,
 // duplicate register). Знает о шаблонах и о выборе языка — вызывающий код
-// передаёт только модель (адрес, URL, TTL).
+// передаёт только модель (адрес, код или URL, TTL).
 type Mailer struct {
 	sender *Sender
 	tpls   *template.Template
@@ -28,8 +28,8 @@ func NewMailer(sender *Sender) *Mailer {
 
 // VerifyEmailData — контекст шаблона email_verify_*.
 type VerifyEmailData struct {
-	VerifyURL string
-	TTLHuman  string // "24 часа" / "24 hours"
+	Code     string // 6-значный код; ввод на странице подтверждения кабинета
+	TTLHuman string // "24 часа" / "24 hours"
 }
 
 // SendVerifyEmail отправляет письмо подтверждения email.
@@ -76,6 +76,11 @@ type TelegramLinkedData struct {
 	MergeResult string // "linked" | "merged" | "noop"
 }
 
+type EmailMergeCodeData struct {
+	Code    string
+	TTLHuman string
+}
+
 // SendTelegramLinked уведомляет пользователя об успешной привязке / слиянии
 // Telegram-аккаунта с веб-кабинетом.
 func (m *Mailer) SendTelegramLinked(ctx context.Context, toEmail, language, mergeResult string) error {
@@ -90,6 +95,14 @@ func (m *Mailer) SendGoogleLinkConfirm(ctx context.Context, toEmail, language st
 	tplName := pickTemplate("google_link_confirm", language)
 	subject := subjectFor("google_link_confirm", language)
 	return m.render(ctx, tplName, subject, toEmail, GoogleLinkConfirmData{ConfirmURL: confirmURL})
+}
+
+// SendEmailMergeCode отправляет 6-значный код подтверждения merge email-аккаунта,
+// когда peer-аккаунт не имеет пароля (OAuth-only).
+func (m *Mailer) SendEmailMergeCode(ctx context.Context, toEmail, language, code, ttlHuman string) error {
+	tplName := pickTemplate("email_merge_code", language)
+	subject := subjectFor("email_merge_code", language)
+	return m.render(ctx, tplName, subject, toEmail, EmailMergeCodeData{Code: code, TTLHuman: ttlHuman})
 }
 
 func (m *Mailer) render(ctx context.Context, tplName, subject, toEmail string, data any) error {
@@ -137,9 +150,14 @@ func subjectFor(kind, language string) string {
 		return "Подтверждение привязки Google"
 	case "telegram_linked":
 		if language == "en" {
-			return "Telegram account linked"
+			return "Sign-in method updated"
 		}
-		return "Telegram-аккаунт привязан"
+		return "Способ входа обновлён"
+	case "email_merge_code":
+		if language == "en" {
+			return "Merge confirmation code"
+		}
+		return "Код подтверждения объединения аккаунтов"
 	default:
 		return "Cabinet notification"
 	}

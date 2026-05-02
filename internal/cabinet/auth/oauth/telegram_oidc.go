@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/oauth2"
 )
 
 const telegramOIDCStateTTL = 10 * time.Minute
@@ -142,10 +143,8 @@ func (p *TelegramOIDCProvider) Start(in TelegramOIDCStartInput) (*TelegramOIDCSt
 	if err != nil {
 		return nil, err
 	}
-	verifier, challenge, err := pkce()
-	if err != nil {
-		return nil, err
-	}
+	verifier := oauth2.GenerateVerifier()
+	challenge := oauth2.S256ChallengeFromVerifier(verifier)
 	p.store.Save(state, telegramOIDCState{
 		Verifier:    verifier,
 		Mode:        in.Mode,

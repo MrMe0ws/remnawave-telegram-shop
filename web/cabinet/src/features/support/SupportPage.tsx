@@ -1,53 +1,46 @@
-import { ExternalLink } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { MessageCircle } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
-
-const SUPPORT_KEYS = ['bot', 'support', 'channel', 'feedback'] as const
+import { useCabinetContentConfig } from '@/features/info/contentConfig'
 
 export default function SupportPage() {
-  const { t } = useTranslation()
   const { data, isLoading } = useAuthBootstrap()
+  const { data: content, isLoading: contentLoading } = useCabinetContentConfig()
   const siteLinks = data?.site_links
-
-  const keys = SUPPORT_KEYS.filter((k) => siteLinks?.[k])
+  const supportURL = siteLinks?.support
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-xl">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('support.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('support.intro')}</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('support.sectionContact')}</CardTitle>
-            <CardDescription>{t('support.sectionContactHint')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
-            ) : keys.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('support.empty')}</p>
+      <div className="mx-auto w-full max-w-xl py-8">
+        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-muted/40 text-card-foreground shadow-lg">
+          <CardContent className="space-y-6 px-6 py-8 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
+              <MessageCircle className="size-7 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-semibold">
+                {content?.support.title ?? 'Поддержка'}
+              </h1>
+              <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                {content?.support.description ?? 'Если у вас возникли вопросы или проблемы с подключением, наша поддержка поможет их решить.'}
+              </p>
+            </div>
+            {isLoading || contentLoading ? (
+              <p className="text-sm text-muted-foreground">Загрузка…</p>
+            ) : supportURL ? (
+              <Button
+                asChild
+                className="w-full shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
+              >
+                <a href={supportURL} target="_blank" rel="noopener noreferrer">
+                  {content?.support.primary_button ?? 'Написать в поддержку'}
+                </a>
+              </Button>
             ) : (
-              <ul className="space-y-1">
-                {keys.map((key) => (
-                  <li key={key}>
-                    <a
-                      href={siteLinks![key]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                    >
-                      {t(`siteLink.${key}`)}
-                      <ExternalLink className="size-3.5 shrink-0 opacity-70" aria-hidden />
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-muted-foreground">Ссылка поддержки не настроена</p>
             )}
           </CardContent>
         </Card>

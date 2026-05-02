@@ -95,8 +95,9 @@ func (h *PaymentsHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		}
 		tariffID = &id
 	}
+	provider := strings.TrimSpace(r.URL.Query().Get("provider"))
 
-	result, err := h.svc.Preview(r.Context(), claims.AccountID, period, tariffID)
+	result, err := h.svc.Preview(r.Context(), claims.AccountID, period, tariffID, provider)
 	if err != nil {
 		writePaymentsErr(w, err, "preview")
 		return

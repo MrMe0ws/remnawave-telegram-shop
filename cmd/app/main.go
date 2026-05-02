@@ -937,15 +937,16 @@ func checkYookasaInvoice(
 			continue
 		}
 
-		// Счет оплачен - обрабатываем покупку
-		// Извлекаем ID покупки из метаданных счета
-		purchaseId, err := strconv.Atoi(invoice.Metadata["purchaseId"])
-		if err != nil {
-			slog.Error("Error parsing purchaseId", "invoiceId", invoice.ID, "error", err)
+		// Счет оплачен - обрабатываем текущую pending-покупку.
+		// Не зависим от invoice.Metadata["purchaseId"], т.к. некоторые провайдеры/ответы
+		// могут вернуть metadata в нестабильном формате и это приводило к "eternal pending".
+		username := ""
+		if invoice.Metadata != nil {
+			username = invoice.Metadata["username"]
 		}
-		// Передаем username в контексте для логирования
-		ctxWithValue := context.WithValue(ctx, remnawave.CtxKeyUsername, invoice.Metadata["username"])
-		err = paymentService.ProcessPurchaseById(ctxWithValue, int64(purchaseId))
+		ctxWithValue := context.WithValue(ctx, remnawave.CtxKeyUsername, username)
+		purchaseId := int(purchase.ID)
+		err = paymentService.ProcessPurchaseById(ctxWithValue, purchase.ID)
 		if err != nil {
 			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, "error", err)
 		} else {

@@ -16,10 +16,12 @@ services:
         condition: service_healthy
     volumes:
       - ./translations:/translations
+      - ./vpn_cat.png:/vpn_cat.png:ro
     networks:
       - remnawave-network
     ports:
-      - "3002:3002"
+      - "127.0.0.1:3002:3002"    
+#      - "3002:3002"
 
   db:
     image: postgres:17

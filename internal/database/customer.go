@@ -27,19 +27,19 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only"
 
 type Customer struct {
-	ID                        int64      `db:"id"`
-	TelegramID                int64      `db:"telegram_id"`
-	ExpireAt                  *time.Time `db:"expire_at"`
-	CreatedAt                 time.Time  `db:"created_at"`
-	SubscriptionLink          *string    `db:"subscription_link"`
-	Language                  string     `db:"language"`
-	ExtraHwid                 int        `db:"extra_hwid"`
-	ExtraHwidExpiresAt        *time.Time `db:"extra_hwid_expires_at"`
-	CurrentTariffID           *int64     `db:"current_tariff_id"`
-	SubscriptionPeriodStart   *time.Time `db:"subscription_period_start"`
-	SubscriptionPeriodMonths  *int       `db:"subscription_period_months"`
-	LoyaltyXP                 int64      `db:"loyalty_xp"`
-	TelegramUsername          *string    `db:"telegram_username"`
+	ID                       int64      `db:"id"`
+	TelegramID               int64      `db:"telegram_id"`
+	ExpireAt                 *time.Time `db:"expire_at"`
+	CreatedAt                time.Time  `db:"created_at"`
+	SubscriptionLink         *string    `db:"subscription_link"`
+	Language                 string     `db:"language"`
+	ExtraHwid                int        `db:"extra_hwid"`
+	ExtraHwidExpiresAt       *time.Time `db:"extra_hwid_expires_at"`
+	CurrentTariffID          *int64     `db:"current_tariff_id"`
+	SubscriptionPeriodStart  *time.Time `db:"subscription_period_start"`
+	SubscriptionPeriodMonths *int       `db:"subscription_period_months"`
+	LoyaltyXP                int64      `db:"loyalty_xp"`
+	TelegramUsername         *string    `db:"telegram_username"`
 	// IsWebOnly помечает клиента, созданного через web-кабинет (нет реального
 	// Telegram-контакта). Для таких клиентов не должны выполняться вызовы
 	// Telegram Bot API — см. utils.IsSyntheticTelegramID и docs/cabinet/audit-telegram-id.md.
@@ -60,9 +60,9 @@ const (
 	BroadcastAudienceActivePaid    = "active_paid"
 	BroadcastAudienceActiveTrial   = "active_trial"
 	BroadcastAudienceActiveAll     = "active_all"
-	BroadcastAudienceInactivePaid   = "inactive_paid"
-	BroadcastAudienceInactiveTrial  = "inactive_trial"
-	BroadcastAudienceInactiveAll    = "inactive_all"
+	BroadcastAudienceInactivePaid  = "inactive_paid"
+	BroadcastAudienceInactiveTrial = "inactive_trial"
+	BroadcastAudienceInactiveAll   = "inactive_all"
 )
 
 func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDate, endDate time.Time) (*[]Customer, error) {
@@ -380,12 +380,29 @@ func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, update
 	if len(updates) == 0 {
 		return nil
 	}
+	allowed := map[string]struct{}{
+		"telegram_id":                {},
+		"expire_at":                  {},
+		"subscription_link":          {},
+		"language":                   {},
+		"extra_hwid":                 {},
+		"extra_hwid_expires_at":      {},
+		"current_tariff_id":          {},
+		"subscription_period_start":  {},
+		"subscription_period_months": {},
+		"loyalty_xp":                 {},
+		"telegram_username":          {},
+		"is_web_only":                {},
+	}
 
 	buildUpdate := sq.Update("customer").
 		PlaceholderFormat(sq.Dollar).
 		Where(sq.Eq{"id": id})
 
 	for field, value := range updates {
+		if _, ok := allowed[field]; !ok {
+			return fmt.Errorf("failed to update customer: field %q is not allowed", field)
+		}
 		buildUpdate = buildUpdate.Set(field, value)
 	}
 
@@ -399,7 +416,7 @@ func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, update
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	result, err := cr.pool.Exec(ctx, sql, args...)
+	result, err := tx.Exec(ctx, sql, args...)
 	if err != nil {
 		if err := tx.Rollback(ctx); err != nil {
 			return fmt.Errorf("failed to rollback transaction: %w", err)
@@ -538,30 +555,46 @@ func (cr *CustomerRepository) UpdateBatch(ctx context.Context, customers []Custo
 // у них нет telegram_id в ответе панели, иначе каждый Sync стирал бы кабинетских пользователей.
 // См. docs/cabinet/audit-telegram-id.md, раздел 1.6.
 func (cr *CustomerRepository) DeleteByNotInTelegramIds(ctx context.Context, telegramIDs []int64) error {
-	var buildDelete sq.DeleteBuilder
 	if len(telegramIDs) == 0 {
-		buildDelete = sq.Delete("customer")
-	} else {
-		buildDelete = sq.Delete("customer").
-			PlaceholderFormat(sq.Dollar).
-			Where(sq.And{
-				sq.NotEq{"telegram_id": telegramIDs},
-				sq.Eq{"is_web_only": false},
-			})
+		// Не удаляем клиентов, связанных с cabinet_account, даже если их нет в панели.
+		// Иначе после sync рвётся account<->customer link и кабинет bootstrap'ит synthetic web-only customer.
+		_, err := cr.pool.Exec(ctx, `
+			DELETE FROM customer c
+			 WHERE c.is_web_only = FALSE
+			   AND NOT EXISTS (
+			     SELECT 1 FROM cabinet_account_customer_link l WHERE l.customer_id = c.id
+			   )`)
+		if err != nil {
+			return fmt.Errorf("failed to delete customers: %w", err)
+		}
+		return nil
 	}
-
-	sqlStr, args, err := buildDelete.ToSql()
-	if err != nil {
-		return fmt.Errorf("failed to build delete query: %w", err)
-	}
-
-	_, err = cr.pool.Exec(ctx, sqlStr, args...)
+	_, err := cr.pool.Exec(ctx, `
+		DELETE FROM customer c
+		 WHERE c.is_web_only = FALSE
+		   AND c.telegram_id <> ALL($1::bigint[])
+		   AND NOT EXISTS (
+		     SELECT 1 FROM cabinet_account_customer_link l WHERE l.customer_id = c.id
+		   )`, telegramIDs)
 	if err != nil {
 		return fmt.Errorf("failed to delete customers: %w", err)
 	}
-
 	return nil
+}
 
+// HasCabinetLink проверяет, привязан ли customer к cabinet_account.
+func (cr *CustomerRepository) HasCabinetLink(ctx context.Context, customerID int64) (bool, error) {
+	if customerID <= 0 {
+		return false, fmt.Errorf("invalid customer id")
+	}
+	var exists bool
+	if err := cr.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM cabinet_account_customer_link WHERE customer_id = $1
+		)`, customerID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check cabinet link: %w", err)
+	}
+	return exists, nil
 }
 
 // DeleteByID удаляет клиента из БД бота (связанные purchase/promo и т.п. — по CASCADE в схеме).

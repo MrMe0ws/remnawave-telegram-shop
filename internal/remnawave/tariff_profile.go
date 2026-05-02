@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,15 +55,39 @@ func (r *Client) CreateOrUpdateUserWithTariffProfileFromNow(ctx context.Context,
 }
 
 func (r *Client) createOrUpdateUserWithTariffProfile(ctx context.Context, customerID int64, telegramID int64, days int, profile TariffPaidProfile, baseExpire *time.Time) (*User, error) {
-	users, err := r.getUsersByTelegramID(ctx, telegramID)
+	existingUser, err := r.findExistingUserForCustomer(ctx, customerID, telegramID)
 	if err != nil {
 		return nil, err
 	}
-	if len(users) == 0 {
+	if existingUser == nil {
 		return r.createUserWithTariffProfile(ctx, customerID, telegramID, days, profile)
 	}
-	existingUser := findUserBySuffix(users, telegramID)
 	return r.updateUserWithTariffProfile(ctx, existingUser, days, profile, baseExpire)
+}
+
+func isPanelUsernameExistsErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "a019") && strings.Contains(msg, "username already exists")
+}
+
+func (r *Client) findUserByUsername(ctx context.Context, username string) (*User, error) {
+	username = strings.TrimSpace(strings.ToLower(username))
+	if username == "" {
+		return nil, nil
+	}
+	users, err := r.GetUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range users {
+		if strings.ToLower(strings.TrimSpace(users[i].Username)) == username {
+			return &users[i], nil
+		}
+	}
+	return nil, nil
 }
 
 func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *User, days int, profile TariffPaidProfile, baseExpire *time.Time) (*User, error) {
@@ -118,7 +143,10 @@ func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *
 
 func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int64, telegramID int64, days int, profile TariffPaidProfile) (*User, error) {
 	expireAt := time.Now().UTC().AddDate(0, 0, days)
-	username := generateUsername(customerID, telegramID)
+	username := panelUsernameFromCtx(ctx)
+	if username == "" {
+		username = generateUsername(customerID, telegramID)
+	}
 	squads, err := r.getInternalSquads(ctx)
 	if err != nil {
 		return nil, err
@@ -126,16 +154,18 @@ func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int
 	squadIds := filterSquadsByUUIDList(squads, profile.SquadUUIDs)
 	strategy := normalizeStrategy(profile.TrafficLimitResetStrategy)
 	tl := profile.TrafficLimitBytes
-	tid := int(telegramID)
 	squadsCreate := append([]uuid.UUID(nil), squadIds...)
 	createReq := &CreateUserRequest{
 		Username:             username,
 		ActiveInternalSquads: &squadsCreate,
 		Status:               "ACTIVE",
-		TelegramID:           &tid,
 		ExpireAt:             expireAt,
 		TrafficLimitStrategy: strategy,
 		TrafficLimitBytes:    &tl,
+	}
+	if !utils.IsSyntheticTelegramID(telegramID) {
+		tid := int(telegramID)
+		createReq.TelegramID = &tid
 	}
 	if profile.BaseDeviceLimit > 0 {
 		lim := profile.BaseDeviceLimit

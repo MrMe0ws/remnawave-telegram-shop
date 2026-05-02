@@ -3,6 +3,8 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
@@ -62,6 +64,40 @@ func (h *SubscriptionHandler) Loyalty(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.LoyaltyDashboard(r.Context(), claims.AccountID)
 	if err != nil {
 		slog.Error("subscription: loyalty failed", "account_id", claims.AccountID, "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// LoyaltyHistory — GET /cabinet/api/me/loyalty/history.
+func (h *SubscriptionHandler) LoyaltyHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	limit := 50
+	if v := strings.TrimSpace(r.URL.Query().Get("limit")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			limit = n
+		}
+	}
+	offset := 0
+	if v := strings.TrimSpace(r.URL.Query().Get("offset")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			offset = n
+		}
+	}
+	resp, err := h.svc.LoyaltyHistory(r.Context(), claims.AccountID, limit, offset)
+	if err != nil {
+		slog.Error("subscription: loyalty history failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

@@ -85,10 +85,12 @@ const claimTTL = 30 * time.Minute
 
 // TelegramClaim — то, что хранится после успешного confirm.
 type TelegramClaim struct {
-	TelegramID       int64  // подтверждённый tg_id
+	TelegramID       int64  // подтверждённый tg_id (или telegram_id «второго» customer при merge по email)
 	TelegramUsername string // опционально
 	CustomerTgID     *int64 // customer.id в БД, если уже существует; nil если новый
-	ExpiresAt        time.Time
+	// PeerAccountID — если >0, после merge удалить этот cabinet_account и перенести email+пароль на survivor.
+	PeerAccountID int64
+	ExpiresAt     time.Time
 }
 
 // ClaimStore хранит один claim на аккаунт (последний подтверждённый).

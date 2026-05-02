@@ -4,20 +4,45 @@ import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 
 import { AuthLayout } from '@/components/AuthLayout'
+import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError } from '@/lib/api'
+import { getTurnstileToken } from '@/lib/turnstile'
 import { useAuthStore } from '@/store/auth'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { AuthSocialProviders } from './AuthSocialProviders'
+import { EmailAuthTabs } from './EmailAuthTabs'
+
+function botHandleFromLink(input: string | undefined): string | null {
+  const raw = input?.trim()
+  if (!raw) return null
+  if (raw.startsWith('@')) return raw
+  try {
+    const url = new URL(raw)
+    const path = url.pathname.replace(/\/+$/, '')
+    const parts = path.split('/').filter(Boolean)
+    const last = parts[parts.length - 1]
+    if (!last) return null
+    return `@${last.replace(/^@/, '')}`
+  } catch {
+    const parts = raw.split('/').filter(Boolean)
+    const last = parts[parts.length - 1]
+    if (!last) return null
+    return `@${last.replace(/^@/, '')}`
+  }
+}
 
 export default function RegisterPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const referralFromUrl = (searchParams.get('ref') ?? '').trim()
+  const { data: bootstrap } = useAuthBootstrap()
+  const botHandle = botHandleFromLink(bootstrap?.site_links?.bot)
   const loginTo = referralFromUrl ? `/login?ref=${encodeURIComponent(referralFromUrl)}` : '/login'
   const { setToken, fetchMe, accessToken, user } = useAuthStore()
 
@@ -32,6 +57,7 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [securityChecking, setSecurityChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   function validate(): string | null {
@@ -49,7 +75,15 @@ export default function RegisterPage() {
     setError(null)
     setLoading(true)
     try {
-      await api.register(email, password, referralFromUrl || undefined)
+      let turnstileToken: string | undefined
+      if (bootstrap?.turnstile_enabled) {
+        const siteKey = (bootstrap.turnstile_site_key ?? '').trim()
+        if (!siteKey) throw new Error('turnstile site key is missing')
+        setSecurityChecking(true)
+        turnstileToken = await getTurnstileToken(siteKey, 'register')
+        setSecurityChecking(false)
+      }
+      await api.register(email, password, referralFromUrl || undefined, turnstileToken)
       navigate('/verify-email', { state: { email } })
     } catch (err) {
       if (err instanceof ApiError) {
@@ -65,87 +99,40 @@ export default function RegisterPage() {
         setError(t('errors.unknown'))
       }
     } finally {
+      setSecurityChecking(false)
       setLoading(false)
     }
   }
 
   return (
-    <AuthLayout>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('auth.register')}</CardTitle>
-          <CardDescription>
-            {t('auth.haveAccount')}{' '}
-            <Link to={loginTo} className="text-primary hover:underline font-medium">
-              {t('auth.login')}
-            </Link>
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="email">{t('auth.email')}</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder={t('auth.emailPlaceholder')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={!!error}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="password">{t('auth.password')}</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPw ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder={t('auth.passwordPlaceholder')}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  error={!!error}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
+    <AuthLayout showHeaderLogo={false}>
+      <div className="space-y-6">
+        <Logo size="sm" stacked logoSizePx={48} className="justify-center" />
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+          {botHandle && (
+            <div className="text-center">
+              <p className="text-[0.775rem] text-[rgb(100,116,139)] dark:text-[rgb(107,114,128)]">
+                {t('auth.openBotInApp')}
+              </p>
+              <div className="mt-1.5 flex items-center justify-center gap-2 text-sm">
+                <a
+                  href={bootstrap?.site_links?.bot}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[rgb(51,65,85)] hover:underline dark:text-white"
                 >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                  {botHandle}
+                </a>
               </div>
             </div>
+          )}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm">{t('auth.passwordConfirm')}</Label>
-              <Input
-                id="confirm"
-                type={showPw ? 'text' : 'password'}
-                autoComplete="new-password"
-                placeholder={t('auth.passwordPlaceholder')}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                error={password !== confirm && confirm.length > 0}
-                required
-              />
-            </div>
-
-            <Button type="submit" className="w-full" loading={loading}>
-              {t('auth.createAccount')}
-            </Button>
-          </form>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           <AuthSocialProviders
             page="register"
@@ -183,17 +170,16 @@ export default function RegisterPage() {
               }
             }}
           />
-        </CardContent>
 
-        <CardFooter className="justify-center">
-          <p className="text-xs text-muted-foreground">
-            {t('auth.haveAccount')}{' '}
-            <Link to={loginTo} className="text-primary hover:underline">
-              {t('auth.login')}
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+            <EmailAuthTabs
+              defaultOpen
+              defaultTab="register"
+              from="/dashboard"
+              referralCode={referralFromUrl || undefined}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </AuthLayout>
   )
 }

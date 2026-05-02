@@ -105,7 +105,28 @@ func (b *CustomerBootstrap) EnsureForAccountTelegram(ctx context.Context, accoun
 		return nil, fmt.Errorf("bootstrap: find by telegram: %w", err)
 	}
 	if botCust == nil {
-		return b.EnsureForAccount(ctx, accountID, language)
+		// Telegram-first login: создаём customer сразу с реальным telegram_id,
+		// чтобы не оставлять synthetic id для живого Telegram-пользователя.
+		created, err := b.customerRepo.Create(ctx, &database.Customer{
+			TelegramID: telegramUserID,
+			Language:   language,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("bootstrap: create telegram customer: %w", err)
+		}
+		newLink, err := b.linkRepo.Create(ctx, accountID, created.ID, repository.LinkStatusLinked)
+		if err != nil {
+			if link2, err2 := b.linkRepo.FindByAccountID(ctx, accountID); err2 == nil {
+				return link2, nil
+			}
+			return nil, fmt.Errorf("bootstrap: create link to telegram customer: %w", err)
+		}
+		slog.Info("cabinet: created telegram customer for cabinet account",
+			"account_id", accountID,
+			"customer_id", created.ID,
+			"telegram_id_masked", utils.MaskHalfInt64(telegramUserID),
+		)
+		return newLink, nil
 	}
 	other, err := b.linkRepo.FindByCustomerID(ctx, botCust.ID)
 	if err == nil && other != nil {

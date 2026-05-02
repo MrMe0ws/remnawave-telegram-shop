@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { setLanguage } from '@/i18n'
+import { cn } from '@/lib/utils'
 
-export function LangToggle() {
+interface LangToggleProps {
+  className?: string
+}
+
+export function LangToggle({ className }: LangToggleProps) {
   const { i18n } = useTranslation()
   const isRu = i18n.language === 'ru'
 
@@ -16,7 +21,7 @@ export function LangToggle() {
       variant="ghost"
       size="sm"
       onClick={toggle}
-      className="font-mono text-xs"
+      className={cn('font-mono text-xs', className)}
       aria-label="Switch language"
     >
       {isRu ? 'EN' : 'RU'}

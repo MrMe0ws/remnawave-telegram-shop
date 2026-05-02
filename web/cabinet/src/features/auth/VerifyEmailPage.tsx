@@ -1,17 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MailCheck } from 'lucide-react'
 
 import { AuthLayout } from '@/components/AuthLayout'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError } from '@/lib/api'
+import { getTurnstileToken } from '@/lib/turnstile'
 import { maskEmail } from '@/lib/utils'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useAuthStore } from '@/store/auth'
 
 const RESEND_COOLDOWN = 60
+
+function isLegacyVerifyToken(raw: string | null): boolean {
+  const t = (raw ?? '').trim()
+  if (!t) return false
+  if (/^\d{6}$/.test(t)) return false
+  return true
+}
 
 export default function VerifyEmailPage() {
   const { t } = useTranslation()
@@ -20,30 +31,39 @@ export default function VerifyEmailPage() {
   const navigate = useNavigate()
   const setToken = useAuthStore((s) => s.setToken)
   const fetchMe = useAuthStore((s) => s.fetchMe)
+  const accessToken = useAuthStore((s) => s.accessToken)
+  const { data: bootstrap } = useAuthBootstrap()
 
   const emailFromState = (location.state as { email?: string })?.email ?? ''
-  const token = searchParams.get('token')
+  const tokenFromURL = searchParams.get('token')
 
   const [resendCooldown, setResendCooldown] = useState(0)
   const [resendLoading, setResendLoading] = useState(false)
+  const [resendSecurity, setResendSecurity] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [confirmLoading, setConfirmLoading] = useState(false)
+  const [legacyLoading, setLegacyLoading] = useState(!!tokenFromURL && isLegacyVerifyToken(tokenFromURL))
 
-  // Если в URL есть ?token=… — автоматически подтверждаем.
+  // Старые письма со ссылкой ?token=base64… — подтверждаем автоматически.
   useEffect(() => {
-    if (!token) return
-    api.confirmEmail(token)
+    if (!tokenFromURL || !isLegacyVerifyToken(tokenFromURL)) return
+    const tok = tokenFromURL.trim()
+    api
+      .confirmEmail(tok)
       .then(async (data) => {
         setToken(data.access_token)
         await fetchMe()
         navigate('/dashboard', { replace: true })
       })
       .catch(() => {
+        setLegacyLoading(false)
         setError(t('errors.unknown'))
+        navigate('/verify-email', { replace: true, state: location.state })
       })
-  }, [token, fetchMe, navigate, setToken, t])
+  }, [tokenFromURL, fetchMe, navigate, setToken, t])
 
-  // Таймер cooldown.
   useEffect(() => {
     if (resendCooldown <= 0) return
     const id = setInterval(() => setResendCooldown((v) => v - 1), 1000)
@@ -51,11 +71,28 @@ export default function VerifyEmailPage() {
   }, [resendCooldown])
 
   async function handleResend() {
+    if (!accessToken && !emailFromState.trim()) {
+      setError(t('verifyEmail.resendNeedEmail'))
+      return
+    }
     setResendLoading(true)
+    setResendSecurity(false)
     setMessage(null)
     setError(null)
     try {
-      await api.resendVerifyEmail()
+      if (accessToken) {
+        await api.resendVerifyEmail()
+      } else {
+        let turnstileToken: string | undefined
+        if (bootstrap?.turnstile_enabled) {
+          const siteKey = (bootstrap.turnstile_site_key ?? '').trim()
+          if (!siteKey) throw new Error('turnstile site key is missing')
+          setResendSecurity(true)
+          turnstileToken = await getTurnstileToken(siteKey, 'register')
+          setResendSecurity(false)
+        }
+        await api.resendVerifyEmailPublic(emailFromState.trim(), turnstileToken)
+      }
       setResendCooldown(RESEND_COOLDOWN)
       setMessage(t('verifyEmail.resend'))
     } catch (err) {
@@ -65,11 +102,33 @@ export default function VerifyEmailPage() {
         setError(t('errors.unknown'))
       }
     } finally {
+      setResendSecurity(false)
       setResendLoading(false)
     }
   }
 
-  if (token) {
+  async function handleConfirm(e: FormEvent) {
+    e.preventDefault()
+    if (code.length !== 6) return
+    setConfirmLoading(true)
+    setError(null)
+    try {
+      const data = await api.confirmEmail(code)
+      setToken(data.access_token)
+      await fetchMe()
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 429) {
+        setError(t('errors.tooManyRequests'))
+      } else {
+        setError(t('verifyEmail.invalidCode'))
+      }
+    } finally {
+      setConfirmLoading(false)
+    }
+  }
+
+  if (tokenFromURL && isLegacyVerifyToken(tokenFromURL)) {
     return (
       <AuthLayout>
         <Card>
@@ -79,7 +138,7 @@ export default function VerifyEmailPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : (
-              <p className="text-muted-foreground">{t('common.loading')}</p>
+              <p className="text-muted-foreground">{legacyLoading ? t('common.loading') : null}</p>
             )}
           </CardContent>
         </Card>
@@ -115,14 +174,33 @@ export default function VerifyEmailPage() {
             </Alert>
           )}
 
+          <form onSubmit={handleConfirm} className="space-y-3 text-left">
+            <div className="space-y-1.5">
+              <Label htmlFor="verify-code">{t('verifyEmail.codeLabel')}</Label>
+              <Input
+                id="verify-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder={t('verifyEmail.codePlaceholder')}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="text-center text-lg tracking-[0.25em] font-mono"
+              />
+            </div>
+            <Button type="submit" className="w-full" loading={confirmLoading} disabled={code.length !== 6}>
+              {t('verifyEmail.confirm')}
+            </Button>
+          </form>
+
           <p className="text-xs text-muted-foreground">{t('verifyEmail.checkSpam')}</p>
 
           <Button
             variant="outline"
             className="w-full"
             onClick={handleResend}
-            loading={resendLoading}
-            disabled={resendCooldown > 0}
+            loading={resendLoading || resendSecurity}
+            disabled={resendCooldown > 0 || (!accessToken && !emailFromState.trim())}
           >
             {resendCooldown > 0
               ? t('verifyEmail.resendCooldown', { sec: resendCooldown })

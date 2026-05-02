@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, CreditCard, Bitcoin, Check, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, Bitcoin, Check, AlertCircle, Star } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError, type TariffItem } from '@/lib/api'
 import { newIdempotencyKey, cn } from '@/lib/utils'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
-type Provider = 'yookassa' | 'cryptopay'
+type Provider = 'yookassa' | 'cryptopay' | 'telegram'
 
 export default function CheckoutPage() {
   const { t } = useTranslation()
@@ -31,6 +32,7 @@ export default function CheckoutPage() {
     queryFn: () => api.tariffs(),
     staleTime: 5 * 60_000,
   })
+  const { data: bootstrap } = useAuthBootstrap()
 
   const tariff: TariffItem | undefined = tariffsData?.tariffs.find(
     (t) => t.slug === tariffSlug && t.months === months,
@@ -41,18 +43,20 @@ export default function CheckoutPage() {
       ? tariff.id
       : undefined
 
+  const selectedProviderForPreview: Provider = provider ?? 'yookassa'
   const { data: preview, isError: previewError } = useQuery({
-    queryKey: ['paymentPreview', tariff?.months, previewTariffId, tariffsData?.sales_mode],
-    queryFn: () => api.paymentPreview(tariff!.months, previewTariffId),
+    queryKey: ['paymentPreview', tariff?.months, previewTariffId, tariffsData?.sales_mode, selectedProviderForPreview],
+    queryFn: () => api.paymentPreview(tariff!.months, previewTariffId, selectedProviderForPreview),
     enabled: Boolean(tariff) && !tariffsLoading,
     staleTime: 30_000,
   })
 
-  const amountRub = preview?.amount_rub ?? tariff?.price_rub ?? 0
+  const amountValue = preview?.amount ?? preview?.amount_rub ?? tariff?.price_rub ?? 0
+  const amountSuffix = preview?.currency === 'STARS' ? t('checkout.stars') : t('checkout.rub')
   const scenarioKey = checkoutScenarioI18nKey(preview?.scenario)
 
   async function handlePay() {
-    if (!provider) return
+    if (!selectedProvider) return
     if (!tariff) { setError(t('errors.unknown')); return }
     setError(null)
     setLoading(true)
@@ -63,11 +67,14 @@ export default function CheckoutPage() {
       const tariffId =
         tariffsData?.sales_mode === 'tariffs' && tariff.id != null && tariff.id > 0 ? tariff.id : undefined
       const res = await api.checkout(
-        { period: tariff.months, provider, tariffId },
+        { period: tariff.months, provider: selectedProvider, tariffId },
         idempotencyKey,
       )
-      // Redirect to payment provider URL; after payment we'll redirect to status page.
-      window.location.href = res.payment_url
+      // Open provider payment page in a new tab.
+      // Do not rely on returned window handle: with noopener/noreferrer
+      // some browsers return null even when the tab opened successfully.
+      window.open(res.payment_url, '_blank', 'noopener,noreferrer')
+      navigate(`/payment/status/${res.checkout_id}`)
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 429) {
@@ -85,6 +92,17 @@ export default function CheckoutPage() {
   }
 
   const monthsLabel = pluralizeMonths(tariff?.months ?? months)
+  const showTariffSwitchBreakdown =
+    preview != null &&
+    (preview.scenario === 'upgrade' || preview.scenario === 'downgrade') &&
+    typeof preview.tariff_switch_total_days === 'number'
+  const providerEnabled = {
+    yookassa: bootstrap?.payment_providers?.yookassa ?? true,
+    cryptopay: bootstrap?.payment_providers?.cryptopay ?? true,
+    telegram: bootstrap?.payment_providers?.telegram ?? false,
+  }
+  const availableProviders: Provider[] = (['yookassa', 'cryptopay', 'telegram'] as Provider[]).filter((p) => providerEnabled[p])
+  const selectedProvider = provider && providerEnabled[provider] ? provider : null
 
   return (
     <AppLayout>
@@ -121,13 +139,33 @@ export default function CheckoutPage() {
                 )}
                 <SummaryRow label={t('checkout.period')} value={monthsLabel} />
                 {tariff.name && (
-                  <SummaryRow label="Plan" value={tariff.name} />
+                  <SummaryRow label={t('checkout.plan')} value={tariff.name} />
                 )}
                 {tariff.device_limit > 0 && (
-                  <SummaryRow label="Devices" value={String(tariff.device_limit)} />
+                  <SummaryRow label={t('checkout.devices')} value={String(tariff.device_limit)} />
                 )}
-                {preview?.is_early_downgrade && (
+                {showTariffSwitchBreakdown && preview && (
+                  <div className="space-y-2 rounded-lg border border-border/80 bg-muted/35 px-3 py-2.5 text-xs dark:border-border dark:bg-muted/25">
+                    <p className="font-medium text-foreground">{t('checkout.switchTitle')}</p>
+                    <SummaryRow
+                      label={t('checkout.switchRemaining')}
+                      value={t('checkout.switchDaysApprox', { days: preview.tariff_switch_remaining_days ?? 0 })}
+                    />
+                    <SummaryRow
+                      label={t('checkout.switchBonus')}
+                      value={t('checkout.switchDaysBonus', { days: preview.tariff_switch_bonus_days ?? 0 })}
+                    />
+                    <SummaryRow
+                      label={t('checkout.switchTotal')}
+                      value={t('checkout.switchDaysExact', { days: preview.tariff_switch_total_days ?? 0 })}
+                    />
+                  </div>
+                )}
+                {preview?.is_early_downgrade && !showTariffSwitchBreakdown && (
                   <p className="text-xs text-amber-700 dark:text-amber-400">{t('checkout.earlyDowngradeHint')}</p>
+                )}
+                {preview?.scenario === 'upgrade' && !showTariffSwitchBreakdown && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">{t('checkout.earlyUpgradeHint')}</p>
                 )}
                 {previewError && (
                   <p className="text-xs text-muted-foreground">{t('checkout.previewError')}</p>
@@ -159,7 +197,7 @@ export default function CheckoutPage() {
                           <span>{t('checkout.promoDiscount', { pct: preview.promo_discount_pct })}</span>
                         )}
                         {(preview.total_discount_pct ?? 0) > 0 && (
-                          <span>{t('checkout.totalDiscount', { pct: preview.total_discount_pct })}</span>
+                          <span className="w-full">{t('checkout.totalDiscount', { pct: preview.total_discount_pct })}</span>
                         )}
                       </div>
                       <SummaryRow
@@ -173,7 +211,7 @@ export default function CheckoutPage() {
                     label={t('checkout.total')}
                     value={
                       <span className="text-lg font-bold">
-                        {amountRub.toLocaleString('ru-RU')} {t('checkout.rub')}
+                        {amountValue.toLocaleString('ru-RU')} {amountSuffix}
                       </span>
                     }
                   />
@@ -191,20 +229,36 @@ export default function CheckoutPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <ProviderButton
-              selected={provider === 'yookassa'}
-              onClick={() => setProvider('yookassa')}
-              icon={<CreditCard size={18} className="text-blue-500" />}
-              label={t('checkout.card')}
-              description="YooKassa"
-            />
-            <ProviderButton
-              selected={provider === 'cryptopay'}
-              onClick={() => setProvider('cryptopay')}
-              icon={<Bitcoin size={18} className="text-orange-500" />}
-              label={t('checkout.crypto')}
-              description="CryptoPay"
-            />
+            {availableProviders.includes('yookassa') && (
+              <ProviderButton
+                selected={selectedProvider === 'yookassa'}
+                onClick={() => setProvider('yookassa')}
+                icon={<CreditCard size={18} className="text-blue-500" />}
+                label={t('checkout.card')}
+                description="YooKassa"
+              />
+            )}
+            {availableProviders.includes('cryptopay') && (
+              <ProviderButton
+                selected={selectedProvider === 'cryptopay'}
+                onClick={() => setProvider('cryptopay')}
+                icon={<Bitcoin size={18} className="text-orange-500" />}
+                label={t('checkout.crypto')}
+                description="CryptoPay"
+              />
+            )}
+            {availableProviders.includes('telegram') && (
+              <ProviderButton
+                selected={selectedProvider === 'telegram'}
+                onClick={() => setProvider('telegram')}
+                icon={<Star size={18} className="text-amber-500" />}
+                label={t('checkout.telegramStars')}
+                description="Telegram Stars"
+              />
+            )}
+            {availableProviders.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('checkout.notAvailable')}</p>
+            )}
           </CardContent>
         </Card>
 
@@ -215,15 +269,31 @@ export default function CheckoutPage() {
           </Alert>
         )}
 
+        <div className="hidden sm:block">
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={!selectedProvider || !tariff || loading || availableProviders.length === 0}
+            loading={loading}
+            onClick={handlePay}
+          >
+            {t('checkout.pay')}
+            {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile: keep "Оплатить" visible above the bottom navbar */}
+      <div className="sm:hidden sticky bottom-0 z-40 pt-3 pb-[max(0.35rem,env(safe-area-inset-bottom))] bg-background/95 backdrop-blur border-t border-border">
         <Button
           className="w-full"
           size="lg"
-          disabled={!provider || !tariff || loading}
+          disabled={!selectedProvider || !tariff || loading || availableProviders.length === 0}
           loading={loading}
           onClick={handlePay}
         >
           {t('checkout.pay')}
-          {tariff ? ` ${amountRub.toLocaleString('ru-RU')} ₽` : ''}
+          {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
         </Button>
       </div>
     </AppLayout>

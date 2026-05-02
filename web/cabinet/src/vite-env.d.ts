@@ -13,9 +13,25 @@ interface TelegramNamespace {
   WebApp?: TelegramWebApp
 }
 
+interface TurnstileApi {
+  render: (
+    container: string | HTMLElement,
+    options: {
+      sitekey: string
+      size?: 'normal' | 'compact' | 'invisible'
+      action?: string
+      callback?: (token: string) => void
+      'error-callback'?: () => void
+      'expired-callback'?: () => void
+    },
+  ) => string
+  execute: (widgetId?: string) => void
+}
+
 declare global {
   interface Window {
     Telegram?: TelegramNamespace
+    turnstile?: TurnstileApi
     /** Имя должно совпадать с data-onauth виджета привязки. */
     cabinetTelegramWidgetCallback?: (user: {
       id: number

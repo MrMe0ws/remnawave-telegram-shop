@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 )
 
@@ -45,4 +46,39 @@ func HashString(token string) ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("tokens: decode: %w", err)
 	}
 	return sha256.Sum256(raw), nil
+}
+
+// EmailVerifyOTPLen — длина кода в письме подтверждения email (только цифры).
+const EmailVerifyOTPLen = 6
+
+// IsEmailVerifyOTP — ровно 6 ASCII-цифр (код из письма).
+func IsEmailVerifyOTP(s string) bool {
+	if len(s) != EmailVerifyOTPLen {
+		return false
+	}
+	for i := 0; i < EmailVerifyOTPLen; i++ {
+		c := s[i]
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// HashEmailVerifyOTP считает sha256 от UTF-8 строки кода (как в GenerateEmailVerifyOTP).
+func HashEmailVerifyOTP(code string) [32]byte {
+	return sha256.Sum256([]byte(code))
+}
+
+// GenerateEmailVerifyOTP возвращает 6-значный код и sha256([]byte(code)) для записи в БД.
+// Entropy 20 бит — опора на rate-limit, TTL и одноразовость строки в cabinet_email_verification.
+func GenerateEmailVerifyOTP() (code string, hash [32]byte, err error) {
+	var buf [4]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "", [32]byte{}, fmt.Errorf("tokens: read rand: %w", err)
+	}
+	n := binary.BigEndian.Uint32(buf[:])
+	code = fmt.Sprintf("%06d", n%1000000)
+	hash = HashEmailVerifyOTP(code)
+	return code, hash, nil
 }

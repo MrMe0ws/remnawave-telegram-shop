@@ -2,7 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ClipboardList, Copy, Check, Wifi, RefreshCw, ChevronRight, Smartphone, Trash2 } from 'lucide-react'
+import { ClipboardList, Copy, Check, Wifi, RefreshCw, ChevronRight, Smartphone, Trash2, AlertTriangle, MonitorSmartphone, Zap } from 'lucide-react'
+import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
@@ -40,12 +41,28 @@ export default function SubscriptionPage() {
     },
   })
 
+  const [deleteConfirmHwid, setDeleteConfirmHwid] = useState<string | null>(null)
+
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
-  const isActive = days !== null && days > 0
-  const isExpired = sub?.expire_at != null && sub.expire_at !== '' && days !== null && days <= 0
+  const isExpiredByDate = sub?.expire_at != null && sub.expire_at !== '' && days !== null && days <= 0
+  const isExpiredByTraffic = Boolean(
+    sub?.traffic_limit_gb != null &&
+    sub.traffic_limit_gb > 0 &&
+    (sub.traffic_used_gb ?? 0) >= sub.traffic_limit_gb,
+  )
+  const isExpired = isExpiredByDate || isExpiredByTraffic
+  const isActive = !isExpired
   const hasLink = Boolean(sub?.subscription_link && String(sub.subscription_link).trim() !== '')
   const hasExpire = Boolean(sub?.expire_at && String(sub.expire_at).trim() !== '')
   const hasRecord = hasLink || hasExpire
+  const connectedDevices = Math.max(0, devices?.connected ?? 0)
+  const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
+  const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
+  const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
+  const deviceLimitText =
+    deviceLimit > 0
+      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
+      : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
 
   async function copyLink() {
     if (!sub?.subscription_link) return
@@ -145,26 +162,71 @@ export default function SubscriptionPage() {
                   }
                 />
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button variant="outline" size="sm" asChild className="gap-1">
-                    <Link to="/tariffs">
-                      {isActive ? t('subscriptionPage.renew') : t('subscriptionPage.buySubscription')}
-                      <ChevronRight size={14} />
-                    </Link>
-                  </Button>
+                <div className="space-y-2.5">
                   {sub?.subscription_link && (
-                    <Button variant="default" size="sm" asChild className="gap-1">
-                      <a href={sub.subscription_link} target="_blank" rel="noreferrer">
-                        {t('subscriptionPage.connectDevice')}
-                      </a>
-                    </Button>
+                    isExpired ? (
+                      <div className="rounded-xl border border-border bg-muted/35 px-4 py-3 opacity-70">
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                            <MonitorSmartphone size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-muted-foreground">{t('subscriptionPage.connectDevice')}</p>
+                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <Link to="/connections" className="connect-device-cta group block rounded-xl">
+                        <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
+                          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                            <MonitorSmartphone size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
+                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  )}
+                  {isExpired ? (
+                    <Link
+                      to="/tariffs"
+                      className="group flex items-center gap-3 rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-card-foreground transition-colors hover:bg-destructive/15"
+                    >
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                        <AlertTriangle size={16} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                        <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
+                      </div>
+                      <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/tariffs"
+                      className="group block rounded-xl border border-border bg-muted/35 px-4 py-3 transition-colors hover:bg-muted/55"
+                    >
+                      <div className="flex items-center gap-3 text-card-foreground">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))]">
+                          <Zap size={16} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                          <p className="text-xs text-muted-foreground">{t('dashboard.tariffsCardTitle')}</p>
+                        </div>
+                        <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </div>
+                    </Link>
                   )}
                 </div>
               </CardContent>
             </Card>
 
             {sub?.subscription_link && (
-              <Card>
+              <Card className={isExpired ? 'opacity-60 saturate-50' : ''}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
                     <Wifi size={14} />
@@ -176,7 +238,7 @@ export default function SubscriptionPage() {
                     <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono text-muted-foreground truncate select-all">
                       {sub.subscription_link}
                     </div>
-                    <Button variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5">
+                    <Button variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5" disabled={isExpired}>
                       {copied ? (
                         <>
                           <Check size={14} className="text-primary" />
@@ -236,7 +298,7 @@ export default function SubscriptionPage() {
                                 size="sm"
                                 className="gap-1.5"
                                 disabled={deleteDevice.isPending}
-                                onClick={() => deleteDevice.mutate(d.hwid)}
+                                onClick={() => setDeleteConfirmHwid(d.hwid)}
                               >
                                 <Trash2 size={13} />
                                 {t('subscriptionPage.deleteDevice')}
@@ -250,6 +312,44 @@ export default function SubscriptionPage() {
                 )}
               </CardContent>
             </Card>
+
+            {deleteConfirmHwid && typeof document !== 'undefined'
+              ? createPortal(
+                  <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm p-4">
+                      <p className="text-base font-medium text-foreground mb-4">
+                        {t('subscriptionPage.deleteDeviceConfirm')}
+                      </p>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={deleteDevice.isPending}
+                          onClick={() => setDeleteConfirmHwid(null)}
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          loading={deleteDevice.isPending}
+                          disabled={deleteDevice.isPending}
+                          onClick={() => {
+                            const hwid = deleteConfirmHwid
+                            setDeleteConfirmHwid(null)
+                            deleteDevice.mutate(hwid)
+                          }}
+                        >
+                          {t('subscriptionPage.deleteDevice')}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>,
+                  document.body,
+                )
+              : null}
           </div>
         )}
       </div>

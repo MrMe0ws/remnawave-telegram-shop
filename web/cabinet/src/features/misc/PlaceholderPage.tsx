@@ -16,7 +16,7 @@ export function PlaceholderPage({ titleKey, bodyKey }: PlaceholderPageProps) {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-xl">
+      <div className="mx-auto w-full max-w-xl space-y-6">
         <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground space-y-4">

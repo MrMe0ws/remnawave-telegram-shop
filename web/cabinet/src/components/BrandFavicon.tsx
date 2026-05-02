@@ -15,10 +15,11 @@ function faviconType(href: string): string {
   return 'image/png'
 }
 
-/** Подменяет rel=icon на кастомный логотип из bootstrap (тот же URL, что и в шапке). */
+/** Подменяет rel=icon и заголовок вкладки из bootstrap (логотип + имя бренда с бэкенда). */
 export function BrandFavicon() {
   const { data } = useAuthBootstrap()
   const href = (data?.brand_logo_url?.trim() || defaultHref).trim() || defaultHref
+  const rawName = data?.brand_name?.trim()
 
   useEffect(() => {
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
@@ -30,6 +31,15 @@ export function BrandFavicon() {
     link.href = href
     link.type = faviconType(href)
   }, [href])
+
+  useEffect(() => {
+    // Совпадает с <title> в index.html, пока бэкенд не отдал имя; API по умолчанию шлёт "Cabinet".
+    if (!rawName || rawName === 'Cabinet') {
+      document.title = 'Кабинет'
+    } else {
+      document.title = rawName
+    }
+  }, [rawName])
 
   return null
 }

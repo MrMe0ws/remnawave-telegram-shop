@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+const slowRequestLogThreshold = 300 * time.Millisecond
+
+var noisyAccessLogPaths = map[string]struct{}{
+	"/cabinet/sw.js":                             {},
+	"/cabinet/api/auth/bootstrap":                {},
+	"/cabinet/api/public/pwa-manifest.webmanifest": {},
+}
+
 // statusRecorder — обёртка над http.ResponseWriter, которая запоминает статус и размер ответа
 // для последующего логирования. Без неё мы не знаем, что реально уехало клиенту.
 type statusRecorder struct {
@@ -43,18 +51,31 @@ func Logger() func(http.Handler) http.Handler {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
+			duration := time.Since(start)
+			if shouldSkipAccessLog(r.URL.Path, rec.status, duration) {
+				return
+			}
 			slog.Info("cabinet http",
 				"request_id", RequestIDFromContext(r.Context()),
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", rec.status,
 				"bytes", rec.bytes,
-				"duration_ms", time.Since(start).Milliseconds(),
+				"duration_ms", duration.Milliseconds(),
 				"remote", maskRemoteAddr(ClientIP(r)),
 				"ua", truncateUserAgent(r.Header.Get("User-Agent"), 160),
 			)
 		})
 	}
+}
+
+func shouldSkipAccessLog(path string, status int, duration time.Duration) bool {
+	// В логах всегда оставляем ошибки и медленные запросы: это критично для отладки.
+	if status >= http.StatusBadRequest || duration >= slowRequestLogThreshold {
+		return false
+	}
+	_, noisy := noisyAccessLogPaths[path]
+	return noisy
 }
 
 func truncateUserAgent(ua string, max int) string {

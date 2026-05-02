@@ -16,10 +16,11 @@ type PolicyError struct {
 
 func (e *PolicyError) Error() string { return e.Reason }
 
-// Policy — правила проверки пароля для MVP (см. mvp-tz.md 8.1).
+// Policy — правила проверки пароля.
 //
-// Минимум 8 символов (после NFKC), запрет на пароль, равный email/username,
-// запрет на топ популярных паролей (см. common_passwords.go).
+// Текущий рабочий профиль кабинета: минимум 8 символов (после NFKC).
+// Дополнительные проверки (популярные пароли/совпадение с email/username)
+// оставлены в коде как опции и по умолчанию выключены.
 //
 // Максимум мы сознательно не ограничиваем (NIST SP 800-63B), но ставим sanity
 // cap в 256 символов после нормализации — это защита от DoS на Argon2id
@@ -31,13 +32,13 @@ type Policy struct {
 	BlockEqualUser bool
 }
 
-// DefaultPolicy — политика из ТЗ.
+// DefaultPolicy — базовая политика: только минимальная длина.
 func DefaultPolicy() Policy {
 	return Policy{
 		MinLength:      8,
 		MaxLength:      256,
-		BlockPopular:   true,
-		BlockEqualUser: true,
+		BlockPopular:   false,
+		BlockEqualUser: false,
 	}
 }
 

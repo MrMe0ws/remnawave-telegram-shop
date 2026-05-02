@@ -2,9 +2,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone } from 'lucide-react'
+import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, type SubscriptionResponse } from '@/lib/api'
@@ -33,9 +34,33 @@ export default function DashboardPage() {
     retry: 1,
   })
 
+  const { data: devices } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => api.devices(),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    retry: 1,
+    enabled: Boolean(sub),
+  })
+
   const hasSubscription = hasSubscriptionData(sub)
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
-  const isActive = days !== null && days > 0
+  const isExpiredByDate = days !== null && days <= 0
+  const isExpiredByTraffic = Boolean(
+    sub?.traffic_limit_gb != null &&
+    sub.traffic_limit_gb > 0 &&
+    (sub.traffic_used_gb ?? 0) >= sub.traffic_limit_gb,
+  )
+  const isInactive = isExpiredByDate || isExpiredByTraffic
+  const isActive = !isInactive
+  const connectedDevices = Math.max(0, devices?.connected ?? 0)
+  const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
+  const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
+  const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
+  const deviceLimitText =
+    deviceLimit > 0
+      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
+      : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
 
   const activateTrial = useMutation({
     mutationFn: () => api.activateTrial(),
@@ -57,6 +82,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
+      <PWAInstallPrompt />
       <div className="space-y-5">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{t('dashboard.welcomeTitle')}</h1>
@@ -103,11 +129,9 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {sub?.subscription_link && (
-                <a
-                  href={sub.subscription_link}
-                  target="_blank"
-                  rel="noreferrer"
+              {sub?.subscription_link && !isInactive && (
+                <Link
+                  to="/connections"
                   className="connect-device-cta group block rounded-xl"
                 >
                   <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
@@ -116,21 +140,42 @@ export default function DashboardPage() {
                     </span>
                     <div className="min-w-0">
                       <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                      <p className="text-xs text-muted-foreground dark:text-slate-300">{t('dashboard.openSubscriptionPage')}</p>
+                            <p className="text-xs text-muted-foreground dark:text-slate-300">{deviceLimitText}</p>
                     </div>
                   </div>
-                </a>
+                </Link>
               )}
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-muted/50 px-4 py-3 dark:border-cyan-300/20 dark:bg-[#10223d]">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground dark:text-cyan-200/70">
+                <Link
+                  to="/subscription"
+                  className={`block rounded-xl border px-4 py-3 transition-colors hover:bg-muted/70 dark:hover:bg-[#173154] ${
+                    isInactive
+                      ? 'border-destructive/45 bg-destructive/10 hover:bg-destructive/15'
+                      : 'border-border bg-muted/50 dark:border-cyan-300/20 dark:bg-[#10223d]'
+                  }`}
+                >
+                  <p className={`text-[11px] uppercase tracking-[0.14em] ${
+                    isInactive
+                      ? 'text-destructive/80'
+                      : 'text-muted-foreground dark:text-cyan-200/70'
+                  }`}>
                     {t('subscriptionPage.tariff')}
                   </p>
-                  <p className="mt-1 text-lg font-semibold">{subscriptionTariffLabel(sub, t)}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/50 px-4 py-3 dark:border-amber-300/20 dark:bg-[#1a2234]">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground dark:text-amber-200/70">
+                  <p className="mt-1 text-lg font-semibold">
+                    {subscriptionTariffLabel(sub, t)}
+                  </p>
+                </Link>
+                <div className={`rounded-xl border px-4 py-3 ${
+                  isInactive
+                    ? 'border-destructive/55 bg-destructive/10'
+                    : 'border-border bg-muted/50 dark:border-amber-300/20 dark:bg-[#1a2234]'
+                }`}>
+                  <p className={`text-[11px] uppercase tracking-[0.14em] ${
+                    isInactive
+                      ? 'text-destructive/80'
+                      : 'text-muted-foreground dark:text-amber-200/70'
+                  }`}>
                     {t('subscriptionPage.expireAt')}
                   </p>
                   <p className="mt-1 text-sm font-medium">{sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}</p>
@@ -143,6 +188,22 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
+
+              {isInactive && (
+                <Link
+                  to="/tariffs"
+                  className="group flex items-start gap-3 rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-card-foreground transition-colors hover:bg-destructive/15"
+                >
+                  <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                    <AlertTriangle size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                    <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
+                  </div>
+                  <ChevronRight size={16} className="mt-1 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -163,13 +224,17 @@ export default function DashboardPage() {
                 <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
               </div>
 
-              <Button
-                className="h-11 w-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-white dark:hover:bg-cyan-500/20"
-                onClick={() => activateTrial.mutate()}
-                disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
-              >
-                {trialButtonLabel}
-              </Button>
+              <div className="connect-device-cta rounded-xl">
+                <div className="connect-device-cta-inner rounded-[10px] p-[1px]">
+                  <Button
+                    className="h-11 w-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-white dark:hover:bg-cyan-500/20"
+                    onClick={() => activateTrial.mutate()}
+                    disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
+                  >
+                    {trialButtonLabel}
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -199,6 +264,36 @@ export default function DashboardPage() {
                 <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                   <Users size={16} className="shrink-0 text-primary" aria-hidden />
                   <span className="truncate">{t('dashboard.referralsCardTitle')}</span>
+                </p>
+                <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link
+            to="/promocodes"
+            className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Card className="bg-card/70 h-full transition-shadow group-hover:shadow-md group-active:scale-[0.99]">
+              <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
+                <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  <Ticket size={16} className="shrink-0 text-primary" aria-hidden />
+                  <span className="truncate">{t('dashboard.promocodesCardTitle')}</span>
+                </p>
+                <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link
+            to="/info"
+            className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Card className="bg-card/70 h-full transition-shadow group-hover:shadow-md group-active:scale-[0.99]">
+              <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
+                <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  <FileText size={16} className="shrink-0 text-primary" aria-hidden />
+                  <span className="truncate">{t('dashboard.infoCardTitle')}</span>
                 </p>
                 <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
               </CardContent>

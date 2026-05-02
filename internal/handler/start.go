@@ -11,7 +11,6 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
-	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/utils"
@@ -46,8 +45,8 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 					slog.Error("error parsing referrer id", err)
 					return
 				}
-				_, err = h.customerRepository.FindByTelegramId(ctx, referrerId)
-				if err == nil {
+				referrer, ferr := h.customerRepository.FindByTelegramId(ctx, referrerId)
+				if ferr == nil && referrer != nil {
 					_, err := h.referralRepository.Create(ctx, referrerId, existingCustomer.TelegramID)
 					if err != nil {
 						slog.Error("error creating referral", err)
@@ -137,7 +136,7 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 
 func (h Handler) resolveConnectButton(lang string) []models.InlineKeyboardButton {
 	// При включённом кабинете «Мой VPN» сразу открывает WebApp кабинета (тот же функционал, что подменю).
-	if u := cabcfg.MiniAppEntryURL(); u != "" {
+	if u := cabinetWebAppURL("/cabinet/dashboard"); u != "" {
 		return []models.InlineKeyboardButton{
 			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{
 				WebApp: &models.WebAppInfo{URL: u},

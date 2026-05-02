@@ -60,7 +60,7 @@ export default function PromoCodesPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-xl space-y-6">
+      <div className="mx-auto w-full max-w-xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">{t('promocodes.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('promocodes.subtitle')}</p>

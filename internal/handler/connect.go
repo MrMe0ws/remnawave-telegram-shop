@@ -14,7 +14,6 @@ import (
 	"github.com/go-telegram/bot/models"
 	"github.com/google/uuid"
 
-	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/translation"
@@ -357,7 +356,7 @@ func escapeHTML(value string) string {
 func (h Handler) resolveConnectDeviceButton(lang string, subscriptionLink *string) []models.InlineKeyboardButton {
 	var inlineKeyboard []models.InlineKeyboardButton
 
-	if u := cabcfg.MiniAppEntryURL(); u != "" {
+	if u := cabinetWebAppURL("/cabinet/connections"); u != "" {
 		inlineKeyboard = []models.InlineKeyboardButton{
 			h.translation.WithButton(lang, "connect_device_button", models.InlineKeyboardButton{WebApp: &models.WebAppInfo{
 				URL: u,

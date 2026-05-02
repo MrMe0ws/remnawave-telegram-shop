@@ -3,12 +3,24 @@ WORKDIR /modules
 COPY go.mod go.sum ./
 RUN go mod download
 
+FROM --platform=$BUILDPLATFORM node:22-alpine AS cabinet_frontend
+WORKDIR /app
+COPY web/cabinet/package.json web/cabinet/package-lock.json /app/web/cabinet/
+WORKDIR /app/web/cabinet
+RUN npm ci
+WORKDIR /app
+COPY web/cabinet /app/web/cabinet
+RUN mkdir -p /app/internal/cabinet/web
+WORKDIR /app/web/cabinet
+RUN npm run build
+
 FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine AS builder
 WORKDIR /app
 
 COPY --from=modules /go/pkg /go/pkg
 
 COPY . .
+COPY --from=cabinet_frontend /app/internal/cabinet/web/dist /app/internal/cabinet/web/dist
 
 RUN apk update && apk add --no-cache ca-certificates tzdata
 RUN update-ca-certificates

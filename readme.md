@@ -13,6 +13,7 @@
 
 ### ✨ Добавленные Новые Функции:
 
+- **🌐 Web-кабинет**: полноценный SPA-кабинет + API в том же процессе бота. Пользователь может зарегистрироваться, войти, купить/продлить подписку, привязать Telegram и управлять профилем без обязательного входа в Telegram.
 - **📱 Управление устройствами**: отдельное меню, просмотр и удаление HWID устройств
 - **➕ Доп. устройства**: покупка дополнительных слотов с пропорциональной оплатой
 - **🔁 Продление с доп. устройствами**: выбор продления подписки с доп. устройствами одним платежом
@@ -35,6 +36,7 @@
 - **👥 Админ — «Пользователи»** (`ADMIN_TELEGRAM_ID`): списки всех / неактивных, поиск, карточка; оплаты и сводка в ₽ + Stars (оценка Stars в ₽ при `RUB_PER_STAR`); ветка **«Подписки»** (все / скоро истекают); пагинация с выбором страницы. При **`SALES_MODE=tariffs`** — смена тарифа, доп. HWID, описание, устройства, настройки панели (squads, трафик, срок подписки и др.).
 - **📈 Админ-статистика** (при заданном `ADMIN_TELEGRAM_ID`): раздел **«Статистика»** в админ-панели — пользователи, подписки, доходы в ₽ (фильтр по RUB/RUR/пустой валюте), реферальные начисления **в днях**, общая сводка; данные из PostgreSQL, кнопки «Обновить» / «Назад».
 - **💎 Лояльность** (`LOYALTY_ENABLED`): XP по успешным оплатам (1 ₽ эквивалента ≈ 1 XP, Stars через `RUB_PER_STAR`), уровни и скидки в таблице `loyalty_tier` (миграция `000014_loyalty`), админка уровней и **пересчёт XP из истории `purchase`**, пользовательский экран в «Мой VPN». Подробнее — `docs/loyalty/` и `AGENTS.md`.
+- **🔐 Hardening кабинета**: Turnstile (опционально), rate-limit с trusted proxy логикой IP, Prometheus-метрики (`/cabinet/api/metrics`) с опциональным Basic-auth, merge/link safeguards.
 
 ### 📋 Совместимость Версий:
 
@@ -65,19 +67,19 @@ Telegram бот для продажи подписок с интеграцией
 - [YooKassa API](https://yookassa.ru/developers/api)
 - [CryptoPay API](https://help.crypt.bot/crypto-pay-api)
 - Telegram Stars
-- Tribute
 
 ## Возможности
 
 - Покупка VPN подписок с различными способами оплаты (банковские карты, криптовалюта)
 - Множественные планы подписок (1, 3, 6, 12 месяцев)
 - Автоматизированное управление подписками
+- **Web-кабинет**: пользователю не обязательно идти в Telegram для оформления/продления подписки и управления аккаунтом
 - **Уведомления о Подписках**: Бот автоматически отправляет уведомления пользователям за 3 дня до истечения их подписки,
   помогая им избежать прерывания сервиса
 - Поддержка нескольких языков (русский и английский)
 - **Селективное Назначение squad**: Настройка конкретных squad для назначения пользователям через фильтрацию UUID
 - Все сообщения telegram поддерживают HTML форматирование https://core.telegram.org/bots/api#html-style
-- Healthcheck - бот проверяет доступность базы данных и панели. Возвращает информацию о версии, коммите и дате сборки
+- Healthcheck (`/healthcheck`) показывает состояние БД/Remnawave и метаданные сборки (версия, commit, buildDate)
 
 ### 🆕 Улучшенные Возможности (специфичные для форка):
 
@@ -92,65 +94,15 @@ Telegram бот для продажи подписок с интеграцией
 - **История транзакций**: Удобный просмотр операций с пагинацией
 - **Промокоды**: пользовательский сценарий активации и админ-раздел (при настроенном `ADMIN_TELEGRAM_ID`), миграция БД `000007_promo_codes`
 - **Админ-статистика**: при `ADMIN_TELEGRAM_ID` в админ-панели — раздел со сводками по БД (пользователи, подписки, доходы в ₽, рефералы в днях, общая сводка)
+- **Web-кабинет**: веб-кабинет для зеров
+    **Полный production-гайд по кабинету:** `documentation/cabinet/SETUP-GUIDE-RU.md`.
 
-## Web-кабинет (опционально, в разработке)
+Быстрый smoke при `CABINET_ENABLED=true`:
 
-В проект добавляется web-кабинет — SPA + API, запускаемые в том же процессе, что и бот. Включается флагом `CABINET_ENABLED=true` в `.env`, по умолчанию **выключен** и никак не влияет на работу бота.
-
-- **Как включить режим кабинета** (миграции, сборка SPA, env, Telegram, брендинг, smoke): [`documentation/cabinet-mode-setup.md`](documentation/cabinet-mode-setup.md). Переменные `CABINET_*` — в **`.env.sample`**. Технические материалы (ТЗ, план, nginx) при необходимости ведите у себя в `docs/cabinet/` (в шаблоне репозитория каталог `/docs/` в `.gitignore` и может не попадать в git).
-- Поддомен и домен: `cabinet.example.com` → `proxy_pass http://127.0.0.1:<HEALTH_CHECK_PORT>` (пример nginx/TLS — в локальной копии `docs/cabinet/deploy-guide-simple.md`, если она у вас есть).
-- Авторизация: email + пароль, Google OAuth2, Telegram Login 2.0 (OIDC для web) + Telegram Mini App `initData` (встроенный путь внутри Telegram).
-- Синхронизация с ботом: аккаунт сайта и профиль Telegram связываются в одну запись `customer`; web-only пользователи получают synthetic `telegram_id` вне реального Telegram-диапазона и дополнительно помечаются колонкой `customer.is_web_only` — Telegram Bot API к ним никогда не вызывается.
-
-Статус: выполнены этапы 0–10 (включая hardening: метрики Prometheus, CSP/HSTS по контексту, правка регистрации `/link/*` без платежей). Краткий обзор:
-
-| Этап | Содержание |
-|------|-----------|
-| 0 | Скелет: `/cabinet/api/healthz`, SPA-заглушка, `go:embed` |
-| 0.5 | Аудит `customer.telegram_id` |
-| 1 | Миграция `000017_cabinet_schema`, synthetic telegram_id, startup-check |
-| 2 | Auth-стек: Argon2id + JWT HS256 + refresh-ротация, CSRF, rate-limit, SMTP |
-| 2.5 | `GET /me`, `PUT /me/language` |
-| 3 | Bootstrap web-only customer, `cabinet_account_customer_link` |
-| 4 | Публичная витрина `GET /tariffs` |
-| 5 | Checkout + оплаты (YooKassa, CryptoPay), `Idempotency-Key` |
-| 6 | `GET /me/subscription`: expire_at, link, tariff, loyalty_xp |
-| 7 | Google OAuth (PKCE) + Telegram Login (MiniApp) |
-| 8 | Link/Merge Telegram ↔ web customer: dry-run preview, атомарный merge, `cabinet_merge_audit` |
-| **9a** | **Фронтенд: `web/cabinet/` — Vite 6 + React 19 + Tailwind 3, страницы auth, dark/light тема, RU/EN i18n, `dist/` в `go:embed`** |
-| **9b** | **Dashboard (статус подписки + copy-link + loyalty), витрина тарифов (classic/tariffs mode), checkout (YooKassa/CryptoPay) + страница статуса оплаты с polling** |
-| **9c** | **Настройки (пароль, язык, Google, Telegram link через OAuth 2.0), страница merge preview/confirm, автологин Mini App по `initData`, `PUT /me/password` на бэкенде** |
-| **10** | **Метрики `GET /cabinet/api/metrics` (+ опциональный Basic-auth), CSP для SPA / security headers для API, маскирование IP/UA в логах, CI: `go build` + тесты кабинета + `scripts/cabinet-forbid-sensitive-slogs.sh`** |
-
-**Релиз / домен:** после смены домена кабинета обязательно обновите настройки в BotFather:
-- `/setdomain` для Mini App / совместимости web-login.
-- Telegram Login 2.0 (OIDC): trusted origin + redirect URI (например, `https://cabinet.example.com/cabinet/api/auth/telegram/callback`).
-- Переменные кабинета: `CABINET_TELEGRAM_WEB_AUTH_MODE`, `CABINET_TELEGRAM_OIDC_CLIENT_ID`, `CABINET_TELEGRAM_OIDC_CLIENT_SECRET`, `CABINET_TELEGRAM_OIDC_REDIRECT_URL`, `CABINET_TELEGRAM_LOGIN_BOT_USERNAME`.
-Метрики: переменные `CABINET_METRICS_*` в `.env.sample`.
-
-### Telegram Auth 2.0 (micro guide)
-
-1. В BotFather откройте раздел **Login Widget / OpenID Connect** для вашего бота.
-2. Заполните в `.env`:
-   - `CABINET_TELEGRAM_WEB_AUTH_MODE` = `oidc` (или `widget`, если нужен legacy Login Widget 1.0).
-   - `CABINET_TELEGRAM_OIDC_CLIENT_ID` = `Client ID` из BotFather.
-   - `CABINET_TELEGRAM_OIDC_CLIENT_SECRET` = `Client Secret` из BotFather.
-   - `CABINET_TELEGRAM_OIDC_REDIRECT_URL` = `https://<ваш_домен>/cabinet/api/auth/telegram/callback`.
-3. В BotFather добавьте:
-   - **Redirect URI**: точно тот же URL, что в `CABINET_TELEGRAM_OIDC_REDIRECT_URL`.
-   - **Trusted Origin**: `https://<ваш_домен>` (без path).
-4. Для Mini App оставьте `/setdomain` на тот же хост кабинета.
-5. Перезапустите сервис и проверьте web-вход «Войти через Telegram».
-
-Режимы `CABINET_TELEGRAM_WEB_AUTH_MODE`:
-- `oidc` — только Telegram OAuth 2.0 (web).
-- `widget` — только legacy Telegram Login Widget 1.0 (web).
-
-Важно:
-- Совпадение `redirect_uri` должно быть **побайтно точным** (схема, хост, path, слеши).
-- Ошибка `redirect_uri required` обычно означает, что Redirect URI не добавлен в BotFather или не совпадает с тем, что уходит в запросе.
-
-Быстрый smoke (бот с `CABINET_ENABLED=true`): `curl -fsS http://127.0.0.1:$HEALTH_CHECK_PORT/cabinet/api/healthz` и при настроенных метриках — `curl -fsS -u user:pass .../cabinet/api/metrics | head`.
+```bash
+curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/healthz"
+curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
+```
 
 ## Промокоды
 
@@ -166,9 +118,6 @@ Telegram бот для продажи подписок с интеграцией
 - Задайте **`ADMIN_TELEGRAM_ID`** — у этого пользователя в главном меню появляется кнопка **«Админ»**.
 - В админ-панели доступны: **рассылка**, **«Пользователи»** (списки, поиск, карточка, подписки/оплаты; при `tariffs` — операции с тарифом и панелью), **статистика** (сводки по пользователям, подпискам, доходам, рефералам и общий обзор), **синхронизация с Remnawave**, **«Промокоды»** (список с пагинацией, мастер создания, карточка: правки, статистика, вкл/выкл, «только первая покупка», удаление), при `SALES_MODE=tariffs` — **тарифы**; при **`LOYALTY_ENABLED=true`** — **«Лояльность»** (уровни, пересчёт XP из оплат).
 
-### База данных и обновление
-
-- Схема промокодов подключается миграцией **`000007_promo_codes`** (см. `db/migrations/`). При обновлении с версии без промокодов **выполните миграции** до запуска бота.
 
 ## Лояльность
 
@@ -206,14 +155,6 @@ Telegram бот для продажи подписок с интеграцией
 - **Даунгрейд** (дороже → дешевле при активной подписке): полная цена выбранного периода на дешёвом тарифе; остаток дорогого тарифа пересчитывается в дни дешёвого **той же формулой**, срок **от момента оплаты** (как у апгрейда). Предупреждение перед оплатой — `tariff_downgrade_early_warning`.
 - **Админка**: при заданном `ADMIN_TELEGRAM_ID` в админ-панели есть раздел управления тарифами (создание, цены в ₽ и Stars, squads, описание). Если таблица тарифов **пуста**, при первом открытии списка тарифов в админке может быть **автоматически создан** тариф `standard` из текущих `PRICE_*`, `TRAFFIC_LIMIT`, лимитов устройств и squad/tag из env (удобно для миграции с `classic`).
 
-#### Миграция пользователей с классической подпиской на учёт тарифа (вариант «наследник classic»)
-
-Чтобы пользователи с активной подпиской из старого режима (`current_tariff_id` пустой) при переходе на премиум не получали лишние дни премиума по цене базового продления, им нужно **проставить текущий тариф**, эквивалентный прежнему classic (те же ₽ за 1/3/6/12 месяцев в `tariff_price`, те же лимиты/squads, что выдавала классика).
-
-1. **Подготовка тарифа**: убедитесь, что в таблице `tariff` есть строка с **`slug = 'standard'`** и во всех нужных строках `tariff_price` заданы **`amount_rub`** за периоды 1, 3, 6, 12 — **в соответствии со старыми ценами** (как в `PRICE_*` при classic). Это может быть уже автосозданный тариф из админки или отдельная строка «Classic» — если используете другой slug, миграцию ниже выполните вручную с нужным slug.
-2. **Опционально**: скройте наследника с витрины (`is_active = false`), если он только для расчётов и не должен продаваться отдельно.
-3. **Миграция БД** `000011_backfill_customer_legacy_tariff`: при применении миграций она выставит `customer.current_tariff_id` на тариф со slug `standard` всем клиентам с **`expire_at > now()`** и **`current_tariff_id IS NULL`**. Если миграция прошла **до** появления строки `tariff` со slug `standard`, обновление затронет 0 строк — выполните тот же `UPDATE` вручную после создания тарифа (текст запроса — в файле миграции).
-4. **Remnawave**: сама по себе миграция **не меняет** профили пользователей в панели — поменяется только учёт в боте до следующей оплаты или до явной синхронизации (если у вас есть сценарий массового применения профиля тарифа подписчикам).
 
 ### Какие переменные `.env` на что влияют в каждом режиме
 
@@ -244,10 +185,11 @@ Telegram бот для продажи подписок с интеграцией
 
 ## API
 
-Веб-сервер запускается на порту, определенном в .env через HEALTH_CHECK_PORT
+Веб-сервер запускается на порту из `.env` через `HEALTH_CHECK_PORT`.
+Это единый HTTP-сервер бота: `/healthcheck` + (если включён кабинет) `/cabinet/*` и `/cabinet/api/*`.
+Рекомендуется держать этот порт локальным (`127.0.0.1`) и пускать внешний трафик через reverse proxy (nginx/caddy).
 
 - `/healthcheck` - Проверка здоровья сервиса. Возвращает JSON с информацией о статусе БД, Remnawave API, версии, коммите и дате сборки
-- `/${TRIBUTE_PAYMENT_URL}` - Webhook для обработки платежей Tribute
 
 ## Переменные Окружения
 
@@ -273,7 +215,6 @@ Telegram бот для продажи подписок с интеграцией
 | `IS_WEB_APP_LINK`                    | Если true, то ссылка подписки будет показана как webapp..                                                                                                     |
 | `REMNAWAVE_HEADERS`                  | Дополнительные заголовки для запросов к remnawave (формат: key1:value1;key2:value2). Пример: X-Api-Key:your_key;X-Custom:value (опционально)                  |
 | `MINI_APP_URL`                       | URL tg WEB APP. если пустой, не используется.                                                                                                                 |
-| `PRICE_12`                           | Цена за 12 месяцев                                                                                                                                            |
 | `STARS_PRICE_1`                      | Цена в Stars за 1 месяц                                                                                                                                       |
 | `STARS_PRICE_3`                      | Цена в Stars за 3 месяца                                                                                                                                      |
 | `STARS_PRICE_6`                      | Цена в Stars за 6 месяцев                                                                                                                                     |
@@ -320,6 +261,36 @@ Telegram бот для продажи подписок с интеграцией
 | `PRIVACY_POLICY_URL`                 | URL политики конфиденциальности (опционально) - если установлен, кнопка "🔒 Политика конфиденциальности" отображается в разделе "Помощь"                      |
 | `TERMS_OF_SERVICE_URL`               | URL пользовательского соглашения (опционально) - если установлен, кнопка "📋 Пользовательское соглашение" отображается в разделе "Помощь"                     |
 | `ADMIN_TELEGRAM_ID`                  | ID telegram админа; кнопка «Админ»: рассылка, **пользователи**, статистика, синхронизация, промокоды; при `SALES_MODE=tariffs` — тарифы; при лояльности — раздел лояльности. Промокоды — миграция `000007_promo_codes` |
+| `CABINET_ENABLED`                    | Включить web-кабинет (`true/false`) |
+| `CABINET_PROFILE_DELETE_ENABLED`     | Разрешить самоудаление профиля в кабинете (`POST /cabinet/api/me/account/delete`) |
+| `CABINET_PUBLIC_URL`                 | Публичный URL кабинета (например, `https://cabinet.example.com`) |
+| `CABINET_ALLOWED_ORIGINS`            | CORS allowlist для кабинета |
+| `CABINET_JWT_SECRET`                 | Секрет подписи access JWT (рекомендуется 32+ байт) |
+| `CABINET_COOKIE_DOMAIN`              | Домен refresh-cookie; если пусто, берётся из `CABINET_PUBLIC_URL` |
+| `CABINET_ACCESS_TTL_MINUTES`         | TTL access token в минутах |
+| `CABINET_REFRESH_TTL_DAYS`           | TTL refresh-сессии в днях |
+| `CABINET_WEB_TELEGRAM_ID_BASE`       | База synthetic Telegram ID для web-only пользователей |
+| `CABINET_BRAND_NAME`                 | Брендовое название в UI кабинета (опционально) |
+| `CABINET_BRAND_LOGO_URL`             | URL логотипа кабинета (опционально, приоритетнее файла) |
+| `CABINET_BRAND_LOGO_FILE`            | Путь к файлу логотипа на диске процесса (опционально) |
+| `CABINET_BRAND_LOGO_FILE_BASE`       | Базовый путь поиска файла логотипа в Docker (опционально) |
+| `CABINET_PWA_ENABLED`                | Включить PWA-манифест кабинета (`true/false`) |
+| `CABINET_PWA_APP_NAME`               | Имя PWA-приложения (опционально) |
+| `CABINET_PWA_SHORT_NAME`             | Короткое имя PWA-приложения (опционально) |
+| `CABINET_MINI_APP_URL`               | URL Mini App для web↔telegram flow (опционально) |
+| `CABINET_MINI_APP_PATH`              | Path Mini App (опционально, обычно `/cabinet/`) |
+| `CABINET_SMTP_HOST` / `CABINET_SMTP_PORT` / `CABINET_SMTP_USER` / `CABINET_SMTP_PASSWORD` / `CABINET_SMTP_TLS` / `CABINET_MAIL_FROM` | SMTP для писем кабинета (verify/reset) |
+| `CABINET_GOOGLE_CLIENT_ID` / `CABINET_GOOGLE_CLIENT_SECRET` / `CABINET_GOOGLE_REDIRECT_URL` | Google OAuth для кабинета |
+| `CABINET_YANDEX_CLIENT_ID` / `CABINET_YANDEX_CLIENT_SECRET` / `CABINET_YANDEX_REDIRECT_URL` | Yandex OAuth для кабинета |
+| `CABINET_VK_CLIENT_ID` / `CABINET_VK_CLIENT_SECRET` / `CABINET_VK_CLIENT_REDIRECT_URL` | VK OAuth для кабинета |
+| `CABINET_TELEGRAM_WEB_AUTH_MODE`     | Режим web-авторизации Telegram: `oidc` (рекомендуется) или `widget` |
+| `CABINET_TELEGRAM_LOGIN_BOT_USERNAME`| Username бота для legacy Telegram Login Widget (режим `widget`) |
+| `CABINET_TELEGRAM_LOGIN_BOT_TOKEN`   | Токен бота для валидации legacy Widget (режим `widget`) |
+| `CABINET_TELEGRAM_OIDC_CLIENT_ID` / `CABINET_TELEGRAM_OIDC_CLIENT_SECRET` / `CABINET_TELEGRAM_OIDC_REDIRECT_URL` | Telegram OAuth 2.0 (OIDC) web-login/link |
+| `CABINET_TURNSTILE_ENABLED`          | Включить Cloudflare Turnstile для `register/login/forgot` |
+| `CABINET_TURNSTILE_SITE_KEY`         | Публичный ключ Turnstile |
+| `CABINET_TURNSTILE_SECRET_KEY`       | Секретный ключ Turnstile |
+| `CABINET_METRICS_USER` / `CABINET_METRICS_PASSWORD` | Опциональный Basic-auth для `GET /cabinet/api/metrics` (оба заданы или оба пусты) |
 | `BLOCKED_TELEGRAM_IDS`               | Список Telegram ID, разделенных запятыми, для блокировки доступа к боту (например, "123456789,987654321")                                                     |
 | `WHITELISTED_TELEGRAM_IDS`           | Список Telegram ID, разделенных запятыми, которые обходят все проверки на подозрительных пользователей (например, "111111111,222222222,333333333")            |
 | `TRIAL_TRAFFIC_LIMIT`                | Максимально разрешенный трафик в гб для пробных подписок                                                                                                      |
@@ -421,60 +392,6 @@ mv .env.sample .env
 
 ```bash
 docker compose up -d
-```
-
-## Инструкции по Настройке Платежей Tribute
-
-> [!WARNING]
-> Для интеграции с Tribute у вас должен быть публичный домен (например, `bot.example.com`), который указывает на ваш сервер бота.  
-> Настройка webhook и подписки не будет работать на локальном адресе или IP — только через домен с действительным SSL
-> сертификатом.
-
-### Как работает интеграция
-
-Бот поддерживает управление подписками через сервис Tribute. Когда пользователь нажимает кнопку оплаты, он перенаправляется
-в бота Tribute или на страницу оплаты для завершения подписки. После успешной оплаты Tribute отправляет webhook
-на ваш сервер, и бот активирует подписку для пользователя.
-
-### Пошаговое руководство по настройке
-
-1. Начало работы
-
-- Создайте канал;
-- В приложении Tribute откройте "Channels and Groups" и добавьте ваш канал;
-- Создайте новую подписку;
-- Получите ссылку на подписку (Subscription -> Links -> Telegram Link).
-
-2. Настройте переменные окружения в `.env`
-
-   - Установите путь webhook (например, `/tribute/webhook`):
-
-   ```
-   TRIBUTE_WEBHOOK_URL=/tribute/webhook
-   ```
-
-   - Установите API ключ из ваших настроек Tribute:
-
-   ```
-   TRIBUTE_API_KEY=your_tribute_api_key
-   ```
-
-   - Вставьте ссылку на подписку, которую вы получили от Tribute:
-
-   ```
-   TRIBUTE_PAYMENT_URL=https://t.me/tribute/app?startapp=...
-   ```
-
-   - Укажите порт, который будет использовать приложение:
-
-   ```
-   HEALTH_CHECK_PORT=82251
-   ```
-
-3. Перезапустите бота
-
-```bash
-docker compose down && docker compose up -d
 ```
 
 ## Мой Налог через прокси (для серверов вне РФ)

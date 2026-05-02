@@ -24,6 +24,8 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --ring: 174 72% 36%;
+    --tariffs-shine-color: 73 73 73;
+    --tariffs-shine-shadow: 73 73 73;
     --radius: 0.625rem;
   }
 
@@ -47,6 +49,8 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --ring: 198 89% 50%;
+    --tariffs-shine-color: 214 214 214;
+    --tariffs-shine-shadow: 255 255 255;
     --radius: 0.625rem;
   }
 
@@ -103,7 +107,7 @@
       rgba(14, 169, 241, 0.2) 84%,
       rgba(14, 169, 241, 0.95)
     );
-    animation: connect-border-spin 2.8s linear infinite;
+    animation: connect-border-spin 4s linear infinite;
     box-shadow: 0 0 20px rgba(14, 169, 241, 0.12);
   }
 
@@ -114,6 +118,12 @@
 
   .connect-device-cta:hover .connect-device-cta-inner {
     background: hsl(var(--connect-device-inner-bg-hover));
+  }
+
+  /* Light "shine" for Tariffs icon in nav. */
+  .tariffs-shine-icon {
+    animation: tariffs-shine 5s linear infinite;
+    will-change: color, filter;
   }
 }
 
@@ -131,6 +141,29 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes tariffs-shine {
+  0%,
+  90% {
+    color: hsl(var(--muted-foreground));
+    filter: brightness(1);
+  }
+  50% {
+    color: rgb(var(--tariffs-shine-color) / 0.98);
+    filter: drop-shadow(0 0 6px rgb(var(--tariffs-shine-shadow) / 0.25));
+  }
+  58%,
+  100% {
+    color: hsl(var(--muted-foreground));
+    filter: brightness(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tariffs-shine-icon {
+    animation: none;
   }
 }
 

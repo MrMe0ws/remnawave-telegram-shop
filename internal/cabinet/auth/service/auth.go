@@ -16,6 +16,10 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -63,11 +67,14 @@ type Service struct {
 	jwt       *jwt.Issuer
 	mailer    *mail.Mailer
 	bootstrap *bootstrap.CustomerBootstrap
+	emailMergeCodes *repository.EmailMergeVerificationRepo
 
 	// Опциональные поля OAuth/Telegram. Устанавливаются через SetGoogle /
 	// SetTelegramToken после вызова New(); nil означает «провайдер отключён».
 	// Поля приватные — доступ только внутри пакета service (oauth.go).
 	googleProvider *oauthGoogleProviderWrapper // объявлен в oauth.go
+	yandexProvider *oauthYandexProviderWrapper
+	vkProvider     *oauthVKProviderWrapper
 	telegramOIDC   *oauthTelegramOIDCWrapper
 	telegramToken  string
 	telegramTokens []string
@@ -77,6 +84,11 @@ type Service struct {
 	// customer уже с реальным telegram_id, но cabinet_identity(telegram) могла не создаваться.
 	lookupCustomers *database.CustomerRepository
 	lookupLinks     *repository.AccountCustomerLinkRepo
+
+	// saveMergeEmailPeerClaim — опционально: сохранить claim для /link/merge после проверки пароля «чужого» email-аккаунта.
+	saveMergeEmailPeerClaim func(ctx context.Context, currentAccountID, peerAccountID int64) error
+	// saveMergeTelegramClaim — опционально: сохранить Telegram claim для /link/merge при OIDC-link конфликтах customer.
+	saveMergeTelegramClaim func(ctx context.Context, currentAccountID, telegramID int64, telegramUsername string) error
 }
 
 // New собирает сервис. Все зависимости обязательны (mailer может быть в dry-run
@@ -93,6 +105,7 @@ func New(
 	jwtIssuer *jwt.Issuer,
 	mailer *mail.Mailer,
 	boot *bootstrap.CustomerBootstrap,
+	emailMergeCodes *repository.EmailMergeVerificationRepo,
 ) *Service {
 	if cfg.AccessTTL == 0 {
 		cfg.AccessTTL = 15 * time.Minute
@@ -124,7 +137,8 @@ func New(
 		prs:       prs,
 		jwt:       jwtIssuer,
 		mailer:    mailer,
-		bootstrap: boot,
+		bootstrap:       boot,
+		emailMergeCodes: emailMergeCodes,
 	}
 }
 
@@ -171,6 +185,18 @@ func (s *Service) SetTelegramCustomerLookup(customers *database.CustomerReposito
 	s.lookupLinks = links
 }
 
+// SetMergeEmailPeerClaimSaver подключает callback для сценария «email занят другим аккаунтом,
+// пароль верный → merge». Вызывается из cabinethttp.Mount после создания MergeService.
+func (s *Service) SetMergeEmailPeerClaimSaver(fn func(ctx context.Context, currentAccountID, peerAccountID int64) error) {
+	s.saveMergeEmailPeerClaim = fn
+}
+
+// SetMergeTelegramClaimSaver подключает callback сохранения Telegram claim для /link/merge
+// в OIDC-link сценариях, когда найден второй customer по тому же telegram_id.
+func (s *Service) SetMergeTelegramClaimSaver(fn func(ctx context.Context, currentAccountID, telegramID int64, telegramUsername string) error) {
+	s.saveMergeTelegramClaim = fn
+}
+
 // Ошибки, которые хендлеры мапят в HTTP-коды. Намеренно скудные: сервис не
 // хочет рассказывать клиенту детали (anti-enumeration).
 var (
@@ -194,7 +220,18 @@ var (
 	// ErrEmailNotVerified — попытка войти/обновить до подтверждения email.
 	// Используется точечно (например, в RequireVerifiedEmail middleware).
 	ErrEmailNotVerified = errors.New("auth: email not verified")
+
 )
+
+// Исход привязки email (POST /me/email/link).
+const (
+	LinkEmailOutcomeVerifySent     = "verify_sent"
+	LinkEmailOutcomeMergeRequired = "merge_required"
+	LinkEmailOutcomeMergeVerificationRequired = "merge_verification_required"
+)
+
+const mergeEmailCodeTTL = 15 * time.Minute
+const mergeEmailCodeAttempts = 5
 
 // RegisterInput — вход регистрации.
 type RegisterInput struct {
@@ -280,7 +317,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*RegisterResu
 	return registerOKMessage(lang), nil
 }
 
-// sendVerifyEmail выпускает новый токен подтверждения и шлёт письмо.
+// sendVerifyEmail выпускает новый одноразовый код подтверждения и шлёт письмо.
 // Предыдущие (если были) инвалидируются.
 func (s *Service) sendVerifyEmail(ctx context.Context, acc *repository.Account) error {
 	if acc.Email == nil || *acc.Email == "" {
@@ -289,17 +326,16 @@ func (s *Service) sendVerifyEmail(ctx context.Context, acc *repository.Account) 
 	if err := s.evs.InvalidateForAccount(ctx, acc.ID); err != nil {
 		return err
 	}
-	token, hash, err := tokens.Generate(0)
+	code, hash, err := tokens.GenerateEmailVerifyOTP()
 	if err != nil {
 		return err
 	}
 	if _, err := s.evs.Create(ctx, acc.ID, hash, time.Now().Add(s.cfg.EmailVerifyTTL)); err != nil {
 		return err
 	}
-	verifyURL := cabinetAppURL(s.cfg.PublicURL, "/cabinet/verify-email?token="+url.QueryEscape(token))
 	return s.mailer.SendVerifyEmail(ctx, *acc.Email, acc.Language, mail.VerifyEmailData{
-		VerifyURL: verifyURL,
-		TTLHuman:  humanDuration(s.cfg.EmailVerifyTTL, acc.Language),
+		Code:     code,
+		TTLHuman: humanDuration(s.cfg.EmailVerifyTTL, acc.Language),
 	})
 }
 
@@ -366,6 +402,13 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*TokenPair, error) 
 	// был создан до Этапа 3), гарантируем наличие customer-link до выдачи
 	// сессии. Идемпотентно, дёшево.
 	s.ensureCustomer(ctx, acc.ID, acc.Language)
+
+	if s.ids != nil {
+		pid := strconv.FormatInt(acc.ID, 10)
+		if err := s.ids.ClearUnlinkedAtForSubject(ctx, acc.ID, repository.ProviderEmail, pid); err != nil {
+			slog.Warn("login: clear email identity unlinked_at", "account_id", acc.ID, "error", err.Error())
+		}
+	}
 
 	return s.issueSession(ctx, acc, uuid.New(), in.UserAgent, in.IP)
 }
@@ -493,6 +536,33 @@ func (s *Service) Refresh(ctx context.Context, refresh, userAgent, ip string) (*
 		AccountID:    acc.ID,
 		CSRFToken:    csrfToken,
 	}, nil
+}
+
+// accountIDFromValidRefresh возвращает account_id активной (не отозванной,
+// не просроченной) сессии по refresh-токену. Не ротирует токен.
+func (s *Service) accountIDFromValidRefresh(ctx context.Context, refresh string) (int64, error) {
+	refresh = strings.TrimSpace(refresh)
+	if refresh == "" {
+		return 0, ErrInvalidToken
+	}
+	hash, err := tokens.HashString(refresh)
+	if err != nil {
+		return 0, ErrInvalidToken
+	}
+	sess, err := s.sess.FindByRefreshHash(ctx, hash)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return 0, ErrInvalidToken
+		}
+		return 0, fmt.Errorf("find session: %w", err)
+	}
+	if sess.RevokedAt != nil {
+		return 0, ErrInvalidToken
+	}
+	if time.Now().After(sess.ExpiresAt) {
+		return 0, ErrInvalidToken
+	}
+	return sess.AccountID, nil
 }
 
 // Logout отзывает конкретную сессию (по refresh-токену из cookie).
@@ -647,16 +717,22 @@ func (s *Service) ChangePassword(ctx context.Context, accountID int64, currentPa
 	return s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
 }
 
-// ConfirmEmail применяет verify-токен: помечает email_verified_at на аккаунте
-// и сразу выдаёт сессию (как login), чтобы пользователь не вводил пароль повторно.
+// ConfirmEmail применяет код из письма (6 цифр) или старый base64url-токен из ссылки:
+// помечает email_verified_at и сразу выдаёт сессию (как login).
 func (s *Service) ConfirmEmail(ctx context.Context, token, userAgent, ip string) (*TokenPair, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return nil, ErrInvalidToken
 	}
-	hash, err := tokens.HashString(token)
-	if err != nil {
-		return nil, ErrInvalidToken
+	var hash [32]byte
+	if tokens.IsEmailVerifyOTP(token) {
+		hash = tokens.HashEmailVerifyOTP(token)
+	} else {
+		var err error
+		hash, err = tokens.HashString(token)
+		if err != nil {
+			return nil, ErrInvalidToken
+		}
 	}
 	ev, err := s.evs.FindByHash(ctx, hash)
 	if err != nil {
@@ -680,7 +756,188 @@ func (s *Service) ConfirmEmail(ctx context.Context, token, userAgent, ip string)
 	}
 	// Defensive bootstrap: если линк customer отсутствует (редкий случай), подшьём.
 	s.ensureCustomer(ctx, acc.ID, acc.Language)
+	if s.ids != nil {
+		pid := strconv.FormatInt(acc.ID, 10)
+		if err := s.ids.ClearUnlinkedAtForSubject(ctx, acc.ID, repository.ProviderEmail, pid); err != nil {
+			slog.Warn("confirm email: clear email identity unlinked_at", "account_id", acc.ID, "error", err.Error())
+		}
+	}
 	return s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
+}
+
+type LinkEmailResult struct {
+	Status      string
+	ReasonCode  string
+	MaskedEmail string
+}
+
+// LinkEmailToAccount — привязка email+пароля к уже существующему аккаунту (OAuth/Telegram без пароля).
+// Если адрес свободен — сохраняет пароль, создаёт identity email при необходимости, шлёт письмо verify.
+// Если адрес у другого аккаунта B и пароль совпадает с B — сохраняет claim для /link/merge.
+// Если адрес у B, а пароль у B отсутствует (OAuth-only) — отправляет код подтверждения на email для авторизации merge.
+func (s *Service) LinkEmailToAccount(ctx context.Context, accountID int64, email, pwd string) (*LinkEmailResult, error) {
+	start := time.Now()
+	defer s.equalizeLatency(start)
+
+	email = normalizeEmail(email)
+	if !isLikelyEmail(email) {
+		password.DummyCompare(s.cfg.PasswordParams)
+		return nil, fmt.Errorf("%w: email", ErrInvalidInput)
+	}
+	normPwd := password.Normalize(pwd)
+	if err := password.Validate(normPwd, email, "", s.cfg.PasswordPolicy); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	acc, err := s.accounts.FindByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if acc.Status != repository.AccountStatusActive {
+		password.DummyCompare(s.cfg.PasswordParams)
+		return nil, ErrInvalidCredentials
+	}
+	if acc.PasswordHash != nil {
+		return nil, fmt.Errorf("%w: email login already enabled", ErrInvalidInput)
+	}
+	// If this email already comes from linked social providers in the same account,
+	// don't create a duplicate "email login" over the same address.
+	ids, err := s.ids.ListLinkedByAccount(ctx, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("list identities: %w", err)
+	}
+	var socialProvider string
+	for _, id := range ids {
+		if id.Provider != repository.ProviderGoogle && id.Provider != repository.ProviderYandex && id.Provider != repository.ProviderVK {
+			continue
+		}
+		if id.ProviderEmail == nil {
+			continue
+		}
+		if normalizeEmail(*id.ProviderEmail) == email {
+			socialProvider = id.Provider
+			break
+		}
+	}
+	if socialProvider != "" {
+		return nil, fmt.Errorf("%w: email is already used in %s sign-in", ErrInvalidInput, socialProvider)
+	}
+
+	other, err := s.accounts.FindByEmail(ctx, email)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+		return nil, fmt.Errorf("find by email: %w", err)
+	}
+	if other != nil && other.ID != accountID {
+		if other.PasswordHash == nil {
+			if err := s.startMergeEmailVerification(ctx, accountID, other.ID, email); err != nil {
+				return nil, fmt.Errorf("start merge email verification: %w", err)
+			}
+			return &LinkEmailResult{
+				Status:      LinkEmailOutcomeMergeVerificationRequired,
+				ReasonCode:  "peer_password_missing_email_code_required",
+				MaskedEmail: maskEmail(email),
+			}, nil
+		}
+		ok, _, cmpErr := password.ComparePasswordAndHash(normPwd, *other.PasswordHash, s.cfg.PasswordParams)
+		if cmpErr != nil {
+			return nil, fmt.Errorf("compare password: %w", cmpErr)
+		}
+		if !ok {
+			password.DummyCompare(s.cfg.PasswordParams)
+			return nil, ErrInvalidCredentials
+		}
+		if s.saveMergeEmailPeerClaim == nil {
+			return nil, errors.New("auth: merge email peer claim saver not configured")
+		}
+		if err := s.saveMergeEmailPeerClaim(ctx, accountID, other.ID); err != nil {
+			return nil, err
+		}
+		return &LinkEmailResult{
+			Status:     LinkEmailOutcomeMergeRequired,
+			ReasonCode: "peer_account_verified_by_password",
+		}, nil
+	}
+
+	hash, err := password.HashPassword(normPwd, s.cfg.PasswordParams)
+	if err != nil {
+		return nil, fmt.Errorf("hash password: %w", err)
+	}
+	if err := s.accounts.UpdateEmailPasswordUnverified(ctx, accountID, email, hash); err != nil {
+		return nil, err
+	}
+
+	pid := strconv.FormatInt(accountID, 10)
+	_, err = s.ids.FindByProvider(ctx, repository.ProviderEmail, pid)
+	if errors.Is(err, repository.ErrNotFound) {
+		if _, err := s.ids.Create(ctx, accountID, repository.ProviderEmail, pid, email, nil); err != nil {
+			return nil, fmt.Errorf("create email identity: %w", err)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("find email identity: %w", err)
+	} else if err := s.ids.ClearUnlinkedAtForSubject(ctx, accountID, repository.ProviderEmail, pid); err != nil {
+		return nil, fmt.Errorf("reactivate email identity: %w", err)
+	}
+
+	acc2, err := s.accounts.FindByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.sendVerifyEmail(ctx, acc2); err != nil {
+		slog.Warn("link email: send verify email", "account_id", accountID, "error", err)
+	}
+	return &LinkEmailResult{
+		Status:     LinkEmailOutcomeVerifySent,
+		ReasonCode: "email_linked_verification_sent",
+	}, nil
+}
+
+func (s *Service) ConfirmEmailMergeCode(ctx context.Context, currentAccountID int64, code string) (*LinkEmailResult, error) {
+	code = strings.TrimSpace(code)
+	if len(code) != 6 {
+		return nil, fmt.Errorf("%w: verification code", ErrInvalidInput)
+	}
+	if s.saveMergeEmailPeerClaim == nil {
+		return nil, errors.New("auth: merge email peer claim saver not configured")
+	}
+	peerID, masked, err := s.consumeMergeEmailVerification(ctx, currentAccountID, code)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.saveMergeEmailPeerClaim(ctx, currentAccountID, peerID); err != nil {
+		return nil, err
+	}
+	return &LinkEmailResult{
+		Status:      LinkEmailOutcomeMergeRequired,
+		ReasonCode:  "peer_account_verified_by_email_code",
+		MaskedEmail: masked,
+	}, nil
+}
+
+// ResendVerifyEmailPublic повторно шлёт код на email без сессии (после регистрации).
+// Ответ снаружи не зависит от наличия неподтверждённого аккаунта (anti-enumeration).
+func (s *Service) ResendVerifyEmailPublic(ctx context.Context, email string) error {
+	start := time.Now()
+	defer s.equalizeLatency(start)
+
+	email = normalizeEmail(email)
+	if !isLikelyEmail(email) {
+		return nil
+	}
+	acc, err := s.accounts.FindByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil
+		}
+		slog.Warn("resend verify public: find account failed", "error", err)
+		return nil
+	}
+	if acc.EmailVerified() {
+		return nil
+	}
+	if err := s.sendVerifyEmail(ctx, acc); err != nil {
+		slog.Warn("resend verify public: send failed", "account_id", acc.ID, "error", err)
+	}
+	return nil
 }
 
 // ResendVerify отправляет новое письмо подтверждения для указанного аккаунта.
@@ -810,6 +1067,66 @@ func humanDuration(d time.Duration, language string) string {
 		return fmt.Sprintf("%d ч %d мин", hours, minutes)
 	}
 	return fmt.Sprintf("%d мин", minutes)
+}
+
+func (s *Service) startMergeEmailVerification(ctx context.Context, currentAccountID, peerAccountID int64, email string) error {
+	if s.emailMergeCodes == nil {
+		return errors.New("auth: email merge verification repo not configured")
+	}
+	code, err := generateSixDigitCode()
+	if err != nil {
+		return err
+	}
+	sum := sha256.Sum256([]byte(code))
+	codeHash := hex.EncodeToString(sum[:])
+	lang := s.cfg.DefaultLanguage
+	if acc, aerr := s.accounts.FindByID(ctx, currentAccountID); aerr == nil && acc != nil {
+		lang = acc.Language
+	}
+	if err := s.mailer.SendEmailMergeCode(ctx, email, lang, code, humanDuration(mergeEmailCodeTTL, lang)); err != nil {
+		slog.Warn("merge email verification: send code failed", "account_id", currentAccountID, "error", err)
+	}
+	expiresAt := time.Now().Add(mergeEmailCodeTTL)
+	return s.emailMergeCodes.Upsert(ctx, currentAccountID, peerAccountID, codeHash, maskEmail(email), mergeEmailCodeAttempts, expiresAt)
+}
+
+func (s *Service) consumeMergeEmailVerification(ctx context.Context, currentAccountID int64, code string) (int64, string, error) {
+	if s.emailMergeCodes == nil {
+		return 0, "", errors.New("auth: email merge verification repo not configured")
+	}
+	v, err := s.emailMergeCodes.Get(ctx, currentAccountID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return 0, "", ErrInvalidToken
+		}
+		return 0, "", err
+	}
+	if time.Now().After(v.ExpiresAt) {
+		_ = s.emailMergeCodes.Delete(ctx, currentAccountID)
+		return 0, "", ErrInvalidToken
+	}
+	inSum := sha256.Sum256([]byte(code))
+	inHash := hex.EncodeToString(inSum[:])
+	if inHash != v.CodeHash {
+		left, derr := s.emailMergeCodes.DecrementAttempts(ctx, currentAccountID)
+		if derr == nil && left <= 0 {
+			_ = s.emailMergeCodes.Delete(ctx, currentAccountID)
+		}
+		return 0, "", ErrInvalidCredentials
+	}
+	if err := s.emailMergeCodes.Delete(ctx, currentAccountID); err != nil {
+		return 0, "", err
+	}
+	return v.PeerAccountID, v.MaskedEmail, nil
+}
+
+func generateSixDigitCode() (string, error) {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	n := binary.BigEndian.Uint64(b[:]) % 1000000
+	return fmt.Sprintf("%06d", n), nil
 }
 
 // RefreshCookieFromRequest — утилита для handler'а: достаёт refresh-токен из

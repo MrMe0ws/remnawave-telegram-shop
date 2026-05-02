@@ -35,19 +35,37 @@ func RateLimit(lim *ratelimit.Limiter, keyFn KeyFunc) func(http.Handler) http.Ha
 // Используйте только за доверенным прокси (Nginx/Caddy), иначе клиент сможет
 // подделать заголовок и обойти rate-limit. В MVP backend всегда за Nginx.
 func ClientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Первая запись — оригинальный клиент (если прокси честный).
-		parts := strings.Split(xff, ",")
-		if ip := strings.TrimSpace(parts[0]); ip != "" {
-			return ip
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err != nil {
+		host = strings.TrimSpace(r.RemoteAddr)
+	}
+	remote := net.ParseIP(host)
+	if remote == nil {
+		return host
+	}
+
+	// Доверяем forwarded-заголовкам только когда запрос пришёл от локального/приватного прокси.
+	// Иначе клиент может подделать X-Forwarded-For и обойти rate-limit по IP.
+	if isTrustedProxyIP(remote) {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			if ip := net.ParseIP(strings.TrimSpace(parts[0])); ip != nil {
+				return ip.String()
+			}
+		}
+		if xri := strings.TrimSpace(r.Header.Get("X-Real-IP")); xri != "" {
+			if ip := net.ParseIP(xri); ip != nil {
+				return ip.String()
+			}
 		}
 	}
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
+	return remote.String()
+}
+
+func isTrustedProxyIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsPrivate() {
+		return true
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
+	// fc00::/7 (ULA) может не всегда определяться через IsPrivate в старых окружениях.
+	return len(ip) == net.IPv6len && (ip[0]&0xfe) == 0xfc
 }

@@ -277,7 +277,7 @@ func (h Handler) adminRwUserByCustomerID(ctx context.Context, cid int64) (*datab
 	if err != nil || cust == nil {
 		return nil, nil, fmt.Errorf("no customer")
 	}
-	rw, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID)
+	rw, err := h.adminFindRWUserByCustomer(ctx, cust)
 	if err != nil || rw == nil {
 		return cust, nil, fmt.Errorf("no rw")
 	}
@@ -758,7 +758,25 @@ func (h Handler) AdminUserDeleteConfirmHandler(ctx context.Context, b *bot.Bot, 
 		})
 		return
 	}
-	rw, errRW := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID)
+	linkedToCabinet, lerr := h.customerRepository.HasCabinetLink(ctx, cust.ID)
+	if lerr != nil {
+		slog.Error("admin delete link check", "error", lerr)
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: cb.ID,
+			Text:            h.translation.GetText(cb.From.LanguageCode, "admin_user_action_error"),
+			ShowAlert:       true,
+		})
+		return
+	}
+	if linkedToCabinet {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: cb.ID,
+			Text:            "Пользователь привязан к кабинету. Удаление из админки заблокировано.",
+			ShowAlert:       true,
+		})
+		return
+	}
+	rw, errRW := h.adminFindRWUserByCustomer(ctx, cust)
 	if errRW == nil && rw != nil {
 		if err := h.remnawaveClient.DeleteUser(ctx, rw.UUID); err != nil {
 			slog.Error("admin delete rw", "error", err)
@@ -961,7 +979,7 @@ func (h Handler) adminUserExtraHwidApplyDelta(ctx context.Context, b *bot.Bot, c
 		if newLim < 1 {
 			newLim = 1
 		}
-		if _, err := h.remnawaveClient.UpdateUserDeviceLimit(ctx, cust.TelegramID, newLim); err != nil {
+		if _, err := h.remnawaveClient.UpdateUserDeviceLimitByCustomer(ctx, cust.ID, cust.TelegramID, newLim); err != nil {
 			slog.Error("admin extra hwid panel limit", "error", err)
 			_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID, Text: h.translation.GetText(lang, "admin_user_action_error"), ShowAlert: true})
 			return
@@ -1102,14 +1120,14 @@ func (h Handler) AdminUserTariffPickHandler(ctx context.Context, b *bot.Bot, upd
 	}
 	cust, _ = h.customerRepository.FindById(ctx, cid)
 	if activeExtraDevices(cust) > 0 {
-		rw2, err := h.remnawaveClient.GetUserTrafficInfo(ctx, cust.TelegramID)
+		rw2, err := h.adminFindRWUserByCustomer(ctx, cust)
 		if err == nil && rw2 != nil && rw2.HwidDeviceLimit != nil {
 			ex := activeExtraDevices(cust)
 			newLim := *rw2.HwidDeviceLimit + ex
 			if maxL := config.HwidMaxDevices(); maxL > 0 && newLim > maxL {
 				newLim = maxL
 			}
-			if _, err := h.remnawaveClient.UpdateUserDeviceLimit(ctx, cust.TelegramID, newLim); err != nil {
+			if _, err := h.remnawaveClient.UpdateUserDeviceLimitByCustomer(ctx, cust.ID, cust.TelegramID, newLim); err != nil {
 				slog.Error("admin tariff extra relimit", "error", err)
 			}
 		}

@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"strings"
-	"remnawave-tg-shop-bot/internal/cache"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
+	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
@@ -19,6 +18,7 @@ import (
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"remnawave-tg-shop-bot/utils"
+	"strings"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -36,16 +36,79 @@ func skipTelegramCustomerDM(c *database.Customer) bool {
 	return c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID)
 }
 
+func sanitizeEmailLocalForPanel(email string) string {
+	email = strings.TrimSpace(strings.ToLower(email))
+	at := strings.LastIndex(email, "@")
+	if at <= 0 {
+		return ""
+	}
+	local := email[:at]
+	if plus := strings.Index(local, "+"); plus >= 0 {
+		local = local[:plus]
+	}
+	local = strings.ReplaceAll(local, ".", "")
+	var b strings.Builder
+	for _, r := range local {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '_':
+			b.WriteRune('_')
+		}
+	}
+	return b.String()
+}
+
+func emailLocalPartForDescription(email string) string {
+	email = strings.TrimSpace(strings.ToLower(email))
+	at := strings.LastIndex(email, "@")
+	if at <= 0 {
+		return ""
+	}
+	local := email[:at]
+	if plus := strings.Index(local, "+"); plus >= 0 {
+		local = local[:plus]
+	}
+	return strings.TrimSpace(local)
+}
+
+func (s PaymentService) withRemnawavePanelUsername(ctx context.Context, customer *database.Customer) context.Context {
+	if customer == nil || (!customer.IsWebOnly && !utils.IsSyntheticTelegramID(customer.TelegramID)) {
+		return ctx
+	}
+	if s.customerRepository == nil {
+		return ctx
+	}
+	emails, err := s.customerRepository.CabinetAccountEmailsByCustomerIDs(ctx, []int64{customer.ID})
+	if err != nil {
+		slog.Warn("payment: load cabinet email for panel username", "customer_id", customer.ID, "error", err)
+		return ctx
+	}
+	email := strings.TrimSpace(emails[customer.ID])
+	local := sanitizeEmailLocalForPanel(email)
+	if local == "" {
+		local = "web"
+	}
+	panelUsername := fmt.Sprintf("%d_%s", customer.ID, local)
+	ctx = context.WithValue(ctx, remnawave.CtxKeyPanelUsername, panelUsername)
+	if desc := emailLocalPartForDescription(email); desc != "" {
+		// Для web-only профилей храним local-part email в Description (без домена):
+		// это упрощает идентификацию в админке при отсутствии реального TG username.
+		ctx = context.WithValue(ctx, remnawave.CtxKeyUsername, desc)
+	}
+	return ctx
+}
+
 type PaymentService struct {
-	purchaseRepository *database.PurchaseRepository
-	tariffRepository   *database.TariffRepository
-	remnawaveClient    *remnawave.Client
-	customerRepository *database.CustomerRepository
-	telegramBot        *bot.Bot
-	translation        *translation.Manager
-	cryptoPayClient    *cryptopay.Client
-	yookasaClient      *yookasa.Client
-	referralRepository *database.ReferralRepository
+	purchaseRepository    *database.PurchaseRepository
+	tariffRepository      *database.TariffRepository
+	remnawaveClient       *remnawave.Client
+	customerRepository    *database.CustomerRepository
+	telegramBot           *bot.Bot
+	translation           *translation.Manager
+	cryptoPayClient       *cryptopay.Client
+	yookasaClient         *yookasa.Client
+	referralRepository    *database.ReferralRepository
 	cache                 *cache.Cache
 	moynalogClient        *moynalog.Client
 	promoService          *promo.Service
@@ -74,18 +137,18 @@ func NewPaymentService(
 	loyaltyTierRepository *database.LoyaltyTierRepository,
 ) *PaymentService {
 	return &PaymentService{
-		purchaseRepository: purchaseRepository,
-		tariffRepository:   tariffRepository,
-		remnawaveClient:    remnawaveClient,
-		customerRepository: customerRepository,
-		telegramBot:        telegramBot,
-		translation:        translation,
-		cryptoPayClient:    cryptoPayClient,
-		yookasaClient:      yookasaClient,
-		referralRepository: referralRepository,
-		cache:              cache,
-		moynalogClient:     moynalogClient,
-		promoService:       promoService,
+		purchaseRepository:    purchaseRepository,
+		tariffRepository:      tariffRepository,
+		remnawaveClient:       remnawaveClient,
+		customerRepository:    customerRepository,
+		telegramBot:           telegramBot,
+		translation:           translation,
+		cryptoPayClient:       cryptoPayClient,
+		yookasaClient:         yookasaClient,
+		referralRepository:    referralRepository,
+		cache:                 cache,
+		moynalogClient:        moynalogClient,
+		promoService:          promoService,
 		loyaltyTierRepository: loyaltyTierRepository,
 	}
 }
@@ -97,6 +160,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	}
 	if purchase == nil {
 		return fmt.Errorf("purchase with crypto invoice id %s not found", utils.MaskHalfInt64(purchaseId))
+	}
+	if purchase.Status == database.PurchaseStatusPaid {
+		// Защита от повторной обработки paid-покупки (поллеры, повторы webhook'ов).
+		return nil
 	}
 
 	customer, err := s.customerRepository.FindById(ctx, purchase.CustomerID)
@@ -162,7 +229,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 				}
 			}
 			daysSwitch := purchase.Month*dim + bonus
-			user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(ctx, customer.ID, customer.TelegramID, daysSwitch, profile)
+			rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+			user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(rwCtx, customer.ID, customer.TelegramID, daysSwitch, profile)
 			if err != nil {
 				return err
 			}
@@ -187,7 +255,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 			}
 			noPaidTariffYet := customer.CurrentTariffID == nil || *customer.CurrentTariffID == 0
 			if paidCount == 0 && noPaidTariffYet {
-				user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(ctx, customer.ID, customer.TelegramID, daysToAdd, profile)
+				rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+				user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfileFromNow(rwCtx, customer.ID, customer.TelegramID, daysToAdd, profile)
 				if err != nil {
 					return err
 				}
@@ -200,7 +269,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 				return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 			}
 		}
-		user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfile(ctx, customer.ID, customer.TelegramID, daysToAdd, profile)
+		rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+		user, err := s.remnawaveClient.CreateOrUpdateUserWithTariffProfile(rwCtx, customer.ID, customer.TelegramID, daysToAdd, profile)
 		if err != nil {
 			return err
 		}
@@ -221,7 +291,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 		}
 		noPaidTariffYet := customer.CurrentTariffID == nil || *customer.CurrentTariffID == 0
 		if paidCount == 0 && noPaidTariffYet {
-			user, err := s.remnawaveClient.CreateOrUpdateUserFromNow(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
+			rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+			user, err := s.remnawaveClient.CreateOrUpdateUserFromNow(rwCtx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
 			if err != nil {
 				return err
 			}
@@ -234,7 +305,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 			return s.resetTrafficAfterSubscriptionPayment(ctx, user)
 		}
 	}
-	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
+	rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+	user, err := s.remnawaveClient.CreateOrUpdateUser(rwCtx, customer.ID, customer.TelegramID, config.TrafficLimit(), daysToAdd, false)
 	if err != nil {
 		return err
 	}
@@ -710,6 +782,13 @@ func (s PaymentService) applyReferralBonus(ctx context.Context, purchase *databa
 	if err != nil || referral == nil {
 		return err
 	}
+	if referral.ReferrerID == customer.TelegramID {
+		slog.Warn("Skip referral bonus: self-referral detected",
+			"referrer_tg_id", utils.MaskHalfInt64(referral.ReferrerID),
+			"referee_tg_id", utils.MaskHalfInt64(customer.TelegramID),
+		)
+		return nil
+	}
 
 	mode := config.ReferralMode()
 	if mode == "progressive" {
@@ -798,7 +877,8 @@ func (s PaymentService) grantReferralDays(ctx context.Context, customer *databas
 	if days <= 0 {
 		return nil
 	}
-	user, err := s.remnawaveClient.ExtendSubscriptionByDaysPreserveSquads(ctx, customer.ID, customer.TelegramID, days)
+	rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+	user, err := s.remnawaveClient.ExtendSubscriptionByDaysPreserveSquads(rwCtx, customer.ID, customer.TelegramID, days)
 	if err != nil {
 		return err
 	}
@@ -1152,7 +1232,8 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 	})
 
 	updates := map[string]interface{}{
-		"status": database.PurchaseStatusPending,
+		"status":             database.PurchaseStatusPending,
+		"crypto_invoice_url": invoiceUrl,
 	}
 
 	err = s.purchaseRepository.UpdateFields(ctx, purchaseId, updates)
@@ -1176,7 +1257,8 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	if customer == nil {
 		return "", fmt.Errorf("customer %d not found", telegramId)
 	}
-	user, err := s.remnawaveClient.CreateOrUpdateUser(ctx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), true)
+	rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+	user, err := s.remnawaveClient.CreateOrUpdateUser(rwCtx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), true)
 	if err != nil {
 		slog.Error("Error creating user", err)
 		return "", err

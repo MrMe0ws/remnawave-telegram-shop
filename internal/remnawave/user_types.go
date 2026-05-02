@@ -109,6 +109,8 @@ type CreateUserRequest struct {
 // UpdateUserRequest is the request body for PATCH /api/users.
 type UpdateUserRequest struct {
 	UUID                 *uuid.UUID  `json:"uuid,omitempty"`
+	Username             *string     `json:"username,omitempty"`
+	TelegramID           *int        `json:"telegramId,omitempty"`
 	Status               string      `json:"status,omitempty"`
 	ExpireAt             *time.Time  `json:"expireAt,omitempty"`
 	TrafficLimitBytes    *int64      `json:"trafficLimitBytes,omitempty"`

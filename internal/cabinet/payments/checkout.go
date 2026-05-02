@@ -165,6 +165,8 @@ type StatusResult struct {
 
 // PreviewResult — ответ GET /payments/preview: сумма с учётом upgrade/downgrade (как у бота).
 type PreviewResult struct {
+	Amount           int    `json:"amount"`
+	Currency         string `json:"currency"`
 	AmountRub        int    `json:"amount_rub"`
 	SalesMode        string `json:"sales_mode"`
 	Scenario         string `json:"scenario"` // new | renew | upgrade | downgrade | classic_new | classic_renew
@@ -172,10 +174,15 @@ type PreviewResult struct {
 	IsEarlyDowngrade bool   `json:"is_early_downgrade,omitempty"`
 	ListPriceRub     int    `json:"list_price_rub,omitempty"` // полная цена прайса за период (для сравнения в UI)
 	// BaseAmountRub — сумма до скидок лояльности и pending-промокода (как в боте).
-	BaseAmountRub        int `json:"base_amount_rub,omitempty"`
-	LoyaltyDiscountPct   int `json:"loyalty_discount_pct,omitempty"`
-	PromoDiscountPct     int `json:"promo_discount_pct,omitempty"`
-	TotalDiscountPct     int `json:"total_discount_pct,omitempty"`
+	BaseAmountRub      int `json:"base_amount_rub,omitempty"`
+	LoyaltyDiscountPct int `json:"loyalty_discount_pct,omitempty"`
+	PromoDiscountPct   int `json:"promo_discount_pct,omitempty"`
+	TotalDiscountPct   int `json:"total_discount_pct,omitempty"`
+	// TariffSwitch* — только при scenario upgrade/downgrade (активная подписка, смена тарифа).
+	TariffSwitchRemainingDays int `json:"tariff_switch_remaining_days,omitempty"` // календарных дней до expire (ceil)
+	TariffSwitchBonusDays     int `json:"tariff_switch_bonus_days,omitempty"`     // остаток в днях по дневной цене нового тарифа
+	TariffSwitchPeriodDays    int `json:"tariff_switch_period_days,omitempty"`    // месяцы × DaysInMonth
+	TariffSwitchTotalDays     int `json:"tariff_switch_total_days,omitempty"`     // период + бонус
 }
 
 // Create создаёт новый web-checkout или возвращает ранее выданный payment_url
@@ -227,7 +234,7 @@ func (s *CheckoutService) Create(ctx context.Context, accountID int64, req Creat
 		return nil, fmt.Errorf("payments: load account: %w", err)
 	}
 
-	amount, tariffID, extras, err := s.resolveAmount(ctx, customer, req)
+	amount, tariffID, extras, err := s.resolveAmount(ctx, customer, invoiceType, req)
 	if err != nil {
 		return nil, err
 	}
@@ -288,9 +295,19 @@ func (s *CheckoutService) Create(ctx context.Context, accountID int64, req Creat
 }
 
 // Preview считает сумму к оплате без создания checkout (та же логика, что Create → resolveAmount).
-func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period int, tariffID *int64) (*PreviewResult, error) {
+func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period int, tariffID *int64, provider string) (*PreviewResult, error) {
 	if !supportedMonths[period] {
 		return nil, fmt.Errorf("%w: period must be one of 1/3/6/12", ErrInvalidInput)
+	}
+	if provider == "" {
+		provider = repository.CheckoutProviderYookassa
+	}
+	invoiceType, err := mapProviderToInvoiceType(provider)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureProviderEnabled(provider); err != nil {
+		return nil, err
 	}
 	link, err := s.bootstrap.EnsureForAccount(ctx, accountID, "")
 	if err != nil {
@@ -306,17 +323,23 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 
 	mode := config.SalesMode()
 	out := &PreviewResult{SalesMode: mode}
+	if invoiceType == database.InvoiceTypeTelegram {
+		out.Currency = "STARS"
+	} else {
+		out.Currency = "RUB"
+	}
 
 	if mode == "tariffs" {
 		if tariffID == nil || *tariffID <= 0 {
 			return nil, fmt.Errorf("%w: tariff_id required in tariffs mode", ErrInvalidInput)
 		}
 		kind, amt, pk, early, rerr := payment.ResolveTariffPurchase(
-			ctx, s.tariffs, customer, *tariffID, period, false,
+			ctx, s.tariffs, customer, *tariffID, period, invoiceType == database.InvoiceTypeTelegram,
 		)
 		if rerr != nil {
 			return nil, fmt.Errorf("payments: resolve tariff: %w", rerr)
 		}
+		out.Amount = amt
 		out.AmountRub = amt
 		out.PurchaseKind = string(pk)
 		out.IsEarlyDowngrade = early
@@ -324,14 +347,35 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		if tp, err := s.tariffs.GetPrice(ctx, *tariffID, period); err == nil && tp != nil {
 			out.ListPriceRub = tp.AmountRub
 		}
-		s.applyPreviewDiscounts(ctx, customer, out)
+		if kind == payment.TariffCheckoutUpgrade || kind == payment.TariffCheckoutDowngrade {
+			if customer.CurrentTariffID != nil && *customer.CurrentTariffID > 0 {
+				tpOld, e1 := s.tariffs.GetPrice(ctx, *customer.CurrentTariffID, period)
+				tpNew, e2 := s.tariffs.GetPrice(ctx, *tariffID, period)
+				if e1 == nil && e2 == nil && tpOld != nil && tpNew != nil {
+					now := time.Now().UTC()
+					out.TariffSwitchRemainingDays = payment.UpgradeCalendarDaysRemainingCeil(customer, now)
+					out.TariffSwitchBonusDays = payment.ComputeUpgradeBonusDays(customer, tpOld, tpNew, period, now)
+					dim := config.DaysInMonth()
+					if dim <= 0 {
+						dim = 30
+					}
+					out.TariffSwitchPeriodDays = period * dim
+					out.TariffSwitchTotalDays = out.TariffSwitchPeriodDays + out.TariffSwitchBonusDays
+				}
+			}
+		}
+		s.applyPreviewDiscounts(ctx, customer, invoiceType, out)
 		return out, nil
 	}
 
 	price := config.Price(period)
+	if invoiceType == database.InvoiceTypeTelegram {
+		price = config.StarsPrice(period)
+	}
 	if price <= 0 {
 		return nil, fmt.Errorf("payments: no price configured for %d months", period)
 	}
+	out.Amount = price
 	out.AmountRub = price
 	out.PurchaseKind = string(database.PurchaseKindSubscription)
 	now := time.Now().UTC()
@@ -340,7 +384,7 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 	} else {
 		out.Scenario = "classic_new"
 	}
-	s.applyPreviewDiscounts(ctx, customer, out)
+	s.applyPreviewDiscounts(ctx, customer, invoiceType, out)
 	return out, nil
 }
 
@@ -452,6 +496,12 @@ func (s *CheckoutService) ensureProviderEnabled(provider string) error {
 		if !config.IsCryptoPayEnabled() {
 			return fmt.Errorf("%w: cryptopay disabled", ErrProviderDisabled)
 		}
+	case repository.CheckoutProviderTelegram:
+		if !config.IsTelegramStarsEnabled() {
+			return fmt.Errorf("%w: telegram stars disabled", ErrProviderDisabled)
+		}
+	default:
+		return fmt.Errorf("%w: unknown provider %q", ErrInvalidInput, provider)
 	}
 	return nil
 }
@@ -490,12 +540,12 @@ func (s *CheckoutService) applyCheckoutDiscounts(ctx context.Context, customer *
 	return final, loyaltyPct, promoPct, meta
 }
 
-func (s *CheckoutService) applyPreviewDiscounts(ctx context.Context, customer *database.Customer, out *PreviewResult) {
+func (s *CheckoutService) applyPreviewDiscounts(ctx context.Context, customer *database.Customer, invoiceType database.InvoiceType, out *PreviewResult) {
 	base := out.AmountRub
-	// Yookassa/CryptoPay в превью считаем одинаково (не Tribute).
-	final, loyPct, proPct, _ := s.applyCheckoutDiscounts(ctx, customer, database.InvoiceTypeYookasa, base)
+	final, loyPct, proPct, _ := s.applyCheckoutDiscounts(ctx, customer, invoiceType, base)
 	out.BaseAmountRub = base
 	out.AmountRub = final
+	out.Amount = final
 	out.LoyaltyDiscountPct = loyPct
 	out.PromoDiscountPct = proPct
 	cap := config.LoyaltyMaxTotalDiscountPercent()
@@ -505,14 +555,16 @@ func (s *CheckoutService) applyPreviewDiscounts(ctx context.Context, customer *d
 func (s *CheckoutService) resolveAmount(
 	ctx context.Context,
 	customer *database.Customer,
+	invoiceType database.InvoiceType,
 	req CreateRequest,
 ) (amount int, tariffID *int64, extras *payment.TariffPurchaseExtras, err error) {
+	invoiceStars := invoiceType == database.InvoiceTypeTelegram
 	if config.SalesMode() == "tariffs" {
 		if req.TariffID == nil || *req.TariffID <= 0 {
 			return 0, nil, nil, fmt.Errorf("%w: tariff_id required in tariffs mode", ErrInvalidInput)
 		}
 		_, amt, kind, isEarly, rerr := payment.ResolveTariffPurchase(
-			ctx, s.tariffs, customer, *req.TariffID, req.Period, false,
+			ctx, s.tariffs, customer, *req.TariffID, req.Period, invoiceStars,
 		)
 		if rerr != nil {
 			return 0, nil, nil, fmt.Errorf("payments: resolve tariff: %w", rerr)
@@ -524,6 +576,13 @@ func (s *CheckoutService) resolveAmount(
 	}
 
 	// classic
+	if invoiceStars {
+		price := config.StarsPrice(req.Period)
+		if price <= 0 {
+			return 0, nil, nil, fmt.Errorf("payments: no stars price configured for %d months", req.Period)
+		}
+		return price, nil, nil, nil
+	}
 	price := config.Price(req.Period)
 	if price <= 0 {
 		return 0, nil, nil, fmt.Errorf("payments: no price configured for %d months", req.Period)
@@ -613,6 +672,8 @@ func mapProviderToInvoiceType(provider string) (database.InvoiceType, error) {
 		return database.InvoiceTypeYookasa, nil
 	case repository.CheckoutProviderCryptoPay:
 		return database.InvoiceTypeCrypto, nil
+	case repository.CheckoutProviderTelegram:
+		return database.InvoiceTypeTelegram, nil
 	default:
 		return "", fmt.Errorf("%w: unknown provider %q", ErrInvalidInput, provider)
 	}
@@ -646,6 +707,10 @@ func paymentURLFromPurchase(p *database.Purchase) string {
 			return *p.YookasaURL
 		}
 	case database.InvoiceTypeCrypto:
+		if p.CryptoInvoiceLink != nil {
+			return *p.CryptoInvoiceLink
+		}
+	case database.InvoiceTypeTelegram:
 		if p.CryptoInvoiceLink != nil {
 			return *p.CryptoInvoiceLink
 		}
