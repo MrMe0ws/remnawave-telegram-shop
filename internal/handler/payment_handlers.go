@@ -561,7 +561,14 @@ func (h Handler) SuccessPaymentHandler(ctx context.Context, b *bot.Bot, update *
 	}
 
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, username)
-	err = h.paymentService.ProcessPurchaseById(ctxWithUsername, int64(purchaseId))
+	sp := update.Message.SuccessfulPayment
+	ctxPaid := payment.WithStarsNotifyMeta(ctxWithUsername, payment.StarsNotifyMeta{
+		TelegramPaymentChargeID: sp.TelegramPaymentChargeID,
+		ProviderPaymentChargeID: sp.ProviderPaymentChargeID,
+		TotalAmount:             sp.TotalAmount,
+		Currency:                sp.Currency,
+	})
+	err = h.paymentService.ProcessPurchaseById(ctxPaid, int64(purchaseId))
 	if err != nil {
 		slog.Error("Error processing purchase", err)
 	}

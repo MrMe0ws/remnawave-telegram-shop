@@ -79,6 +79,11 @@ type config struct {
 	loyaltyEnabled                                            bool
 	loyaltyMaxTotalDiscountPercent                            int // потолок суммы лояльность+промо (1–100)
 	loyaltyXPMinPerPurchase                                   int64 // минимум XP за оплату если сумма не дала XP
+	paymentsNotifyEnabled                                     bool
+	paymentsNotifyChatID                                      int64
+	paymentsNotifyMessageThreadID                             int
+	paymentsNotifySendPaid                                    bool
+	paymentsNotifySendCancel                                  bool
 }
 
 var conf config
@@ -829,4 +834,54 @@ func InitConfig() {
 			slog.Info("Loyalty XP min per purchase active", "min_per_purchase", conf.loyaltyXPMinPerPurchase)
 		}
 	}
+
+	conf.paymentsNotifyEnabled = envBoolDefault("PAYMENTS_NOTIFY_ENABLED", false)
+	chatRaw := strings.TrimSpace(os.Getenv("PAYMENTS_NOTIFY_CHAT_ID"))
+	if chatRaw != "" {
+		cid, err := strconv.ParseInt(chatRaw, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("invalid PAYMENTS_NOTIFY_CHAT_ID: %v", err))
+		}
+		conf.paymentsNotifyChatID = cid
+	}
+	conf.paymentsNotifyMessageThreadID = envIntDefault("PAYMENTS_NOTIFY_MESSAGE_THREAD_ID", 0)
+	conf.paymentsNotifySendPaid = false
+	conf.paymentsNotifySendCancel = false
+	if conf.paymentsNotifyEnabled {
+		if conf.paymentsNotifyChatID == 0 {
+			slog.Warn("PAYMENTS_NOTIFY_ENABLED=true but PAYMENTS_NOTIFY_CHAT_ID is empty — уведомления о платежах отправляться не будут")
+		}
+		eventsRaw := strings.TrimSpace(os.Getenv("PAYMENTS_NOTIFY_EVENTS"))
+		if eventsRaw == "" {
+			conf.paymentsNotifySendPaid = true
+			conf.paymentsNotifySendCancel = true
+		} else {
+			for _, p := range strings.Split(eventsRaw, ",") {
+				switch strings.ToLower(strings.TrimSpace(p)) {
+				case "paid":
+					conf.paymentsNotifySendPaid = true
+				case "cancel":
+					conf.paymentsNotifySendCancel = true
+				case "":
+				default:
+					slog.Warn("PAYMENTS_NOTIFY_EVENTS: неизвестное значение, пропуск", "token", p)
+				}
+			}
+		}
+	}
 }
+
+// PaymentsNotifyEnabled — PAYMENTS_NOTIFY_ENABLED.
+func PaymentsNotifyEnabled() bool { return conf.paymentsNotifyEnabled }
+
+// PaymentsNotifyChatID — PAYMENTS_NOTIFY_CHAT_ID (0 если не задан).
+func PaymentsNotifyChatID() int64 { return conf.paymentsNotifyChatID }
+
+// PaymentsNotifyMessageThreadID — PAYMENTS_NOTIFY_MESSAGE_THREAD_ID (тема форума; 0 — основной чат).
+func PaymentsNotifyMessageThreadID() int { return conf.paymentsNotifyMessageThreadID }
+
+// PaymentsNotifySendPaid — слать уведомления об успешной оплате (событие paid).
+func PaymentsNotifySendPaid() bool { return conf.paymentsNotifySendPaid }
+
+// PaymentsNotifySendCancel — слать уведомления об отмене счёта (событие cancel).
+func PaymentsNotifySendCancel() bool { return conf.paymentsNotifySendCancel }

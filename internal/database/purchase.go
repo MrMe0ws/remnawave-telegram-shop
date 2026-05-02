@@ -168,6 +168,19 @@ func (cr *PurchaseRepository) FindById(ctx context.Context, id int64) (*Purchase
 	return purchase, nil
 }
 
+// HasCabinetCheckoutForPurchase — true, если purchase_id встречается в cabinet_checkout (оплата через web-кабинет).
+func (cr *PurchaseRepository) HasCabinetCheckoutForPurchase(ctx context.Context, purchaseID int64) (bool, error) {
+	var exists bool
+	err := cr.pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM cabinet_checkout WHERE purchase_id = $1)`,
+		purchaseID,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("cabinet_checkout exists for purchase: %w", err)
+	}
+	return exists, nil
+}
+
 func (p *PurchaseRepository) UpdateFields(ctx context.Context, id int64, updates map[string]interface{}) error {
 	if len(updates) == 0 {
 		return nil

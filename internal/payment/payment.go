@@ -335,6 +335,10 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 	if err != nil {
 		return err
 	}
+	paidNow := time.Now().UTC()
+	purchase.Status = database.PurchaseStatusPaid
+	purchase.PaidAt = &paidNow
+	expireBefore := customer.ExpireAt
 
 	userInfo, err := s.remnawaveClient.GetUserTrafficInfo(ctx, customer.TelegramID)
 	if err != nil {
@@ -418,6 +422,13 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 	}
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
 	s.applyLoyaltyXPAfterPayment(ctx, purchase, customer)
+
+	var expireAfter *time.Time
+	if updatedUser != nil {
+		expireAfter = ptrTimeIfValid(updatedUser.ExpireAt)
+	}
+	s.tryNotifyPurchasePaid(ctx, purchase, customer, expireBefore, expireAfter)
+
 	return nil
 }
 
@@ -608,6 +619,10 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	if err != nil {
 		return err
 	}
+	paidNow := time.Now().UTC()
+	purchase.Status = database.PurchaseStatusPaid
+	purchase.PaidAt = &paidNow
+	expireBefore := customer.ExpireAt
 
 	// Отправка чека в МойНалог для платежей YooKassa (сразу после подтверждения платежа)
 	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
@@ -668,6 +683,8 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
 	s.applyLoyaltyXPAfterPayment(ctx, purchase, customer)
 	slog.Info("purchase processed", "purchase_id", utils.MaskHalfInt64(purchase.ID), "type", purchase.InvoiceType, "customer_id", utils.MaskHalfInt64(customer.ID))
+
+	s.tryNotifyPurchasePaid(ctx, purchase, customer, expireBefore, ptrTimeIfValid(user.ExpireAt))
 
 	return nil
 }
@@ -1076,6 +1093,9 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 	}); err != nil {
 		return err
 	}
+	tributePurchase.Status = database.PurchaseStatusCancel
+	s.tryNotifyPurchaseCancel(ctx, tributePurchase, customer)
+
 	if !utils.IsSyntheticTelegramID(telegramId) && !customer.IsWebOnly {
 		_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:    telegramId,
@@ -1297,6 +1317,13 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 	if err != nil {
 		return err
 	}
+
+	purchase.Status = database.PurchaseStatusCancel
+	cust, ferr := s.customerRepository.FindById(ctx, purchase.CustomerID)
+	if ferr != nil {
+		slog.Warn("payments notify cancel: load customer", "error", ferr)
+	}
+	s.tryNotifyPurchaseCancel(ctx, purchase, cust)
 
 	return nil
 }

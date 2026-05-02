@@ -1007,7 +1007,22 @@ func checkCryptoPayInvoice(
 			username := strings.Split(payload[1], "=")[1]
 			// Передаем username в контексте для логирования
 			ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, username)
-			err = paymentService.ProcessPurchaseById(ctxWithUsername, int64(purchaseID))
+			feeAmt := ""
+			if invoice.FeeAmount != nil {
+				feeAmt = *invoice.FeeAmount
+			}
+			ctxPaid := payment.WithCryptoNotifyMeta(ctxWithUsername, payment.CryptoNotifyMeta{
+				Hash:         invoice.Hash,
+				Status:       invoice.Status,
+				CurrencyType: invoice.CurrencyType,
+				Asset:        invoice.Asset,
+				PaidAsset:    invoice.PaidAsset,
+				PaidAmount:   invoice.PaidAmount,
+				PayUrl:       invoice.PayUrl,
+				BotInvoiceUrl: invoice.BotInvoiceUrl,
+				FeeAmount:    feeAmt,
+			})
+			err = paymentService.ProcessPurchaseById(ctxPaid, int64(purchaseID))
 			if err != nil {
 				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID, "error", err)
 			} else {
