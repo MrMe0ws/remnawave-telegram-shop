@@ -14,8 +14,11 @@ import { api, ApiError } from '@/lib/api'
 import { getTurnstileToken } from '@/lib/turnstile'
 import { useAuthStore } from '@/store/auth'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+import { getTelegramInitData } from '@/lib/utils'
 import { AuthSocialProviders } from './AuthSocialProviders'
 import { EmailAuthTabs } from './EmailAuthTabs'
+import type { TelegramWidgetUser } from './TelegramLoginWidget'
+import { TelegramLoginWidget } from './TelegramLoginWidget'
 
 function botHandleFromLink(input: string | undefined): string | null {
   const raw = input?.trim()
@@ -43,6 +46,10 @@ export default function RegisterPage() {
   const referralFromUrl = (searchParams.get('ref') ?? '').trim()
   const { data: bootstrap } = useAuthBootstrap()
   const botHandle = botHandleFromLink(bootstrap?.site_links?.bot)
+  const showTelegramWidgetAbove =
+    bootstrap?.telegram_web_auth_mode === 'widget' &&
+    Boolean((bootstrap.telegram_widget_bot ?? '').trim()) &&
+    (typeof window === 'undefined' || getTelegramInitData().length === 0)
   const loginTo = referralFromUrl ? `/login?ref=${encodeURIComponent(referralFromUrl)}` : '/login'
   const { setToken, fetchMe, accessToken, user } = useAuthStore()
 
@@ -104,12 +111,44 @@ export default function RegisterPage() {
     }
   }
 
+  async function handleTelegramWidgetAuth(user: TelegramWidgetUser) {
+    setError(null)
+    try {
+      const data = await api.telegramAuthWidget(user, referralFromUrl || undefined)
+      setToken(data.access_token)
+      await fetchMe()
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setError(t('errors.invalidCredentials'))
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError(t('errors.tooManyRequests'))
+      } else {
+        setError(t('errors.unknown'))
+      }
+    }
+  }
+
   return (
     <AuthLayout showHeaderLogo={false}>
       <div className="space-y-6">
         <Logo size="sm" stacked logoSizePx={48} className="justify-center" />
         <Card>
           <CardContent className="space-y-4 pt-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {showTelegramWidgetAbove && bootstrap?.telegram_widget_bot && (
+            <TelegramLoginWidget
+              page="register"
+              botUsername={bootstrap.telegram_widget_bot}
+              onTelegramAuth={handleTelegramWidgetAuth}
+            />
+          )}
+
           {botHandle && (
             <div className="text-center">
               <p className="text-[0.775rem] text-[rgb(100,116,139)] dark:text-[rgb(107,114,128)]">
@@ -128,32 +167,11 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
           <AuthSocialProviders
             page="register"
             referralCode={referralFromUrl || undefined}
-            onTelegramAuth={async (user) => {
-              setError(null)
-              try {
-                const data = await api.telegramAuthWidget(user, referralFromUrl || undefined)
-                setToken(data.access_token)
-                await fetchMe()
-                navigate('/dashboard', { replace: true })
-              } catch (err) {
-                if (err instanceof ApiError && err.status === 401) {
-                  setError(t('errors.invalidCredentials'))
-                } else if (err instanceof ApiError && err.status === 429) {
-                  setError(t('errors.tooManyRequests'))
-                } else {
-                  setError(t('errors.unknown'))
-                }
-              }
-            }}
+            telegramWidgetRenderedAbove={showTelegramWidgetAbove}
+            onTelegramAuth={handleTelegramWidgetAuth}
             onTelegramMiniAppSuccess={async (data) => {
               setError(null)
               setToken(data.access_token)

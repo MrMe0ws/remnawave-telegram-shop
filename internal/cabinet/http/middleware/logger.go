@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 )
 
 const slowRequestLogThreshold = 300 * time.Millisecond
@@ -43,7 +45,7 @@ func (s *statusRecorder) Write(b []byte) (int, error) {
 	return n, err
 }
 
-// Logger пишет одну строку slog.Info на каждый завершённый HTTP-запрос.
+// Logger пишет строку access-лога на каждый завершённый HTTP-запрос (уровень зависит от CABINET_HTTP_ACCESS_LOG).
 // Тело запроса/ответа не логируется — только метаданные, чтобы не утечь PII.
 func Logger() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -52,20 +54,39 @@ func Logger() func(http.Handler) http.Handler {
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rec, r)
 			duration := time.Since(start)
-			if shouldSkipAccessLog(r.URL.Path, rec.status, duration) {
-				return
-			}
-			slog.Info("cabinet http",
-				"request_id", RequestIDFromContext(r.Context()),
-				"method", r.Method,
-				"path", r.URL.Path,
-				"status", rec.status,
-				"bytes", rec.bytes,
-				"duration_ms", duration.Milliseconds(),
-				"remote", maskRemoteAddr(ClientIP(r)),
-				"ua", truncateUserAgent(r.Header.Get("User-Agent"), 160),
-			)
+			logCabinetHTTPAccess(rec, r, duration)
 		})
+	}
+}
+
+func logCabinetHTTPAccess(rec *statusRecorder, r *http.Request, duration time.Duration) {
+	mode := cabcfg.HTTPAccessLogMode()
+	if mode == cabcfg.AccessLogOff {
+		return
+	}
+	if shouldSkipAccessLog(r.URL.Path, rec.status, duration) {
+		return
+	}
+	attrs := []any{
+		"request_id", RequestIDFromContext(r.Context()),
+		"method", r.Method,
+		"path", r.URL.Path,
+		"status", rec.status,
+		"bytes", rec.bytes,
+		"duration_ms", duration.Milliseconds(),
+		"remote", maskRemoteAddr(ClientIP(r)),
+		"ua", truncateUserAgent(r.Header.Get("User-Agent"), 160),
+	}
+	problem := rec.status >= http.StatusBadRequest || duration >= slowRequestLogThreshold
+	if mode == cabcfg.AccessLogFull {
+		slog.Info("cabinet http", attrs...)
+		return
+	}
+	// AccessLogMinimal
+	if problem {
+		slog.Info("cabinet http", attrs...)
+	} else {
+		slog.Debug("cabinet http", attrs...)
 	}
 }
 

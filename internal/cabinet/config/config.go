@@ -20,6 +20,19 @@ import (
 	"remnawave-tg-shop-bot/utils"
 )
 
+// AccessLogMode — насколько подробно писать access-лог HTTP кабинета в общий slog (тот же поток, что и бот).
+type AccessLogMode int
+
+const (
+	// AccessLogMinimal — успешные быстрые запросы на уровне Debug (при уровне Info в stdout их не видно);
+	// 4xx/5xx и медленные — Info. Рекомендуемый режим для Docker без засорения логов бота.
+	AccessLogMinimal AccessLogMode = iota
+	// AccessLogFull — каждый запрос Info (кроме путей из noisy-списка middleware), как раньше.
+	AccessLogFull
+	// AccessLogOff — middleware access-лога не пишет.
+	AccessLogOff
+)
+
 // cabinet — набор всех параметров кабинета, заполняется в InitConfig().
 type cabinet struct {
 	enabled bool
@@ -80,6 +93,8 @@ type cabinet struct {
 	pwaEnabled   bool
 	pwaAppName   string
 	pwaShortName string
+
+	httpAccessLogMode AccessLogMode
 }
 
 var conf cabinet
@@ -87,6 +102,14 @@ var conf cabinet
 // IsEnabled возвращает значение CABINET_ENABLED. До InitConfig() — false.
 func IsEnabled() bool { return conf.enabled }
 func ProfileDeleteEnabled() bool { return conf.profileDeleteEnabled }
+
+// HTTPAccessLogMode — режим access-лога /cabinet (см. CABINET_HTTP_ACCESS_LOG). До InitConfig() — AccessLogMinimal.
+func HTTPAccessLogMode() AccessLogMode {
+	if !conf.enabled {
+		return AccessLogOff
+	}
+	return conf.httpAccessLogMode
+}
 
 // PublicURL возвращает публичный URL кабинета (например https://cabinet.example.com).
 func PublicURL() string { return conf.publicURLRaw }
@@ -413,6 +436,8 @@ func InitConfig() {
 	conf.pwaAppName = strings.TrimSpace(os.Getenv("CABINET_PWA_APP_NAME"))
 	conf.pwaShortName = strings.TrimSpace(os.Getenv("CABINET_PWA_SHORT_NAME"))
 
+	conf.httpAccessLogMode = parseHTTPAccessLogMode(strings.TrimSpace(os.Getenv("CABINET_HTTP_ACCESS_LOG")))
+
 	slog.Info("cabinet config initialized",
 		"public_url", conf.publicURLRaw,
 		"mini_app_entry_url", conf.miniAppEntryURL,
@@ -437,7 +462,33 @@ func InitConfig() {
 		"pwa_app_name", PWAAppName(),
 		"pwa_short_name", PWAShortName(),
 		"profile_delete_enabled", conf.profileDeleteEnabled,
+		"http_access_log", httpAccessLogModeString(conf.httpAccessLogMode),
 	)
+}
+
+func parseHTTPAccessLogMode(raw string) AccessLogMode {
+	switch strings.ToLower(raw) {
+	case "", "minimal", "quiet":
+		return AccessLogMinimal
+	case "full", "all", "verbose":
+		return AccessLogFull
+	case "off", "none", "false", "0":
+		return AccessLogOff
+	default:
+		slog.Warn("cabinet: invalid CABINET_HTTP_ACCESS_LOG, using minimal", "value", raw)
+		return AccessLogMinimal
+	}
+}
+
+func httpAccessLogModeString(m AccessLogMode) string {
+	switch m {
+	case AccessLogFull:
+		return "full"
+	case AccessLogOff:
+		return "off"
+	default:
+		return "minimal"
+	}
 }
 
 // resolveBrandLogoFile ищет файл логотипа: абсолютный путь как есть; относительный —

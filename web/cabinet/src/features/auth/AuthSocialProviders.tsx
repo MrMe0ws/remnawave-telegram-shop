@@ -6,6 +6,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, type AuthTokenResponse } from '@/lib/api'
 import { getTelegramInitData, getTelegramMiniAppStartParam } from '@/lib/utils'
 import { GoogleBrandIcon, TelegramBrandIcon, VKBrandIcon, YandexBrandIcon } from '@/components/BrandIcons'
+import type { TelegramWidgetUser } from './TelegramLoginWidget'
+
+export type { TelegramWidgetUser } from './TelegramLoginWidget'
 
 export type OAuthFlags = {
   google: boolean
@@ -16,22 +19,14 @@ export type OAuthFlags = {
   telegramWebAuthMode?: 'widget' | 'oidc'
 }
 
-export type TelegramWidgetUser = {
-  id: number
-  first_name?: string
-  last_name?: string
-  username?: string
-  photo_url?: string
-  auth_date: number
-  hash: string
-}
-
 type Page = 'login' | 'register'
 
 type Props = {
   page: Page
   /** ref из ?ref= (реферальная регистрация); уходит в Google OAuth state и в POST /auth/telegram. */
   referralCode?: string
+  /** true — виджет уже отрисован выше (widget mode); не монтировать второй раз в сетке. */
+  telegramWidgetRenderedAbove?: boolean
   /** Для legacy Telegram Login Widget 1.0. */
   onTelegramAuth?: (user: TelegramWidgetUser) => Promise<void>
   /** Mini App: после успешного POST /auth/telegram с init_data. */
@@ -47,6 +42,7 @@ type Props = {
 export function AuthSocialProviders({
   page,
   referralCode,
+  telegramWidgetRenderedAbove = false,
   onTelegramAuth,
   onTelegramMiniAppSuccess,
   onTelegramFlowError,
@@ -69,6 +65,8 @@ export function AuthSocialProviders({
   const bot = oauth?.telegramBot
   const oidcEnabled = oauth?.telegramOIDCEnabled ?? false
   const showWidget = !!bot && !inMiniApp
+  const embedTelegramWidget =
+    showWidget && !telegramWidgetRenderedAbove && oauth?.telegramWebAuthMode === 'widget'
   const showOIDC = oidcEnabled && !inMiniApp
   const showSocial = inMiniApp || (oauth !== null && (!!oauth.google || !!oauth.yandex || !!oauth.vk || showWidget || showOIDC))
   const socialButtons: Array<{ key: string; label: string; icon: ReactNode; onClick: () => void; loading?: boolean }> = []
@@ -179,7 +177,7 @@ export function AuthSocialProviders({
   useLayoutEffect(() => {
     setTgWidgetError(false)
     const el = tgMountRef.current
-    if (!showWidget || !el || !onTelegramAuthRef.current) return
+    if (!embedTelegramWidget || !el || !onTelegramAuthRef.current) return
 
     const key = page === 'login' ? 'cabinetTelegramLoginCallback' : 'cabinetTelegramRegisterCallback'
     el.innerHTML = ''
@@ -205,7 +203,7 @@ export function AuthSocialProviders({
       el.innerHTML = ''
       delete (window as unknown as Record<string, unknown>)[key]
     }
-  }, [bot, page, showWidget])
+  }, [bot, page, embedTelegramWidget])
 
   if (!showSocial) return null
 
@@ -239,7 +237,7 @@ export function AuthSocialProviders({
             </Button>
           )
         })}
-        {showWidget && (
+        {embedTelegramWidget && (
           <div className="col-span-2 flex min-h-[48px] w-full flex-col items-stretch justify-center gap-2">
             {tgWidgetError && (
               <Alert variant="destructive">
