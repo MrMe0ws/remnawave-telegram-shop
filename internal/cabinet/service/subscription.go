@@ -87,7 +87,9 @@ type SubscriptionResponse struct {
 	TrafficLimitGB           *int                `json:"traffic_limit_gb,omitempty"`
 	LoyaltyXP                int64               `json:"loyalty_xp"`
 	LoyaltyTier              *string             `json:"loyalty_tier,omitempty"`
-	// IsTrial — активная подписка без оплаченных invoice с month>0 (пробный период как в боте).
+	// IsTrial — активная подписка без оплаченных invoice с month>0 (как «ещё не платил» в боте).
+	// Исключение: если Remnawave уже выставил лимит трафика выше триального — не триал (админка,
+	// ручная выдача, рассинхрон purchase после миграции current_tariff_id).
 	IsTrial bool `json:"is_trial"`
 }
 
@@ -195,6 +197,14 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 			linkSet := customer.SubscriptionLink != nil && strings.TrimSpace(*customer.SubscriptionLink) != ""
 			active := customer.ExpireAt != nil && customer.ExpireAt.After(now) && linkSet
 			resp.IsTrial = active && n == 0
+		}
+	}
+	// Не затирать «платный» лимит из панели признаком триала из-за пустого purchase
+	// (например backfill current_tariff_id при активном expire).
+	if resp.IsTrial && rwUser != nil {
+		trialCap := int64(config.TrialTrafficLimit())
+		if trialCap > 0 && rwUser.TrafficLimitBytes > trialCap {
+			resp.IsTrial = false
 		}
 	}
 
