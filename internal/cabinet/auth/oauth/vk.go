@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -13,9 +14,16 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// VKProvider — OAuth 2.1 VK ID (id.vk.ru), не legacy oauth.vk.com.
+// В кабинете VK создаётся приложение VK ID; redirect и client_id из настроек приложения.
+//
+// Документация: https://id.vk.com/about/business/go/docs/ru/vkid/latest/vk-id/connection/api-description
 type VKProvider struct {
-	cfg   *oauth2.Config
-	store *StateStore
+	clientID     string
+	clientSecret string
+	redirectURL  string
+	store        *StateStore
+	authCfg      *oauth2.Config // только для AuthCodeURL + PKCE на id.vk.ru/authorize
 }
 
 type VKUserInfo struct {
@@ -28,17 +36,22 @@ type VKUserInfo struct {
 }
 
 func NewVKProvider(clientID, clientSecret, redirectURL string, store *StateStore) *VKProvider {
-	cfg := &oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		RedirectURL:  redirectURL,
-		Scopes:       []string{"email"},
+	authCfg := &oauth2.Config{
+		ClientID:    clientID,
+		RedirectURL: redirectURL,
+		Scopes:      []string{"email"},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://oauth.vk.com/authorize",
-			TokenURL: "https://oauth.vk.com/access_token",
+			AuthURL:  "https://id.vk.ru/authorize",
+			TokenURL: "https://id.vk.ru/oauth2/auth",
 		},
 	}
-	return &VKProvider{cfg: cfg, store: store}
+	return &VKProvider{
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		redirectURL:  redirectURL,
+		store:        store,
+		authCfg:      authCfg,
+	}
 }
 
 func (p *VKProvider) Start(referralRaw string, linkAccountID int64) (*StartResult, error) {
@@ -46,27 +59,34 @@ func (p *VKProvider) Start(referralRaw string, linkAccountID int64) (*StartResul
 	if len(ref) > maxOAuthReferralLen {
 		ref = ref[:maxOAuthReferralLen]
 	}
-	state, err := randomHex(16)
+	// VK ID: state ≥ 32 символов (a-z A-Z 0-9 _ -); hex из randomHex подходит.
+	state, err := randomHex(24)
 	if err != nil {
 		return nil, fmt.Errorf("vk oauth start: gen state: %w", err)
 	}
-	// VK OAuth с client_secret — «server-side» приложение; PKCE в authorize
-	// не поддерживается (invalid_request: PKCE is unsupported for server-side authorization).
-	p.store.Save(state, "", ref, linkAccountID)
-	authURL := p.cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
+	verifier := oauth2.GenerateVerifier()
+	p.store.Save(state, verifier, ref, linkAccountID)
+	authURL := p.authCfg.AuthCodeURL(state, oauth2.S256ChallengeOption(verifier))
 	return &StartResult{RedirectURL: authURL, State: state}, nil
 }
 
-func (p *VKProvider) Callback(ctx context.Context, state, code string) (*VKUserInfo, string, int64, error) {
-	_, referralRaw, linkAccountID, ok := p.store.Pop(state)
+func (p *VKProvider) Callback(ctx context.Context, state, code, deviceID string) (*VKUserInfo, string, int64, error) {
+	deviceID = strings.TrimSpace(deviceID)
+	if deviceID == "" {
+		return nil, "", 0, errors.New("vk oauth: missing device_id (VK ID callback)")
+	}
+	verifier, referralRaw, linkAccountID, ok := p.store.Pop(state)
 	if !ok {
 		return nil, "", 0, ErrStateInvalid
 	}
-	token, err := p.cfg.Exchange(ctx, code)
+	if verifier == "" {
+		return nil, "", 0, errors.New("vk oauth: empty code_verifier for state")
+	}
+	accessToken, err := vkIDExchangeCode(ctx, p.clientID, p.clientSecret, p.redirectURL, code, verifier, deviceID, state)
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("vk oauth exchange: %w", err)
 	}
-	info, err := fetchVKUserInfo(ctx, p.cfg, token)
+	info, err := fetchVKIDUserInfo(ctx, p.clientID, accessToken)
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("vk userinfo: %w", err)
 	}
@@ -76,41 +96,101 @@ func (p *VKProvider) Callback(ctx context.Context, state, code string) (*VKUserI
 	return info, referralRaw, linkAccountID, nil
 }
 
-type vkUsersResponse struct {
-	Response []VKUserInfo `json:"response"`
+func vkIDExchangeCode(ctx context.Context, clientID, clientSecret, redirectURI, code, codeVerifier, deviceID, state string) (accessToken string, err error) {
+	form := url.Values{}
+	form.Set("grant_type", "authorization_code")
+	form.Set("code_verifier", codeVerifier)
+	form.Set("redirect_uri", redirectURI)
+	form.Set("code", code)
+	form.Set("client_id", clientID)
+	form.Set("device_id", deviceID)
+	form.Set("state", state)
+	if strings.TrimSpace(clientSecret) != "" {
+		form.Set("client_secret", clientSecret)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://id.vk.ru/oauth2/auth", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var tok struct {
+		AccessToken string `json:"access_token"`
+		Error       string `json:"error"`
+		Description string `json:"error_description"`
+	}
+	if err := json.Unmarshal(body, &tok); err != nil {
+		return "", fmt.Errorf("token decode: %w", err)
+	}
+	if tok.Error != "" {
+		return "", fmt.Errorf("%s: %s", tok.Error, tok.Description)
+	}
+	if strings.TrimSpace(tok.AccessToken) == "" {
+		return "", errors.New("empty access_token")
+	}
+	return tok.AccessToken, nil
 }
 
-func fetchVKUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (*VKUserInfo, error) {
-	rawUID := token.Extra("user_id")
-	uid, err := toInt64(rawUID)
-	if err != nil || uid <= 0 {
-		return nil, fmt.Errorf("vk token: missing user_id")
-	}
-	email, _ := token.Extra("email").(string)
+type vkIDUserInfoResponse struct {
+	User vkIDUserPayload `json:"user"`
+}
 
-	client := cfg.Client(ctx, token)
-	q := url.Values{}
-	q.Set("user_ids", strconv.FormatInt(uid, 10))
-	q.Set("fields", "screen_name,photo_200")
-	q.Set("v", "5.199")
-	resp, err := client.Get("https://api.vk.com/method/users.get?" + q.Encode())
+type vkIDUserPayload struct {
+	UserID    any    `json:"user_id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Avatar    string `json:"avatar"`
+}
+
+func fetchVKIDUserInfo(ctx context.Context, clientID, accessToken string) (*VKUserInfo, error) {
+	form := url.Values{}
+	form.Set("client_id", clientID)
+	form.Set("access_token", accessToken)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://id.vk.ru/oauth2/user_info", strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("users.get: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("user_info status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
-	var data vkUsersResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, fmt.Errorf("users.get decode: %w", err)
+	var env vkIDUserInfoResponse
+	if err := json.Unmarshal(body, &env); err != nil {
+		return nil, fmt.Errorf("user_info decode: %w", err)
 	}
-	if len(data.Response) == 0 {
-		return nil, errors.New("vk users.get: empty response")
+	uid, err := toInt64(env.User.UserID)
+	if err != nil || uid <= 0 {
+		return nil, fmt.Errorf("user_info: bad user_id")
 	}
-	out := data.Response[0]
-	out.Email = strings.TrimSpace(email)
-	return &out, nil
+	return &VKUserInfo{
+		ID:       uid,
+		Email:    strings.TrimSpace(env.User.Email),
+		First:    strings.TrimSpace(env.User.FirstName),
+		Last:     strings.TrimSpace(env.User.LastName),
+		Nickname: "",
+		Photo:    strings.TrimSpace(env.User.Avatar),
+	}, nil
 }
 
 func toInt64(v any) (int64, error) {

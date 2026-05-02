@@ -234,11 +234,12 @@ func (h *OAuthHandler) VKStart(w http.ResponseWriter, r *http.Request) {
 func (h *OAuthHandler) VKCallback(w http.ResponseWriter, r *http.Request) {
 	state := strings.TrimSpace(r.URL.Query().Get("state"))
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
-	if state == "" || code == "" {
-		http.Error(w, "missing state or code", http.StatusBadRequest)
+	deviceID := strings.TrimSpace(r.URL.Query().Get("device_id"))
+	if state == "" || code == "" || deviceID == "" {
+		http.Error(w, "missing state, code, or device_id", http.StatusBadRequest)
 		return
 	}
-	result, err := h.svc.VKCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
+	result, err := h.svc.VKCallback(r.Context(), state, code, deviceID, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
 	if err != nil {
 		if result.WasLinkAttempt {
 			to := "/cabinet/accounts?status=error&reason_code=vk_link_unknown"

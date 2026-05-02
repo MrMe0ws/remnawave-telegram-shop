@@ -642,12 +642,12 @@ func (s *Service) YandexCallback(ctx context.Context, state, code, userAgent, ip
 	return s.oauthLoginFlowGeneric(ctx, repository.ProviderYandex, pid, email, rawProfile, referralRaw, userAgent, ip, "yandex")
 }
 
-func (s *Service) VKCallback(ctx context.Context, state, code, userAgent, ip, refreshFromCookie string) (VKCallbackResult, error) {
+func (s *Service) VKCallback(ctx context.Context, state, code, deviceID, userAgent, ip, refreshFromCookie string) (VKCallbackResult, error) {
 	var empty VKCallbackResult
 	if s.vkProvider == nil {
 		return empty, ErrVKDisabled
 	}
-	info, referralRaw, linkAccountID, err := s.vkProvider.p.Callback(ctx, state, code)
+	info, referralRaw, linkAccountID, err := s.vkProvider.p.Callback(ctx, state, code, deviceID)
 	if err != nil {
 		if errors.Is(err, googleoauth.ErrStateInvalid) {
 			return empty, ErrInvalidToken
