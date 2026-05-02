@@ -199,11 +199,22 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 			resp.IsTrial = active && n == 0
 		}
 	}
-	// Не затирать «платный» лимит из панели признаком триала из-за пустого purchase
-	// (например backfill current_tariff_id при активном expire).
+	// Не затирать панель признаком триала из-за пустого purchase (backfill current_tariff_id и т.п.):
+	// — лимит в панели выше триального из env;
+	// — лимит 0 байт в панели = безлимит, но у настоящего триала list-user иногда тоже 0 — тогда не трогаем is_trial,
+	//   пока expire_at не «длиннее типичного триала» (ручная выдача на много месяцев / 2099).
 	if resp.IsTrial && rwUser != nil {
+		now := time.Now().UTC()
 		trialCap := int64(config.TrialTrafficLimit())
-		if trialCap > 0 && rwUser.TrafficLimitBytes > trialCap {
+		if rwUser.TrafficLimitBytes <= 0 {
+			trialTail := int(config.TrialDays()) + 60
+			if trialTail < 120 {
+				trialTail = 120
+			}
+			if customer.ExpireAt != nil && customer.ExpireAt.After(now.AddDate(0, 0, trialTail)) {
+				resp.IsTrial = false
+			}
+		} else if trialCap > 0 && rwUser.TrafficLimitBytes > trialCap {
 			resp.IsTrial = false
 		}
 	}
@@ -215,15 +226,16 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 	}
 
 	// Лимит трафика в UI: основной источник — Remnawave (user.trafficLimitBytes).
-	// Панель в ряде случаев отдаёт 0 при реальном лимите (триал, урезанный list-user).
-	// Тогда: триал → TRIAL_TRAFFIC_LIMIT из env; оплаченный tariffs → лимит строки тарифа.
+	// 0 байт в панели = безлимит (см. trafficGBFromBytes): не подставлять лимит строки тарифа поверх этого.
+	// Триал из бота при пустом/нулевом ответе лимита из панели — TRIAL_TRAFFIC_LIMIT из env (как раньше).
 	if resp.IsTrial {
 		if config.TrialTrafficLimit() > 0 {
 			if lim := trafficGBFromBytes(int64(config.TrialTrafficLimit())); lim != nil {
 				resp.TrafficLimitGB = lim
 			}
 		}
-	} else if resp.Tariff != nil && resp.Tariff.TrafficGB != nil && *resp.Tariff.TrafficGB > 0 && resp.TrafficLimitGB == nil {
+	} else if resp.Tariff != nil && resp.Tariff.TrafficGB != nil && *resp.Tariff.TrafficGB > 0 && resp.TrafficLimitGB == nil &&
+		(rwUser == nil || rwUser.TrafficLimitBytes > 0) {
 		v := *resp.Tariff.TrafficGB
 		resp.TrafficLimitGB = &v
 	}
