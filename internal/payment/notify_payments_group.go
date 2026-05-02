@@ -3,7 +3,9 @@ package payment
 import (
 	"context"
 	"fmt"
+	"html"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,8 +14,14 @@ import (
 	"remnawave-tg-shop-bot/utils"
 
 	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"github.com/google/uuid"
 )
+
+// htmlCode — фрагмент для Telegram ParseMode HTML: удобное копирование одним тапом.
+func htmlCode(s string) string {
+	return "<code>" + html.EscapeString(s) + "</code>"
+}
 
 func invoiceTypeTitle(t database.InvoiceType) string {
 	switch t {
@@ -54,16 +62,24 @@ func telegramUsernameLine(c *database.Customer) string {
 	if c == nil {
 		return "(нет username)"
 	}
-	if c.TelegramUsername != nil {
-		u := strings.TrimSpace(*c.TelegramUsername)
-		if u != "" {
-			if !strings.HasPrefix(u, "@") {
-				return "@" + u
-			}
-			return u
-		}
+	if u := telegramUsernameRaw(c); u != "" {
+		return u
 	}
 	return "(нет username)"
+}
+
+func telegramUsernameRaw(c *database.Customer) string {
+	if c == nil || c.TelegramUsername == nil {
+		return ""
+	}
+	u := strings.TrimSpace(*c.TelegramUsername)
+	if u == "" {
+		return ""
+	}
+	if !strings.HasPrefix(u, "@") {
+		return "@" + u
+	}
+	return u
 }
 
 func paymentLinkBlock(p *database.Purchase) string {
@@ -73,19 +89,19 @@ func paymentLinkBlock(p *database.Purchase) string {
 	switch p.InvoiceType {
 	case database.InvoiceTypeYookasa:
 		if p.YookasaID != nil && *p.YookasaID != uuid.Nil {
-			return fmt.Sprintf("🔗 платёж: %s (можно скопировать)", p.YookasaID.String())
+			return "🔗 платёж: " + htmlCode(p.YookasaID.String())
 		}
 	case database.InvoiceTypeCrypto:
 		if p.CryptoInvoiceID != nil {
-			line := fmt.Sprintf("🔗 платёж: %d (можно скопировать)", *p.CryptoInvoiceID)
+			line := "🔗 платёж: " + htmlCode(strconv.FormatInt(*p.CryptoInvoiceID, 10))
 			if p.CryptoInvoiceLink != nil && strings.TrimSpace(*p.CryptoInvoiceLink) != "" {
-				line += "\n   " + strings.TrimSpace(*p.CryptoInvoiceLink)
+				line += "\n   " + htmlCode(strings.TrimSpace(*p.CryptoInvoiceLink))
 			}
 			return line
 		}
 	case database.InvoiceTypeTelegram:
 		if p.CryptoInvoiceLink != nil && strings.TrimSpace(*p.CryptoInvoiceLink) != "" {
-			return "🔗 счёт Stars:\n   " + strings.TrimSpace(*p.CryptoInvoiceLink)
+			return "🔗 счёт Stars:\n   " + htmlCode(strings.TrimSpace(*p.CryptoInvoiceLink))
 		}
 	}
 	return "🔗 платёж: —"
@@ -107,6 +123,18 @@ func cabinetWebHint(cabinet bool, c *database.Customer) string {
 		return "🌐 " + src
 	}
 	return "🌐 " + src + " · " + strings.Join(tags, " · ")
+}
+
+func customerNotifyLineHTML(c *database.Customer) string {
+	if c == nil {
+		return ""
+	}
+	tgID := htmlCode(strconv.FormatInt(c.TelegramID, 10))
+	userPart := "(нет username)"
+	if u := telegramUsernameRaw(c); u != "" {
+		userPart = htmlCode(u)
+	}
+	return fmt.Sprintf("👤 customer #%d · tg %s · %s\n", c.ID, tgID, userPart)
 }
 
 func amountPeriodLine(p *database.Purchase) string {
@@ -161,14 +189,17 @@ func tariffLine(p *database.Purchase) string {
 }
 
 func durationPaidLine(p *database.Purchase) string {
-	if p == nil || p.PaidAt == nil {
-		return "⏱ счёт: " + formatClockUTC(p.CreatedAt) + " → оплачен: —"
+	if p == nil {
+		return "⏱️ счёт: — → оплачен: —"
+	}
+	if p.PaidAt == nil {
+		return "⏱️ счёт: " + formatClockUTC(p.CreatedAt) + " → оплачен: —"
 	}
 	d := p.PaidAt.Sub(p.CreatedAt)
 	if d < 0 {
 		d = 0
 	}
-	return fmt.Sprintf("⏱ счёт: %s → оплачен: %s · %d с в пути",
+	return fmt.Sprintf("⏱️ счёт: %s → оплачен: %s · %d с в пути",
 		formatClockUTC(p.CreatedAt),
 		formatClockUTC(*p.PaidAt),
 		int(d.Round(time.Second).Seconds()),
@@ -177,9 +208,9 @@ func durationPaidLine(p *database.Purchase) string {
 
 func durationCancelLine(p *database.Purchase) string {
 	if p == nil {
-		return "⏱ счёт: —"
+		return "⏱️ счёт: —"
 	}
-	return "⏱ счёт: " + formatClockUTC(p.CreatedAt) + " (отмена, без оплаты)"
+	return "⏱️ счёт: " + formatClockUTC(p.CreatedAt) + " (отмена, без оплаты)"
 }
 
 func expireChangeLine(before, after *time.Time) string {
@@ -202,9 +233,13 @@ func providerExtrasFromCtx(ctx context.Context, p *database.Purchase) string {
 			return ""
 		}
 		b.WriteString("\n\n⭐ Stars (Telegram)\n")
-		b.WriteString("tg_charge_id: " + strings.TrimSpace(m.TelegramPaymentChargeID) + "\n")
-		b.WriteString("provider_charge_id: " + strings.TrimSpace(m.ProviderPaymentChargeID) + "\n")
-		b.WriteString(fmt.Sprintf("successful_payment: %d %s", m.TotalAmount, strings.TrimSpace(m.Currency)))
+		if id := strings.TrimSpace(m.TelegramPaymentChargeID); id != "" {
+			b.WriteString("tg_charge_id: " + htmlCode(id) + "\n")
+		}
+		if id := strings.TrimSpace(m.ProviderPaymentChargeID); id != "" {
+			b.WriteString("provider_charge_id: " + htmlCode(id) + "\n")
+		}
+		b.WriteString(fmt.Sprintf("successful_payment: %d %s", m.TotalAmount, html.EscapeString(strings.TrimSpace(m.Currency))))
 	case database.InvoiceTypeCrypto:
 		if !config.IsCryptoPayEnabled() {
 			return ""
@@ -214,26 +249,26 @@ func providerExtrasFromCtx(ctx context.Context, p *database.Purchase) string {
 			return ""
 		}
 		b.WriteString("\n\n₿ CryptoPay\n")
-		if strings.TrimSpace(m.Hash) != "" {
-			b.WriteString("hash: " + m.Hash + "\n")
+		if h := strings.TrimSpace(m.Hash); h != "" {
+			b.WriteString("hash: " + htmlCode(h) + "\n")
 		}
-		if strings.TrimSpace(m.Status) != "" {
-			b.WriteString("status: " + m.Status + "\n")
+		if st := strings.TrimSpace(m.Status); st != "" {
+			b.WriteString("status: " + html.EscapeString(st) + "\n")
 		}
 		if strings.TrimSpace(m.CurrencyType) != "" || strings.TrimSpace(m.Asset) != "" {
-			b.WriteString(fmt.Sprintf("currency: %s · asset: %s\n", m.CurrencyType, m.Asset))
+			b.WriteString(fmt.Sprintf("currency: %s · asset: %s\n", html.EscapeString(strings.TrimSpace(m.CurrencyType)), html.EscapeString(strings.TrimSpace(m.Asset))))
 		}
 		if strings.TrimSpace(m.PaidAsset) != "" || strings.TrimSpace(m.PaidAmount) != "" {
-			b.WriteString(fmt.Sprintf("оплачено: %s %s\n", m.PaidAmount, m.PaidAsset))
+			b.WriteString(fmt.Sprintf("оплачено: %s %s\n", html.EscapeString(strings.TrimSpace(m.PaidAmount)), html.EscapeString(strings.TrimSpace(m.PaidAsset))))
 		}
 		if strings.TrimSpace(m.FeeAmount) != "" {
-			b.WriteString("комиссия: " + m.FeeAmount + "\n")
+			b.WriteString("комиссия: " + html.EscapeString(strings.TrimSpace(m.FeeAmount)) + "\n")
 		}
-		if strings.TrimSpace(m.PayUrl) != "" {
-			b.WriteString("pay_url: " + m.PayUrl + "\n")
+		if u := strings.TrimSpace(m.PayUrl); u != "" {
+			b.WriteString("pay_url: " + htmlCode(u) + "\n")
 		}
-		if strings.TrimSpace(m.BotInvoiceUrl) != "" && m.BotInvoiceUrl != m.PayUrl {
-			b.WriteString("bot_invoice_url: " + m.BotInvoiceUrl + "\n")
+		if u := strings.TrimSpace(m.BotInvoiceUrl); u != "" && u != strings.TrimSpace(m.PayUrl) {
+			b.WriteString("bot_invoice_url: " + htmlCode(u) + "\n")
 		}
 	default:
 		return ""
@@ -259,8 +294,7 @@ func buildPaidGroupMessage(ctx context.Context, p *database.Purchase, c *databas
 	b.WriteString(durationPaidLine(p) + "\n")
 	b.WriteString(paymentLinkBlock(p) + "\n\n")
 	if c != nil {
-		b.WriteString(fmt.Sprintf("👤 customer #%d · tg %d · %s (можно скопировать юзернэйм и тг айди)\n",
-			c.ID, c.TelegramID, telegramUsernameLine(c)))
+		b.WriteString(customerNotifyLineHTML(c))
 	}
 	b.WriteString(cabinetWebHint(cabinet, c) + "\n")
 	b.WriteString(expireChangeLine(expireBefore, expireAfter))
@@ -286,8 +320,7 @@ func buildCancelGroupMessage(p *database.Purchase, c *database.Customer, cabinet
 	b.WriteString(durationCancelLine(p) + "\n")
 	b.WriteString(paymentLinkBlock(p) + "\n\n")
 	if c != nil {
-		b.WriteString(fmt.Sprintf("👤 customer #%d · tg %d · %s (можно скопировать юзернэйм и тг айди)\n",
-			c.ID, c.TelegramID, telegramUsernameLine(c)))
+		b.WriteString(customerNotifyLineHTML(c))
 	}
 	b.WriteString(cabinetWebHint(cabinet, c))
 	return b.String()
@@ -303,8 +336,9 @@ func (s *PaymentService) sendPaymentsGroupText(ctx context.Context, text string)
 		return
 	}
 	params := &bot.SendMessageParams{
-		ChatID: chatID,
-		Text:   text,
+		ChatID:    chatID,
+		Text:      text,
+		ParseMode: models.ParseModeHTML,
 	}
 	if tid := config.PaymentsNotifyMessageThreadID(); tid > 0 {
 		params.MessageThreadID = tid
