@@ -611,6 +611,22 @@ func (h Handler) broadcastButtonPickerKeyboard(lang string, flags BroadcastRecip
 	}
 }
 
+// broadcastConnectRow — «Мой VPN» в рассылке: то же поведение, что resolveConnectButton в /start при включённом кабинете.
+func (h Handler) broadcastConnectRow(lang string) []models.InlineKeyboardButton {
+	if u := cabinetWebAppURL("/cabinet/dashboard"); u != "" {
+		return []models.InlineKeyboardButton{
+			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{
+				WebApp: &models.WebAppInfo{URL: u},
+			}),
+		}
+	}
+	return []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{
+			CallbackData: CallbackConnect + BroadcastInlineQuery,
+		}),
+	}
+}
+
 func (h Handler) buildBroadcastReplyMarkup(lang string, flags BroadcastRecipientButtons) models.ReplyMarkup {
 	if !flags.Buy && !flags.MainMenu && !flags.Promo && !flags.Connect {
 		return nil
@@ -622,9 +638,7 @@ func (h Handler) buildBroadcastReplyMarkup(lang string, flags BroadcastRecipient
 		})
 	}
 	if flags.Connect {
-		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{CallbackData: CallbackConnect + BroadcastInlineQuery}),
-		})
+		rows = append(rows, h.broadcastConnectRow(lang))
 	}
 	if flags.Promo {
 		rows = append(rows, []models.InlineKeyboardButton{

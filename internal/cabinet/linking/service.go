@@ -1315,14 +1315,14 @@ func (s *MergeService) absorbEmailPeerAccountTx(ctx context.Context, tx pgx.Tx, 
 		}
 		return fmt.Errorf("linking: absorb email peer tx: read peer: %w", err)
 	}
-	if email == nil || strings.TrimSpace(*email) == "" {
-		// Peer could be already transformed (or stale claim from previous email-merge attempt).
-		// Do not fail Telegram/social merge confirm in this case.
-		slog.Warn("linking: absorb email peer tx skipped: peer has no email",
+	hasPeerEmail := email != nil && strings.TrimSpace(*email) != ""
+	if !hasPeerEmail {
+		// Peer без почты (типично web-only + только VK/Yandex без email): merge всё равно должен
+		// перенести соц-identities на survivor и удалить peer-аккаунт — иначе VK/Google «теряются».
+		slog.Info("linking: absorb peer without email: moving identities only",
 			"survivor_account_id", survivorID,
 			"peer_account_id", peerID,
 		)
-		return nil
 	}
 	// Переносим identity peer-аккаунта на survivor до удаления peer.
 	// Важно для кейса "привязал Google -> после merge в UI пропал Google".
@@ -1347,12 +1347,14 @@ func (s *MergeService) absorbEmailPeerAccountTx(ctx context.Context, tx pgx.Tx, 
 	if _, err := tx.Exec(ctx, `DELETE FROM cabinet_account WHERE id = $1`, peerID); err != nil {
 		return fmt.Errorf("linking: absorb email peer tx: delete peer: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
+	if hasPeerEmail {
+		if _, err := tx.Exec(ctx, `
 		UPDATE cabinet_account
 		   SET email = $2, password_hash = $3, email_verified_at = $4, updated_at = NOW()
 		 WHERE id = $1`,
-		survivorID, strings.TrimSpace(strings.ToLower(*email)), pwd, ev); err != nil {
-		return fmt.Errorf("linking: absorb email peer tx: update survivor: %w", err)
+			survivorID, strings.TrimSpace(strings.ToLower(*email)), pwd, ev); err != nil {
+			return fmt.Errorf("linking: absorb email peer tx: update survivor: %w", err)
+		}
 	}
 	return nil
 }

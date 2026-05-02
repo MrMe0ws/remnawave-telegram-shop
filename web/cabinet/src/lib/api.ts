@@ -200,6 +200,8 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
         if (!p || typeof p.months !== 'number') continue
         const months = p.months
         const amount = typeof p.amount_rub === 'number' ? p.amount_rub : 0
+        // Как в боте (renderTariffMonthChoice): периоды с amount_rub <= 0 не продаются.
+        if (amount <= 0) continue
         const perMonth = months > 0 ? Math.round(amount / months) : amount
         rows.push({
           id: tid,
@@ -219,7 +221,8 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
       typeof t.slug === 'string' &&
       typeof t.months === 'number' &&
       typeof t.price_rub === 'number' &&
-      typeof t.monthly_base_rub === 'number'
+      typeof t.monthly_base_rub === 'number' &&
+      t.price_rub > 0
     ) {
       rows.push(item as TariffItem)
     }
