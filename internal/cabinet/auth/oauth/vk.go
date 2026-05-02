@@ -50,18 +50,19 @@ func (p *VKProvider) Start(referralRaw string, linkAccountID int64) (*StartResul
 	if err != nil {
 		return nil, fmt.Errorf("vk oauth start: gen state: %w", err)
 	}
-	verifier := oauth2.GenerateVerifier()
-	p.store.Save(state, verifier, ref, linkAccountID)
-	authURL := p.cfg.AuthCodeURL(state, oauth2.AccessTypeOnline, oauth2.S256ChallengeOption(verifier))
+	// VK OAuth с client_secret — «server-side» приложение; PKCE в authorize
+	// не поддерживается (invalid_request: PKCE is unsupported for server-side authorization).
+	p.store.Save(state, "", ref, linkAccountID)
+	authURL := p.cfg.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	return &StartResult{RedirectURL: authURL, State: state}, nil
 }
 
 func (p *VKProvider) Callback(ctx context.Context, state, code string) (*VKUserInfo, string, int64, error) {
-	verifier, referralRaw, linkAccountID, ok := p.store.Pop(state)
+	_, referralRaw, linkAccountID, ok := p.store.Pop(state)
 	if !ok {
 		return nil, "", 0, ErrStateInvalid
 	}
-	token, err := p.cfg.Exchange(ctx, code, oauth2.VerifierOption(verifier))
+	token, err := p.cfg.Exchange(ctx, code)
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("vk oauth exchange: %w", err)
 	}
