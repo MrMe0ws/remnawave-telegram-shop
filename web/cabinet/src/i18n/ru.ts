@@ -57,6 +57,7 @@ export default {
       googleLinkPending:
         'Этот Google-аккаунт совпадает с уже зарегистрированным email в кабинете. На {{email}} отправлено письмо — перейдите по ссылке в нём, чтобы войти через Google, либо войдите по паролю ниже.',
       telegramWidgetLoadError: 'Не удалось загрузить виджет Telegram',
+      telegramWidgetLoading: 'Загрузка виджета Telegram…',
     },
     verifyEmail: {
       title: 'Подтвердите email',

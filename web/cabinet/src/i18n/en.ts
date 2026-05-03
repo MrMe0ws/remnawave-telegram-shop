@@ -57,6 +57,7 @@ export default {
       googleLinkPending:
         'This Google account matches an existing cabinet email. We sent a message to {{email}} — open the link there to finish Google sign-in, or sign in with your password below.',
       telegramWidgetLoadError: 'Could not load the Telegram widget',
+      telegramWidgetLoading: 'Loading Telegram widget…',
     },
     verifyEmail: {
       title: 'Verify your email',

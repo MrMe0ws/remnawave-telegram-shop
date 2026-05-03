@@ -10,6 +10,8 @@ type MountOpts = {
   bot: string
   onAuth: (user: TelegramWidgetUser) => Promise<void>
   onScriptFailed: () => void
+  /** true — скрипт ещё грузится; false — onload, onerror или таймаут. */
+  onScriptLoadingChange?: (loading: boolean) => void
   loadTimeoutMs?: number
 }
 
@@ -21,6 +23,7 @@ export function mountTelegramLoginWidgetScript(container: HTMLElement, opts: Mou
   const key = opts.page === 'login' ? 'cabinetTelegramLoginCallback' : 'cabinetTelegramRegisterCallback'
 
   container.innerHTML = ''
+  opts.onScriptLoadingChange?.(true)
   ;(window as unknown as Record<string, unknown>)[key] = async (user: TelegramWidgetUser) => {
     try {
       await opts.onAuth(user)
@@ -34,11 +37,13 @@ export function mountTelegramLoginWidgetScript(container: HTMLElement, opts: Mou
     if (settled) return
     settled = true
     window.clearTimeout(timer)
+    opts.onScriptLoadingChange?.(false)
   }
   const settleFail = () => {
     if (settled) return
     settled = true
     window.clearTimeout(timer)
+    opts.onScriptLoadingChange?.(false)
     opts.onScriptFailed()
   }
 
@@ -62,6 +67,7 @@ export function mountTelegramLoginWidgetScript(container: HTMLElement, opts: Mou
 
   return () => {
     window.clearTimeout(timer)
+    opts.onScriptLoadingChange?.(false)
     container.innerHTML = ''
     delete (window as unknown as Record<string, unknown>)[key]
   }

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -63,6 +64,7 @@ export function AuthSocialProviders({
   const { t } = useTranslation()
   const [oauth, setOauth] = useState<OAuthFlags>(OAUTH_BEFORE_BOOTSTRAP)
   const [tgWidgetError, setTgWidgetError] = useState(false)
+  const [tgWidgetLoading, setTgWidgetLoading] = useState(true)
   const [miniLoading, setMiniLoading] = useState(false)
   const tgMountRef = useRef<HTMLDivElement>(null)
   const onTelegramAuthRef = useRef(onTelegramAuth)
@@ -196,13 +198,18 @@ export function AuthSocialProviders({
   useLayoutEffect(() => {
     setTgWidgetError(false)
     const el = tgMountRef.current
-    if (!embedTelegramWidget || !el || !onTelegramAuthRef.current || !bot) return
+    if (!embedTelegramWidget || !el || !onTelegramAuthRef.current || !bot) {
+      setTgWidgetLoading(false)
+      return
+    }
 
+    setTgWidgetLoading(true)
     return mountTelegramLoginWidgetScript(el, {
       page,
       bot,
       onAuth: (user) => onTelegramAuthRef.current?.(user) ?? Promise.resolve(),
       onScriptFailed: () => setTgWidgetError(true),
+      onScriptLoadingChange: setTgWidgetLoading,
     })
   }, [bot, page, embedTelegramWidget])
 
@@ -245,7 +252,18 @@ export function AuthSocialProviders({
                 <AlertDescription>{t('auth.telegramWidgetLoadError')}</AlertDescription>
               </Alert>
             )}
-            <div ref={tgMountRef} className="flex w-full justify-center [&_iframe]:max-w-full" />
+            <div className="relative flex min-h-[48px] w-full justify-center">
+              {tgWidgetLoading && !tgWidgetError && (
+                <div
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70"
+                  aria-busy
+                  aria-label={t('auth.telegramWidgetLoading')}
+                >
+                  <Loader2 className="size-7 animate-spin text-primary" aria-hidden />
+                </div>
+              )}
+              <div ref={tgMountRef} className="flex w-full justify-center [&_iframe]:max-w-full" />
+            </div>
           </div>
         )}
       </div>

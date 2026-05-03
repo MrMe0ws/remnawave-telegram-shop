@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Loader2 } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getTelegramInitData } from '@/lib/utils'
@@ -20,6 +21,7 @@ type Props = {
 export function TelegramLoginWidget({ page, botUsername, onTelegramAuth }: Props) {
   const { t } = useTranslation()
   const [error, setError] = useState(false)
+  const [widgetLoading, setWidgetLoading] = useState(false)
   const mountRef = useRef<HTMLDivElement>(null)
   const onAuthRef = useRef(onTelegramAuth)
   onAuthRef.current = onTelegramAuth
@@ -31,13 +33,18 @@ export function TelegramLoginWidget({ page, botUsername, onTelegramAuth }: Props
   useLayoutEffect(() => {
     setError(false)
     const el = mountRef.current
-    if (!active || !el) return
+    if (!active || !el) {
+      setWidgetLoading(false)
+      return
+    }
 
+    setWidgetLoading(true)
     return mountTelegramLoginWidgetScript(el, {
       page,
       bot,
       onAuth: (user) => onAuthRef.current(user),
       onScriptFailed: () => setError(true),
+      onScriptLoadingChange: setWidgetLoading,
     })
   }, [active, bot, page])
 
@@ -50,7 +57,18 @@ export function TelegramLoginWidget({ page, botUsername, onTelegramAuth }: Props
           <AlertDescription>{t('auth.telegramWidgetLoadError')}</AlertDescription>
         </Alert>
       )}
-      <div ref={mountRef} className="flex w-full justify-center [&_iframe]:max-w-full" />
+      <div className="relative flex min-h-[48px] w-full justify-center">
+        {widgetLoading && !error && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/70"
+            aria-busy
+            aria-label={t('auth.telegramWidgetLoading')}
+          >
+            <Loader2 className="size-7 animate-spin text-primary" aria-hidden />
+          </div>
+        )}
+        <div ref={mountRef} className="flex w-full justify-center [&_iframe]:max-w-full" />
+      </div>
     </div>
   )
 }
