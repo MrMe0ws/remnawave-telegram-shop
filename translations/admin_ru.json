@@ -407,6 +407,9 @@
   "admin_user_card_hwid_limit": "📲 <b>Лимит устройств:</b> %d",
   "admin_user_card_panel_error": "⚠️ Не удалось загрузить данные панели для этого пользователя.",
 
+  "payments_notify_to_user_btn": "👤 К пользователю",
+  "payments_notify_user_not_found": "Пользователь не найден",
+
   "admin_user_subscription_settings": "📱 Подписка и настройки",
   "admin_user_referrals_btn": "🤝 Рефералы",
   "admin_user_stats_btn": "📊 Статистика трат",

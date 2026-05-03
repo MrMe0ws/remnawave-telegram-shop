@@ -999,6 +999,51 @@ func (h Handler) AdminUserManageHandler(ctx context.Context, b *bot.Bot, update 
 	}
 }
 
+// AdminPaymentsNotifyOpenUserHandler — callback «К пользователю» из уведомления об оплате в группе: новое сообщение с той же карточкой, что в разделе «Пользователи».
+func (h Handler) AdminPaymentsNotifyOpenUserHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || !isAdmin(update.CallbackQuery) {
+		return
+	}
+	cb := update.CallbackQuery
+	id, ok := parseCustomerIDFromPrefix(cb.Data, CallbackPaymentsNotifyUserOpenPrefix)
+	if !ok {
+		return
+	}
+	msg := cb.Message.Message
+	if msg == nil {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+		return
+	}
+	lang := strings.TrimSpace(cb.From.LanguageCode)
+	if lang == "" {
+		lang = "ru"
+	}
+	cust, err := h.customerRepository.FindById(ctx, id)
+	if err != nil || cust == nil {
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: cb.ID,
+			Text:            h.translation.GetText(lang, "payments_notify_user_not_found"),
+			ShowAlert:       true,
+		})
+		return
+	}
+	adminUsersDMClear(cb.From.ID)
+	text, markup := h.adminUserManageContent(ctx, b, lang, cust)
+	params := &bot.SendMessageParams{
+		ChatID:      msg.Chat.ID,
+		Text:        text,
+		ParseMode:   models.ParseModeHTML,
+		ReplyMarkup: markup,
+	}
+	if msg.MessageThreadID != 0 {
+		params.MessageThreadID = msg.MessageThreadID
+	}
+	if _, err := b.SendMessage(ctx, params); err != nil {
+		slog.Error("payments notify open user send", "error", err, "customer_id", id)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
 // adminUserCardTitleHTML — заголовок карточки: @username из БД, иначе имя из Telegram API, иначе числовой ID.
 func (h Handler) adminUserCardTitleHTML(ctx context.Context, b *bot.Bot, cust *database.Customer) string {
 	if adminCustomerWebCabinetDisplay(cust) {

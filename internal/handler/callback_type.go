@@ -68,7 +68,9 @@ const (
 	CallbackAdminUsersListPagePickJumpPrefix = "ulkj"
 	CallbackAdminUsersListPagePickOpenPrefix = "ulkp"
 
-	CallbackAdminUserManagePrefix       = "aum"
+	CallbackAdminUserManagePrefix = "aum"
+	// Карточка пользователя из уведомления об оплате в PAYMENTS_NOTIFY_CHAT_ID (новое сообщение; см. internal/payment/notify_payments_group.go).
+	CallbackPaymentsNotifyUserOpenPrefix = "pnu"
 	CallbackAdminUserSubscriptionPrefix = "aus"
 	CallbackAdminUserReferralsPrefix    = "aur"
 	CallbackAdminUserSpendPrefix        = "aut"

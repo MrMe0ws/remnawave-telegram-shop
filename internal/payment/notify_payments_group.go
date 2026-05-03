@@ -18,6 +18,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// Должен совпадать с handler.CallbackPaymentsNotifyUserOpenPrefix.
+const paymentsNotifyUserOpenCallbackPrefix = "pnu"
+
 // htmlCode — фрагмент для Telegram ParseMode HTML: удобное копирование одним тапом.
 func htmlCode(s string) string {
 	return "<code>" + html.EscapeString(s) + "</code>"
@@ -327,6 +330,10 @@ func buildCancelGroupMessage(p *database.Purchase, c *database.Customer, cabinet
 }
 
 func (s *PaymentService) sendPaymentsGroupText(ctx context.Context, text string) {
+	s.sendPaymentsGroupHTML(ctx, text, nil)
+}
+
+func (s *PaymentService) sendPaymentsGroupHTML(ctx context.Context, text string, replyMarkup models.ReplyMarkup) {
 	if s.telegramBot == nil || !config.PaymentsNotifyEnabled() {
 		return
 	}
@@ -340,12 +347,34 @@ func (s *PaymentService) sendPaymentsGroupText(ctx context.Context, text string)
 		Text:      text,
 		ParseMode: models.ParseModeHTML,
 	}
+	if replyMarkup != nil {
+		params.ReplyMarkup = replyMarkup
+	}
 	if tid := config.PaymentsNotifyMessageThreadID(); tid > 0 {
 		params.MessageThreadID = tid
 	}
 	if _, err := s.telegramBot.SendMessage(ctx, params); err != nil {
 		slog.Warn("payments notify: не удалось отправить в группу", "error", err)
 	}
+}
+
+func (s *PaymentService) paymentsNotifyToUserReplyMarkup(customerID int64) models.ReplyMarkup {
+	if s == nil || s.translation == nil || customerID <= 0 {
+		return nil
+	}
+	// Тексты уведомлений в группе на русском — подпись кнопки из admin_ru.
+	lang := "ru"
+	btnText := strings.TrimSpace(s.translation.GetText(lang, "payments_notify_to_user_btn"))
+	if btnText == "" {
+		btnText = "К пользователю"
+	}
+	data := paymentsNotifyUserOpenCallbackPrefix + strconv.FormatInt(customerID, 10)
+	if len(data) > 64 {
+		return nil
+	}
+	return models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+		{{Text: btnText, CallbackData: data}},
+	}}
 }
 
 // tryNotifyPurchasePaid — уведомление в группу после успешной оплаты (не влияет на результат покупки).
@@ -359,7 +388,7 @@ func (s *PaymentService) tryNotifyPurchasePaid(ctx context.Context, p *database.
 		cabinet = false
 	}
 	msg := buildPaidGroupMessage(ctx, p, c, cabinet, expireBefore, expireAfter)
-	s.sendPaymentsGroupText(ctx, msg)
+	s.sendPaymentsGroupHTML(ctx, msg, s.paymentsNotifyToUserReplyMarkup(c.ID))
 }
 
 // tryNotifyPurchaseCancel — уведомление об отмене счёта (YooKassa worker, Tribute cancel и т.д.).
@@ -380,5 +409,9 @@ func (s *PaymentService) tryNotifyPurchaseCancel(ctx context.Context, p *databas
 		cabinet = false
 	}
 	msg := buildCancelGroupMessage(p, c, cabinet)
-	s.sendPaymentsGroupText(ctx, msg)
+	var markup models.ReplyMarkup
+	if c != nil {
+		markup = s.paymentsNotifyToUserReplyMarkup(c.ID)
+	}
+	s.sendPaymentsGroupHTML(ctx, msg, markup)
 }

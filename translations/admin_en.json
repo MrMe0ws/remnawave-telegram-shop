@@ -407,6 +407,9 @@
   "admin_user_card_hwid_limit": "📲 <b>Device limit:</b> %d",
   "admin_user_card_panel_error": "⚠️ Could not load panel data for this user.",
 
+  "payments_notify_to_user_btn": "👤 Open user",
+  "payments_notify_user_not_found": "User not found",
+
   "admin_user_subscription_settings": "📱 Subscription & settings",
   "admin_user_referrals_btn": "🤝 Referrals",
   "admin_user_stats_btn": "📊 Spending stats",

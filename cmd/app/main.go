@@ -296,6 +296,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersListInactivePrefix, bot.MatchTypePrefix, h.AdminUsersListInactiveRouter, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersListPagePickOpenPrefix, bot.MatchTypePrefix, h.AdminUsersListPagePickerOpenHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUsersListPagePickJumpPrefix, bot.MatchTypePrefix, h.AdminUsersListPagePickerJumpHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPaymentsNotifyUserOpenPrefix, bot.MatchTypePrefix, h.AdminPaymentsNotifyOpenUserHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserManagePrefix, bot.MatchTypePrefix, h.AdminUserManageHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSubscriptionPrefix, bot.MatchTypePrefix, h.AdminUserSubscriptionHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserExtraHwidDecPrefix, bot.MatchTypePrefix, h.AdminUserExtraHwidDecHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
