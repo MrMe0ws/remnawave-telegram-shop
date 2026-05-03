@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
@@ -41,14 +41,33 @@ const queryClient = new QueryClient({
   },
 })
 
+const PUBLIC_AUTH_PATHS = new Set([
+  '/login',
+  '/register',
+  '/verify-email',
+  '/password/forgot',
+  '/password/reset',
+])
+
+function normalizePath(pathname: string): string {
+  const p = (pathname || '/').replace(/\/+$/, '')
+  return p === '' ? '/' : p
+}
+
+function isPublicAuthPath(pathname: string): boolean {
+  return PUBLIC_AUTH_PATHS.has(normalizePath(pathname))
+}
+
 function AppRoutes() {
+  const location = useLocation()
   const { initialized, initialize } = useAuthStore()
+  const showAuthShellEarly = isPublicAuthPath(location.pathname)
 
   useEffect(() => {
-    initialize()
+    void initialize()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!initialized) {
+  if (!initialized && !showAuthShellEarly) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <span className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />

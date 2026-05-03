@@ -3,16 +3,10 @@ import { useTranslation } from 'react-i18next'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getTelegramInitData } from '@/lib/utils'
+import { mountTelegramLoginWidgetScript } from '@/lib/telegram-widget-mount'
+import type { TelegramWidgetUser } from './telegram-widget-user'
 
-export type TelegramWidgetUser = {
-  id: number
-  first_name?: string
-  last_name?: string
-  username?: string
-  photo_url?: string
-  auth_date: number
-  hash: string
-}
+export type { TelegramWidgetUser } from './telegram-widget-user'
 
 type Page = 'login' | 'register'
 
@@ -39,30 +33,12 @@ export function TelegramLoginWidget({ page, botUsername, onTelegramAuth }: Props
     const el = mountRef.current
     if (!active || !el) return
 
-    const key = page === 'login' ? 'cabinetTelegramLoginCallback' : 'cabinetTelegramRegisterCallback'
-    el.innerHTML = ''
-    ;(window as unknown as Record<string, unknown>)[key] = async (user: TelegramWidgetUser) => {
-      try {
-        await onAuthRef.current(user)
-      } catch {
-        setError(true)
-      }
-    }
-    const s = document.createElement('script')
-    s.src = 'https://telegram.org/js/telegram-widget.js?22'
-    s.async = true
-    s.setAttribute('data-telegram-login', bot)
-    s.setAttribute('data-size', 'large')
-    s.setAttribute('data-radius', '8')
-    s.setAttribute('data-onauth', `${String(key)}(user)`)
-    s.setAttribute('data-request-access', 'write')
-    s.onerror = () => setError(true)
-    el.appendChild(s)
-
-    return () => {
-      el.innerHTML = ''
-      delete (window as unknown as Record<string, unknown>)[key]
-    }
+    return mountTelegramLoginWidgetScript(el, {
+      page,
+      bot,
+      onAuth: (user) => onAuthRef.current(user),
+      onScriptFailed: () => setError(true),
+    })
   }, [active, bot, page])
 
   if (!active) return null

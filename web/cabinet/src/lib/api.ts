@@ -502,12 +502,13 @@ async function request<T>(
 
 export const api = {
   // Auth (отдельный fetch: не кэшировать, иначе после смены env/nginx долго «нет Telegram»).
-  authBootstrap: async (): Promise<AuthBootstrapResponse> => {
+  authBootstrap: async (signal?: AbortSignal): Promise<AuthBootstrapResponse> => {
     const res = await fetch(`${BASE}/auth/bootstrap`, {
       method: 'GET',
       credentials: 'include',
       cache: 'no-store',
       headers: { Accept: 'application/json' },
+      signal,
     })
     if (!res.ok) {
       const text = await res.text().catch(() => '')

@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import './i18n'
+import { loadTelegramWebAppScriptIfNeeded } from '@/lib/telegram-web-app-loader'
+import { useAuthStore } from '@/store/auth'
 
 // Применяем тему до первого рендера (избегаем мигания).
 const savedTheme = localStorage.getItem('cab_theme')
@@ -13,8 +15,7 @@ if (savedTheme === 'light') {
   document.documentElement.classList.add('dark')
 }
 
-// Telegram Mini App: сообщаем клиенту, что страница готова.
-window.Telegram?.WebApp?.ready()
+window.Telegram?.WebApp?.ready?.()
 window.Telegram?.WebApp?.expand?.()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -22,3 +23,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 )
+
+// Mini App: SDK в фоне; после загрузки — ready/expand и повтор автологина (первый initialize мог быть без initData).
+void loadTelegramWebAppScriptIfNeeded().then(() => {
+  window.Telegram?.WebApp?.ready?.()
+  window.Telegram?.WebApp?.expand?.()
+  void useAuthStore.getState().tryTelegramMiniAppAfterSdk()
+})

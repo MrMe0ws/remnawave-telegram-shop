@@ -13,7 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Onest:wght@300..900&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- telegram-web-app.js не подключаем здесь: синхронная загрузка с telegram.org блокирует первый рендер при блокировке (РФ). См. loadTelegramWebAppScriptIfNeeded в main.tsx. -->
   </head>
   <body>
     <div id="root"></div>

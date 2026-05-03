@@ -56,8 +56,7 @@ export default {
       emailVerifiedOk: 'Email подтверждён. Войдите с паролем.',
       googleLinkPending:
         'Этот Google-аккаунт совпадает с уже зарегистрированным email в кабинете. На {{email}} отправлено письмо — перейдите по ссылке в нём, чтобы войти через Google, либо войдите по паролю ниже.',
-      telegramWidgetLoadError:
-        'Не удалось загрузить виджет Telegram (сеть или блокировщик). Проверьте консоль браузера и домен бота в BotFather.',
+      telegramWidgetLoadError: 'Не удалось загрузить виджет Telegram',
     },
     verifyEmail: {
       title: 'Подтвердите email',

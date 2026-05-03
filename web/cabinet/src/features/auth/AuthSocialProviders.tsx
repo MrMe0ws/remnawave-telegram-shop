@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, type AuthTokenResponse } from '@/lib/api'
 import { getTelegramInitData, getTelegramMiniAppStartParam } from '@/lib/utils'
+import { mountTelegramLoginWidgetScript } from '@/lib/telegram-widget-mount'
 import { GoogleBrandIcon, TelegramBrandIcon, VKBrandIcon, YandexBrandIcon } from '@/components/BrandIcons'
 import type { TelegramWidgetUser } from './TelegramLoginWidget'
 
@@ -18,6 +19,18 @@ export type OAuthFlags = {
   telegramOIDCEnabled?: boolean
   telegramWebAuthMode?: 'widget' | 'oidc'
 }
+
+/** До ответа bootstrap — не скрываем блок «или», чтобы не было «пустой» карточки при медленном API. */
+const OAUTH_BEFORE_BOOTSTRAP: OAuthFlags = {
+  google: true,
+  yandex: false,
+  vk: false,
+  telegramBot: undefined,
+  telegramOIDCEnabled: false,
+  telegramWebAuthMode: 'widget',
+}
+
+const BOOTSTRAP_TIMEOUT_MS = 10_000
 
 type Page = 'login' | 'register'
 
@@ -48,7 +61,7 @@ export function AuthSocialProviders({
   onTelegramFlowError,
 }: Props) {
   const { t } = useTranslation()
-  const [oauth, setOauth] = useState<OAuthFlags | null>(null)
+  const [oauth, setOauth] = useState<OAuthFlags>(OAUTH_BEFORE_BOOTSTRAP)
   const [tgWidgetError, setTgWidgetError] = useState(false)
   const [miniLoading, setMiniLoading] = useState(false)
   const tgMountRef = useRef<HTMLDivElement>(null)
@@ -62,16 +75,17 @@ export function AuthSocialProviders({
   const initData = typeof window !== 'undefined' ? getTelegramInitData() : ''
   const inMiniApp = initData.length > 0
 
-  const bot = oauth?.telegramBot
-  const oidcEnabled = oauth?.telegramOIDCEnabled ?? false
+  const bot = oauth.telegramBot
+  const oidcEnabled = oauth.telegramOIDCEnabled ?? false
   const showWidget = !!bot && !inMiniApp
   const embedTelegramWidget =
-    showWidget && !telegramWidgetRenderedAbove && oauth?.telegramWebAuthMode === 'widget'
+    showWidget && !telegramWidgetRenderedAbove && oauth.telegramWebAuthMode === 'widget'
   const showOIDC = oidcEnabled && !inMiniApp
-  const showSocial = inMiniApp || (oauth !== null && (!!oauth.google || !!oauth.yandex || !!oauth.vk || showWidget || showOIDC))
+  const showSocial =
+    inMiniApp || !!oauth.google || !!oauth.yandex || !!oauth.vk || showWidget || showOIDC
   const socialButtons: Array<{ key: string; label: string; icon: ReactNode; onClick: () => void; loading?: boolean }> = []
 
-  if (oauth?.google) {
+  if (oauth.google) {
     socialButtons.push({
       key: 'google',
       label: t('auth.socialGoogle'),
@@ -83,7 +97,7 @@ export function AuthSocialProviders({
       },
     })
   }
-  if (oauth?.yandex) {
+  if (oauth.yandex) {
     socialButtons.push({
       key: 'yandex',
       label: t('auth.socialYandex'),
@@ -95,7 +109,7 @@ export function AuthSocialProviders({
       },
     })
   }
-  if (oauth?.vk) {
+  if (oauth.vk) {
     socialButtons.push({
       key: 'vk',
       label: t('auth.socialVK'),
@@ -142,9 +156,11 @@ export function AuthSocialProviders({
 
   useEffect(() => {
     let cancelled = false
+    const c = new AbortController()
+    const tid = window.setTimeout(() => c.abort(), BOOTSTRAP_TIMEOUT_MS)
     ;(async () => {
       try {
-        const b = await api.authBootstrap()
+        const b = await api.authBootstrap(c.signal)
         if (cancelled) return
         setOauth({
           google: b.google_oauth_enabled,
@@ -156,11 +172,14 @@ export function AuthSocialProviders({
         })
       } catch {
         if (cancelled) return
-        setOauth({ google: true, yandex: false, vk: false, telegramBot: undefined, telegramOIDCEnabled: false })
+        setOauth(OAUTH_BEFORE_BOOTSTRAP)
+      } finally {
+        window.clearTimeout(tid)
       }
     })()
     return () => {
       cancelled = true
+      c.abort()
     }
   }, [])
 
@@ -177,32 +196,14 @@ export function AuthSocialProviders({
   useLayoutEffect(() => {
     setTgWidgetError(false)
     const el = tgMountRef.current
-    if (!embedTelegramWidget || !el || !onTelegramAuthRef.current) return
+    if (!embedTelegramWidget || !el || !onTelegramAuthRef.current || !bot) return
 
-    const key = page === 'login' ? 'cabinetTelegramLoginCallback' : 'cabinetTelegramRegisterCallback'
-    el.innerHTML = ''
-    ;(window as unknown as Record<string, unknown>)[key] = async (user: TelegramWidgetUser) => {
-      try {
-        await onTelegramAuthRef.current?.(user)
-      } catch {
-        setTgWidgetError(true)
-      }
-    }
-    const s = document.createElement('script')
-    s.src = 'https://telegram.org/js/telegram-widget.js?22'
-    s.async = true
-    s.setAttribute('data-telegram-login', bot ?? '')
-    s.setAttribute('data-size', 'large')
-    s.setAttribute('data-radius', '8')
-    s.setAttribute('data-onauth', `${String(key)}(user)`)
-    s.setAttribute('data-request-access', 'write')
-    s.onerror = () => setTgWidgetError(true)
-    el.appendChild(s)
-
-    return () => {
-      el.innerHTML = ''
-      delete (window as unknown as Record<string, unknown>)[key]
-    }
+    return mountTelegramLoginWidgetScript(el, {
+      page,
+      bot,
+      onAuth: (user) => onTelegramAuthRef.current?.(user) ?? Promise.resolve(),
+      onScriptFailed: () => setTgWidgetError(true),
+    })
   }, [bot, page, embedTelegramWidget])
 
   if (!showSocial) return null

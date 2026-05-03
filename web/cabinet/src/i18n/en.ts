@@ -56,8 +56,7 @@ export default {
       emailVerifiedOk: 'Email verified. Sign in with your password.',
       googleLinkPending:
         'This Google account matches an existing cabinet email. We sent a message to {{email}} — open the link there to finish Google sign-in, or sign in with your password below.',
-      telegramWidgetLoadError:
-        'Could not load the Telegram widget (network or blocker). Check the browser console and the bot domain in BotFather.',
+      telegramWidgetLoadError: 'Could not load the Telegram widget',
     },
     verifyEmail: {
       title: 'Verify your email',
