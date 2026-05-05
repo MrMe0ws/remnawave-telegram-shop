@@ -35,6 +35,11 @@
       "link_key": "video_guide"
     },
     {
+      "id": "tg-proxy",
+      "question": "Не работает Телеграм",
+      "answer_md": "Используйте оба прокси по кнопкам ниже:\n\n[Прокси 1](https://t.me/proxy?server=tg1.me0ws.ru&port=443&secret=96d00e61b3c11ffc1cccb2c725d2c086)\n\n[Прокси 2](https://t.me/proxy?server=tg1.me0ws.ru&port=6443&secret=eea2b5f4e456a1703dda880e74521d362631632e7275)"
+    },	
+    {
       "id": "pay-subscription",
       "question": "Как оплатить подписку?",
       "answer_md": "Перейдите в `Тарифы` и выберите период. Доступные способы оплаты отображаются автоматически.\n\nПосле оплаты активация обычно занимает несколько секунд."

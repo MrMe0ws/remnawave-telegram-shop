@@ -81,15 +81,9 @@ func (h Handler) ManageDevicesCallbackHandler(ctx context.Context, b *bot.Bot, u
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 	})
 
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      title,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
+	_, err = editCallbackOriginToHTMLText(ctx, b, callbackMessage, title, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}, nil)
 	logEditError("Error sending manage devices message", err)
 }
 

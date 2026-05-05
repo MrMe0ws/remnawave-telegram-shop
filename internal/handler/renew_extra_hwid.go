@@ -68,26 +68,20 @@ func (h Handler) RenewExtraHwidCallbackHandler(ctx context.Context, b *bot.Bot, 
 	}
 
 	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_renew_payment_title"), extra, months, amt)
-	message, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{
-					h.translation.WithButton(langCode, "pay_button", models.InlineKeyboardButton{URL: paymentURL}),
-					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?extra=%d&months=%d", CallbackRenewExtraHwid, extra, months)}),
-				},
+	message, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
+				h.translation.WithButton(langCode, "pay_button", models.InlineKeyboardButton{URL: paymentURL}),
+				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?extra=%d&months=%d", CallbackRenewExtraHwid, extra, months)}),
 			},
 		},
-	})
+	}, nil)
 	if err != nil {
 		logEditError("Error sending renew hwid payment message", err)
 		return
 	}
 
-	if purchaseId > 0 {
+	if purchaseId > 0 && message != nil {
 		h.cache.Set(purchaseId, message.ID)
 	}
 }
@@ -144,14 +138,8 @@ func (h Handler) showRenewPaymentMethods(ctx context.Context, b *bot.Bot, callba
 	})
 
 	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_renew_payment_methods"), amount)
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}, nil)
 	logEditError("Error sending renew hwid payment methods", err)
 }

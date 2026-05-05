@@ -205,19 +205,13 @@ func (h Handler) AddDeviceApplyCallbackHandler(ctx context.Context, b *bot.Bot, 
 	}
 
 	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_change_success_free"), currentLimit, target)
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{
-					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-				},
+	_, err = editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
+				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 			},
 		},
-	})
+	}, nil)
 	if err != nil {
 		slog.Error("Error sending apply device message", "error", err)
 	}
@@ -298,26 +292,20 @@ func (h Handler) AddDevicePaymentCallbackHandler(ctx context.Context, b *bot.Bot
 	}
 
 	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_payment_title"), delta, formatPaymentAmount(amt, params["invoiceType"]), daysLeft)
-	message, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{
-					h.translation.WithButton(langCode, "pay_button", models.InlineKeyboardButton{URL: paymentURL}),
-					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?target=%d", CallbackAddDevicePayment, target)}),
-				},
+	message, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
+				h.translation.WithButton(langCode, "pay_button", models.InlineKeyboardButton{URL: paymentURL}),
+				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: fmt.Sprintf("%s?target=%d", CallbackAddDevicePayment, target)}),
 			},
 		},
-	})
+	}, nil)
 	if err != nil {
 		slog.Error("Error sending hwid payment message", "error", err)
 		return
 	}
 
-	if purchaseId > 0 {
+	if purchaseId > 0 && message != nil {
 		h.cache.Set(purchaseId, message.ID)
 	}
 }
@@ -335,15 +323,9 @@ func (h Handler) showDeviceChangeOptions(ctx context.Context, b *bot.Bot, callba
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackManageDevices}),
 	})
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}, nil)
 	logEditError("Error sending add device message", err)
 }
 
@@ -384,15 +366,9 @@ func (h Handler) showDeviceChangeConfirm(ctx context.Context, b *bot.Bot, callba
 		h.translation.WithButton(langCode, "cancel_button", models.InlineKeyboardButton{CallbackData: CallbackAddDevice}),
 	})
 
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}, nil)
 	logEditError("Error sending confirm device message", err)
 }
 
@@ -448,15 +424,9 @@ func (h Handler) showDevicePaymentMethods(ctx context.Context, b *bot.Bot, callb
 	})
 
 	text := fmt.Sprintf(h.translation.GetText(langCode, "hwid_payment_methods"), amount)
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}, nil)
 	logEditError("Error sending add device payment options", err)
 }
 
@@ -565,18 +535,12 @@ func (h Handler) cleanupExpiredExtraHwid(ctx context.Context, customer *database
 }
 
 func (h Handler) editSimpleMessage(ctx context.Context, b *bot.Bot, message *models.Message, langCode, text string, backCallback string) {
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    message.Chat.ID,
-		MessageID: message.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{
-					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: backCallback}),
-				},
+	_, err := editCallbackOriginToHTMLText(ctx, b, message, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
+				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: backCallback}),
 			},
 		},
-	})
+	}, nil)
 	logEditError("Error editing message", err)
 }

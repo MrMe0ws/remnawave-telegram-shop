@@ -67,18 +67,10 @@ func (h Handler) PurchaseHistoryCallbackHandler(ctx context.Context, b *bot.Bot,
 	markup := buildPurchaseHistoryMarkup(langCode, page, totalPages)
 
 	isDisabled := true
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      text,
-		LinkPreviewOptions: &models.LinkPreviewOptions{
-			IsDisabled: &isDisabled,
-		},
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: markup,
-		},
-	})
+	lp := &models.LinkPreviewOptions{IsDisabled: &isDisabled}
+	_, err = editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: markup,
+	}, lp)
 	logEditError("Error sending purchase history message", err)
 }
 

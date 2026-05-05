@@ -343,13 +343,7 @@ func (h Handler) BroadcastActiveMenuHandler(ctx context.Context, b *bot.Bot, upd
 		return
 	}
 	lang := cb.From.LanguageCode
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		ParseMode:   models.ParseModeHTML,
-		Text:        h.translation.GetText(lang, "broadcast_choose_active_segment"),
-		ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastActiveSegmentKeyboard(lang)},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "broadcast_choose_active_segment"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastActiveSegmentKeyboard(lang)}, nil)
 	if err != nil {
 		slog.Error("broadcast active submenu", "error", err)
 	}
@@ -370,13 +364,7 @@ func (h Handler) BroadcastInactiveMenuHandler(ctx context.Context, b *bot.Bot, u
 		return
 	}
 	lang := cb.From.LanguageCode
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		ParseMode:   models.ParseModeHTML,
-		Text:        h.translation.GetText(lang, "broadcast_choose_inactive_segment"),
-		ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastInactiveSegmentKeyboard(lang)},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "broadcast_choose_inactive_segment"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastInactiveSegmentKeyboard(lang)}, nil)
 	if err != nil {
 		slog.Error("broadcast inactive submenu", "error", err)
 	}
@@ -397,13 +385,7 @@ func (h Handler) BroadcastBackToAudienceHandler(ctx context.Context, b *bot.Bot,
 		return
 	}
 	lang := cb.From.LanguageCode
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		ParseMode:   models.ParseModeHTML,
-		Text:        h.translation.GetText(lang, "broadcast_choose_audience"),
-		ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastAudienceRootKeyboard(lang, adminID)},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "broadcast_choose_audience"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastAudienceRootKeyboard(lang, adminID)}, nil)
 	if err != nil {
 		slog.Error("broadcast back audience", "error", err)
 	}
@@ -451,22 +433,22 @@ func (h Handler) broadcastBeginDraftPrompt(ctx context.Context, b *bot.Bot, cb *
 		delete(broadcastState.selectedTariffID, adminID)
 	}
 	broadcastState.waitingForInput[adminID] = true
-	broadcastState.promptMessageID[adminID] = callbackMessage.ID
+	delete(broadcastState.promptMessageID, adminID)
 	broadcastState.mu.Unlock()
 
 	typeText := h.broadcastAudienceSummaryLine(ctx, lang, broadcastType, tariffFilter)
 	prompt := fmt.Sprintf(h.translation.GetText(lang, "broadcast_enter_message"), typeText)
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      prompt,
-		ReplyMarkup: &models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{},
-		},
-	})
+	newMsg, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, prompt, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{},
+	}, nil)
 	if err != nil {
 		slog.Error("broadcast draft prompt", "error", err)
+		return
+	}
+	if newMsg != nil {
+		broadcastState.mu.Lock()
+		broadcastState.promptMessageID[adminID] = newMsg.ID
+		broadcastState.mu.Unlock()
 	}
 }
 
@@ -486,25 +468,13 @@ func (h Handler) BroadcastPaidTariffCallbacksHandler(ctx context.Context, b *bot
 
 	switch data {
 	case CallbackBroadcastPaidTariffBackActiveSeg:
-		_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-			ChatID:      msg.Chat.ID,
-			MessageID:   msg.ID,
-			ParseMode:   models.ParseModeHTML,
-			Text:        h.translation.GetText(lang, "broadcast_choose_active_segment"),
-			ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastActiveSegmentKeyboard(lang)},
-		})
+		_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "broadcast_choose_active_segment"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastActiveSegmentKeyboard(lang)}, nil)
 		if err != nil {
 			slog.Error("broadcast tariff back active", "error", err)
 		}
 		return
 	case CallbackBroadcastPaidTariffBackInactiveSeg:
-		_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-			ChatID:      msg.Chat.ID,
-			MessageID:   msg.ID,
-			ParseMode:   models.ParseModeHTML,
-			Text:        h.translation.GetText(lang, "broadcast_choose_inactive_segment"),
-			ReplyMarkup: &models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastInactiveSegmentKeyboard(lang)},
-		})
+		_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "broadcast_choose_inactive_segment"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.broadcastInactiveSegmentKeyboard(lang)}, nil)
 		if err != nil {
 			slog.Error("broadcast tariff back inactive", "error", err)
 		}
@@ -570,15 +540,9 @@ func (h Handler) BroadcastSegmentPickHandler(ctx context.Context, b *bot.Bot, up
 		} else if len(tariffs) > 0 {
 			lang := cb.From.LanguageCode
 			activePaidSeg := data == CallbackBroadcastActivePaid
-			_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-				ChatID:    callbackMessage.Chat.ID,
-				MessageID: callbackMessage.ID,
-				ParseMode: models.ParseModeHTML,
-				Text:      h.translation.GetText(lang, "broadcast_choose_paid_tariff"),
-				ReplyMarkup: &models.InlineKeyboardMarkup{
-					InlineKeyboard: h.broadcastPaidTariffPickKeyboard(lang, activePaidSeg, tariffs),
-				},
-			})
+			_, err := editCallbackOriginToHTMLText(ctx, b, callbackMessage, h.translation.GetText(lang, "broadcast_choose_paid_tariff"), models.ParseModeHTML, models.InlineKeyboardMarkup{
+				InlineKeyboard: h.broadcastPaidTariffPickKeyboard(lang, activePaidSeg, tariffs),
+			}, nil)
 			if err != nil {
 				slog.Error("broadcast tariff submenu", "error", err)
 			}

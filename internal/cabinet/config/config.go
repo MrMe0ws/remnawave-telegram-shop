@@ -82,6 +82,9 @@ type cabinet struct {
 	// miniAppEntryURL — абсолютный URL для Telegram WebApp (кнопки «Мой VPN», «Подключить VPN»).
 	miniAppEntryURL string
 
+	// telegramUIMode — CABINET_TELEGRAM_UI_MODE: classic | minimalism (только при включённом кабинете).
+	telegramUIMode string
+
 	// brandName — подпись в шапке/футере SPA (CABINET_BRAND_NAME).
 	brandName string
 	// brandLogoURLRaw — URL или относительный путь картинки (CABINET_BRAND_LOGO_URL).
@@ -204,6 +207,14 @@ func MetricsPassword() string { return conf.metricsPassword }
 // Источник: CABINET_MINI_APP_URL или CABINET_PUBLIC_URL + CABINET_MINI_APP_PATH (по умолчанию /cabinet/).
 func MiniAppEntryURL() string { return conf.miniAppEntryURL }
 
+// TelegramUIMode — CABINET_TELEGRAM_UI_MODE: classic | minimalism. Если кабинет выключен — "".
+func TelegramUIMode() string {
+	if !conf.enabled {
+		return ""
+	}
+	return conf.telegramUIMode
+}
+
 // BrandName — отображаемое имя кабинета в UI. Пустой env → "Cabinet".
 func BrandName() string {
 	if strings.TrimSpace(conf.brandName) == "" {
@@ -295,6 +306,15 @@ func InitConfig() {
 		}
 		conf.miniAppEntryURL = conf.publicURLRaw + path
 	}
+
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("CABINET_TELEGRAM_UI_MODE")))
+	if mode == "" {
+		mode = "classic"
+	}
+	if mode != "classic" && mode != "minimalism" {
+		panic(`CABINET_TELEGRAM_UI_MODE must be "classic" or "minimalism"`)
+	}
+	conf.telegramUIMode = mode
 
 	// CORS allowlist. Если не задан — fallback на PublicURL.
 	origins := strings.TrimSpace(os.Getenv("CABINET_ALLOWED_ORIGINS"))

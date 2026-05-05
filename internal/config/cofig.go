@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -36,6 +37,7 @@ type config struct {
 	publicOfferURL                                            string
 	privacyPolicyURL                                          string
 	termsOfServiceURL                                         string
+	greetingImage                                             string
 	isYookasaEnabled                                          bool
 	isCryptoEnabled                                           bool
 	isTelegramStarsEnabled                                    bool
@@ -281,6 +283,10 @@ func PrivacyPolicyURL() string {
 
 func TermsOfServiceURL() string {
 	return conf.termsOfServiceURL
+}
+
+func GreetingImage() string {
+	return strings.TrimSpace(conf.greetingImage)
 }
 
 func YookasaEmail() string {
@@ -657,6 +663,23 @@ func InitConfig() {
 	conf.publicOfferURL = os.Getenv("PUBLIC_OFFER_URL")
 	conf.privacyPolicyURL = os.Getenv("PRIVACY_POLICY_URL")
 	conf.termsOfServiceURL = os.Getenv("TERMS_OF_SERVICE_URL")
+	conf.greetingImage = strings.TrimSpace(envStringDefault("GREETING_IMAGE", ""))
+	if conf.greetingImage != "" {
+		gl := strings.ToLower(conf.greetingImage)
+		if strings.HasPrefix(gl, "http://") || strings.HasPrefix(gl, "https://") {
+			// URL — проверку на диске не делаем
+		} else {
+			p := conf.greetingImage
+			if !filepath.IsAbs(p) {
+				p = filepath.Clean(filepath.Join(".", p))
+			} else {
+				p = filepath.Clean(p)
+			}
+			if _, err := os.Stat(p); err != nil {
+				slog.Warn("GREETING_IMAGE: локальный файл не найден или недоступен", "path", p, "error", err)
+			}
+		}
+	}
 
 	conf.squadUUIDs = func() map[uuid.UUID]uuid.UUID {
 		v := os.Getenv("SQUAD_UUIDS")

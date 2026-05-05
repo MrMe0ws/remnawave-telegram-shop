@@ -45,23 +45,17 @@ func (h Handler) ReferralCallbackHandler(ctx context.Context, b *bot.Bot, update
 		stats.EarnedLastMonth,
 	)
 	callbackMessage := update.CallbackQuery.Message.Message
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		Text:      text,
-		ParseMode: models.ParseModeHTML,
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
-			{
-				h.translation.WithButton(langCode, "share_referral_button", models.InlineKeyboardButton{URL: refLink}),
-			},
-			{
-				h.translation.WithButton(langCode, "referral_list_button", models.InlineKeyboardButton{CallbackData: CallbackReferralList}),
-			},
-			{
-				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-			},
-		}},
-	})
+	_, err = editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+		{
+			h.translation.WithButton(langCode, "share_referral_button", models.InlineKeyboardButton{URL: refLink}),
+		},
+		{
+			h.translation.WithButton(langCode, "referral_list_button", models.InlineKeyboardButton{CallbackData: CallbackReferralList}),
+		},
+		{
+			h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
+		},
+	}}, nil)
 	logEditError("Error sending referral message", err)
 }
 

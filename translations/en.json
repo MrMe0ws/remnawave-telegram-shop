@@ -1,5 +1,33 @@
 {
   "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Servers:<blockquote>🇱🇻 Latvia  🇩🇪 Germany\n🇸🇪 Sweden  🇷🇺 Russia</blockquote>\n\n🚀 Fast speed unlimited traffic\n💪 No ads\n♾️ Bypassing WS\n\n🌐 Cabinet: cabinet.me0ws.ru\n\n<b><a href=\"tg://resolve?domain=Meows_support_bot\">🆘 Help and TG proxy</a></b>",
+  "cabinet_minimal_user_line": "👤 <b>%s</b>",
+  "cabinet_minimal_status_active": "📱 Subscription: 💎 Active",
+  "cabinet_minimal_status_expired": "📱 Subscription: 🔴 Expired",
+  "cabinet_minimal_status_none": "📱 Subscription: ⚪ None active",
+  "cabinet_minimal_date_line": "📅 %s",
+  "cabinet_minimal_date_placeholder": "—",
+  "cabinet_minimal_expiring": "⚠️ expires in %d days",
+  "cabinet_minimal_footer": "Choose an action:",
+  "cabinet_minimal_btn_trial": {
+    "text": "🔥 Try free",
+    "style": "red"
+  },
+  "cabinet_minimal_btn_buy": {
+    "text": "💰 Buy",
+    "style": "red"
+  },
+  "cabinet_minimal_btn_subscription": {
+    "text": "💳 Subscription",
+    "style": "green"
+  },
+  "cabinet_minimal_btn_support": {
+    "text": "🆘 Support",
+    "style": "blue"
+  },
+  "cabinet_minimal_btn_info": {
+    "text": "📚 Guides & info",
+    "style": "blue"
+  },
   "buy_button": "💰 Buy",
   "connect_button": "🔌 My VPN",
   "connect_device_button": "🔌 Connect Device",

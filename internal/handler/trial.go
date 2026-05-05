@@ -30,20 +30,14 @@ func (h Handler) TrialCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 	}
 	callback := update.CallbackQuery.Message.Message
 	langCode := update.CallbackQuery.From.LanguageCode
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callback.Chat.ID,
-		MessageID: callback.ID,
-		Text:      h.translation.GetText(langCode, "trial_text"),
-		ParseMode: models.ParseModeHTML,
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
-			{
-				h.translation.WithButton(langCode, "activate_trial_button", models.InlineKeyboardButton{CallbackData: CallbackActivateTrial}),
-			},
-			{
-				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
-			},
-		}},
-	})
+	_, err = editCallbackOriginToHTMLText(ctx, b, callback, h.translation.GetText(langCode, "trial_text"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+		{
+			h.translation.WithButton(langCode, "activate_trial_button", models.InlineKeyboardButton{CallbackData: CallbackActivateTrial}),
+		},
+		{
+			h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+		},
+	}}, nil)
 	logEditError("Error sending /trial message", err)
 }
 
@@ -71,13 +65,7 @@ func (h Handler) ActivateTrialCallbackHandler(ctx context.Context, b *bot.Bot, u
 		return
 	}
 	langCode := update.CallbackQuery.From.LanguageCode
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      callback.Chat.ID,
-		MessageID:   callback.ID,
-		Text:        h.translation.GetText(langCode, "trial_activated"),
-		ParseMode:   models.ParseModeHTML,
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: h.createConnectKeyboard(langCode)},
-	})
+	_, err = editCallbackOriginToHTMLText(ctx, b, callback, h.translation.GetText(langCode, "trial_activated"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.createConnectKeyboard(langCode)}, nil)
 	logEditError("Error sending /trial message", err)
 }
 

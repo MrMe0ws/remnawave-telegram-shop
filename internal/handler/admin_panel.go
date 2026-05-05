@@ -46,13 +46,7 @@ func (h Handler) RenderAdminPanel(ctx context.Context, b *bot.Bot, msg *models.M
 			h.translation.WithButton(lang, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
 		},
 	)
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		ParseMode:   models.ParseModeHTML,
-		Text:        h.translation.GetText(lang, "admin_panel_title"),
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: kb},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "admin_panel_title"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: kb}, nil)
 	return err
 }
 
@@ -85,13 +79,7 @@ func (h Handler) AdminBroadcastShortcutHandler(ctx context.Context, b *bot.Bot, 
 	if msg == nil {
 		return
 	}
-	_, err := b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:      msg.Chat.ID,
-		MessageID:   msg.ID,
-		ParseMode:   models.ParseModeHTML,
-		Text:        h.translation.GetText(lang, "broadcast_choose_audience"),
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: h.BroadcastAudienceKeyboard(lang, true)},
-	})
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(lang, "broadcast_choose_audience"), models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.BroadcastAudienceKeyboard(lang, true)}, nil)
 	if err != nil {
 		slog.Error("admin broadcast open", "error", err)
 	}

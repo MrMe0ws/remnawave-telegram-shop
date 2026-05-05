@@ -35,7 +35,7 @@
 - **📦 Режим нескольких тарифов (`SALES_MODE=tariffs`)**: цены и лимиты (трафик, устройства, squads, описание) из PostgreSQL; пошаговый сценарий «Купить» (выбор тарифа → период → способ оплаты → оплата); админка тарифов; опциональное описание тарифа для экранов покупки и карточки в админке
 - **👥 Админ — «Пользователи»** (`ADMIN_TELEGRAM_ID`): списки всех / неактивных, поиск, карточка; оплаты и сводка в ₽ + Stars (оценка Stars в ₽ при `RUB_PER_STAR`); ветка **«Подписки»** (все / скоро истекают); пагинация с выбором страницы. При **`SALES_MODE=tariffs`** — смена тарифа, доп. HWID, описание, устройства, настройки панели (squads, трафик, срок подписки и др.).
 - **📈 Админ-статистика** (при заданном `ADMIN_TELEGRAM_ID`): раздел **«Статистика»** в админ-панели — пользователи, подписки, доходы в ₽ (фильтр по RUB/RUR/пустой валюте), реферальные начисления **в днях**, общая сводка; данные из PostgreSQL, кнопки «Обновить» / «Назад».
-- **💎 Лояльность** (`LOYALTY_ENABLED`): XP по успешным оплатам (1 ₽ эквивалента ≈ 1 XP, Stars через `RUB_PER_STAR`), уровни и скидки в таблице `loyalty_tier` (миграция `000014_loyalty`), админка уровней и **пересчёт XP из истории `purchase`**, пользовательский экран в «Мой VPN». Подробнее — `docs/loyalty/` и `AGENTS.md`.
+- **💎 Лояльность** (`LOYALTY_ENABLED`): XP по успешным оплатам (1 ₽ эквивалента ≈ 1 XP, Stars через `RUB_PER_STAR`), уровни и скидки в таблице `loyalty_tier` (миграция `000014_loyalty`), админка уровней и **пересчёт XP из истории `purchase`**, пользовательский экран в «Мой VPN». Подробнее — `.cursor/telegram/SKILLS.md` (лоyальность), код `internal/loyalty/`.
 - **🔐 Hardening кабинета**: Turnstile (опционально), rate-limit с trusted proxy логикой IP, Prometheus-метрики (`/cabinet/api/metrics`) с опциональным Basic-auth, merge/link safeguards.
 
 ### 📋 Совместимость Версий:
@@ -128,7 +128,7 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 - **После успешной оплаты:** начисление XP — `XPRubEquivalentForPurchase` (`internal/loyalty/pricing.go`): сумма в ₽ или Stars×`RUB_PER_STAR` (в сумме уже учтены доп. устройства, если они в счёте), затем при нуле — минимум (`LOYALTY_XP_MIN_PER_PURCHASE`). Для Stars задайте **`RUB_PER_STAR`**, иначе вклад в XP из суммы будет нулевым и сработает только минимум (если включён).
 - **Пользователь:** «Мой VPN» — кнопка и экран программы (`internal/handler/connect.go`, `loyalty_ui.go`); напоминания на экране покупки — как у промо, см. маркеры «Способы оплаты» в переводах.
 - **Администратор:** при **`ADMIN_TELEGRAM_ID`** и включённой лояльности в админ-панели появляется кнопка — список уровней, редактирование (в т.ч. подпись для UI), экран **«Правила XP»** (текущие значения из env), добавление уровня, **пересчёт XP из всех успешных строк `purchase`** (полная перезапись `loyalty_xp`; идемпотентно при неизменной истории).
-- Подробная спецификация: **`docs/loyalty/`**, кратко для ассистентов — **`AGENTS.md`**.
+- Подробная спецификация: код **`internal/loyalty/`** и **`.cursor/telegram/SKILLS.md`**, кратко для ассистентов — **`.cursor/AGENT.md`**.
 
 ## Режим продаж: `classic` и `tariffs`
 
@@ -215,6 +215,7 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `IS_WEB_APP_LINK`                    | Если true, то ссылка подписки будет показана как webapp..                                                                                                     |
 | `REMNAWAVE_HEADERS`                  | Дополнительные заголовки для запросов к remnawave (формат: key1:value1;key2:value2). Пример: X-Api-Key:your_key;X-Custom:value (опционально)                  |
 | `MINI_APP_URL`                       | URL tg WEB APP. если пустой, не используется.                                                                                                                 |
+| `GREETING_IMAGE`                     | Картинка только для главного меню (`greeting`). Только `http(s)://` URL или путь к локальному файлу (относительный к рабочей директории процесса или абсолютный). Если задан локальный путь и файла нет — при старте в лог пишется предупреждение. Если пусто — главное меню текстом, как раньше. |
 | `STARS_PRICE_1`                      | Цена в Stars за 1 месяц                                                                                                                                       |
 | `STARS_PRICE_3`                      | Цена в Stars за 3 месяца                                                                                                                                      |
 | `STARS_PRICE_6`                      | Цена в Stars за 6 месяцев                                                                                                                                     |
@@ -279,6 +280,7 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `CABINET_PWA_SHORT_NAME`             | Короткое имя PWA-приложения (опционально) |
 | `CABINET_MINI_APP_URL`               | URL Mini App для web↔telegram flow (опционально) |
 | `CABINET_MINI_APP_PATH`              | Path Mini App (опционально, обычно `/cabinet/`) |
+| `CABINET_TELEGRAM_UI_MODE`           | При включённом кабинете: `classic` (меню как раньше) или `minimalism` (кнопки в кабинет: тарифы, подписка, поддержка, инфо + короткий greeting; подписи в `translations/*`) |
 | `CABINET_SMTP_HOST` / `CABINET_SMTP_PORT` / `CABINET_SMTP_USER` / `CABINET_SMTP_PASSWORD` / `CABINET_SMTP_TLS` / `CABINET_MAIL_FROM` | SMTP для писем кабинета (verify/reset) |
 | `CABINET_GOOGLE_CLIENT_ID` / `CABINET_GOOGLE_CLIENT_SECRET` / `CABINET_GOOGLE_REDIRECT_URL` | Google OAuth для кабинета |
 | `CABINET_YANDEX_CLIENT_ID` / `CABINET_YANDEX_CLIENT_SECRET` / `CABINET_YANDEX_REDIRECT_URL` | Yandex OAuth для кабинета |

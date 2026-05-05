@@ -30,17 +30,11 @@ func (h Handler) LoyaltyRootCallbackHandler(ctx context.Context, b *bot.Bot, upd
 	langCode := update.CallbackQuery.From.LanguageCode
 	callbackMessage := update.CallbackQuery.Message.Message
 	text := h.buildLoyaltyScreenHTML(ctx, customer, langCode)
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callbackMessage.Chat.ID,
-		MessageID: callbackMessage.ID,
-		Text:      text,
-		ParseMode: models.ParseModeHTML,
-		ReplyMarkup: models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
-			{
-				h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-			},
-		}},
-	})
+	_, err = editCallbackOriginToHTMLText(ctx, b, callbackMessage, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+		{
+			h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
+		},
+	}}, nil)
 	logEditError("loyalty screen edit", err)
 }
 

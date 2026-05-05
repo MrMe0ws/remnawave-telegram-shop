@@ -36,32 +36,23 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		slog.Error("Error getting user info", err)
 
 		// Проверяем, является ли ошибка "user not found"
+		msg := callback.Message.Message
 		if strings.Contains(err.Error(), "user not found") {
-			_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-				ChatID:    callback.Message.Message.Chat.ID,
-				MessageID: callback.Message.Message.ID,
-				Text:      h.translation.GetText(langCode, "no_devices"),
-				ReplyMarkup: models.InlineKeyboardMarkup{
-					InlineKeyboard: [][]models.InlineKeyboardButton{
-						{
-							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-						},
+			_, err = editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(langCode, "no_devices"), models.ParseModeHTML, models.InlineKeyboardMarkup{
+				InlineKeyboard: [][]models.InlineKeyboardButton{
+					{
+						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 					},
 				},
-			})
+			}, nil)
 		} else {
-			_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-				ChatID:    callback.Message.Message.Chat.ID,
-				MessageID: callback.Message.Message.ID,
-				Text:      h.translation.GetText(langCode, "devices_error"),
-				ReplyMarkup: models.InlineKeyboardMarkup{
-					InlineKeyboard: [][]models.InlineKeyboardButton{
-						{
-							h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-						},
+			_, err = editCallbackOriginToHTMLText(ctx, b, msg, h.translation.GetText(langCode, "devices_error"), models.ParseModeHTML, models.InlineKeyboardMarkup{
+				InlineKeyboard: [][]models.InlineKeyboardButton{
+					{
+						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 					},
 				},
-			})
+			}, nil)
 		}
 		logEditError("Error editing message", err)
 		return
@@ -76,18 +67,13 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	devices, err := h.syncService.GetRemnawaveClient().GetUserDevicesByUuid(ctx, userUuid)
 	if err != nil {
 		slog.Error("Error getting user devices", err)
-		_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-			ChatID:    callback.Message.Message.Chat.ID,
-			MessageID: callback.Message.Message.ID,
-			Text:      h.translation.GetText(langCode, "devices_error"),
-			ReplyMarkup: models.InlineKeyboardMarkup{
-				InlineKeyboard: [][]models.InlineKeyboardButton{
-					{
-						h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
-					},
+		_, err = editCallbackOriginToHTMLText(ctx, b, callback.Message.Message, h.translation.GetText(langCode, "devices_error"), models.ParseModeHTML, models.InlineKeyboardMarkup{
+			InlineKeyboard: [][]models.InlineKeyboardButton{
+				{
+					h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 				},
 			},
-		})
+		}, nil)
 		logEditError("Error editing message", err)
 		return
 	}
@@ -151,15 +137,9 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackConnect}),
 	})
 
-	_, err = b.EditMessageText(ctx, &bot.EditMessageTextParams{
-		ChatID:    callback.Message.Message.Chat.ID,
-		MessageID: callback.Message.Message.ID,
-		ParseMode: models.ParseModeHTML,
-		Text:      messageText,
-		ReplyMarkup: models.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		},
-	})
+	_, err = editCallbackOriginToHTMLText(ctx, b, callback.Message.Message, messageText, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}, nil)
 	logEditError("Error editing message", err)
 }
 

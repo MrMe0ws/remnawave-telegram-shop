@@ -94,6 +94,14 @@ func (h Handler) ConnectCallbackHandler(ctx context.Context, b *bot.Bot, update 
 // Кнопка «Подключить VPN»: при включённом кабинете WebApp на MiniAppEntryURL; иначе MINI_APP_URL или ссылка подписки.
 // Отдельные кнопки опускаются, если URL не задан или функция выключена.
 func (h Handler) buildConnectInlineMarkup(langCode string, customer *database.Customer) [][]models.InlineKeyboardButton {
+	if cabinetTelegramMinimalismActive() {
+		kb := h.buildCabinetMinimalismCoreRows(langCode, customer)
+		kb = append(kb, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+		})
+		return kb
+	}
+
 	now := time.Now()
 	active := customer.SubscriptionLink != nil && customer.ExpireAt != nil && customer.ExpireAt.After(now)
 	var markup [][]models.InlineKeyboardButton
@@ -136,6 +144,13 @@ func (h Handler) buildConnectInlineMarkup(langCode string, customer *database.Cu
 }
 
 func (h Handler) buildConnectText(ctx context.Context, customer *database.Customer, langCode, displayName string) string {
+	if cabinetTelegramMinimalismActive() {
+		if customer != nil && customer.SubscriptionLink != nil {
+			return h.buildCabinetMinimalismGreetingHTML(ctx, customer, langCode, displayName)
+		}
+		return h.translation.GetText(langCode, "greeting")
+	}
+
 	var info strings.Builder
 
 	tm := translation.GetInstance()
