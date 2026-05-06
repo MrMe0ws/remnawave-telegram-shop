@@ -17,11 +17,14 @@ import {
   Globe,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { needsTelegramDeepLinkWorkaround, openCabinetDeepLinkRedirectExternally } from '@/lib/deep-link-redirect'
 
 type Lang = 'ru' | 'en'
@@ -495,7 +498,17 @@ function GuideSection({
         </span>
         <h2 className="text-lg font-semibold">{title}</h2>
       </div>
-      {description && <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground dark:text-slate-300">{description}</p>}
+      {description ? (
+        <div
+          className={cn(
+            'text-sm leading-6 text-muted-foreground dark:text-slate-300',
+            '[&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:hover:no-underline',
+            '[&_ol]:ml-4 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:mb-2 [&_p]:last:mb-0',
+          )}
+        >
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
+        </div>
+      ) : null}
       {(buttons?.length || customAction) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {buttons?.map((btn, idx) => (
