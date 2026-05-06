@@ -217,7 +217,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	)
 	contentHandler := handlers.NewCabinetContentHandler()
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
-		paymentService, rw, customerRepo, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
+		paymentService, purchaseRepo, rw, customerRepo, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 
@@ -238,6 +238,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 			checkoutRepo, linkRepo, customerRepo, purchaseRepo, tariffRepo, accountRepo,
 			customerBootstrap, paymentService,
 			loyaltyRepo, promoService,
+			rw,
 		)
 		paymentsHandler = handlers.NewPayments(checkoutSvc)
 	}
@@ -659,6 +660,15 @@ func registerAPIRoutes(
 			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_delete")),
 		)),
 	)
+	api.Handle("/cabinet/api/me/hwid-extra/apply",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.PostHwidExtraApply),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireVerifiedEmail(),
+			middleware.CSRF(),
+			middleware.RateLimit(subscriptionAcctLim, accountKey("hwid_extra_apply")),
+		)),
+	)
 
 	// OAuth/Telegram маршруты включаются только если хотя бы один провайдер настроен.
 	if oauthH != nil {
@@ -846,6 +856,25 @@ func registerAPIRoutes(
 					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 				),
 			}),
+		)
+		api.Handle("/cabinet/api/payments/hwid/preview",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(pay.HwidPreview),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/payments/hwid/checkout",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(pay.HwidCheckout),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.CSRF(),
+				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+			)),
 		)
 
 		// GET /payments/{id}/status. Префиксный маршрут на ServeMux — сам хендлер

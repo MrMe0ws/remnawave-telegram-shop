@@ -21,14 +21,36 @@ function invoiceLabel(t: (k: string) => string, invoiceType: string): string {
   }
 }
 
-function kindLabel(t: (k: string) => string, kind: string): string {
+function effectivePurchaseKind(p: { purchase_kind: string; month: number; extra_hwid?: number }): string {
+  const raw = p.purchase_kind
+  if (raw === 'tariff_upgrade' || raw === 'extra_hwid') {
+    return raw
+  }
+  const extra = p.extra_hwid ?? 0
+  if (p.month > 0 && extra > 0 && raw === 'subscription') {
+    return 'subscription_with_hwid'
+  }
+  if (p.month <= 0 && extra > 0 && raw === 'subscription') {
+    return 'extra_hwid'
+  }
+  return raw
+}
+
+function kindLabel(
+  t: (k: string, o?: Record<string, string | number>) => string,
+  p: { purchase_kind: string; month: number; extra_hwid?: number },
+): string {
+  const kind = effectivePurchaseKind(p)
+  const extra = p.extra_hwid ?? 0
   switch (kind) {
     case 'subscription':
       return t('payments.kindSubscription')
     case 'tariff_upgrade':
       return t('payments.kindUpgrade')
     case 'extra_hwid':
-      return t('payments.kindExtraHwid')
+      return extra > 0 ? t('payments.kindExtraHwidSlots', { n: extra }) : t('payments.kindExtraHwid')
+    case 'subscription_with_hwid':
+      return t('payments.kindSubscriptionWithHwid', { months: p.month, n: extra })
     default:
       return kind || '—'
   }
@@ -98,7 +120,7 @@ export default function PaymentsHistoryPage() {
                         <td className="py-2.5 pr-3 whitespace-nowrap">{formatPaid(p.paid_at)}</td>
                         <td className="py-2.5 pr-3 font-medium">{formatMoney(p.amount, p.currency)}</td>
                         <td className="py-2.5 pr-3">{invoiceLabel(t, p.invoice_type)}</td>
-                        <td className="py-2.5 text-muted-foreground">{kindLabel(t, p.purchase_kind)}</td>
+                        <td className="py-2.5 text-muted-foreground">{kindLabel(t, p)}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const months = parseInt(searchParams.get('months') ?? '1', 10)
 
   const [provider, setProvider] = useState<Provider | null>(null)
+  const [renewExtraHwid, setRenewExtraHwid] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,6 +34,17 @@ export default function CheckoutPage() {
     staleTime: 5 * 60_000,
   })
   const { data: bootstrap } = useAuthBootstrap()
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api.subscription(),
+    staleTime: 30_000,
+  })
+  const extraHwidActive = subscription?.hwid_extra?.extra_active ?? 0
+  const shouldAskExtraRenew = extraHwidActive > 0
+
+  useEffect(() => {
+    setRenewExtraHwid(shouldAskExtraRenew ? null : false)
+  }, [shouldAskExtraRenew])
 
   const tariff: TariffItem | undefined = tariffsData?.tariffs.find(
     (t) => t.slug === tariffSlug && t.months === months,
@@ -45,9 +57,22 @@ export default function CheckoutPage() {
 
   const selectedProviderForPreview: Provider = provider ?? 'yookassa'
   const { data: preview, isError: previewError } = useQuery({
-    queryKey: ['paymentPreview', tariff?.months, previewTariffId, tariffsData?.sales_mode, selectedProviderForPreview],
-    queryFn: () => api.paymentPreview(tariff!.months, previewTariffId, selectedProviderForPreview),
-    enabled: Boolean(tariff) && !tariffsLoading,
+    queryKey: [
+      'paymentPreview',
+      tariff?.months,
+      previewTariffId,
+      tariffsData?.sales_mode,
+      selectedProviderForPreview,
+      shouldAskExtraRenew ? renewExtraHwid : false,
+    ],
+    queryFn: () =>
+      api.paymentPreview(
+        tariff!.months,
+        previewTariffId,
+        selectedProviderForPreview,
+        shouldAskExtraRenew ? Boolean(renewExtraHwid) : false,
+      ),
+    enabled: Boolean(tariff) && !tariffsLoading && (!shouldAskExtraRenew || renewExtraHwid != null),
     staleTime: 30_000,
   })
 
@@ -67,7 +92,12 @@ export default function CheckoutPage() {
       const tariffId =
         tariffsData?.sales_mode === 'tariffs' && tariff.id != null && tariff.id > 0 ? tariff.id : undefined
       const res = await api.checkout(
-        { period: tariff.months, provider: selectedProvider, tariffId },
+        {
+          period: tariff.months,
+          provider: selectedProvider,
+          tariffId,
+          renewExtraHwid: shouldAskExtraRenew ? Boolean(renewExtraHwid) : false,
+        },
         idempotencyKey,
       )
       // Open provider payment page in a new tab.
@@ -142,7 +172,19 @@ export default function CheckoutPage() {
                   <SummaryRow label={t('checkout.plan')} value={tariff.name} />
                 )}
                 {tariff.device_limit > 0 && (
-                  <SummaryRow label={t('checkout.devices')} value={String(tariff.device_limit)} />
+                  <SummaryRow
+                    label={t('checkout.devices')}
+                    value={
+                      preview?.extra_hwid_included && (preview.extra_hwid_active ?? 0) > 0
+                        ? t('checkout.devicesWithExtra', {
+                            base: tariff.device_limit,
+                            extra: preview.extra_hwid_active ?? 0,
+                            amount: (preview.extra_hwid_amount_rub ?? 0).toLocaleString('ru-RU'),
+                            unit: amountSuffix,
+                          })
+                        : String(tariff.device_limit)
+                    }
+                  />
                 )}
                 {showTariffSwitchBreakdown && preview && (
                   <div className="space-y-2 rounded-lg border border-border/80 bg-muted/35 px-3 py-2.5 text-xs dark:border-border dark:bg-muted/25">
@@ -171,39 +213,20 @@ export default function CheckoutPage() {
                   <p className="text-xs text-muted-foreground">{t('checkout.previewError')}</p>
                 )}
                 {preview &&
-                  preview.list_price_rub != null &&
-                  preview.list_price_rub > 0 &&
-                  preview.list_price_rub !== preview.amount_rub && (
-                    <p className="text-xs text-muted-foreground">
-                      {t('checkout.listPriceNote', {
-                        amount: preview.list_price_rub.toLocaleString('ru-RU'),
-                      })}
-                    </p>
-                  )}
-                {preview &&
                   preview.base_amount_rub != null &&
                   preview.base_amount_rub > 0 &&
                   preview.amount_rub < preview.base_amount_rub && (
                     <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
-                      <SummaryRow
-                        label={t('checkout.subtotalBeforeDiscount')}
-                        value={`${preview.base_amount_rub.toLocaleString('ru-RU')} ${t('checkout.rub')}`}
-                      />
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
-                        {(preview.loyalty_discount_pct ?? 0) > 0 && (
-                          <span>{t('checkout.loyaltyDiscount', { pct: preview.loyalty_discount_pct })}</span>
-                        )}
-                        {(preview.promo_discount_pct ?? 0) > 0 && (
-                          <span>{t('checkout.promoDiscount', { pct: preview.promo_discount_pct })}</span>
-                        )}
-                        {(preview.total_discount_pct ?? 0) > 0 && (
-                          <span className="w-full">{t('checkout.totalDiscount', { pct: preview.total_discount_pct })}</span>
-                        )}
-                      </div>
-                      <SummaryRow
-                        label={t('checkout.youSave')}
-                        value={`−${(preview.base_amount_rub - preview.amount_rub).toLocaleString('ru-RU')} ${t('checkout.rub')}`}
-                      />
+                      {(preview.total_discount_pct ?? 0) > 0 && (
+                        <SummaryRow
+                          label={t('checkout.discountLabel')}
+                          value={t('checkout.discountValueWithAmount', {
+                            pct: preview.total_discount_pct,
+                            amount: (preview.base_amount_rub - preview.amount_rub).toLocaleString('ru-RU'),
+                            unit: amountSuffix,
+                          })}
+                        />
+                      )}
                     </div>
                   )}
                 <div className="border-t border-border pt-2 mt-2">
@@ -222,6 +245,49 @@ export default function CheckoutPage() {
         </Card>
 
         {/* Provider selection */}
+        {shouldAskExtraRenew && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium text-muted-foreground">
+                {t('checkout.extraHwidRenewTitle')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {t('checkout.extraHwidRenewHint', { n: extraHwidActive })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    'border-emerald-300/80 text-emerald-700 hover:bg-emerald-500/10 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-500/15',
+                    renewExtraHwid === true &&
+                      'bg-emerald-500/15 border-emerald-400/80 dark:border-emerald-700 dark:bg-emerald-900/40',
+                  )}
+                  onClick={() => setRenewExtraHwid(true)}
+                >
+                  {t('checkout.extraHwidRenewYes')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    'border-rose-300/80 text-rose-700 hover:bg-rose-500/10 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-500/15',
+                    renewExtraHwid === false &&
+                      'bg-rose-500/15 border-rose-400/80 dark:border-rose-700 dark:bg-rose-900/40',
+                  )}
+                  onClick={() => setRenewExtraHwid(false)}
+                >
+                  {t('checkout.extraHwidRenewNo')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium text-muted-foreground">
@@ -273,7 +339,13 @@ export default function CheckoutPage() {
           <Button
             className="w-full"
             size="lg"
-            disabled={!selectedProvider || !tariff || loading || availableProviders.length === 0}
+            disabled={
+              !selectedProvider ||
+              !tariff ||
+              loading ||
+              availableProviders.length === 0 ||
+              (shouldAskExtraRenew && renewExtraHwid == null)
+            }
             loading={loading}
             onClick={handlePay}
           >
@@ -288,7 +360,13 @@ export default function CheckoutPage() {
         <Button
           className="w-full"
           size="lg"
-          disabled={!selectedProvider || !tariff || loading || availableProviders.length === 0}
+          disabled={
+            !selectedProvider ||
+            !tariff ||
+            loading ||
+            availableProviders.length === 0 ||
+            (shouldAskExtraRenew && renewExtraHwid == null)
+          }
           loading={loading}
           onClick={handlePay}
         >

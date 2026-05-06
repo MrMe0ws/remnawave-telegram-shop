@@ -384,13 +384,11 @@ func (s *Service) PendingDiscountForConnectUI(ctx context.Context, customerID in
 	return d.Percent, d.UntilFirstPurchase, d.ExpiresAt, true, nil
 }
 
-// OnSuccessfulSubscriptionDiscountPayment вызывается после успешной оплаты подписки (month≥1), если к счёту применяли промо-скидку.
+// OnSuccessfulSubscriptionDiscountPayment вызывается после успешной оплаты с применённой промо-скидкой.
 // Уменьшает счётчик многоразовой скидки или удаляет pending после последней оплаты; безлимитная скидка сохраняется до TTL.
+// Важно: учитываем любые типы оплат, где скидка реально была применена (подписка, доп. HWID и т.д.).
 func (s *Service) OnSuccessfulSubscriptionDiscountPayment(ctx context.Context, purchase *database.Purchase, customerID int64) error {
 	if s == nil || purchase == nil || purchase.PromoCodeID == nil || *purchase.PromoCodeID == 0 {
-		return nil
-	}
-	if purchase.Month < 1 {
 		return nil
 	}
 	tx, err := s.PromoRepo.Pool().Begin(ctx)

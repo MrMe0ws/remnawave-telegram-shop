@@ -1,5 +1,5 @@
 {
-  "greeting": "🎁 14 дней VPN бесплатно!\nПодключайся прямо сейчас!\n\n🌐 Сервера:<blockquote>🇩🇪 Германия • 🇸🇪 Швеция • 🇱🇻 Латвия • 🇷🇺 Россия</blockquote>\n\n🔓 Обход ограничений\n🚀 Высокая скорость\n🚫 Нет рекламы\n\n🌐 Личный кабинет: cabinet.me0ws.ru\n\n<b><a href=\"tg://proxy?server=tg1.me0ws.ru&port=443&secret=96d00e61b3c11ffc1cccb2c725d2c086\">👉 TG прокси 1</a></b>\n<b><a href=\"tg://proxy?server=tg1.me0ws.ru&port=6443&secret=eea2b5f4e456a1703dda880e74521d362631632e7275\">👉 TG прокси 2</a></b>",
+  "greeting": "🎁 14 дней VPN бесплатно!\nПодключайся прямо сейчас!\n\n🌐 Сервера:<blockquote>🇩🇪 Германия • 🇸🇪 Швеция • 🇱🇻 Латвия • 🇷🇺 Россия</blockquote>\n\n🚀 Высокая скорость\n🚫 Нет рекламы\n\n🌐 Личный кабинет: cabinet.me0ws.ru\n\n<b><a href=\"tg://proxy?server=tg1.me0ws.ru&port=443&secret=96d00e61b3c11ffc1cccb2c725d2c086\">👉 TG прокси 1</a></b>\n<b><a href=\"tg://proxy?server=tg1.me0ws.ru&port=6443&secret=eea2b5f4e456a1703dda880e74521d362631632e7275\">👉 TG прокси 2</a></b>",
   "cabinet_minimal_user_line": "👤 <b>%s</b>",
   "cabinet_minimal_status_active": "📱 Подписка: 💎 Активна",
   "cabinet_minimal_status_expired": "📱 Подписка: 🔴 Истекла",
@@ -7,26 +7,30 @@
   "cabinet_minimal_date_line": "📅 До %s",
   "cabinet_minimal_date_placeholder": "—",
   "cabinet_minimal_expiring": "⚠️ истекает через %d дн.",
-  "cabinet_minimal_footer": "Выберите действие:",
+  "cabinet_minimal_footer": "🌐Личный кабинет - cabinet.me0ws.ru\nКанал новостей - @VPN_meows_news",
   "cabinet_minimal_btn_trial": {
     "text": "Попробовать бесплатно",
     "emoji_id": "5424972470023104089",
     "style": "red"
   },
   "cabinet_minimal_btn_buy": {
-    "text": "💰 Купить",
+    "text": "Купить",
+    "emoji_id": "5350452584119279096",
     "style": "red"
   },
   "cabinet_minimal_btn_subscription": {
-    "text": "💳 Подписка",
+    "text": "Подписка",
+    "emoji_id": "5283080528818360566",
     "style": "green"
   },
   "cabinet_minimal_btn_support": {
-    "text": "🆘 Поддержка",
+    "text": "Поддержка",
+    "emoji_id": "5417915203100613993",
     "style": "blue"
   },
   "cabinet_minimal_btn_info": {
-    "text": "📚 Инструкции и информация",
+    "text": "Инструкции и информация",
+    "emoji_id": "5350481781306958339",
     "style": "blue"
   },
   "buy_button": "💰 Купить",

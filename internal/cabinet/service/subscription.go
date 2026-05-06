@@ -74,6 +74,21 @@ type SubscriptionTariff struct {
 	DeviceLimit int     `json:"device_limit"`
 }
 
+// SubscriptionHwidExtra — блок «доп. устройства» для SPA /cabinet/subscription (как HWID_EXTRA в боте).
+type SubscriptionHwidExtra struct {
+	Enabled         bool `json:"enabled"`
+	UiVisible       bool `json:"ui_visible"`
+	CurrentLimit    int  `json:"current_limit"`
+	BaseLimit       int  `json:"base_limit"`
+	MaxLimit        int  `json:"max_limit"`
+	ExtraActive     int  `json:"extra_active"`
+	CanIncrease     bool `json:"can_increase"`
+	CanDecrease     bool `json:"can_decrease"`
+	PriceRubMonth   int  `json:"price_rub_month"`
+	StarsPriceMonth int  `json:"stars_price_month"`
+	DaysLeft        int  `json:"days_left"`
+}
+
 // SubscriptionResponse — корневой объект `GET /cabinet/api/me/subscription`.
 //
 // Все поля, кроме loyalty_xp, опциональны — у нового web-аккаунта, ещё не
@@ -91,6 +106,8 @@ type SubscriptionResponse struct {
 	// Исключение: если Remnawave уже выставил лимит трафика выше триального — не триал (админка,
 	// ручная выдача, рассинхрон purchase после миграции current_tariff_id).
 	IsTrial bool `json:"is_trial"`
+	// HwidExtra — настройки и лимиты докупки HWID; nil если HWID_EXTRA_DEVICES_ENABLED=false.
+	HwidExtra *SubscriptionHwidExtra `json:"hwid_extra,omitempty"`
 }
 
 type LoyaltyHistoryItem struct {
@@ -153,6 +170,14 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 			slog.Warn("subscription: remnawave sync failed", "customer_id", customer.ID, "error", syncErr)
 		} else if synced != nil {
 			customer = synced
+		}
+	}
+	if s.rw != nil && config.HwidExtraDevicesEnabled() && customer != nil &&
+		!customer.IsWebOnly && !utils.IsSyntheticTelegramID(customer.TelegramID) {
+		if err := CleanupExpiredExtraHwid(ctx, s.rw, s.customers, customer); err != nil {
+			slog.Warn("subscription: hwid extra cleanup", "customer_id", customer.ID, "error", err)
+		} else if fresh, ferr := s.customers.FindById(ctx, customer.ID); ferr == nil && fresh != nil {
+			customer = fresh
 		}
 	}
 	var rwUser *remnawave.User
@@ -238,6 +263,40 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 		(rwUser == nil || rwUser.TrafficLimitBytes > 0) {
 		v := *resp.Tariff.TrafficGB
 		resp.TrafficLimitGB = &v
+	}
+
+	if config.HwidExtraDevicesEnabled() {
+		block := &SubscriptionHwidExtra{Enabled: true}
+		paidOK := false
+		if s.purchases != nil {
+			var perr error
+			paidOK, perr = s.purchases.HasPaidSubscription(ctx, customer.ID)
+			if perr != nil {
+				slog.Warn("subscription: hwid paid check", "customer_id", customer.ID, "error", perr)
+				paidOK = false
+			}
+		}
+		now := time.Now().UTC()
+		activeSub := customer.ExpireAt != nil && customer.ExpireAt.After(now)
+		show := !customer.IsWebOnly && !utils.IsSyntheticTelegramID(customer.TelegramID) &&
+			s.rw != nil && rwUser != nil && paidOK && activeSub && !resp.IsTrial
+		if show {
+			block.UiVisible = true
+			lim := BuildHwidExtraLimits(customer, rwUser)
+			block.CurrentLimit = lim.CurrentLimit
+			block.BaseLimit = lim.BaseLimit
+			block.MaxLimit = lim.MaxCap
+			block.ExtraActive = lim.ActiveExtra
+			block.DaysLeft = lim.DaysLeft
+			block.PriceRubMonth = config.HwidAddPrice()
+			block.StarsPriceMonth = config.HwidAddStarsPrice()
+			maxCap := lim.MaxCap
+			// Как в боте: при HWID_MAX_DEVICE=0 докупка недоступна (верхняя граница = текущий лимит).
+			canInc := maxCap > 0 && lim.CurrentLimit < maxCap
+			block.CanIncrease = canInc && lim.DaysLeft > 0
+			block.CanDecrease = lim.CurrentLimit > lim.BaseLimit
+		}
+		resp.HwidExtra = block
 	}
 
 	return resp, nil

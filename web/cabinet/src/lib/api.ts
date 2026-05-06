@@ -235,6 +235,20 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
   }
 }
 
+export interface SubscriptionHwidExtraInfo {
+  enabled: boolean
+  ui_visible: boolean
+  current_limit: number
+  base_limit: number
+  max_limit: number
+  extra_active: number
+  can_increase: boolean
+  can_decrease: boolean
+  price_rub_month: number
+  stars_price_month: number
+  days_left: number
+}
+
 export interface SubscriptionResponse {
   expire_at: string | null
   subscription_link: string | null
@@ -253,6 +267,21 @@ export interface SubscriptionResponse {
   } | null
   loyalty_xp: number
   loyalty_tier: string | null
+  hwid_extra?: SubscriptionHwidExtraInfo | null
+}
+
+/** GET /payments/hwid/preview */
+export interface HwidExtraPreviewResponse {
+  current_limit: number
+  target_limit: number
+  delta: number
+  days_left: number
+  amount_rub: number
+  base_amount_rub: number
+  currency: string
+  loyalty_discount_pct?: number
+  promo_discount_pct?: number
+  total_discount_pct?: number
 }
 
 export interface DeviceInfo {
@@ -342,11 +371,16 @@ export interface PaymentPreviewResponse {
   tariff_switch_bonus_days?: number
   tariff_switch_period_days?: number
   tariff_switch_total_days?: number
+  extra_hwid_active?: number
+  extra_hwid_included?: boolean
+  extra_hwid_amount_rub?: number
 }
 
 export interface PaymentStatusResponse {
   status: 'new' | 'pending' | 'paid' | 'failed' | 'expired'
   subscription_link: string | null
+  /** paid: subscription | extra_hwid | tariff_upgrade — для текста успеха. */
+  purchase_kind?: string
 }
 
 export interface ReferralsStatsResponse {
@@ -380,6 +414,8 @@ export interface PurchaseHistoryItem {
   invoice_type: string
   purchase_kind: string
   month: number
+  /** Число доп. слотов HWID в строке покупки (как в боте). */
+  extra_hwid?: number
   paid_at?: string
   created_at: string
 }
@@ -682,12 +718,13 @@ export const api = {
 
   // Payments — тело как в internal/cabinet/http/handlers/payments.go: period, tariff_id, provider.
   checkout: (
-    input: { period: number; provider: string; tariffId?: number | null },
+    input: { period: number; provider: string; tariffId?: number | null; renewExtraHwid?: boolean },
     idempotencyKey: string,
   ) => {
     const body: Record<string, unknown> = {
       period: input.period,
       provider: input.provider,
+      renew_extra_hwid: Boolean(input.renewExtraHwid),
     }
     if (input.tariffId != null && input.tariffId > 0) {
       body.tariff_id = input.tariffId
@@ -695,13 +732,29 @@ export const api = {
     return request<CheckoutResponse>('POST', '/payments/checkout', body, { 'Idempotency-Key': idempotencyKey })
   },
 
-  paymentPreview: (period: number, tariffId?: number | null, provider?: string) => {
+  paymentPreview: (period: number, tariffId?: number | null, provider?: string, renewExtraHwid?: boolean) => {
     const q = new URLSearchParams()
     q.set('period', String(period))
     if (tariffId != null && tariffId > 0) q.set('tariff_id', String(tariffId))
     if (provider) q.set('provider', provider)
+    if (renewExtraHwid != null) q.set('renew_extra_hwid', String(renewExtraHwid))
     return request<PaymentPreviewResponse>('GET', `/payments/preview?${q.toString()}`)
   },
+
+  hwidExtraPreview: (targetLimit: number, provider?: string) => {
+    const q = new URLSearchParams()
+    q.set('target_limit', String(targetLimit))
+    if (provider) q.set('provider', provider)
+    return request<HwidExtraPreviewResponse>('GET', `/payments/hwid/preview?${q.toString()}`)
+  },
+
+  hwidExtraCheckout: (targetLimit: number, provider: string, idempotencyKey: string) =>
+    request<CheckoutResponse>('POST', '/payments/hwid/checkout', { target_limit: targetLimit, provider }, {
+      'Idempotency-Key': idempotencyKey,
+    }),
+
+  hwidExtraApply: (targetLimit: number) =>
+    request<{ ok: boolean; device_limit: number }>('POST', '/me/hwid-extra/apply', { target_limit: targetLimit }),
 
   paymentStatus: (id: number) =>
     request<PaymentStatusResponse>('GET', `/payments/${id}/status`),

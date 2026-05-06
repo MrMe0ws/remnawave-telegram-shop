@@ -104,6 +104,8 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/healthz"
 curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 ```
 
+**Доп. устройства (HWID) в кабинете** (`/cabinet/subscription`): при `CABINET_ENABLED=true` и **`HWID_EXTRA_DEVICES_ENABLED=true`** после блока лояльности показывается карточка «Дополнительные опции» — докупка слотов до лимита **`HWID_MAX_DEVICE`** (если `0`, докупка в кабинете недоступна, как в боте) и бесплатное уменьшение лимита до базы тарифа. Видимость как у списка устройств: не **web-only**, не **synthetic** `telegram_id`, активная **оплаченная** подписка (не триал), ответ Remnawave. **API:** поле **`hwid_extra`** в `GET /cabinet/api/me/subscription`; расчёт/оплата — `GET /cabinet/api/payments/hwid/preview?target_limit=&provider=`, `POST /cabinet/api/payments/hwid/checkout` (тело `target_limit`, `provider`, заголовок **`Idempotency-Key`**, CSRF); уменьшение — `POST /cabinet/api/me/hwid-extra/apply` с `{"target_limit":N}` (CSRF, подтверждённый email). После оплаты — тот же poll `GET /cabinet/api/payments/{id}/status`, что и для тарифов. **Код:** `internal/cabinet/service/hwid_extra.go`, `internal/cabinet/service/subscription.go`, `internal/cabinet/payments/checkout.go`, `internal/cabinet/http/handlers/payments.go`, `internal/cabinet/http/handlers/me.go`, UI — `web/cabinet/src/features/subscription/SubscriptionExtraDevices.tsx`, строки в `web/cabinet/src/i18n/ru.ts` / `en.ts` (`subscriptionPage.extraDevices*`).
+
 ## Промокоды
 
 ### Для пользователей
@@ -306,7 +308,7 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `TRIBUTE_WEBHOOK_URL`                | Путь для обработчика webhook. Пример: /example (https://www.uuidgenerator.net/version4)                                                                       |
 | `TRIBUTE_API_KEY`                    | API ключ, который можно получить через настройки в приложении Tribute.                                                                                        |
 | `TRIBUTE_PAYMENT_URL`                | Ваш URL оплаты для Tribute. (Ссылка подписки telegram)                                                                                                        |
-| `HWID_EXTRA_DEVICES_ENABLED`         | `true` / `false` — включить продажу доп. HWID (кнопки, счета с `extra`, отдельная оплата устройств). `false` не отменяет уже выданные слоты до истечения; подписку без допа можно продлить. По умолчанию `true` (если не задано) |
+| `HWID_EXTRA_DEVICES_ENABLED`         | `true` / `false` — продажа доп. HWID в **боте** и блок **«Дополнительные опции»** на странице **`/cabinet/subscription`** в кабинете (см. абзац про HWID в кабинете выше). `false` не отменяет уже выданные слоты до истечения. По умолчанию `true` (если не задано) |
 | `HWID_ADD_PRICE`                     | Цена за 1 доп. устройство в рублях                                                                                                                            |
 | `HWID_ADD_STARS_PRICE`               | Цена за 1 доп. устройство в Telegram Stars                                                                                                                     |
 | `HWID_MAX_DEVICE`                    | Максимальный лимит устройств в одной подписке                                                                                                                 |

@@ -15,6 +15,7 @@ import (
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
+	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/payment"
@@ -31,6 +32,7 @@ type MeHandler struct {
 	customers           *database.CustomerRepository
 	bootstrap           *bootstrap.CustomerBootstrap
 	payments            *payment.PaymentService
+	purchases           *database.PurchaseRepository
 	rw                  *remnawave.Client
 	cookieDomain        string
 	telegramWidgetBot   string // username без @ для Login Widget; "" — виджет недоступен
@@ -49,6 +51,7 @@ func NewMe(
 	links *repository.AccountCustomerLinkRepo,
 	boot *bootstrap.CustomerBootstrap,
 	payments *payment.PaymentService,
+	purchases *database.PurchaseRepository,
 	rw *remnawave.Client,
 	customers *database.CustomerRepository,
 	cookieDomain string,
@@ -59,7 +62,7 @@ func NewMe(
 	telegramOIDCEnabled bool,
 ) *MeHandler {
 	return &MeHandler{
-		svc: svc, accounts: accounts, ids: ids, links: links, bootstrap: boot, payments: payments, rw: rw,
+		svc: svc, accounts: accounts, ids: ids, links: links, bootstrap: boot, payments: payments, purchases: purchases, rw: rw,
 		customers: customers, cookieDomain: cookieDomain, telegramWidgetBot: telegramWidgetBot,
 		googleOAuthEnabled: googleOAuthEnabled, yandexOAuthEnabled: yandexOAuthEnabled, vkOAuthEnabled: vkOAuthEnabled, telegramOIDCEnabled: telegramOIDCEnabled,
 	}
@@ -801,6 +804,110 @@ func (h *MeHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+type meHwidExtraApplyReq struct {
+	TargetLimit int `json:"target_limit"`
+}
+
+// PostHwidExtraApply — POST /cabinet/api/me/hwid-extra/apply: бесплатное уменьшение лимита (как CallbackAddDeviceApply в боте).
+func (h *MeHandler) PostHwidExtraApply(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req meHwidExtraApplyReq
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.TargetLimit <= 0 {
+		http.Error(w, "bad target_limit", http.StatusBadRequest)
+		return
+	}
+	if !config.HwidExtraDevicesEnabled() || h.rw == nil || h.bootstrap == nil || h.customers == nil || h.purchases == nil {
+		http.Error(w, "unavailable", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	link, err := h.bootstrap.EnsureForAccount(ctx, claims.AccountID, "")
+	if err != nil || link == nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	c, err := h.customers.FindById(ctx, link.CustomerID)
+	if err != nil || c == nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	if c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	paid, err := h.purchases.HasPaidSubscription(ctx, c.ID)
+	if err != nil || !paid {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	now := time.Now()
+	if c.ExpireAt == nil || !c.ExpireAt.After(now) {
+		http.Error(w, "subscription inactive", http.StatusBadRequest)
+		return
+	}
+	if err := cabsvc.CleanupExpiredExtraHwid(ctx, h.rw, h.customers, c); err != nil {
+		slog.Warn("me: hwid extra apply cleanup", "error", err.Error())
+		http.Error(w, "cleanup failed", http.StatusBadGateway)
+		return
+	}
+	if fresh, ferr := h.customers.FindById(ctx, c.ID); ferr == nil && fresh != nil {
+		c = fresh
+	}
+	u, err := h.rw.GetUserTrafficInfo(ctx, c.TelegramID)
+	if err != nil {
+		http.Error(w, "remnawave error", http.StatusBadGateway)
+		return
+	}
+	lim := cabsvc.BuildHwidExtraLimits(c, u)
+	cur := lim.CurrentLimit
+	if req.TargetLimit == cur {
+		http.Error(w, "noop", http.StatusBadRequest)
+		return
+	}
+	if req.TargetLimit > cur {
+		http.Error(w, "use payment flow to increase", http.StatusBadRequest)
+		return
+	}
+	if req.TargetLimit < lim.BaseLimit {
+		http.Error(w, "below tariff base", http.StatusBadRequest)
+		return
+	}
+	newExtra := req.TargetLimit - lim.BaseLimit
+	if newExtra < 0 {
+		newExtra = 0
+	}
+	if _, err := h.rw.UpdateUserDeviceLimit(ctx, c.TelegramID, req.TargetLimit); err != nil {
+		slog.Warn("me: hwid apply update panel", "error", err.Error())
+		http.Error(w, "panel update failed", http.StatusBadGateway)
+		return
+	}
+	updates := map[string]interface{}{
+		"extra_hwid":            newExtra,
+		"extra_hwid_expires_at": nil,
+	}
+	if newExtra > 0 {
+		updates["extra_hwid_expires_at"] = c.ExpireAt
+	}
+	if err := h.customers.UpdateFields(ctx, c.ID, updates); err != nil {
+		slog.Warn("me: hwid apply db", "error", err.Error())
+		http.Error(w, "db update failed", http.StatusBadGateway)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "device_limit": req.TargetLimit})
 }
 
 type trialResp struct {

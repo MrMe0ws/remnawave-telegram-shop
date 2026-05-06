@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -26,7 +28,7 @@
     --ring: 174 72% 36%;
     --tariffs-shine-color: 73 73 73;
     --tariffs-shine-shadow: 73 73 73;
-    --radius: 0.625rem;
+    --radius: 1.25rem;
   }
 
   .dark {
@@ -51,21 +53,41 @@
     --ring: 198 89% 50%;
     --tariffs-shine-color: 214 214 214;
     --tariffs-shine-shadow: 255 255 255;
-    --radius: 0.625rem;
+    --radius: 1.25rem;
   }
 
   * {
     @apply border-border;
   }
 
+  /* Глобально увеличиваем читаемость только на desktop: 16px -> 18px от 1024px. */
+  @media (min-width: 1024px) {
+    html {
+      font-size: 18px;
+    }
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
 
+  h1, h2, h3, h4 {
+    font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+  }
+
   .dark body {
     background-image:
-      radial-gradient(900px 420px at 14% -8%, rgba(14, 169, 241, 0.14), transparent 58%),
-      radial-gradient(760px 360px at 88% -12%, rgba(14, 169, 241, 0.09), transparent 62%);
+      radial-gradient(
+        900px 420px at 14% -8%,
+        rgba(14, 169, 241, 0.14),
+        transparent 58%
+      ),
+      radial-gradient(
+        760px 360px at 88% -12%,
+        rgba(14, 169, 241, 0.09),
+        transparent 62%
+      );
     background-attachment: fixed;
   }
 
@@ -88,7 +110,7 @@
 
   /* Вращающаяся «conic»-окантовка (яркая дуга, противоположная сторона тусклая). */
   @property --connect-border-angle {
-    syntax: '<angle>';
+    syntax: "<angle>";
     inherits: false;
     initial-value: 0deg;
   }
@@ -166,4 +188,3 @@
     animation: none;
   }
 }
-

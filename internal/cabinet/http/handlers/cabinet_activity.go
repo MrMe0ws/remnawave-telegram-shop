@@ -212,6 +212,7 @@ type purchaseRowDTO struct {
 	InvoiceType  string   `json:"invoice_type"`
 	PurchaseKind string   `json:"purchase_kind"`
 	Month        int      `json:"month"`
+	ExtraHwid    int      `json:"extra_hwid"`
 	PaidAt       *string  `json:"paid_at,omitempty"`
 	CreatedAt    string   `json:"created_at"`
 }
@@ -268,6 +269,7 @@ func (h *CabinetActivityHandler) GetPurchases(w http.ResponseWriter, r *http.Req
 			InvoiceType:  string(p.InvoiceType),
 			PurchaseKind: string(p.PurchaseKind),
 			Month:        p.Month,
+			ExtraHwid:    p.ExtraHwid,
 			CreatedAt:    p.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 		}
 		if p.PaidAt != nil {

@@ -968,6 +968,20 @@ func applyTariffPurchaseExtras(pur *database.Purchase, extras *TariffPurchaseExt
 	pur.IsEarlyDowngrade = extras.IsEarlyDowngrade
 }
 
+// ensurePurchaseKindExtraHwidOnly помечает покупку «только доп. HWID» (month==0, extra>0),
+// иначе в БД через Create подставлялся subscription и кабинет/отчёты путали с подпиской.
+func ensurePurchaseKindExtraHwidOnly(pur *database.Purchase) {
+	if pur == nil {
+		return
+	}
+	if pur.Month > 0 {
+		return
+	}
+	if pur.ExtraHwid > 0 {
+		pur.PurchaseKind = database.PurchaseKindExtraHwid
+	}
+}
+
 func rubMonthWord(months int) string {
 	switch months {
 	case 1:
@@ -1122,6 +1136,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		TariffID:    tariffID,
 	}
 	applyTariffPurchaseExtras(pur, extras)
+	ensurePurchaseKindExtraHwidOnly(pur)
 	if meta != nil {
 		pur.PromoCodeID = meta.PromoCodeID
 		pur.DiscountPercentApplied = meta.DiscountPercentApplied
@@ -1183,6 +1198,7 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		TariffID:    tariffID,
 	}
 	applyTariffPurchaseExtras(pur, extras)
+	ensurePurchaseKindExtraHwidOnly(pur)
 	if meta != nil {
 		pur.PromoCodeID = meta.PromoCodeID
 		pur.DiscountPercentApplied = meta.DiscountPercentApplied
@@ -1227,6 +1243,7 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 		TariffID:    tariffID,
 	}
 	applyTariffPurchaseExtras(pur, extras)
+	ensurePurchaseKindExtraHwidOnly(pur)
 	if meta != nil {
 		pur.PromoCodeID = meta.PromoCodeID
 		pur.DiscountPercentApplied = meta.DiscountPercentApplied
@@ -1340,6 +1357,7 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 		TariffID:    tariffID,
 	}
 	applyTariffPurchaseExtras(pur, extras)
+	ensurePurchaseKindExtraHwidOnly(pur)
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
 		slog.Error("Error creating purchase", err)

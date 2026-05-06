@@ -145,7 +145,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Link>
 
           <nav
-            className="hidden sm:flex flex-1 items-center justify-center gap-0.5 min-w-0 overflow-x-auto py-0.5"
+            className="hidden sm:flex flex-1 items-center justify-start gap-0.5 min-w-0 overflow-x-auto py-0.5"
             aria-label={t('nav.main')}
           >
             {navItems.map(({ to, icon: Icon, labelKey, activePrefixes }) => {
@@ -159,7 +159,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   size="sm"
                   asChild
                   className={cn(
-                    'group shrink-0 h-9 !gap-1 rounded-xl px-2 text-muted-foreground hover:text-foreground transition-all duration-500',
+                    'group shrink-0 h-9 !gap-1 rounded-xl px-2 text-muted-foreground hover:text-foreground transition-all duration-200',
                     active && 'bg-secondary text-foreground shadow-sm',
                   )}
                 >
@@ -179,7 +179,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     />
                     <span
                       className={cn(
-                        'max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-500',
+                        'max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200',
                         'group-hover:max-w-[9rem] group-hover:opacity-100',
                       )}
                     >

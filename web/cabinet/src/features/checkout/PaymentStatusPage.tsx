@@ -54,6 +54,7 @@ export default function PaymentStatusPage() {
             ) : status === 'paid' ? (
               <SuccessState
                 link={data?.subscription_link ?? null}
+                purchaseKind={data?.purchase_kind}
                 copied={copied}
                 onCopy={copyLink}
               />
@@ -93,14 +94,19 @@ function PendingState() {
 
 function SuccessState({
   link,
+  purchaseKind,
   copied,
   onCopy,
 }: {
   link: string | null
+  purchaseKind?: string
   copied: boolean
   onCopy: () => void
 }) {
   const { t } = useTranslation()
+  const successHintKey =
+    purchaseKind === 'extra_hwid' ? 'paymentStatus.successHintExtraHwid' : 'paymentStatus.successHint'
+
   return (
     <>
       <div className="h-16 w-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
@@ -108,7 +114,7 @@ function SuccessState({
       </div>
       <div>
         <p className="font-semibold text-lg">{t('paymentStatus.success')}</p>
-        <p className="text-sm text-muted-foreground mt-1">{t('paymentStatus.successHint')}</p>
+        <p className="text-sm text-muted-foreground mt-1">{t(successHintKey)}</p>
       </div>
 
       {link && (

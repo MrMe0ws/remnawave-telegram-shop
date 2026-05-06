@@ -14,7 +14,8 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['Onest', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
@@ -50,8 +51,8 @@ const config: Config = {
       },
       borderRadius: {
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: '0.75rem',
+        sm: '0.75rem',
       },
       keyframes: {
         'fade-in': {

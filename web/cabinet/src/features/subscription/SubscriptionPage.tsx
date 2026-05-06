@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
+import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -59,6 +60,12 @@ export default function SubscriptionPage() {
   const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
   const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
   const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
+  const tariffExtraFromHwid = Math.max(0, sub?.hwid_extra?.extra_active ?? 0)
+  const tariffExtraFromActualLimit =
+    deviceLimitByPlan > 0 && deviceLimitFromDevices > deviceLimitByPlan
+      ? deviceLimitFromDevices - deviceLimitByPlan
+      : 0
+  const tariffExtraDevices = Math.max(tariffExtraFromHwid, tariffExtraFromActualLimit)
   const deviceLimitText =
     deviceLimit > 0
       ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
@@ -140,7 +147,12 @@ export default function SubscriptionPage() {
                         {sub.tariff.name}
                         <span className="ml-2 text-xs text-muted-foreground">
                           {sub.tariff.device_limit > 0
-                            ? `${sub.tariff.device_limit} ${t('subscriptionPage.devices').toLowerCase()}`
+                            ? tariffExtraDevices > 0
+                              ? t('subscriptionPage.tariffDevicesWithExtra', {
+                                  base: sub.tariff.device_limit,
+                                  extra: tariffExtraDevices,
+                                })
+                              : `${sub.tariff.device_limit} ${t('subscriptionPage.devices').toLowerCase()}`
                             : t('subscriptionPage.unlimited')}
                           {' · '}
                           {sub.tariff.traffic_gb
@@ -259,6 +271,10 @@ export default function SubscriptionPage() {
             <div id="cabinet-loyalty">
               <LoyaltyCompactCard />
             </div>
+
+            {sub?.hwid_extra?.ui_visible && sub.hwid_extra.enabled && (
+              <SubscriptionExtraDevices hwid={sub.hwid_extra} inactive={isExpired} onUpdated={() => void refetch()} />
+            )}
 
             <Card>
               <CardHeader className="pb-3">

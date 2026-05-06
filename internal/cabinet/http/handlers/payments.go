@@ -27,6 +27,8 @@ type checkoutReq struct {
 	Period   int    `json:"period"`
 	TariffID *int64 `json:"tariff_id,omitempty"`
 	Provider string `json:"provider"`
+	// RenewExtraHwid — продлевать активные доп. HWID вместе с подпиской.
+	RenewExtraHwid bool `json:"renew_extra_hwid"`
 }
 
 // Checkout — POST /cabinet/api/payments/checkout.
@@ -51,6 +53,7 @@ func (h *PaymentsHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		TariffID:       req.TariffID,
 		Provider:       strings.ToLower(strings.TrimSpace(req.Provider)),
 		IdempotencyKey: idemKey,
+		RenewExtraHwid: req.RenewExtraHwid,
 	})
 	if err != nil {
 		writePaymentsErr(w, err, "checkout")
@@ -96,13 +99,84 @@ func (h *PaymentsHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		tariffID = &id
 	}
 	provider := strings.TrimSpace(r.URL.Query().Get("provider"))
+	renewExtraHwid := false
+	if v := strings.TrimSpace(r.URL.Query().Get("renew_extra_hwid")); v != "" {
+		b, berr := strconv.ParseBool(v)
+		if berr != nil {
+			http.Error(w, "bad renew_extra_hwid", http.StatusBadRequest)
+			return
+		}
+		renewExtraHwid = b
+	}
 
-	result, err := h.svc.Preview(r.Context(), claims.AccountID, period, tariffID, provider)
+	ctx := payments.WithPreviewRenewExtraHwid(r.Context(), renewExtraHwid)
+	result, err := h.svc.Preview(ctx, claims.AccountID, period, tariffID, provider)
 	if err != nil {
 		writePaymentsErr(w, err, "preview")
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+type hwidCheckoutReq struct {
+	TargetLimit int    `json:"target_limit"`
+	Provider    string `json:"provider"`
+}
+
+// HwidPreview — GET /cabinet/api/payments/hwid/preview?target_limit=&provider=.
+func (h *PaymentsHandler) HwidPreview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tStr := strings.TrimSpace(r.URL.Query().Get("target_limit"))
+	target, err := strconv.Atoi(tStr)
+	if err != nil || target <= 0 {
+		http.Error(w, "bad target_limit", http.StatusBadRequest)
+		return
+	}
+	provider := strings.TrimSpace(r.URL.Query().Get("provider"))
+	result, err := h.svc.PreviewHwid(r.Context(), claims.AccountID, target, provider)
+	if err != nil {
+		writePaymentsErr(w, err, "hwid_preview")
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// HwidCheckout — POST /cabinet/api/payments/hwid/checkout.
+func (h *PaymentsHandler) HwidCheckout(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req hwidCheckoutReq
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	idemKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	result, err := h.svc.CreateHwid(r.Context(), claims.AccountID, payments.HwidCreateRequest{
+		TargetLimit:    req.TargetLimit,
+		Provider:       req.Provider,
+		IdempotencyKey: idemKey,
+	})
+	if err != nil {
+		writePaymentsErr(w, err, "hwid_checkout")
+		return
+	}
+	status := http.StatusCreated
+	if result.Reused {
+		status = http.StatusOK
+	} else {
+		cabmetrics.RecordCheckoutStarted(result.Provider)
+	}
+	writeJSON(w, status, result)
 }
 
 // Status — GET /cabinet/api/payments/{id}/status.

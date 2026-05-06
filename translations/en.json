@@ -7,25 +7,30 @@
   "cabinet_minimal_date_line": "📅 %s",
   "cabinet_minimal_date_placeholder": "—",
   "cabinet_minimal_expiring": "⚠️ expires in %d days",
-  "cabinet_minimal_footer": "Choose an action:",
+  "cabinet_minimal_footer": "🌐 Cabinet - cabinet.me0ws.ru\nNews channel - @VPN_meows_news",
   "cabinet_minimal_btn_trial": {
-    "text": "🔥 Try free",
+    "text": "Try free",
+    "emoji_id": "5424972470023104089",    
     "style": "red"
   },
   "cabinet_minimal_btn_buy": {
-    "text": "💰 Buy",
+    "text": "Buy",
+   "emoji_id": "5350452584119279096",    
     "style": "red"
   },
   "cabinet_minimal_btn_subscription": {
-    "text": "💳 Subscription",
+    "text": "Subscription",
+    "emoji_id": "5283080528818360566",    
     "style": "green"
   },
   "cabinet_minimal_btn_support": {
-    "text": "🆘 Support",
+    "text": "Support",
+    "emoji_id": "5417915203100613993",    
     "style": "blue"
   },
   "cabinet_minimal_btn_info": {
-    "text": "📚 Guides & info",
+    "text": "Guides & info",
+    "emoji_id": "5350481781306958339",    
     "style": "blue"
   },
   "buy_button": "💰 Buy",

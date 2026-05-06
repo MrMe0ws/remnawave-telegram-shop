@@ -23,18 +23,22 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	cabmetrics "remnawave-tg-shop-bot/internal/cabinet/metrics"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
+	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/payment"
 	promosvc "remnawave-tg-shop-bot/internal/promo"
+	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/yookasa"
+	"remnawave-tg-shop-bot/utils"
 )
 
 // Sentinel-ошибки, на которые HTTP-слой маппит конкретные статусы.
@@ -88,6 +92,7 @@ type CheckoutService struct {
 	payments  *payment.PaymentService
 	loyalty   *database.LoyaltyTierRepository
 	promo     *promosvc.Service
+	rw        *remnawave.Client
 }
 
 // NewCheckoutService — конструктор.
@@ -103,6 +108,7 @@ func NewCheckoutService(
 	payments *payment.PaymentService,
 	loyaltyRepo *database.LoyaltyTierRepository,
 	promo *promosvc.Service,
+	rw *remnawave.Client,
 ) *CheckoutService {
 	if cfg.MinIdempotencyKeyLen <= 0 {
 		cfg.MinIdempotencyKeyLen = 16
@@ -122,6 +128,7 @@ func NewCheckoutService(
 		payments:  payments,
 		loyalty:   loyaltyRepo,
 		promo:     promo,
+		rw:        rw,
 	}
 }
 
@@ -138,6 +145,8 @@ type CreateRequest struct {
 	Provider string
 	// IdempotencyKey — содержимое заголовка Idempotency-Key.
 	IdempotencyKey string
+	// RenewExtraHwid — если true, при наличии активных extra_hwid добавляем их продление к счёту (как в Telegram-боте).
+	RenewExtraHwid bool
 }
 
 // CreateResult — ответ для POST /cabinet/api/payments/checkout.
@@ -161,6 +170,8 @@ type StatusResult struct {
 	PaymentURL       string     `json:"payment_url,omitempty"`
 	SubscriptionLink *string    `json:"subscription_link,omitempty"`
 	ExpireAt         *time.Time `json:"expire_at,omitempty"`
+	// PurchaseKind — при привязанном purchase (в т.ч. paid): для текста на странице статуса (подписка vs доп. HWID).
+	PurchaseKind string `json:"purchase_kind,omitempty"`
 }
 
 // PreviewResult — ответ GET /payments/preview: сумма с учётом upgrade/downgrade (как у бота).
@@ -183,6 +194,10 @@ type PreviewResult struct {
 	TariffSwitchBonusDays     int `json:"tariff_switch_bonus_days,omitempty"`     // остаток в днях по дневной цене нового тарифа
 	TariffSwitchPeriodDays    int `json:"tariff_switch_period_days,omitempty"`    // месяцы × DaysInMonth
 	TariffSwitchTotalDays     int `json:"tariff_switch_total_days,omitempty"`     // период + бонус
+	// Extra HWID renew (как в Telegram sell-flow): при наличии активных слотов можно включить/выключить продление.
+	ExtraHwidActive    int  `json:"extra_hwid_active,omitempty"`
+	ExtraHwidIncluded  bool `json:"extra_hwid_included,omitempty"`
+	ExtraHwidAmountRub int  `json:"extra_hwid_amount_rub,omitempty"`
 }
 
 // Create создаёт новый web-checkout или возвращает ранее выданный payment_url
@@ -234,7 +249,7 @@ func (s *CheckoutService) Create(ctx context.Context, accountID int64, req Creat
 		return nil, fmt.Errorf("payments: load account: %w", err)
 	}
 
-	amount, tariffID, extras, err := s.resolveAmount(ctx, customer, invoiceType, req)
+	amount, tariffID, extras, extraHwid, err := s.resolveAmount(ctx, customer, invoiceType, req)
 	if err != nil {
 		return nil, err
 	}
@@ -257,16 +272,32 @@ func (s *CheckoutService) Create(ctx context.Context, accountID int64, req Creat
 	returnURL := s.buildReturnURL(checkout.ID)
 	providerCtx := s.withProviderOverrides(ctx, provider, returnURL, acc)
 
-	paymentURL, purchaseID, err := s.payments.CreatePurchase(
-		providerCtx,
-		float64(amount),
-		req.Period,
-		customer,
-		invoiceType,
-		meta,
-		tariffID,
-		extras,
-	)
+	var paymentURL string
+	var purchaseID int64
+	if extraHwid > 0 {
+		paymentURL, purchaseID, err = s.payments.CreatePurchaseWithExtra(
+			providerCtx,
+			float64(amount),
+			req.Period,
+			extraHwid,
+			customer,
+			invoiceType,
+			meta,
+			tariffID,
+			extras,
+		)
+	} else {
+		paymentURL, purchaseID, err = s.payments.CreatePurchase(
+			providerCtx,
+			float64(amount),
+			req.Period,
+			customer,
+			invoiceType,
+			meta,
+			tariffID,
+			extras,
+		)
+	}
 	if err != nil {
 		// Checkout остался в 'new'. Можно попытаться отметить failed, но в MVP
 		// оставляем как есть: клиент может прислать тот же ключ ещё раз, а
@@ -329,6 +360,10 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		out.Currency = "RUB"
 	}
 
+	activeExtra := cabsvc.ActiveExtraSlots(customer)
+	out.ExtraHwidActive = activeExtra
+	out.ExtraHwidIncluded = reqBoolFalse(reqRenewExtraHwidFromContext(ctx))
+
 	if mode == "tariffs" {
 		if tariffID == nil || *tariffID <= 0 {
 			return nil, fmt.Errorf("%w: tariff_id required in tariffs mode", ErrInvalidInput)
@@ -346,6 +381,16 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		out.Scenario = tariffCheckoutScenario(kind)
 		if tp, err := s.tariffs.GetPrice(ctx, *tariffID, period); err == nil && tp != nil {
 			out.ListPriceRub = tp.AmountRub
+		}
+		if activeExtra > 0 && reqBoolFalse(reqRenewExtraHwidFromContext(ctx)) {
+			extra := s.subscriptionExtraAmount(period, invoiceType, activeExtra)
+			out.ExtraHwidAmountRub = extra
+			out.Amount += extra
+			out.AmountRub += extra
+			out.ExtraHwidIncluded = true
+			if out.ListPriceRub > 0 {
+				out.ListPriceRub += extra
+			}
 		}
 		if kind == payment.TariffCheckoutUpgrade || kind == payment.TariffCheckoutDowngrade {
 			if customer.CurrentTariffID != nil && *customer.CurrentTariffID > 0 {
@@ -383,6 +428,13 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		out.Scenario = "classic_renew"
 	} else {
 		out.Scenario = "classic_new"
+	}
+	if activeExtra > 0 && reqBoolFalse(reqRenewExtraHwidFromContext(ctx)) {
+		extra := s.subscriptionExtraAmount(period, invoiceType, activeExtra)
+		out.ExtraHwidAmountRub = extra
+		out.Amount += extra
+		out.AmountRub += extra
+		out.ExtraHwidIncluded = true
 	}
 	s.applyPreviewDiscounts(ctx, customer, invoiceType, out)
 	return out, nil
@@ -438,6 +490,12 @@ func (s *CheckoutService) GetStatus(ctx context.Context, accountID, checkoutID i
 		return nil, fmt.Errorf("payments: purchase %d missing", *checkout.PurchaseID)
 	}
 
+	kind := string(purchase.PurchaseKind)
+	if purchase.Month <= 0 && purchase.ExtraHwid > 0 {
+		kind = string(database.PurchaseKindExtraHwid)
+	}
+	result.PurchaseKind = kind
+
 	desired := checkoutStatusForPurchase(purchase.Status)
 	if desired != "" && desired != checkout.Status {
 		if err := s.checkouts.UpdateStatus(ctx, checkout.ID, desired); err != nil {
@@ -463,6 +521,232 @@ func (s *CheckoutService) GetStatus(ctx context.Context, accountID, checkoutID i
 	}
 
 	return result, nil
+}
+
+// HwidPreviewResult — ответ GET /cabinet/api/payments/hwid/preview.
+type HwidPreviewResult struct {
+	CurrentLimit       int    `json:"current_limit"`
+	TargetLimit        int    `json:"target_limit"`
+	Delta              int    `json:"delta"`
+	DaysLeft           int    `json:"days_left"`
+	AmountRub          int    `json:"amount_rub"`
+	BaseAmountRub      int    `json:"base_amount_rub"`
+	Currency           string `json:"currency"`
+	LoyaltyDiscountPct int    `json:"loyalty_discount_pct,omitempty"`
+	PromoDiscountPct   int    `json:"promo_discount_pct,omitempty"`
+	TotalDiscountPct   int    `json:"total_discount_pct,omitempty"`
+}
+
+// HwidCreateRequest — тело POST /cabinet/api/payments/hwid/checkout.
+type HwidCreateRequest struct {
+	TargetLimit    int
+	Provider       string
+	IdempotencyKey string
+}
+
+func (s *CheckoutService) validateHwidIdempotencyKey(key string) error {
+	l := len(key)
+	if l < s.cfg.MinIdempotencyKeyLen || l > s.cfg.MaxIdempotencyKeyLen {
+		return fmt.Errorf(
+			"%w: idempotency key must be between %d and %d chars",
+			ErrInvalidInput, s.cfg.MinIdempotencyKeyLen, s.cfg.MaxIdempotencyKeyLen,
+		)
+	}
+	return nil
+}
+
+func (s *CheckoutService) hwidPrecheck(ctx context.Context, accountID int64) (*database.Customer, cabsvc.HwidExtraLimits, error) {
+	if s.rw == nil {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: remnawave unavailable", ErrInvalidInput)
+	}
+	if !config.HwidExtraDevicesEnabled() {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: extra devices disabled", ErrInvalidInput)
+	}
+	link, err := s.bootstrap.EnsureForAccount(ctx, accountID, "")
+	if err != nil {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("payments: bootstrap customer: %w", err)
+	}
+	customer, err := s.customers.FindById(ctx, link.CustomerID)
+	if err != nil {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("payments: load customer: %w", err)
+	}
+	if customer == nil {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("payments: customer missing")
+	}
+	if customer.IsWebOnly || utils.IsSyntheticTelegramID(customer.TelegramID) {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: not available for this account", ErrForbidden)
+	}
+	paid, err := s.purchases.HasPaidSubscription(ctx, customer.ID)
+	if err != nil {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("payments: paid check: %w", err)
+	}
+	if !paid {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: paid subscription required", ErrInvalidInput)
+	}
+	now := time.Now()
+	if customer.ExpireAt == nil || !customer.ExpireAt.After(now) {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: subscription inactive", ErrInvalidInput)
+	}
+	if err := cabsvc.CleanupExpiredExtraHwid(ctx, s.rw, s.customers, customer); err != nil {
+		return nil, cabsvc.HwidExtraLimits{}, err
+	}
+	if fresh, ferr := s.customers.FindById(ctx, customer.ID); ferr == nil && fresh != nil {
+		customer = fresh
+	}
+	u, err := s.rw.GetUserTrafficInfo(ctx, customer.TelegramID)
+	if err != nil {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("remnawave: %w", err)
+	}
+	lim := cabsvc.BuildHwidExtraLimits(customer, u)
+	return customer, lim, nil
+}
+
+// PreviewHwid считает сумму докупки устройств без создания счёта.
+func (s *CheckoutService) PreviewHwid(ctx context.Context, accountID int64, targetLimit int, provider string) (*HwidPreviewResult, error) {
+	if targetLimit <= 0 {
+		return nil, fmt.Errorf("%w: bad target_limit", ErrInvalidInput)
+	}
+	if provider == "" {
+		provider = repository.CheckoutProviderYookassa
+	}
+	invoiceType, err := mapProviderToInvoiceType(provider)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureProviderEnabled(provider); err != nil {
+		return nil, err
+	}
+	customer, lim, err := s.hwidPrecheck(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if lim.MaxCap <= 0 || lim.CurrentLimit >= lim.MaxCap {
+		return nil, fmt.Errorf("%w: cannot add devices (check HWID_MAX_DEVICE)", ErrInvalidInput)
+	}
+	if targetLimit <= lim.CurrentLimit {
+		return nil, fmt.Errorf("%w: target must exceed current limit", ErrInvalidInput)
+	}
+	if targetLimit > lim.MaxCap {
+		return nil, fmt.Errorf("%w: exceeds max devices", ErrInvalidInput)
+	}
+	if lim.DaysLeft <= 0 {
+		return nil, fmt.Errorf("%w: subscription ended", ErrInvalidInput)
+	}
+	delta := targetLimit - lim.CurrentLimit
+	priceMonth := config.HwidAddPrice()
+	if invoiceType == database.InvoiceTypeTelegram {
+		priceMonth = config.HwidAddStarsPrice()
+	}
+	base := cabsvc.CalcHwidProportionalRub(priceMonth, delta, lim.DaysLeft)
+	final, loyPct, proPct, _ := s.applyCheckoutDiscounts(ctx, customer, invoiceType, base)
+	out := &HwidPreviewResult{
+		CurrentLimit:  lim.CurrentLimit,
+		TargetLimit:   targetLimit,
+		Delta:         delta,
+		DaysLeft:      lim.DaysLeft,
+		AmountRub:     final,
+		BaseAmountRub: base,
+		LoyaltyDiscountPct: loyPct,
+		PromoDiscountPct:   proPct,
+	}
+	cap := config.LoyaltyMaxTotalDiscountPercent()
+	out.TotalDiscountPct = loyalty.CombinedDiscountPercent(loyPct, proPct, cap)
+	if invoiceType == database.InvoiceTypeTelegram {
+		out.Currency = "STARS"
+	} else {
+		out.Currency = "RUB"
+	}
+	return out, nil
+}
+
+// CreateHwid создаёт счёт на докупку HWID (как Telegram AddDevicePayment).
+func (s *CheckoutService) CreateHwid(ctx context.Context, accountID int64, req HwidCreateRequest) (*CreateResult, error) {
+	if err := s.validateHwidIdempotencyKey(req.IdempotencyKey); err != nil {
+		return nil, err
+	}
+	if req.TargetLimit <= 0 {
+		return nil, fmt.Errorf("%w: bad target_limit", ErrInvalidInput)
+	}
+	provider := strings.ToLower(strings.TrimSpace(req.Provider))
+	if provider == "" {
+		provider = repository.CheckoutProviderYookassa
+	}
+	invoiceType, err := mapProviderToInvoiceType(provider)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureProviderEnabled(provider); err != nil {
+		return nil, err
+	}
+
+	if existing, err := s.checkouts.FindByIdempotencyKey(ctx, accountID, req.IdempotencyKey); err == nil {
+		return s.reuseExisting(ctx, existing)
+	} else if !errors.Is(err, repository.ErrNotFound) {
+		return nil, fmt.Errorf("payments: find existing: %w", err)
+	}
+
+	customer, lim, err := s.hwidPrecheck(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if lim.MaxCap <= 0 || lim.CurrentLimit >= lim.MaxCap {
+		return nil, fmt.Errorf("%w: cannot add devices (check HWID_MAX_DEVICE)", ErrInvalidInput)
+	}
+	if req.TargetLimit <= lim.CurrentLimit {
+		return nil, fmt.Errorf("%w: target must exceed current limit", ErrInvalidInput)
+	}
+	if req.TargetLimit > lim.MaxCap {
+		return nil, fmt.Errorf("%w: exceeds max devices", ErrInvalidInput)
+	}
+	if lim.DaysLeft <= 0 {
+		return nil, fmt.Errorf("%w: subscription ended", ErrInvalidInput)
+	}
+	delta := req.TargetLimit - lim.CurrentLimit
+	priceMonth := config.HwidAddPrice()
+	if invoiceType == database.InvoiceTypeTelegram {
+		priceMonth = config.HwidAddStarsPrice()
+	}
+	base := cabsvc.CalcHwidProportionalRub(priceMonth, delta, lim.DaysLeft)
+	amount, _, _, meta := s.applyCheckoutDiscounts(ctx, customer, invoiceType, base)
+
+	checkout, err := s.checkouts.Create(ctx, accountID, req.IdempotencyKey, provider)
+	if err != nil {
+		if errors.Is(err, repository.ErrCheckoutConflict) {
+			existing, ferr := s.checkouts.FindByIdempotencyKey(ctx, accountID, req.IdempotencyKey)
+			if ferr != nil {
+				return nil, fmt.Errorf("payments: read after conflict: %w", ferr)
+			}
+			return s.reuseExisting(ctx, existing)
+		}
+		return nil, fmt.Errorf("payments: create checkout: %w", err)
+	}
+
+	returnURL := s.buildReturnURL(checkout.ID)
+	acc, err := s.accounts.FindByID(ctx, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("payments: load account: %w", err)
+	}
+	providerCtx := s.withProviderOverrides(ctx, provider, returnURL, acc)
+
+	paymentURL, purchaseID, err := s.payments.CreateHwidPurchase(providerCtx, float64(amount), delta, customer, invoiceType, meta)
+	if err != nil {
+		return nil, fmt.Errorf("payments: create hwid purchase: %w", err)
+	}
+
+	if err := s.checkouts.AttachPurchase(ctx, checkout.ID, purchaseID, returnURL); err != nil {
+		slog.Error("payments: hwid attach purchase failed",
+			"checkout_id", checkout.ID,
+			"purchase_id", purchaseID,
+			"error", err,
+		)
+	}
+
+	return &CreateResult{
+		CheckoutID: checkout.ID,
+		Provider:   provider,
+		Status:     repository.CheckoutStatusPending,
+		PaymentURL: paymentURL,
+	}, nil
 }
 
 // ============================================================================
@@ -557,37 +841,71 @@ func (s *CheckoutService) resolveAmount(
 	customer *database.Customer,
 	invoiceType database.InvoiceType,
 	req CreateRequest,
-) (amount int, tariffID *int64, extras *payment.TariffPurchaseExtras, err error) {
+) (amount int, tariffID *int64, extras *payment.TariffPurchaseExtras, extraHwid int, err error) {
 	invoiceStars := invoiceType == database.InvoiceTypeTelegram
+	activeExtra := cabsvc.ActiveExtraSlots(customer)
+	if req.RenewExtraHwid && activeExtra > 0 {
+		extraHwid = activeExtra
+	}
 	if config.SalesMode() == "tariffs" {
 		if req.TariffID == nil || *req.TariffID <= 0 {
-			return 0, nil, nil, fmt.Errorf("%w: tariff_id required in tariffs mode", ErrInvalidInput)
+			return 0, nil, nil, 0, fmt.Errorf("%w: tariff_id required in tariffs mode", ErrInvalidInput)
 		}
 		_, amt, kind, isEarly, rerr := payment.ResolveTariffPurchase(
 			ctx, s.tariffs, customer, *req.TariffID, req.Period, invoiceStars,
 		)
 		if rerr != nil {
-			return 0, nil, nil, fmt.Errorf("payments: resolve tariff: %w", rerr)
+			return 0, nil, nil, 0, fmt.Errorf("payments: resolve tariff: %w", rerr)
 		}
 		extras = &payment.TariffPurchaseExtras{Kind: kind, IsEarlyDowngrade: isEarly}
 		tariffID = req.TariffID
 		amount = amt
-		return amount, tariffID, extras, nil
+		amount += s.subscriptionExtraAmount(req.Period, invoiceType, extraHwid)
+		return amount, tariffID, extras, extraHwid, nil
 	}
 
 	// classic
 	if invoiceStars {
 		price := config.StarsPrice(req.Period)
 		if price <= 0 {
-			return 0, nil, nil, fmt.Errorf("payments: no stars price configured for %d months", req.Period)
+			return 0, nil, nil, 0, fmt.Errorf("payments: no stars price configured for %d months", req.Period)
 		}
-		return price, nil, nil, nil
+		return price + s.subscriptionExtraAmount(req.Period, invoiceType, extraHwid), nil, nil, extraHwid, nil
 	}
 	price := config.Price(req.Period)
 	if price <= 0 {
-		return 0, nil, nil, fmt.Errorf("payments: no price configured for %d months", req.Period)
+		return 0, nil, nil, 0, fmt.Errorf("payments: no price configured for %d months", req.Period)
 	}
-	return price, nil, nil, nil
+	return price + s.subscriptionExtraAmount(req.Period, invoiceType, extraHwid), nil, nil, extraHwid, nil
+}
+
+type renewExtraCtxKey struct{}
+
+// WithPreviewRenewExtraHwid прокидывает флаг из HTTP preview-query в сервис расчёта.
+func WithPreviewRenewExtraHwid(ctx context.Context, renew bool) context.Context {
+	return context.WithValue(ctx, renewExtraCtxKey{}, renew)
+}
+
+func reqRenewExtraHwidFromContext(ctx context.Context) *bool {
+	v, ok := ctx.Value(renewExtraCtxKey{}).(bool)
+	if !ok {
+		return nil
+	}
+	return &v
+}
+
+func reqBoolFalse(v *bool) bool {
+	return v != nil && *v
+}
+
+func (s *CheckoutService) subscriptionExtraAmount(period int, invoiceType database.InvoiceType, extra int) int {
+	if period <= 0 || extra <= 0 {
+		return 0
+	}
+	if invoiceType == database.InvoiceTypeTelegram {
+		return config.HwidAddStarsPrice() * extra * period
+	}
+	return config.HwidAddPrice() * extra * period
 }
 
 // buildReturnURL собирает URL, на который провайдер вернёт пользователя после
