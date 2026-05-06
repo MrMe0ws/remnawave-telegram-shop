@@ -123,7 +123,7 @@ function TariffsGrid({
   return (
     <div className={cn(
       'grid gap-4',
-      cardPeriods.length === 1 ? 'max-w-xs' : cardPeriods.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+      cardPeriods.length === 1 ? 'max-w-xs' : cardPeriods.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-4xl',
     )}>
       {cardPeriods.map((periods) => (
         <TariffPlanCard key={periods[0].slug} periods={periods} onChoosePlan={onChoosePlan} sub={sub} />
@@ -527,7 +527,7 @@ function isSubscriptionActive(expireAt: string | null | undefined): boolean {
 
 function TariffsSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {[1, 2, 3].map((i) => (
         <Card key={i} className="animate-pulse">
           <CardHeader>

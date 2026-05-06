@@ -616,6 +616,42 @@ func (cr *CustomerRepository) DeleteByID(ctx context.Context, id int64) error {
 	return nil
 }
 
+// DeleteByIDWithCabinetCascade удаляет клиента и связанные cabinet_account (если есть link),
+// чтобы пользователь мог заново зайти через Telegram как "новый".
+func (cr *CustomerRepository) DeleteByIDWithCabinetCascade(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return fmt.Errorf("invalid customer id")
+	}
+	tx, err := cr.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin delete customer with cabinet tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM cabinet_account
+		WHERE id IN (
+			SELECT account_id
+			FROM cabinet_account_customer_link
+			WHERE customer_id = $1
+		)
+	`, id); err != nil {
+		return fmt.Errorf("delete linked cabinet accounts: %w", err)
+	}
+
+	ct, err := tx.Exec(ctx, `DELETE FROM customer WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete customer: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("customer not found")
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit delete customer with cabinet tx: %w", err)
+	}
+	return nil
+}
+
 func (cr *CustomerRepository) GetAllTelegramIds(ctx context.Context) ([]int64, error) {
 	buildSelect := sq.Select("telegram_id").
 		From("customer").
