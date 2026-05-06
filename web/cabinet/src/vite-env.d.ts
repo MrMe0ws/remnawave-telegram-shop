@@ -4,9 +4,13 @@
 interface TelegramWebApp {
   initData: string
   initDataUnsafe: Record<string, unknown>
+  /** Например: ios, android, macos, tdesktop, weba, webk, unknown */
+  platform?: string
   ready: () => void
   expand?: () => void
   close?: () => void
+  /** Открыть https-ссылку во внешнем браузере (нужно для обхода webview Desktop). */
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void
 }
 
 interface TelegramNamespace {

@@ -251,6 +251,14 @@ export default {
       openSubscriptionPage: 'Open subscription page',
       noLink: 'No subscription link yet. Buy a plan or activate a trial.',
       backToSubscription: 'Back to subscription summary',
+      deepLinkTitle: 'Opening the app',
+      deepLinkIntro:
+        'Use the button below or wait for the automatic redirect.',
+      deepLinkCountdown: 'Redirecting in {{seconds}} s…',
+      deepLinkOpenApp: 'Open in app',
+      deepLinkCancel: 'Cancel',
+      deepLinkInvalidTitle: 'Invalid link',
+      deepLinkInvalidHint: 'This URL cannot be opened safely. Go back to the guide and try again.',
     },
     payments: {
       title: 'Payments',

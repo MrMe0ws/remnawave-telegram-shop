@@ -25,6 +25,7 @@ import LinkEmailPage from '@/features/settings/LinkEmailPage'
 import MergePreviewPage from '@/features/settings/MergePreviewPage'
 import ProfilePage from '@/features/profile/ProfilePage'
 import ConnectionsPage from '@/features/connections/ConnectionsPage'
+import DeepLinkRedirectPage from '@/features/connections/DeepLinkRedirectPage'
 import ReferralProgramPage from '@/features/referral/ReferralProgramPage'
 import LoyaltyProgramPage from '@/features/loyalty/LoyaltyProgramPage'
 import PaymentsHistoryPage from '@/features/payments/PaymentsHistoryPage'
@@ -49,19 +50,22 @@ const PUBLIC_AUTH_PATHS = new Set([
   '/password/reset',
 ])
 
+/** Показывать оболочку до init auth (публичные страницы + deeplink без сессии). */
+const PUBLIC_SHELL_PATHS = new Set([...PUBLIC_AUTH_PATHS, '/deeplink'])
+
 function normalizePath(pathname: string): string {
   const p = (pathname || '/').replace(/\/+$/, '')
   return p === '' ? '/' : p
 }
 
-function isPublicAuthPath(pathname: string): boolean {
-  return PUBLIC_AUTH_PATHS.has(normalizePath(pathname))
+function isPublicShellPath(pathname: string): boolean {
+  return PUBLIC_SHELL_PATHS.has(normalizePath(pathname))
 }
 
 function AppRoutes() {
   const location = useLocation()
   const { initialized, initialize } = useAuthStore()
-  const showAuthShellEarly = isPublicAuthPath(location.pathname)
+  const showAuthShellEarly = isPublicShellPath(location.pathname)
 
   useEffect(() => {
     void initialize()
@@ -83,6 +87,9 @@ function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/password/forgot" element={<ForgotPasswordPage />} />
       <Route path="/password/reset" element={<ResetPasswordPage />} />
+
+      {/* Публичная страница редиректа на custom scheme — открывается из мини-приложения во внешнем браузере (без сессии). */}
+      <Route path="/deeplink" element={<DeepLinkRedirectPage />} />
 
       {/* ── Protected routes ───────────────────────────── */}
       <Route

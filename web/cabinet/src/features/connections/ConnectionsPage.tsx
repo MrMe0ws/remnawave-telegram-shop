@@ -22,6 +22,7 @@ import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { needsTelegramDeepLinkWorkaround, openCabinetDeepLinkRedirectExternally } from '@/lib/deep-link-redirect'
 
 type Lang = 'ru' | 'en'
 type PlatformKey = string
@@ -298,6 +299,10 @@ export default function ConnectionsPage() {
     if (!scheme) return
     const payload = subscriptionPayloadForScheme(scheme, subscriptionLink, selectedApp.isNeedBase64Encoding)
     const href = `${scheme}${payload}`
+    if (needsTelegramDeepLinkWorkaround()) {
+      openCabinetDeepLinkRedirectExternally(href)
+      return
+    }
     window.open(href, '_blank', 'noopener,noreferrer')
   }
 

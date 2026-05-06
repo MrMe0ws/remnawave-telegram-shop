@@ -354,6 +354,14 @@ export default {
       openSubscriptionPage: 'Открыть страницу подписки',
       noLink: 'У вас ещё нет ссылки подписки. Оформите подписку или активируйте пробный период.',
       backToSubscription: 'К сводке подписки',
+      deepLinkTitle: 'Открытие приложения',
+      deepLinkIntro:
+        'Нажмите кнопку ниже или дождитесь автоматического перехода.',
+      deepLinkCountdown: 'Автоматический переход через {{seconds}} с…',
+      deepLinkOpenApp: 'Открыть в приложении',
+      deepLinkCancel: 'Отмена',
+      deepLinkInvalidTitle: 'Некорректная ссылка',
+      deepLinkInvalidHint: 'Не удалось безопасно открыть эту ссылку. Вернитесь к гайду и попробуйте снова.',
     },
     payments: {
       title: 'Платежи',
