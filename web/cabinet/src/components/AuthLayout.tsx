@@ -18,7 +18,7 @@ export function AuthLayout({ children, showHeaderLogo = true }: AuthLayoutProps)
     (data?.brand_name?.trim() || defaultBrand).trim() || defaultBrand
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="relative flex min-h-dvh flex-col">
       {/* Top bar */}
       <header className={`flex items-center px-4 py-2 sm:px-5 sm:py-2.5 ${showHeaderLogo ? 'justify-between' : 'justify-end'}`}>
         {showHeaderLogo && (
