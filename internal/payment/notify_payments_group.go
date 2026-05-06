@@ -184,9 +184,37 @@ func promoLine(p *database.Purchase) string {
 	return b.String()
 }
 
-func tariffLine(p *database.Purchase) string {
+func loyaltyLine(loyaltyPct int) string {
+	if loyaltyPct <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("🎯 лояльность: −%d%%", loyaltyPct)
+}
+
+func tariffDisplayName(ctx context.Context, repo *database.TariffRepository, tariffID int64) string {
+	if repo == nil || tariffID <= 0 {
+		return ""
+	}
+	t, err := repo.GetByID(ctx, tariffID)
+	if err != nil || t == nil {
+		return ""
+	}
+	if t.Name == nil {
+		return ""
+	}
+	name := strings.TrimSpace(*t.Name)
+	if name == "" {
+		return ""
+	}
+	return name
+}
+
+func tariffLine(ctx context.Context, p *database.Purchase, repo *database.TariffRepository) string {
 	if p == nil || p.TariffID == nil || *p.TariffID <= 0 {
 		return "📦 " + string(p.PurchaseKind) + fmt.Sprintf(" · HWID +%d", p.ExtraHwid)
+	}
+	if name := tariffDisplayName(ctx, repo, *p.TariffID); name != "" {
+		return fmt.Sprintf("📦 %s · HWID +%d · тариф «%s»", p.PurchaseKind, p.ExtraHwid, html.EscapeString(name))
 	}
 	return fmt.Sprintf("📦 %s · HWID +%d · тариф #%d", p.PurchaseKind, p.ExtraHwid, *p.TariffID)
 }
@@ -279,16 +307,14 @@ func providerExtrasFromCtx(ctx context.Context, p *database.Purchase) string {
 	return b.String()
 }
 
-func buildPaidGroupMessage(ctx context.Context, p *database.Purchase, c *database.Customer, cabinet bool, expireBefore, expireAfter *time.Time) string {
+func buildPaidGroupMessage(ctx context.Context, p *database.Purchase, c *database.Customer, cabinet bool, expireBefore, expireAfter *time.Time, tariffRepo *database.TariffRepository, loyaltyPct int) string {
 	var b strings.Builder
 	b.WriteString("✅ Оплата\n\n")
 	b.WriteString(fmt.Sprintf("🧾 #%d · paid · %s\n", p.ID, invoiceTypeTitle(p.InvoiceType)))
 	b.WriteString(amountPeriodLine(p) + "\n")
-	b.WriteString(tariffLine(p) + "\n")
-	if p.IsEarlyDowngrade {
-		b.WriteString("↘️ ранний даунгрейд: да\n")
-	} else {
-		b.WriteString("↘️ ранний даунгрейд: нет\n")
+	b.WriteString(tariffLine(ctx, p, tariffRepo) + "\n")
+	if ll := loyaltyLine(loyaltyPct); ll != "" {
+		b.WriteString(ll + "\n")
 	}
 	if pl := promoLine(p); pl != "" {
 		b.WriteString(pl + "\n")
@@ -305,16 +331,14 @@ func buildPaidGroupMessage(ctx context.Context, p *database.Purchase, c *databas
 	return b.String()
 }
 
-func buildCancelGroupMessage(p *database.Purchase, c *database.Customer, cabinet bool) string {
+func buildCancelGroupMessage(ctx context.Context, p *database.Purchase, c *database.Customer, cabinet bool, tariffRepo *database.TariffRepository, loyaltyPct int) string {
 	var b strings.Builder
 	b.WriteString("❌ Счёт отменён\n\n")
 	b.WriteString(fmt.Sprintf("🧾 #%d · cancel · %s\n", p.ID, invoiceTypeTitle(p.InvoiceType)))
 	b.WriteString(amountPeriodLine(p) + "\n")
-	b.WriteString(tariffLine(p) + "\n")
-	if p.IsEarlyDowngrade {
-		b.WriteString("↘️ ранний даунгрейд: да\n")
-	} else {
-		b.WriteString("↘️ ранний даунгрейд: нет\n")
+	b.WriteString(tariffLine(ctx, p, tariffRepo) + "\n")
+	if ll := loyaltyLine(loyaltyPct); ll != "" {
+		b.WriteString(ll + "\n")
 	}
 	if pl := promoLine(p); pl != "" {
 		b.WriteString(pl + "\n")
@@ -377,6 +401,24 @@ func (s *PaymentService) paymentsNotifyToUserReplyMarkup(customerID int64) model
 	}}
 }
 
+func (s *PaymentService) loyaltyDiscountPercentForNotify(ctx context.Context, p *database.Purchase, c *database.Customer) int {
+	if s == nil || s.loyaltyTierRepository == nil || p == nil || c == nil || p.DiscountPercentApplied == nil || *p.DiscountPercentApplied <= 0 {
+		return 0
+	}
+	prog, err := s.loyaltyTierRepository.ProgressForXP(ctx, c.LoyaltyXP)
+	if err != nil {
+		return 0
+	}
+	pct := prog.CurrentTier.DiscountPercent
+	if pct <= 0 {
+		return 0
+	}
+	if pct > *p.DiscountPercentApplied {
+		pct = *p.DiscountPercentApplied
+	}
+	return pct
+}
+
 // tryNotifyPurchasePaid — уведомление в группу после успешной оплаты (не влияет на результат покупки).
 func (s *PaymentService) tryNotifyPurchasePaid(ctx context.Context, p *database.Purchase, c *database.Customer, expireBefore, expireAfter *time.Time) {
 	if p == nil || c == nil || !config.PaymentsNotifySendPaid() {
@@ -387,7 +429,8 @@ func (s *PaymentService) tryNotifyPurchasePaid(ctx context.Context, p *database.
 		slog.Warn("payments notify: cabinet_checkout lookup", "error", err)
 		cabinet = false
 	}
-	msg := buildPaidGroupMessage(ctx, p, c, cabinet, expireBefore, expireAfter)
+	loyaltyPct := s.loyaltyDiscountPercentForNotify(ctx, p, c)
+	msg := buildPaidGroupMessage(ctx, p, c, cabinet, expireBefore, expireAfter, s.tariffRepository, loyaltyPct)
 	s.sendPaymentsGroupHTML(ctx, msg, s.paymentsNotifyToUserReplyMarkup(c.ID))
 }
 
@@ -408,7 +451,8 @@ func (s *PaymentService) tryNotifyPurchaseCancel(ctx context.Context, p *databas
 		slog.Warn("payments notify cancel: cabinet_checkout lookup", "error", err)
 		cabinet = false
 	}
-	msg := buildCancelGroupMessage(p, c, cabinet)
+	loyaltyPct := s.loyaltyDiscountPercentForNotify(ctx, p, c)
+	msg := buildCancelGroupMessage(ctx, p, c, cabinet, s.tariffRepository, loyaltyPct)
 	var markup models.ReplyMarkup
 	if c != nil {
 		markup = s.paymentsNotifyToUserReplyMarkup(c.ID)
