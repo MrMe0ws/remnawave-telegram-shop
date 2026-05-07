@@ -86,7 +86,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const logout = useAuthStore((s) => s.logout)
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [mobileChromeVisible, setMobileChromeVisible] = useState(true)
   const menuRef = useRef<HTMLDivElement>(null)
+  const lastScrollYRef = useRef(0)
+  const scrollTickingRef = useRef(false)
+  const lastTouchYRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -103,6 +107,79 @@ export function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    setMobileChromeVisible(true)
+  }, [location.pathname])
+
+  useEffect(() => {
+    const mobileMq = window.matchMedia('(max-width: 639px)')
+
+    function updateMobileChromeVisibility() {
+      const y = window.scrollY
+      const prevY = lastScrollYRef.current
+      const delta = y - prevY
+      const nearTop = y <= 8
+
+      if (!mobileMq.matches) {
+        setMobileChromeVisible((prev) => (prev ? prev : true))
+        lastScrollYRef.current = y
+        scrollTickingRef.current = false
+        return
+      }
+
+      if (nearTop || delta < -4) {
+        setMobileChromeVisible(true)
+      } else if (delta > 6 && y > 40) {
+        setMobileChromeVisible(false)
+      }
+
+      lastScrollYRef.current = y
+      scrollTickingRef.current = false
+    }
+
+    function onScroll() {
+      if (scrollTickingRef.current) return
+      scrollTickingRef.current = true
+      window.requestAnimationFrame(updateMobileChromeVisibility)
+    }
+
+    function onResize() {
+      lastScrollYRef.current = window.scrollY
+      setMobileChromeVisible(true)
+    }
+
+    function onTouchStart(e: TouchEvent) {
+      if (!mobileMq.matches) return
+      lastTouchYRef.current = e.touches[0]?.clientY ?? null
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!mobileMq.matches) return
+      const currentY = e.touches[0]?.clientY
+      const prevY = lastTouchYRef.current
+      if (currentY == null || prevY == null) return
+      const deltaY = currentY - prevY
+      if (deltaY > 6) {
+        // Пользователь скроллит страницу вверх: сразу возвращаем шапку сайта,
+        // даже если window.scrollY ещё почти не изменился из-за анимации браузера.
+        setMobileChromeVisible(true)
+      }
+      lastTouchYRef.current = currentY
+    }
+
+    lastScrollYRef.current = window.scrollY
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize)
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -134,9 +211,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="relative flex h-dvh max-h-dvh flex-col overflow-hidden">
+    <div className="relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
-      <header className="relative z-50 isolate shrink-0 border-b border-border bg-card/60 backdrop-blur-sm shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]">
+      <header
+        className={cn(
+          'sticky top-0 z-50 isolate shrink-0 border-b border-border bg-card/60 backdrop-blur-sm shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-transform duration-300 will-change-transform',
+          !mobileChromeVisible && !menuOpen && 'max-sm:-translate-y-full',
+        )}
+      >
         <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
           <Link
             to="/dashboard"
@@ -326,7 +408,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden touch-pan-y">
+      <div className="min-h-0 flex-1 overflow-x-hidden touch-pan-y">
         <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(1rem,calc(5.75rem+env(safe-area-inset-bottom)))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
           {children}
         </div>
