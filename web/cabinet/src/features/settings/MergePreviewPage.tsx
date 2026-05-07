@@ -189,7 +189,7 @@ export default function MergePreviewPage() {
 
         {typeof document !== 'undefined' && showDoneToast
           ? createPortal(
-              <div className="fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-emerald-400/50 bg-background/95 px-4 py-3 text-sm font-medium text-emerald-400 shadow-2xl backdrop-blur-sm">
+              <div className="fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-emerald-400/50 bg-background/95 px-4 py-3 text-sm font-medium text-emerald-400 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-4 shrink-0" />
                   <span>{t('merge.success')}</span>
@@ -200,7 +200,7 @@ export default function MergePreviewPage() {
           : null}
         {typeof document !== 'undefined' && (error || loadErr) && !showDoneToast
           ? createPortal(
-              <div className="fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-destructive/40 bg-background/95 px-4 py-3 text-sm font-medium text-destructive shadow-2xl backdrop-blur-sm">
+              <div className="fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-destructive/40 bg-background/95 px-4 py-3 text-sm font-medium text-destructive shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                   <XCircle className="size-4 shrink-0" />
                   <span>{error || t('errors.unknown')}</span>

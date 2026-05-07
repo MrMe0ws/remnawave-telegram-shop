@@ -136,7 +136,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="relative flex h-dvh max-h-dvh flex-col overflow-hidden">
       <div className="cabinet-shell-gradient" aria-hidden />
-      <header className="relative z-50 isolate shrink-0 border-b border-border bg-card/60 backdrop-blur-sm shadow-[0_4px_30px_rgba(0,0,0,0.4),inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+      <header className="relative z-50 isolate shrink-0 border-b border-border bg-card/60 backdrop-blur-sm shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]">
         <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
           <Link
             to="/dashboard"
@@ -212,7 +212,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {menuOpen && (
                 <div
                   role="menu"
-                  className="hidden sm:block absolute right-0 top-full mt-1.5 min-w-[14rem] rounded-lg border border-border bg-card py-1 shadow-2xl z-[500] ring-1 ring-border/60"
+                  className="hidden sm:block absolute right-0 top-full mt-1.5 min-w-[14rem] rounded-lg border border-border bg-card py-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] z-[500] ring-1 ring-border/60"
                 >
                   {overflowNavItems.map(({ to, icon: Icon, labelKey }) => {
                     const label = t(labelKey)
@@ -310,7 +310,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           onClick={() => setLogoutConfirmOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-border bg-background/95 p-4 shadow-2xl"
+            className="w-full max-w-sm rounded-2xl border border-border bg-background/95 p-4 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-4 text-base font-medium text-foreground">{t('nav.logoutConfirmTitle')}</p>
@@ -336,7 +336,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         className="fixed inset-x-0 bottom-0 z-50 sm:hidden px-2 pb-2 pointer-events-none"
         aria-label={t('nav.mobile')}
       >
-        <div className="pointer-events-auto flex items-stretch justify-around gap-0 overflow-x-auto rounded-2xl border border-border bg-card/95 px-1 py-1.5 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.4),inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+        <div className="pointer-events-auto flex items-stretch justify-around gap-0 overflow-x-auto rounded-2xl border border-border bg-card/95 px-1 py-1.5 backdrop-blur-md shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]">
           {mobileBottomNavItems.map(({ to, icon: Icon, labelKey, activePrefixes }) => {
             const active = navItemActive(location.pathname, { to, icon: Icon, labelKey, activePrefixes })
             const label = t(labelKey)

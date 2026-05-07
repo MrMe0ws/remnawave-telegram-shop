@@ -113,7 +113,7 @@ export default function SubscriptionPage() {
           </Card>
         ) : (
           <div className="space-y-6">
-            <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_10px_28px_rgba(8,22,46,.26),inset_0_1px_0_rgba(255,255,255,.04)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
+            <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
               <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -255,7 +255,7 @@ export default function SubscriptionPage() {
             {!isExpired && (
               <Link
                 to="/tariffs"
-                className="connect-device-cta group block rounded-xl shadow-[0_10px_28px_rgba(8,22,46,.26),inset_0_1px_0_rgba(255,255,255,.04)]"
+                className="connect-device-cta group block rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
               >
                 <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
                   <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))]">
@@ -334,7 +334,7 @@ export default function SubscriptionPage() {
             {deleteConfirmHwid && typeof document !== 'undefined'
               ? createPortal(
                   <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm p-4">
+                    <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm p-4">
                       <p className="text-base font-medium text-foreground mb-4">
                         {t('subscriptionPage.deleteDeviceConfirm')}
                       </p>

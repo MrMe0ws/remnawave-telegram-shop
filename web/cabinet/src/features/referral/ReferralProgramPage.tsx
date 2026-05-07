@@ -233,7 +233,7 @@ function CopyRow({
             <Button
               type="button"
               size="sm"
-              className="shrink-0 gap-1 shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
+              className="shrink-0 gap-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
               onClick={onShare}
             >
               <Upload size={14} strokeWidth={1.5} />

@@ -163,13 +163,13 @@ function TariffPlanCard({
         }
       }}
       className={cn(
-        'relative flex flex-col transition-all hover:shadow-[0_10px_28px_rgba(14,169,241,0.25)] hover:brightness-110 active:scale-[0.98] cursor-pointer',
-        head.is_popular && 'border-primary/50 shadow-primary/10 shadow-lg',
+        'relative flex flex-col transition-all hover:brightness-105 active:scale-[0.98] cursor-pointer',
+        head.is_popular && 'border-primary/50',
       )}
     >
       {head.is_popular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="gap-1 shadow-md">
+          <Badge className="gap-1">
             <Zap size={10} />
             {t('tariffs.popular')}
           </Badge>
@@ -426,13 +426,13 @@ function PeriodCard({
   return (
     <Card
       className={cn(
-        'relative flex flex-col transition-shadow hover:shadow-xl',
-        tariff.is_popular && 'border-primary/50 shadow-primary/10 shadow-lg',
+        'relative flex flex-col transition-shadow',
+        tariff.is_popular && 'border-primary/50',
       )}
     >
       {tariff.is_popular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <Badge className="gap-1 shadow-md">
+          <Badge className="gap-1">
             <Zap size={10} />
             {t('tariffs.popular')}
           </Badge>

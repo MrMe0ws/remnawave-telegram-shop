@@ -243,8 +243,8 @@ export default function SettingsPage() {
               <div
                 className={
                   noticeError
-                    ? 'fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-destructive/40 bg-background/95 px-4 py-3 text-sm font-medium text-destructive shadow-2xl backdrop-blur-sm'
-                    : 'fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-emerald-400/50 bg-background/95 px-4 py-3 text-sm font-medium text-emerald-400 shadow-2xl backdrop-blur-sm'
+                    ? 'fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-destructive/40 bg-background/95 px-4 py-3 text-sm font-medium text-destructive shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm'
+                    : 'fixed right-4 top-20 z-[1000] w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-emerald-400/50 bg-background/95 px-4 py-3 text-sm font-medium text-emerald-400 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm'
                 }
               >
                 <div className="flex items-center gap-2">
@@ -428,7 +428,7 @@ export default function SettingsPage() {
       {unlinkConfirmProvider && typeof document !== 'undefined'
         ? createPortal(
             <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm p-4">
+              <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm p-4">
                 <p className="text-base font-medium text-foreground mb-4">Точно отвязать?</p>
                 <div className="flex items-center justify-end gap-2">
                   <Button

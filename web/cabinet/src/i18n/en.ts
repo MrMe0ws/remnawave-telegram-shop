@@ -122,6 +122,8 @@ export default {
       referralsCardTitle: 'Referrals',
       promocodesCardTitle: 'Promo codes',
       infoCardTitle: 'Info',
+      newsCardTitle: 'News',
+      feedbackCardTitle: 'Reviews',
       comingSoon: 'Coming soon',
       yourSubscriptionTitle: 'Your subscription',
       openSubscriptionPage: 'Subscription details',

@@ -124,6 +124,8 @@ export default {
       referralsCardTitle: 'Рефералы',
       promocodesCardTitle: 'Промокоды',
       infoCardTitle: 'Информация',
+      newsCardTitle: 'Новости',
+      feedbackCardTitle: 'Отзывы',
       comingSoon: 'Скоро',
       yourSubscriptionTitle: 'Ваша подписка',
       openSubscriptionPage: 'Подробнее о подписке',

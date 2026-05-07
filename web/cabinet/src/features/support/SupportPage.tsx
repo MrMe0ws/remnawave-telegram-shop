@@ -15,7 +15,7 @@ export default function SupportPage() {
   return (
     <AppLayout>
       <div className="mx-auto w-full max-w-xl py-8">
-        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-muted/40 text-card-foreground shadow-lg">
+        <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-muted/40 text-card-foreground">
           <CardContent className="space-y-6 px-6 py-8 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
               <MessageCircle className="size-7 text-primary" />
@@ -33,7 +33,7 @@ export default function SupportPage() {
             ) : supportURL ? (
               <Button
                 asChild
-                className="w-full shadow-[0_0_24px_hsl(var(--primary)/0.35)]"
+                className="w-full shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
               >
                 <a href={supportURL} target="_blank" rel="noopener noreferrer">
                   {content?.support.primary_button ?? 'Написать в поддержку'}

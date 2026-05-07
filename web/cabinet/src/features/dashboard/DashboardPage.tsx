@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText } from 'lucide-react'
+import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText, Newspaper, Star } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { api, type SubscriptionResponse } from '@/lib/api'
 import { daysUntil, formatDate } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
 export default function DashboardPage() {
   const { t } = useTranslation()
@@ -42,6 +43,7 @@ export default function DashboardPage() {
     retry: 1,
     enabled: Boolean(sub),
   })
+  const { data: bootstrap } = useAuthBootstrap()
 
   const hasSubscription = hasSubscriptionData(sub)
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
@@ -62,6 +64,8 @@ export default function DashboardPage() {
     deviceLimit > 0
       ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
       : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
+  const newsUrl = bootstrap?.site_links?.channel?.trim()
+  const feedbackUrl = bootstrap?.site_links?.feedback?.trim()
 
   const activateTrial = useMutation({
     mutationFn: () => api.activateTrial(),
@@ -90,7 +94,7 @@ export default function DashboardPage() {
         </div>
 
         {hasSubscription ? (
-          <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-md dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white dark:shadow-cyan-500/5">
+          <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white dark:shadow-cyan-500/5">
             <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -100,14 +104,7 @@ export default function DashboardPage() {
                   <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-4xl font-semibold leading-none text-primary dark:text-white">
-                    {sub?.traffic_limit_gb ? `${Math.round(((sub?.traffic_used_gb ?? 0) / sub.traffic_limit_gb) * 100)}%` : '∞'}
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground dark:text-slate-300">
-                    {sub?.traffic_limit_gb
-                      ? `${(sub?.traffic_used_gb ?? 0).toFixed(1)} / ${sub.traffic_limit_gb.toLocaleString('ru-RU')} ${t('dashboard.gigabytes')}`
-                      : t('subscriptionPage.unlimited')}
-                  </div>
+                  <StatusBadge isActive={isActive} isExpired={isInactive} hasSubscription={Boolean(sub?.expire_at)} />
                 </div>
               </div>
 
@@ -147,26 +144,7 @@ export default function DashboardPage() {
                 </Link>
               )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Link
-                  to="/subscription"
-                  className={`block rounded-xl border px-4 py-3 transition-colors hover:bg-muted/70 dark:hover:bg-[#173154] ${
-                    isInactive
-                      ? 'border-destructive/45 bg-destructive/10 hover:bg-destructive/15'
-                      : 'border-border bg-muted/50 dark:border-cyan-300/20 dark:bg-[#10223d]'
-                  }`}
-                >
-                  <p className={`text-[11px] uppercase tracking-[0.14em] ${
-                    isInactive
-                      ? 'text-destructive/80'
-                      : 'text-muted-foreground dark:text-cyan-200/70'
-                  }`}>
-                    {t('subscriptionPage.tariff')}
-                  </p>
-                  <p className="mt-1 text-lg font-semibold">
-                    {subscriptionTariffLabel(sub, t)}
-                  </p>
-                </Link>
+              <div>
                 <div className={`rounded-xl border px-4 py-3 ${
                   isInactive
                     ? 'border-destructive/55 bg-destructive/10'
@@ -210,7 +188,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-md dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0E1A33] dark:via-[#0D1324] dark:to-[#0A1222] dark:text-white">
+          <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0E1A33] dark:via-[#0D1324] dark:to-[#0A1222] dark:text-white">
             <CardContent className="space-y-5 px-6 py-7">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 dark:border-cyan-400/30 dark:bg-cyan-500/10">
                 <Sparkles size={18} className="text-primary dark:text-cyan-200" />
@@ -247,7 +225,7 @@ export default function DashboardPage() {
             to="/tariffs"
             className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Card className="bg-card/70 h-full transition-shadow group-hover:shadow-md group-active:scale-[0.99]">
+            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
               <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
                 <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                   <Zap size={16} className="shrink-0 text-primary" aria-hidden />
@@ -262,7 +240,7 @@ export default function DashboardPage() {
             to="/referral"
             className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Card className="bg-card/70 h-full transition-shadow group-hover:shadow-md group-active:scale-[0.99]">
+            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
               <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
                 <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                   <Users size={16} className="shrink-0 text-primary" aria-hidden />
@@ -277,7 +255,7 @@ export default function DashboardPage() {
             to="/promocodes"
             className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Card className="bg-card/70 h-full transition-shadow group-hover:shadow-md group-active:scale-[0.99]">
+            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
               <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
                 <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                   <Ticket size={16} className="shrink-0 text-primary" aria-hidden />
@@ -292,7 +270,7 @@ export default function DashboardPage() {
             to="/info"
             className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Card className="bg-card/70 h-full transition-shadow group-hover:shadow-md group-active:scale-[0.99]">
+            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
               <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
                 <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                   <FileText size={16} className="shrink-0 text-primary" aria-hidden />
@@ -302,6 +280,44 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+
+          {newsUrl && (
+            <a
+              href={newsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
+                <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                    <Newspaper size={16} className="shrink-0 text-primary" aria-hidden />
+                    <span className="truncate">{t('dashboard.newsCardTitle')}</span>
+                  </p>
+                  <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
+                </CardContent>
+              </Card>
+            </a>
+          )}
+
+          {feedbackUrl && (
+            <a
+              href={feedbackUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
+                <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                    <Star size={16} className="shrink-0 text-primary" aria-hidden />
+                    <span className="truncate">{t('dashboard.feedbackCardTitle')}</span>
+                  </p>
+                  <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
+                </CardContent>
+              </Card>
+            </a>
+          )}
         </div>
       </div>
     </AppLayout>
@@ -345,6 +361,42 @@ function expireAtTone(days: number | null, isActive: boolean): { cardClass: stri
     labelClass: 'text-emerald-700/85 dark:text-emerald-300/90',
     daysClass: 'text-emerald-600 dark:text-emerald-300',
   }
+}
+
+function StatusBadge({
+  isActive,
+  isExpired,
+  hasSubscription,
+}: {
+  isActive: boolean
+  isExpired: boolean
+  hasSubscription: boolean
+}) {
+  const { t } = useTranslation()
+
+  if (isActive) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
+        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        {t('subscriptionPage.statusActive')}
+      </span>
+    )
+  }
+  if (isExpired) {
+    return (
+      <span className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+        {t('subscriptionPage.statusExpired')}
+      </span>
+    )
+  }
+  if (!hasSubscription) {
+    return (
+      <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        {t('subscriptionPage.statusNone')}
+      </span>
+    )
+  }
+  return null
 }
 
 function TrialStat({ value, label }: { value: number; label: string }) {

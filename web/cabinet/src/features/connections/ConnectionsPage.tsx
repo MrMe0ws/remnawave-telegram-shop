@@ -333,7 +333,7 @@ export default function ConnectionsPage() {
                     <ChevronDown size={14} className={`transition-transform ${platformOpen ? 'rotate-180' : ''}`} />
                   </Button>
                   {platformOpen && (
-                    <div className="absolute left-0 top-full z-[120] mt-1 w-44 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border bg-card shadow-xl ring-1 ring-border/70 sm:left-auto sm:right-0 dark:border-white/10 dark:bg-[#1b2435] dark:ring-white/10">
+                    <div className="absolute left-0 top-full z-[120] mt-1 w-44 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border bg-card shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] ring-1 ring-border/70 sm:left-auto sm:right-0 dark:border-white/10 dark:bg-[#1b2435] dark:ring-white/10">
                       {availablePlatforms.map((platform) => (
                         <button
                           key={platform}
@@ -366,7 +366,7 @@ export default function ConnectionsPage() {
                   onClick={() => setSelectedAppId(app.id)}
                   className={`relative min-w-0 flex-[1_1_160px] sm:flex-[1_1_220px] rounded-xl border px-3 py-2 pr-12 text-left transition-all ${
                     app.id === selectedApp?.id
-                      ? 'border-cyan-400/45 bg-cyan-500/15 shadow-[0_8px_18px_rgba(14,169,241,0.18)] dark:border-cyan-400/45 dark:bg-cyan-500/15'
+                      ? 'border-cyan-400/45 bg-cyan-500/15 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-cyan-400/45 dark:bg-cyan-500/15'
                       : 'border-border bg-muted/30 hover:border-border/80 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20'
                   }`}
                 >

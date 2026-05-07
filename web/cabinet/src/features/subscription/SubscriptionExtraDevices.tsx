@@ -362,7 +362,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="hwid-decrease-warning-title"
-                className="w-full max-w-md rounded-2xl border border-border bg-background/95 p-5 shadow-2xl backdrop-blur-sm"
+                className="w-full max-w-md rounded-2xl border border-border bg-background/95 p-5 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex gap-3">

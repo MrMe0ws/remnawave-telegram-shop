@@ -72,7 +72,7 @@ export default function LoyaltyProgramPage() {
                 </p>
               )}
 
-            <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-lg dark:border-primary/20 dark:bg-gradient-to-br dark:from-[#0E1A33] dark:via-[#0D1324] dark:to-[#0A1222] dark:text-white">
+            <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/20 dark:bg-gradient-to-br dark:from-[#0E1A33] dark:via-[#0D1324] dark:to-[#0A1222] dark:text-white">
               <CardContent className="space-y-5 px-6 py-7">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 dark:border-teal-400/30 dark:bg-teal-500/15">
@@ -226,7 +226,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
     <Link
       to="/loyalty"
       className={cn(
-        'flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_10px_28px_rgba(8,22,46,.26),inset_0_1px_0_rgba(255,255,255,.04)] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >

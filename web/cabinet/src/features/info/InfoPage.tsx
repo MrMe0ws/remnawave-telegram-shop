@@ -53,7 +53,7 @@ export default function InfoPage() {
               type="button"
               size="sm"
               variant={tab === item.id ? 'default' : 'outline'}
-              className={tab === item.id ? 'shadow-[0_0_20px_rgba(34,158,217,0.35)]' : ''}
+              className={tab === item.id ? 'shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]' : ''}
               onClick={() => setTab(item.id)}
             >
               {item.label}
