@@ -15,12 +15,32 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
 self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET') return
   const url = new URL(req.url)
   if (!url.pathname.startsWith('/cabinet/')) return
   if (url.pathname.startsWith('/cabinet/api/')) return
+
+  // Always try network first for navigations, so users get fresh index/app shell.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put('/cabinet/index.html', copy))
+          return res
+        })
+        .catch(() => caches.match('/cabinet/index.html')),
+    )
+    return
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {

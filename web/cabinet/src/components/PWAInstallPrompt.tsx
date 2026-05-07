@@ -86,9 +86,46 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     if (!pwaEnabled) return
     if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/cabinet/sw.js').catch(() => {
-      // no-op: pwa optional
-    })
+    let hasReloadedForUpdate = false
+
+    function forceActivate(reg: ServiceWorkerRegistration | null) {
+      if (!reg?.waiting) return
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+    }
+
+    function onControllerChange() {
+      if (hasReloadedForUpdate) return
+      hasReloadedForUpdate = true
+      window.location.reload()
+    }
+
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+    navigator.serviceWorker
+      .register('/cabinet/sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        // Immediate activation when a new worker is already waiting.
+        forceActivate(reg)
+
+        reg.addEventListener('updatefound', () => {
+          const worker = reg.installing
+          if (!worker) return
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              forceActivate(reg)
+            }
+          })
+        })
+
+        // Proactively ask browser to check updates on each app start.
+        void reg.update()
+      })
+      .catch(() => {
+        // no-op: pwa optional
+      })
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+    }
   }, [pwaEnabled])
 
   const visible = useMemo(() => {

@@ -1049,10 +1049,25 @@ func buildSPAHandler(spaFS fs.FS) http.Handler {
 			serveIndex(w, r, spaFS)
 			return
 		}
-		if _, err := fs.Stat(spaFS, strings.TrimPrefix(trimmed, "/")); err != nil {
+		filePath := strings.TrimPrefix(trimmed, "/")
+		if _, err := fs.Stat(spaFS, filePath); err != nil {
 			serveIndex(w, r, spaFS)
 			return
 		}
+
+		// Cache policy:
+		// - hashed assets: aggressive immutable cache
+		// - app shell / worker / manifest: always revalidate
+		// - other static files: short shared cache
+		switch {
+		case strings.HasPrefix(filePath, "assets/"):
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		case filePath == "sw.js" || strings.HasSuffix(filePath, ".webmanifest") || strings.HasSuffix(filePath, ".html"):
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		default:
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+		}
+
 		http.StripPrefix("/cabinet", fileServer).ServeHTTP(w, r)
 	})
 }
@@ -1064,7 +1079,7 @@ func serveIndex(w http.ResponseWriter, _ *http.Request, spaFS fs.FS) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
 }

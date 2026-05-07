@@ -5,6 +5,7 @@ import { CheckCircle2, Mail, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Button } from '@/components/ui/button'
 import { api, ApiError } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
@@ -231,10 +232,11 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       <div className="space-y-6 max-w-xl mx-auto w-full">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t('accounts.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('accounts.subtitle')}</p>
-        </div>
+        <PageTitleWithBack
+          title={t('accounts.title')}
+          subtitle={t('accounts.subtitle')}
+          titleClassName="text-2xl font-semibold tracking-tight"
+        />
 
         {noticeText && noticeVisible && typeof document !== 'undefined'
           ? createPortal(

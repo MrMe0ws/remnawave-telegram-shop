@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Check, Zap } from 'lucide-react'
+import { Check, Zap } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -57,9 +58,12 @@ export default function TariffsPage() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('tariffs.title')}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t('tariffs.subtitle')}</p>
+        <div className={cn(planSlug && 'mx-auto w-full max-w-lg')}>
+          <PageTitleWithBack
+            title={t('tariffs.title')}
+            subtitle={t('tariffs.subtitle')}
+            showBack={Boolean(planSlug)}
+          />
         </div>
 
         {isLoading && <TariffsSkeleton />}
@@ -252,10 +256,6 @@ function TariffPeriodStep({
 
   return (
     <div className="space-y-4 max-w-lg mx-auto w-full">
-      <Button type="button" variant="ghost" size="sm" className="gap-1 -ml-2" onClick={onBack}>
-        <ArrowLeft className="size-4" />
-        {t('tariffs.backToPlans')}
-      </Button>
       <div>
         <h2 className="text-xl font-semibold">{head.name}</h2>
         {head.description ? (
@@ -377,10 +377,6 @@ function ClassicPeriodStep({
 
   return (
     <div className="space-y-4">
-      <Button type="button" variant="ghost" size="sm" className="gap-1 -ml-2" onClick={onBack}>
-        <ArrowLeft className="size-4" />
-        {t('tariffs.backToPlans')}
-      </Button>
       <p className="text-sm text-muted-foreground">{t('tariffs.choosePeriodHint')}</p>
       <div className={cn(
         'grid gap-3',

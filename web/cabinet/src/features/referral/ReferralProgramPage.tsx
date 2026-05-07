@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Copy, Check, Users, BookOpen, Upload } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,7 +45,7 @@ export default function ReferralProgramPage() {
   return (
     <AppLayout>
       <div className="mx-auto w-full max-w-2xl space-y-6">
-        <h1 className="text-2xl font-semibold">{t('referralPage.title')}</h1>
+        <PageTitleWithBack title={t('referralPage.title')} />
         <p className="text-sm text-muted-foreground">{t('referralPage.intro')}</p>
 
         {!isLoading && !error && data && (

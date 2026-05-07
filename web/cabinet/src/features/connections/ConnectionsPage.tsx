@@ -8,7 +8,6 @@ import {
   Power,
   Check,
   ExternalLink,
-  ArrowLeft,
   ChevronDown,
   Monitor,
   Smartphone,
@@ -16,11 +15,11 @@ import {
   Laptop,
   Globe,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
@@ -214,7 +213,6 @@ function detectPlatformFromUA(): PlatformKey | '' {
 
 export default function ConnectionsPage() {
   const { i18n } = useTranslation()
-  const navigate = useNavigate()
   const currentLanguage: Lang = i18n.language?.toLowerCase().startsWith('en') ? 'en' : 'ru'
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey>('')
   const [selectedAppId, setSelectedAppId] = useState<string>('')
@@ -315,18 +313,11 @@ export default function ConnectionsPage() {
         <Card className="overflow-visible border-border/80 bg-card dark:bg-[linear-gradient(180deg,#0e1b34d6,#0a1428d1)]">
           <CardContent className="space-y-5 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  aria-label="Назад"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background/70 text-foreground hover:bg-muted/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-                >
-                  <ArrowLeft size={15} />
-                </button>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-100">
-                  {text.pageTitle}
-                </h1>
+              <div className="text-foreground dark:text-slate-100">
+                <PageTitleWithBack
+                  title={text.pageTitle}
+                  titleClassName="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-100"
+                />
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative" ref={platformMenuRef}>

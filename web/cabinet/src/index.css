@@ -171,6 +171,33 @@
     background: hsl(var(--connect-device-inner-bg-hover));
   }
 
+  .renew-subscription-cta-danger {
+    position: relative;
+    display: block;
+    border-radius: 0.75rem;
+    padding: 2px;
+    background: conic-gradient(
+      from var(--connect-border-angle),
+      rgba(239, 68, 68, 0.95),
+      rgba(239, 68, 68, 0.24) 16%,
+      transparent 28%,
+      transparent 72%,
+      rgba(239, 68, 68, 0.24) 84%,
+      rgba(239, 68, 68, 0.95)
+    );
+    animation: connect-border-spin 4s linear infinite;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.14);
+  }
+
+  .renew-subscription-cta-danger-inner {
+    border-radius: 0.625rem;
+    background: #291619;
+  }
+
+  .renew-subscription-cta-danger:hover .renew-subscription-cta-danger-inner {
+    background: rgb(68 21 33);
+  }
+
   /* Light "shine" for Tariffs icon in nav. */
   .tariffs-shine-icon {
     animation: tariffs-shine 5s linear infinite;

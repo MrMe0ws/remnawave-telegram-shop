@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ClipboardList, Copy, Check, Wifi, RefreshCw, ChevronRight, Smartphone, Trash2, AlertTriangle, MonitorSmartphone, Zap } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
@@ -53,6 +54,7 @@ export default function SubscriptionPage() {
   )
   const isExpired = isExpiredByDate || isExpiredByTraffic
   const isActive = !isExpired
+  const expireTone = expireAtTone(days, isActive)
   const hasLink = Boolean(sub?.subscription_link && String(sub.subscription_link).trim() !== '')
   const hasExpire = Boolean(sub?.expire_at && String(sub.expire_at).trim() !== '')
   const hasRecord = hasLink || hasExpire
@@ -111,102 +113,131 @@ export default function SubscriptionPage() {
           </Card>
         ) : (
           <div className="space-y-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-medium text-muted-foreground">
-                    {t('dashboard.subscriptionLabel')}
-                  </CardTitle>
-                  <StatusBadge isActive={isActive} isExpired={isExpired} hasSubscription={Boolean(sub?.expire_at)} />
+            <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_10px_28px_rgba(8,22,46,.26),inset_0_1px_0_rgba(255,255,255,.04)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
+              <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-primary/80 dark:text-cyan-200/80">
+                      {t('dashboard.subscriptionLabel')}
+                    </p>
+                    <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
+                    <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">
+                      {sub?.tariff?.device_limit && sub.tariff.device_limit > 0
+                        ? tariffExtraDevices > 0
+                          ? t('subscriptionPage.tariffDevicesWithExtra', { base: sub.tariff.device_limit, extra: tariffExtraDevices })
+                          : `${sub.tariff.device_limit} ${t('subscriptionPage.devices').toLowerCase()}`
+                        : t('subscriptionPage.unlimited')}
+                      {' · '}
+                      {sub?.tariff?.traffic_gb ? `${sub.tariff.traffic_gb} ${t('dashboard.gigabytes')}` : t('subscriptionPage.unlimited')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <StatusBadge isActive={isActive} isExpired={isExpired} hasSubscription={Boolean(sub?.expire_at)} />
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {sub?.expire_at && (
-                  <InfoRow
-                    label={t('subscriptionPage.expireAt')}
-                    value={
-                      <span className="font-medium">
-                        {formatDate(sub.expire_at, lang)}
-                        {days !== null && (
-                          <span className={`ml-2 text-xs ${isActive ? 'text-primary' : 'text-destructive'}`}>
-                            {isActive
-                              ? t('subscriptionPage.daysLeft', { n: days })
-                              : t('subscriptionPage.statusExpired')}
-                          </span>
-                        )}
-                      </span>
-                    }
-                  />
-                )}
 
-                {sub?.tariff && (
-                  <InfoRow
-                    label={t('subscriptionPage.tariff')}
-                    value={
-                      <span className="font-medium">
-                        {sub.tariff.name}
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {sub.tariff.device_limit > 0
-                            ? tariffExtraDevices > 0
-                              ? t('subscriptionPage.tariffDevicesWithExtra', {
-                                  base: sub.tariff.device_limit,
-                                  extra: tariffExtraDevices,
-                                })
-                              : `${sub.tariff.device_limit} ${t('subscriptionPage.devices').toLowerCase()}`
-                            : t('subscriptionPage.unlimited')}
-                          {' · '}
-                          {sub.tariff.traffic_gb
-                            ? `${sub.tariff.traffic_gb} ${t('dashboard.gigabytes')}`
-                            : t('subscriptionPage.unlimited')}
-                        </span>
-                      </span>
-                    }
-                  />
-                )}
-                <InfoRow
-                  label={t('dashboard.trafficUsage')}
-                  value={
-                    <span className="font-medium">
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground dark:text-slate-300">{t('dashboard.trafficUsage')}</span>
+                    <span className="text-muted-foreground dark:text-slate-300">
                       {sub?.traffic_limit_gb
-                        ? `${(sub?.traffic_used_gb ?? 0).toFixed(1)} / ${sub.traffic_limit_gb} ${t('dashboard.gigabytes')}`
+                        ? `${Math.max(0, (sub.traffic_used_gb ?? 0)).toFixed(1)} ${t('dashboard.gigabytes')}`
                         : t('subscriptionPage.unlimited')}
                     </span>
-                  }
-                />
+                  </div>
+                  <div className="h-2.5 rounded-full bg-muted dark:bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all dark:from-cyan-400 dark:via-blue-400 dark:to-indigo-500"
+                      style={{
+                        width: `${sub?.traffic_limit_gb ? Math.min(100, Math.max(0, ((sub.traffic_used_gb ?? 0) / sub.traffic_limit_gb) * 100)) : 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
 
-                <div className="space-y-2.5">
-                  {sub?.subscription_link && (
-                    isExpired ? (
-                      <div className="rounded-xl border border-border bg-muted/35 px-4 py-3 opacity-70">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                            <MonitorSmartphone size={16} />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-medium text-muted-foreground">{t('subscriptionPage.connectDevice')}</p>
-                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
-                          </div>
+                {sub?.subscription_link && (
+                  <div className={`rounded-xl border px-4 py-3 ${
+                    isExpired
+                      ? 'border-destructive/55 bg-destructive/10'
+                      : expireTone.cardClass
+                  }`}>
+                    <p className={`text-[11px] uppercase tracking-[0.14em] ${
+                      isExpired ? 'text-destructive/80' : expireTone.labelClass
+                    }`}>
+                      {t('subscriptionPage.expireAt')}
+                    </p>
+                    <p className="mt-1 text-sm font-medium">{sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}</p>
+                    <p className={`mt-1 text-xs ${daysLeftToneClass(days, isActive)}`}>
+                      {days !== null
+                        ? (isActive ? t('subscriptionPage.daysLeft', { n: days }) : t('subscriptionPage.statusExpired'))
+                        : t('subscriptionPage.statusNone')}
+                    </p>
+                  </div>
+                )}
+
+                {sub?.subscription_link && (
+                  isExpired ? (
+                    <div className="rounded-xl border border-border bg-muted/35 px-4 py-3 opacity-70">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                          <MonitorSmartphone size={16} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-muted-foreground">{t('subscriptionPage.connectDevice')}</p>
+                          <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
                         </div>
                       </div>
-                    ) : (
-                      <Link to="/connections" className="connect-device-cta group block rounded-xl">
-                        <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-                          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                            <MonitorSmartphone size={16} />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
-                          </div>
+                    </div>
+                  ) : (
+                    <Link to="/connections" className="connect-device-cta group block rounded-xl">
+                      <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary dark:bg-cyan-500/15 dark:text-cyan-200">
+                          <MonitorSmartphone size={16} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
+                          <p className="text-xs text-muted-foreground dark:text-slate-300">{deviceLimitText}</p>
                         </div>
-                      </Link>
-                    )
-                  )}
-                  {isExpired ? (
-                    <Link
-                      to="/tariffs"
-                      className="group flex items-center gap-3 rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-card-foreground transition-colors hover:bg-destructive/15"
-                    >
+                      </div>
+                    </Link>
+                  )
+                )}
+
+                {sub?.subscription_link && (
+                  <div className="pb-0">
+                    <div className="pb-3 pt-1">
+                      <p className="text-base font-medium text-muted-foreground flex items-center gap-2">
+                        <Wifi size={14} />
+                        {t('subscriptionPage.subscriptionLink')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pb-0">
+                      <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono text-muted-foreground truncate select-all">
+                        {sub.subscription_link}
+                      </div>
+                      <Button variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5" disabled={isExpired}>
+                        {copied ? (
+                          <>
+                            <Check size={14} className="text-primary" />
+                            {t('subscriptionPage.copied')}
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            {t('subscriptionPage.copyLink')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isExpired && (
+                  <Link
+                    to="/tariffs"
+                    className="renew-subscription-cta-danger group block rounded-xl"
+                  >
+                    <div className="renew-subscription-cta-danger-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
                       <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
                         <AlertTriangle size={16} />
                       </span>
@@ -215,57 +246,28 @@ export default function SubscriptionPage() {
                         <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
                       </div>
                       <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    </Link>
-                  ) : (
-                    <Link
-                      to="/tariffs"
-                      className="group block rounded-xl border border-border bg-muted/35 px-4 py-3 transition-colors hover:bg-muted/55"
-                    >
-                      <div className="flex items-center gap-3 text-card-foreground">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))]">
-                          <Zap size={16} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-                          <p className="text-xs text-muted-foreground">{t('dashboard.tariffsCardTitle')}</p>
-                        </div>
-                        <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                      </div>
-                    </Link>
-                  )}
-                </div>
+                    </div>
+                  </Link>
+                )}
               </CardContent>
             </Card>
 
-            {sub?.subscription_link && (
-              <Card className={isExpired ? 'opacity-60 saturate-50' : ''}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
-                    <Wifi size={14} />
-                    {t('subscriptionPage.subscriptionLink')}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono text-muted-foreground truncate select-all">
-                      {sub.subscription_link}
-                    </div>
-                    <Button variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5" disabled={isExpired}>
-                      {copied ? (
-                        <>
-                          <Check size={14} className="text-primary" />
-                          {t('subscriptionPage.copied')}
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={14} />
-                          {t('subscriptionPage.copyLink')}
-                        </>
-                      )}
-                    </Button>
+            {!isExpired && (
+              <Link
+                to="/tariffs"
+                className="connect-device-cta group block rounded-xl shadow-[0_10px_28px_rgba(8,22,46,.26),inset_0_1px_0_rgba(255,255,255,.04)]"
+              >
+                <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))]">
+                    <Zap size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.tariffsCardTitle')}</p>
                   </div>
-                </CardContent>
-              </Card>
+                  <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </Link>
             )}
 
             <div id="cabinet-loyalty">
@@ -373,6 +375,42 @@ export default function SubscriptionPage() {
   )
 }
 
+function subscriptionTariffLabel(sub: Awaited<ReturnType<typeof api.subscription>> | null | undefined, t: TFunction): string {
+  if (!sub) return t('dashboard.basicPlan')
+  if (sub.is_trial) return t('dashboard.trialTariffLabel')
+  const raw = sub.tariff?.name
+  const name = typeof raw === 'string' ? raw.trim() : ''
+  if (name) return name
+  if (sub.tariff?.slug === 'classic') return t('dashboard.classicTariffFallback')
+  return t('dashboard.basicPlan')
+}
+
+function daysLeftToneClass(days: number | null, isActive: boolean): string {
+  if (!isActive) return 'text-destructive'
+  if (days != null && days < 3) return 'text-destructive'
+  if (days != null && days < 7) return 'text-amber-700 dark:text-[#fde68ab3]'
+  return 'text-emerald-600 dark:text-emerald-300'
+}
+
+function expireAtTone(days: number | null, isActive: boolean): { cardClass: string; labelClass: string } {
+  if (!isActive || days == null || days < 3) {
+    return {
+      cardClass: 'border-destructive/55 bg-destructive/10',
+      labelClass: 'text-destructive/80',
+    }
+  }
+  if (days < 7) {
+    return {
+      cardClass: 'border-amber-400/80 bg-amber-100/70 dark:border-amber-300/30 dark:bg-amber-500/10',
+      labelClass: 'text-amber-800 dark:text-[#fde68ab3]',
+    }
+  }
+  return {
+    cardClass: 'border-emerald-300/70 bg-emerald-500/10 dark:border-emerald-300/25 dark:bg-emerald-500/10',
+    labelClass: 'text-emerald-700/85 dark:text-emerald-300/90',
+  }
+}
+
 function StatusBadge({
   isActive,
   isExpired,
@@ -399,15 +437,6 @@ function StatusBadge({
     return <Badge variant="outline">{t('subscriptionPage.statusNone')}</Badge>
   }
   return null
-}
-
-function InfoRow({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 text-sm">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="text-right">{value}</span>
-    </div>
-  )
 }
 
 function SkeletonRows({ n }: { n: number }) {

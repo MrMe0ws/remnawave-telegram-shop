@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, CreditCard, Bitcoin, Check, AlertCircle, Star } from 'lucide-react'
+import { CreditCard, Bitcoin, Check, AlertCircle, Star } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -137,15 +138,7 @@ export default function CheckoutPage() {
   return (
     <AppLayout>
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Back link */}
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link to="/tariffs">
-            <ArrowLeft size={14} />
-            {t('checkout.back')}
-          </Link>
-        </Button>
-
-        <h1 className="text-2xl font-semibold">{t('checkout.title')}</h1>
+        <PageTitleWithBack title={t('checkout.title')} />
 
         {/* Order summary */}
         <Card>

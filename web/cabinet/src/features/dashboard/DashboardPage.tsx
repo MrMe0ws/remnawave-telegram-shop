@@ -53,6 +53,7 @@ export default function DashboardPage() {
   )
   const isInactive = isExpiredByDate || isExpiredByTraffic
   const isActive = !isInactive
+  const expireTone = expireAtTone(days, isActive)
   const connectedDevices = Math.max(0, devices?.connected ?? 0)
   const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
   const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
@@ -169,18 +170,18 @@ export default function DashboardPage() {
                 <div className={`rounded-xl border px-4 py-3 ${
                   isInactive
                     ? 'border-destructive/55 bg-destructive/10'
-                    : 'border-border bg-muted/50 dark:border-amber-300/20 dark:bg-[#1a2234]'
+                    : expireTone.cardClass
                 }`}>
                   <p className={`text-[11px] uppercase tracking-[0.14em] ${
                     isInactive
                       ? 'text-destructive/80'
-                      : 'text-muted-foreground dark:text-amber-200/70'
+                      : expireTone.labelClass
                   }`}>
                     {t('subscriptionPage.expireAt')}
                   </p>
                   <p className="mt-1 text-sm font-medium">{sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}</p>
                   <p
-                    className={`mt-1 text-xs ${isActive ? 'text-emerald-600 dark:text-emerald-300' : 'text-destructive'}`}
+                    className={`mt-1 text-xs ${isInactive ? 'text-destructive' : expireTone.daysClass}`}
                   >
                     {days !== null
                       ? (isActive ? t('subscriptionPage.daysLeft', { n: days }) : t('subscriptionPage.statusExpired'))
@@ -192,16 +193,18 @@ export default function DashboardPage() {
               {isInactive && (
                 <Link
                   to="/tariffs"
-                  className="group flex items-start gap-3 rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-card-foreground transition-colors hover:bg-destructive/15"
+                  className="renew-subscription-cta-danger group block rounded-xl"
                 >
-                  <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                    <AlertTriangle size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-                    <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
+                  <div className="renew-subscription-cta-danger-inner flex items-start gap-3 px-4 py-3 text-card-foreground">
+                    <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                      <AlertTriangle size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+                      <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
+                    </div>
+                    <ChevronRight size={16} className="mt-1 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
-                  <ChevronRight size={16} className="mt-1 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </Link>
               )}
             </CardContent>
@@ -320,6 +323,28 @@ function hasSubscriptionData(sub?: SubscriptionResponse | null): boolean {
   if (sub.subscription_link && String(sub.subscription_link).trim() !== '') return true
   if (sub.expire_at && String(sub.expire_at).trim() !== '') return true
   return false
+}
+
+function expireAtTone(days: number | null, isActive: boolean): { cardClass: string; labelClass: string; daysClass: string } {
+  if (!isActive || days == null || days < 3) {
+    return {
+      cardClass: 'border-destructive/55 bg-destructive/10',
+      labelClass: 'text-destructive/80',
+      daysClass: 'text-destructive',
+    }
+  }
+  if (days < 7) {
+    return {
+      cardClass: 'border-amber-400/80 bg-amber-100/70 dark:border-amber-300/30 dark:bg-amber-500/10',
+      labelClass: 'text-amber-800 dark:text-[#fde68ab3]',
+      daysClass: 'text-amber-700 dark:text-[#fde68ab3]',
+    }
+  }
+  return {
+    cardClass: 'border-emerald-300/70 bg-emerald-500/10 dark:border-emerald-300/25 dark:bg-emerald-500/10',
+    labelClass: 'text-emerald-700/85 dark:text-emerald-300/90',
+    daysClass: 'text-emerald-600 dark:text-emerald-300',
+  }
 }
 
 function TrialStat({ value, label }: { value: number; label: string }) {

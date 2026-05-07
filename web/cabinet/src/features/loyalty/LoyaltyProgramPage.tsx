@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronRight, Gem, Gift, Info } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
 import { cn, formatDateTimeShort } from '@/lib/utils'
@@ -46,10 +47,11 @@ export default function LoyaltyProgramPage() {
   return (
     <AppLayout>
       <div className="mx-auto w-full max-w-lg space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t('loyaltyPage.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('loyaltyPage.subtitle')}</p>
-        </div>
+        <PageTitleWithBack
+          title={t('loyaltyPage.title')}
+          subtitle={t('loyaltyPage.subtitle')}
+          titleClassName="text-2xl font-semibold tracking-tight"
+        />
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
@@ -224,7 +226,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
     <Link
       to="/loyalty"
       className={cn(
-        'flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_10px_28px_rgba(8,22,46,.26),inset_0_1px_0_rgba(255,255,255,.04)] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >
