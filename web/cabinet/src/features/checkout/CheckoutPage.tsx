@@ -345,7 +345,7 @@ export default function CheckoutPage() {
 
         <div className="hidden sm:block">
           <Button
-            className="w-full disabled:opacity-100 disabled:bg-primary/50 disabled:text-primary-foreground/80"
+            className="w-full disabled:opacity-100 disabled:bg-primary disabled:text-primary-foreground disabled:brightness-75 disabled:saturate-75"
             size="lg"
             disabled={!canPay}
             loading={loading}
@@ -365,7 +365,7 @@ export default function CheckoutPage() {
         createPortal(
           <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[73px] px-2">
             <Button
-              className="mx-auto block w-full max-w-lg shadow-none disabled:opacity-100 disabled:bg-primary/50 disabled:text-primary-foreground/80"
+              className="mx-auto block w-full max-w-lg shadow-none disabled:opacity-100 disabled:bg-primary disabled:text-primary-foreground disabled:brightness-75 disabled:saturate-75"
               size="lg"
               disabled={!canPay}
               loading={loading}
