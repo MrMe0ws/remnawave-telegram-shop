@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CreditCard, Bitcoin, Check, AlertCircle, Star } from 'lucide-react'
+import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
@@ -142,6 +143,12 @@ export default function CheckoutPage() {
   }
   const availableProviders: Provider[] = (['yookassa', 'cryptopay', 'telegram'] as Provider[]).filter((p) => providerEnabled[p])
   const selectedProvider = provider && providerEnabled[provider] ? provider : null
+  const canPay =
+    Boolean(selectedProvider) &&
+    Boolean(tariff) &&
+    !loading &&
+    availableProviders.length > 0 &&
+    (!shouldAskExtraRenew || renewExtraHwid != null)
 
   return (
     <AppLayout>
@@ -340,13 +347,7 @@ export default function CheckoutPage() {
           <Button
             className="w-full"
             size="lg"
-            disabled={
-              !selectedProvider ||
-              !tariff ||
-              loading ||
-              availableProviders.length === 0 ||
-              (shouldAskExtraRenew && renewExtraHwid == null)
-            }
+            disabled={!canPay}
             loading={loading}
             onClick={handlePay}
           >
@@ -359,27 +360,25 @@ export default function CheckoutPage() {
         <div className="sm:hidden h-[6.5rem]" aria-hidden />
       </div>
 
-      {/* Mobile: keep "Оплатить" visible above the bottom navbar */}
-      <div className="sm:hidden fixed inset-x-0 z-40 bottom-[calc(4.8rem+env(safe-area-inset-bottom))] px-4">
-        <div className="mx-auto w-full max-w-lg rounded-xl border border-border bg-background/95 p-2 shadow-[0_8px_24px_rgb(0_0_0_/_0.22)] backdrop-blur">
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={
-              !selectedProvider ||
-              !tariff ||
-              loading ||
-              availableProviders.length === 0 ||
-              (shouldAskExtraRenew && renewExtraHwid == null)
-            }
-            loading={loading}
-            onClick={handlePay}
-          >
-            {t('checkout.pay')}
-            {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
-          </Button>
-        </div>
-      </div>
+      {/* Mobile: fixed to viewport above bottom navbar (via portal). */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[calc(5.4rem+env(safe-area-inset-bottom))] px-4">
+            <div className="mx-auto w-full max-w-lg rounded-xl border border-border bg-background/95 p-2 shadow-[0_8px_24px_rgb(0_0_0_/_0.22)] backdrop-blur">
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={!canPay}
+                loading={loading}
+                onClick={handlePay}
+              >
+                {t('checkout.pay')}
+                {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+              </Button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </AppLayout>
   )
 }
