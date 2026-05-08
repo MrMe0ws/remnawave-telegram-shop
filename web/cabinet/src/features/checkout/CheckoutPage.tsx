@@ -354,26 +354,31 @@ export default function CheckoutPage() {
             {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
           </Button>
         </div>
+
+        {/* Mobile spacer: fixed pay bar should not overlap the last content block */}
+        <div className="sm:hidden h-[6.5rem]" aria-hidden />
       </div>
 
       {/* Mobile: keep "Оплатить" visible above the bottom navbar */}
-      <div className="sm:hidden sticky bottom-0 z-40 pt-3 pb-[max(0.35rem,env(safe-area-inset-bottom))] bg-background/95 backdrop-blur border-t border-border">
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={
-            !selectedProvider ||
-            !tariff ||
-            loading ||
-            availableProviders.length === 0 ||
-            (shouldAskExtraRenew && renewExtraHwid == null)
-          }
-          loading={loading}
-          onClick={handlePay}
-        >
-          {t('checkout.pay')}
-          {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
-        </Button>
+      <div className="sm:hidden fixed inset-x-0 z-40 bottom-[calc(4.8rem+env(safe-area-inset-bottom))] px-4">
+        <div className="mx-auto w-full max-w-lg rounded-xl border border-border bg-background/95 p-2 shadow-[0_8px_24px_rgb(0_0_0_/_0.22)] backdrop-blur">
+          <Button
+            className="w-full"
+            size="lg"
+            disabled={
+              !selectedProvider ||
+              !tariff ||
+              loading ||
+              availableProviders.length === 0 ||
+              (shouldAskExtraRenew && renewExtraHwid == null)
+            }
+            loading={loading}
+            onClick={handlePay}
+          >
+            {t('checkout.pay')}
+            {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+          </Button>
+        </div>
       </div>
     </AppLayout>
   )
