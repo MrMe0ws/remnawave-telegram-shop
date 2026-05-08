@@ -284,10 +284,19 @@ function TariffPeriodStep({
             type="button"
             variant="outline"
             className={cn(
-              'h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-lg',
+              'h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-[var(--radius)] backdrop-blur-[2px] border transition-[background-color,box-shadow,border-color,filter] duration-200',
+              tariffCardShadowClassName,
               p.months === selectedMonths
-                ? 'border-[rgb(14,169,241)] bg-[rgba(14,169,241,0.08)]'
-                : 'border-[rgba(54,65,84,0.5)] bg-transparent',
+                ? cn(
+                    'border-primary bg-primary/10 dark:bg-primary/15',
+                    tariffOtherCardHoverClassName,
+                    'hover:brightness-[1.02]',
+                  )
+                : cn(
+                    'border-border bg-card dark:bg-[hsl(var(--card))]',
+                    tariffOtherCardHoverClassName,
+                    'hover:brightness-[1.02]',
+                  ),
             )}
             onClick={() => {
               setSelectedMonths(p.months)
@@ -558,6 +567,10 @@ const tariffCurrentCardClassName =
 /** Карточки остальных тарифов — ховер без смены яркости всей карточки. */
 const tariffOtherCardHoverClassName =
   'hover:border-primary/35 hover:shadow-[0_10px_28px_-12px_hsl(var(--foreground)/0.12)] dark:hover:shadow-[0_12px_32px_-10px_hsl(var(--primary)/0.22)]'
+
+/** Базовая тень как у `Card` (карточки тарифов на сетке). */
+const tariffCardShadowClassName =
+  'shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:shadow-[0_12px_30px_rgba(3,10,24,0.42),inset_0_1px_0_rgba(255,255,255,0.03)]'
 
 /** Кнопка «Продлить»: явный primary (тема уже задаёт --primary в :root / .dark). */
 const tariffRenewButtonClassName =
