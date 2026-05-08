@@ -1,5 +1,5 @@
 {
-  "greeting": "🎁 14 days of VPN for FREE!\nConnect right now!\n\n🌐 Servers:<blockquote>🇱🇻 Latvia  🇩🇪 Germany\n🇸🇪 Sweden  🇷🇺 Russia</blockquote>\n\n🚀 Fast speed unlimited traffic\n💪 No ads\n♾️ Bypassing WS\n\n🌐 Cabinet: cabinet.me0ws.ru\n\n<b><a href=\"tg://resolve?domain=Meows_support_bot\">🆘 Help and TG proxy</a></b>",
+  "greeting": "🎁 7 days of VPN for FREE!\nConnect right now!\n\n🌐 Servers:<blockquote>🇱🇻 Latvia  🇩🇪 Germany\n🇸🇪 Sweden  🇷🇺 Russia</blockquote>\n\n🚀 Fast speed unlimited traffic\n💪 No ads\n♾️ Bypassing WS\n\n🌐 Cabinet: cabinet.me0ws.ru\n\n<b><a href=\"tg://resolve?domain=Meows_support_bot\">🆘 Help and TG proxy</a></b>",
   "cabinet_minimal_user_line": "👤 <b>%s</b>",
   "cabinet_minimal_status_active": "📱 Subscription: 💎 Active",
   "cabinet_minimal_status_expired": "📱 Subscription: 🔴 Expired",
@@ -144,7 +144,7 @@
   "invoice_title": "Subscription",
   "trial_button": "🔥 Try free",
   "trial_activated": "🔥 Trial activated",
-  "trial_text": "🎁 You have a free 14-day subscription available!\n\n📊 Trial plan terms:\n• 3 GB of traffic per day\n• 1 device\n\n⚠️ Please note:\nNot all servers are available on the trial plan\n<b>Premium servers</b> and <b>Whitelist Bypass</b>  are only available on the Premium plan",
+  "trial_text": "🎁 You have a free 7-day subscription available!\n\n📊 Trial plan terms:\n• 3 GB of traffic per day\n• 1 device\n\n⚠️ Please note:\nNot all servers are available on the trial plan\n<b>Premium servers</b> and <b>Whitelist Bypass</b>  are only available on the Premium plan",
   "activate_trial_button": "🔥 Activate trial",
   "referral_button": "🤝 Referrals",
   "referral_desc_default": "🚩 For the first successful payment\nmade via your referral link\nyou receive +%d days",

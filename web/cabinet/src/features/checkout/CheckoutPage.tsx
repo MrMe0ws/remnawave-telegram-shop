@@ -149,6 +149,8 @@ export default function CheckoutPage() {
     !loading &&
     availableProviders.length > 0 &&
     (!shouldAskExtraRenew || renewExtraHwid != null)
+  const disabledPayButtonClass =
+    'disabled:opacity-100 disabled:bg-[hsl(174_31.2%_76.18%)] disabled:text-[hsl(0_0%_100%_/_57%)] disabled:brightness-100 dark:disabled:bg-primary dark:disabled:text-primary-foreground dark:disabled:brightness-[.45]'
 
   return (
     <AppLayout>
@@ -345,7 +347,7 @@ export default function CheckoutPage() {
 
         <div className="hidden sm:block">
           <Button
-            className="w-full disabled:opacity-100 disabled:bg-primary disabled:text-primary-foreground disabled:brightness-75 disabled:saturate-75"
+            className={cn('w-full', disabledPayButtonClass)}
             size="lg"
             disabled={!canPay}
             loading={loading}
@@ -365,7 +367,7 @@ export default function CheckoutPage() {
         createPortal(
           <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[73px] px-2">
             <Button
-              className="mx-auto block w-full max-w-lg shadow-none disabled:opacity-100 disabled:bg-primary disabled:text-primary-foreground disabled:brightness-75 disabled:saturate-75"
+              className={cn('mx-auto block w-full max-w-lg shadow-none', disabledPayButtonClass)}
               size="lg"
               disabled={!canPay}
               loading={loading}
