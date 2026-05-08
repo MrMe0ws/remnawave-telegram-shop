@@ -57,7 +57,12 @@ export function formatRub(n: number): string {
 /** initData из Telegram Mini App (пустая строка в обычном браузере). */
 export function getTelegramInitData(): string {
   const raw = window.Telegram?.WebApp?.initData
-  return typeof raw === 'string' ? raw.trim() : ''
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    return raw.trim()
+  }
+  // Fallback for first Mini App open when SDK object is not ready yet.
+  const fromHash = readUrlParamFromHashOrSearch('tgWebAppData')
+  return fromHash.trim()
 }
 
 /**
@@ -68,5 +73,19 @@ export function getTelegramInitData(): string {
 export function getTelegramMiniAppStartParam(): string {
   const u = window.Telegram?.WebApp?.initDataUnsafe
   const sp = u && typeof u === 'object' && u !== null && 'start_param' in u ? (u as { start_param?: unknown }).start_param : undefined
-  return typeof sp === 'string' ? sp.trim() : ''
+  if (typeof sp === 'string' && sp.trim().length > 0) {
+    return sp.trim()
+  }
+  return readUrlParamFromHashOrSearch('tgWebAppStartParam').trim()
+}
+
+function readUrlParamFromHashOrSearch(name: string): string {
+  if (typeof window === 'undefined') return ''
+  const fromSearch = new URLSearchParams(window.location.search).get(name)
+  if (fromSearch) return fromSearch
+
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
+  if (!hash) return ''
+  const fromHash = new URLSearchParams(hash).get(name)
+  return fromHash ?? ''
 }

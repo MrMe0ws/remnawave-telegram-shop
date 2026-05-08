@@ -4,6 +4,8 @@ import { getTelegramInitData, getTelegramMiniAppStartParam } from '@/lib/utils'
 
 /** Не держим «вечный» спиннер при недоступном API / зависшем fetch. */
 const AUTH_NET_TIMEOUT_MS = 12_000
+const TELEGRAM_INIT_DATA_WAIT_MS = 2_500
+const TELEGRAM_INIT_DATA_POLL_MS = 150
 
 function raceTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -19,6 +21,22 @@ function raceTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       },
     )
   })
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
+
+async function waitForTelegramInitData(timeoutMs = TELEGRAM_INIT_DATA_WAIT_MS): Promise<string> {
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < timeoutMs) {
+    const data = getTelegramInitData()
+    if (data) return data
+    await sleep(TELEGRAM_INIT_DATA_POLL_MS)
+  }
+  return ''
 }
 
 interface AuthState {
@@ -75,7 +93,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     // 2) Telegram Mini App: автологин по initData (если открыто из бота).
-    const tgData = getTelegramInitData()
+    let tgData = getTelegramInitData()
+    if (!tgData) {
+      tgData = await waitForTelegramInitData()
+    }
     if (tgData) {
       try {
         const ref = getTelegramMiniAppStartParam()

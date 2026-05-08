@@ -10,10 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError, type TariffItem } from '@/lib/api'
-import { newIdempotencyKey, cn } from '@/lib/utils'
+import { getTelegramInitData, newIdempotencyKey, cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
 type Provider = 'yookassa' | 'cryptopay' | 'telegram'
+
+function openPaymentUrl(url: string): void {
+  const inMiniApp = getTelegramInitData().length > 0
+  if (inMiniApp && window.Telegram?.WebApp?.openLink) {
+    window.Telegram.WebApp.openLink(url, { try_instant_view: false })
+    return
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
 
 export default function CheckoutPage() {
   const { t } = useTranslation()
@@ -101,10 +110,9 @@ export default function CheckoutPage() {
         },
         idempotencyKey,
       )
-      // Open provider payment page in a new tab.
-      // Do not rely on returned window handle: with noopener/noreferrer
-      // some browsers return null even when the tab opened successfully.
-      window.open(res.payment_url, '_blank', 'noopener,noreferrer')
+      // Mini App on iOS can block window.open popups.
+      // Use Telegram openLink inside Mini App and keep window.open for browsers.
+      openPaymentUrl(res.payment_url)
       navigate(`/payment/status/${res.checkout_id}`)
     } catch (err) {
       if (err instanceof ApiError) {
