@@ -163,8 +163,14 @@ function TariffPlanCard({
         }
       }}
       className={cn(
-        'relative flex flex-col transition-all hover:brightness-105 active:scale-[0.98] cursor-pointer',
-        head.is_popular && 'border-primary/50',
+        'relative flex flex-col transition-[border-color,box-shadow,transform,filter] duration-200 cursor-pointer',
+        isCurrent
+          ? cn(tariffCurrentCardClassName, 'active:scale-[0.98]')
+          : cn(
+              tariffOtherCardHoverClassName,
+              'active:scale-[0.98] hover:brightness-[1.02]',
+            ),
+        head.is_popular && !isCurrent && 'border-primary/50',
       )}
     >
       {head.is_popular && (
@@ -186,7 +192,7 @@ function TariffPlanCard({
 
       {isCurrent && (
         <div className="absolute top-4 right-4">
-          <Badge variant="secondary" className="w-fit text-xs font-normal">
+          <Badge variant="secondary" className={cn('w-fit text-xs font-normal', tariffCurrentBadgeClassName)}>
             {t('tariffs.currentBadge')}
           </Badge>
         </div>
@@ -211,8 +217,11 @@ function TariffPlanCard({
         </ul>
 
         <Button
-          className="w-full"
-          variant={head.is_popular ? 'default' : 'outline'}
+          className={cn(
+            'w-full transition-[background-color,box-shadow,transform,filter] duration-200',
+            isCurrent ? tariffRenewButtonClassName : tariffChangeCtaButtonClassName,
+          )}
+          variant="default"
           type="button"
         >
           {ctaLabel}
@@ -426,8 +435,11 @@ function PeriodCard({
   return (
     <Card
       className={cn(
-        'relative flex flex-col transition-shadow',
-        tariff.is_popular && 'border-primary/50',
+        'relative flex flex-col transition-[border-color,box-shadow] duration-200',
+        isCurrent
+          ? tariffCurrentCardClassName
+          : cn(tariffOtherCardHoverClassName, 'hover:brightness-[1.01]'),
+        tariff.is_popular && !isCurrent && 'border-primary/50',
       )}
     >
       {tariff.is_popular && (
@@ -442,7 +454,10 @@ function PeriodCard({
       <CardHeader className="pb-2 pt-5">
         <CardTitle className="text-base">{monthLabel}</CardTitle>
         {isCurrent && (
-          <Badge variant="secondary" className="w-fit text-xs mt-1 font-normal">
+          <Badge
+            variant="secondary"
+            className={cn('w-fit text-xs mt-1 font-normal', tariffCurrentBadgeClassName)}
+          >
             {t('tariffs.currentBadge')}
           </Badge>
         )}
@@ -465,8 +480,11 @@ function PeriodCard({
         </div>
 
         <Button
-          className="w-full"
-          variant={tariff.is_popular ? 'default' : 'outline'}
+          className={cn(
+            'w-full transition-[background-color,box-shadow,transform,filter] duration-200',
+            isCurrent ? tariffRenewButtonClassName : tariffChangeCtaButtonClassName,
+          )}
+          variant="default"
           size="sm"
           type="button"
           onClick={() => onSelect(tariff)}
@@ -520,6 +538,26 @@ function isSubscriptionActive(expireAt: string | null | undefined): boolean {
   if (Number.isNaN(t)) return false
   return t > Date.now()
 }
+
+/** Бейдж «Текущий»: бордер primary, фон в тёмной теме #1E2A4A, в светлой — светлый аналог. */
+const tariffCurrentBadgeClassName =
+  'border border-primary bg-[#EDF2FA] text-primary dark:bg-[#1E2A4A] dark:text-primary shadow-none'
+
+/** Карточка активного тарифа: бордер и inset-обводка primary. */
+const tariffCurrentCardClassName =
+  'border-primary shadow-[inset_0_0_0_1px_hsl(var(--primary))] hover:border-primary hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)),0_8px_28px_-8px_hsl(var(--primary)/0.35)]'
+
+/** Карточки остальных тарифов — ховер без смены яркости всей карточки. */
+const tariffOtherCardHoverClassName =
+  'hover:border-primary/35 hover:shadow-[0_10px_28px_-12px_hsl(var(--foreground)/0.12)] dark:hover:shadow-[0_12px_32px_-10px_hsl(var(--primary)/0.22)]'
+
+/** Кнопка «Продлить»: явный primary (тема уже задаёт --primary в :root / .dark). */
+const tariffRenewButtonClassName =
+  'bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 hover:shadow-[0_6px_20px_-6px_hsl(var(--primary)/0.55)] active:scale-[0.98]'
+
+/** Кнопки «Сменить тариф» / «Выбрать»: тёмная тема #5E9CFF, светлая — более насыщенный синий. */
+const tariffChangeCtaButtonClassName =
+  'border-transparent bg-[#2563EB] text-white hover:bg-[#1D4ED8] hover:shadow-[0_6px_18px_-6px_rgb(37_99_235_/_0.45)] dark:bg-[#5E9CFF] dark:text-[#0B1220] dark:hover:bg-[#7CADFF] dark:hover:shadow-[0_6px_22px_-6px_rgb(94_156_255_/_0.4)] active:scale-[0.98]'
 
 function TariffsSkeleton() {
   return (
