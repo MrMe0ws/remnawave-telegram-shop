@@ -3,8 +3,10 @@
 
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/eff4a209-873c-400e-9ff3-2ad7facf6c51" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/96d96a7f-4316-427c-b9c8-781c6f7213d7" />
-<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/216cdcbe-f88e-4830-a799-a8ae86585720" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/ebe300a8-55f0-4569-86ec-3af160a24bb4" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/445d714d-6122-40be-9240-40945f500ca1" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/2b5d8ae5-c9cc-4947-b340-f2b5c499d1af" />
+<img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/a1ead898-decb-4c21-88d0-e7894866fd96" />
 
 
 ## 🚀 Улучшенные Возможности
