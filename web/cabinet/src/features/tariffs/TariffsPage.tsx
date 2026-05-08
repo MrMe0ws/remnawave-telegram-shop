@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check, Zap } from 'lucide-react'
+import { Cloud, Smartphone, Zap, type LucideIcon } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -204,12 +204,12 @@ function TariffPlanCard({
         ) : null}
 
         <ul className="space-y-1.5 text-sm flex-1">
-          <FeatureLine>
+          <FeatureLine icon={Cloud}>
             {head.traffic_gb
               ? t('tariffs.traffic', { n: head.traffic_gb })
               : t('tariffs.trafficUnlimited')}
           </FeatureLine>
-          <FeatureLine>
+          <FeatureLine icon={Smartphone}>
             {head.device_limit > 0
               ? t('tariffs.devices', { n: head.device_limit })
               : t('tariffs.devicesUnlimited')}
@@ -340,13 +340,13 @@ function ClassicIntro({
     <div className="space-y-4 max-w-xl">
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <Check size={14} className="text-primary" />
+          <Cloud size={14} className="text-primary shrink-0" />
           {head.traffic_gb
             ? t('tariffs.traffic', { n: head.traffic_gb })
             : t('tariffs.trafficUnlimited')}
         </span>
         <span className="flex items-center gap-1.5">
-          <Check size={14} className="text-primary" />
+          <Smartphone size={14} className="text-primary shrink-0" />
           {head.device_limit > 0
             ? t('tariffs.devices', { n: head.device_limit })
             : t('tariffs.devicesUnlimited')}
@@ -496,10 +496,16 @@ function PeriodCard({
   )
 }
 
-function FeatureLine({ children }: { children: React.ReactNode }) {
+function FeatureLine({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon
+  children: React.ReactNode
+}) {
   return (
     <li className="flex items-center gap-2 text-muted-foreground">
-      <Check size={14} className="text-primary shrink-0" />
+      <Icon size={14} className="text-primary shrink-0" strokeWidth={2} />
       {children}
     </li>
   )
@@ -543,9 +549,11 @@ function isSubscriptionActive(expireAt: string | null | undefined): boolean {
 const tariffCurrentBadgeClassName =
   'border border-primary bg-[#EDF2FA] text-primary dark:bg-[#1E2A4A] dark:text-primary shadow-none'
 
-/** Карточка активного тарифа: бордер и inset-обводка primary. */
+/**
+ * Текущий тариф: inset primary + те же «плавающие» тени, что у Card (иначе в dark побеждает dark:shadow карточки).
+ */
 const tariffCurrentCardClassName =
-  'border-primary shadow-[inset_0_0_0_1px_hsl(var(--primary))] hover:border-primary hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)),0_8px_28px_-8px_hsl(var(--primary)/0.35)]'
+  'border-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)),0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:shadow-[inset_0_0_0_1px_hsl(var(--primary)),0_12px_30px_rgba(3,10,24,0.42),inset_0_1px_0_rgba(255,255,255,0.03)] hover:-translate-y-0.5 hover:border-primary hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)),0_10px_32px_-8px_hsl(var(--primary)/0.42),0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)),0_14px_40px_-6px_hsl(var(--primary)/0.38),0_12px_30px_rgba(3,10,24,0.5),inset_0_1px_0_rgba(255,255,255,0.05)]'
 
 /** Карточки остальных тарифов — ховер без смены яркости всей карточки. */
 const tariffOtherCardHoverClassName =
@@ -555,9 +563,9 @@ const tariffOtherCardHoverClassName =
 const tariffRenewButtonClassName =
   'bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 hover:shadow-[0_6px_20px_-6px_hsl(var(--primary)/0.55)] active:scale-[0.98]'
 
-/** Кнопки «Сменить тариф» / «Выбрать»: тёмная тема #5E9CFF, светлая — более насыщенный синий. */
+/** Кнопки «Сменить тариф» / «Выбрать»: светлая — #10b981fa; тёмная — #5E9CFF, текст белый как у «Продлить». */
 const tariffChangeCtaButtonClassName =
-  'border-transparent bg-[#2563EB] text-white hover:bg-[#1D4ED8] hover:shadow-[0_6px_18px_-6px_rgb(37_99_235_/_0.45)] dark:bg-[#5E9CFF] dark:text-[#0B1220] dark:hover:bg-[#7CADFF] dark:hover:shadow-[0_6px_22px_-6px_rgb(94_156_255_/_0.4)] active:scale-[0.98]'
+  'border-transparent bg-[#10b981fa] text-white hover:bg-[#0d9668fa] hover:shadow-[0_6px_18px_-6px_rgb(16_185_129_/_0.4)] dark:bg-[#5E9CFF] dark:text-white dark:hover:bg-[#7CADFF] dark:hover:shadow-[0_6px_22px_-6px_rgb(94_156_255_/_0.4)] active:scale-[0.98]'
 
 function TariffsSkeleton() {
   return (
