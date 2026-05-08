@@ -363,19 +363,17 @@ export default function CheckoutPage() {
       {/* Mobile: fixed to viewport above bottom navbar (via portal). */}
       {typeof document !== 'undefined' &&
         createPortal(
-          <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[calc(5.4rem+env(safe-area-inset-bottom))] px-4">
-            <div className="mx-auto w-full max-w-lg rounded-xl border border-border bg-background/95 p-2 shadow-[0_8px_24px_rgb(0_0_0_/_0.22)] backdrop-blur">
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={!canPay}
-                loading={loading}
-                onClick={handlePay}
-              >
-                {t('checkout.pay')}
-                {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
-              </Button>
-            </div>
+          <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[73px] px-2">
+            <Button
+              className="mx-auto block w-full max-w-lg shadow-none"
+              size="lg"
+              disabled={!canPay}
+              loading={loading}
+              onClick={handlePay}
+            >
+              {t('checkout.pay')}
+              {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+            </Button>
           </div>,
           document.body,
         )}
