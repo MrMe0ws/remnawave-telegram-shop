@@ -67,6 +67,10 @@ function AppRoutes() {
   const showAuthShellEarly = isPublicShellPath(location.pathname)
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname, location.search])
+
+  useEffect(() => {
     void initialize()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
