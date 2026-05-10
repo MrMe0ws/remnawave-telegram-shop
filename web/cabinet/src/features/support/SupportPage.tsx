@@ -54,7 +54,7 @@ export default function SupportPage() {
       <div className="mx-auto w-full max-w-xl space-y-8 py-2">
         <section id={SUPPORT_ANCHOR} className="scroll-mt-24">
           <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-muted/40 text-card-foreground">
-            <CardContent className="space-y-6 px-6 py-8 text-center">
+            <CardContent className="space-y-6 px-[10px] py-[15px] text-center sm:px-6 sm:py-8">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
                 <MessageCircle className="size-7 text-primary" />
               </div>
