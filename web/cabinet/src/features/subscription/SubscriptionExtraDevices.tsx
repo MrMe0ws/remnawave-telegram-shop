@@ -1,23 +1,89 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Star, X } from 'lucide-react'
 
+import { PlategaPaymentExpand, enabledPlategaMethods, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, ApiError, type HwidExtraPreviewResponse, type SubscriptionHwidExtraInfo } from '@/lib/api'
-import { newIdempotencyKey } from '@/lib/utils'
+import { newIdempotencyKey, cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
 type Panel = 'menu' | 'buy' | 'decrease'
-type Provider = 'yookassa' | 'cryptopay' | 'telegram'
+type Provider =
+  | 'yookassa'
+  | 'cryptopay'
+  | 'telegram'
+  | 'platega_sbp'
+  | 'platega_cards'
+  | 'platega_acquiring'
+  | 'platega_worldwide'
+  | 'platega_crypto'
+
+function hwidSubpanelGridCls(open: boolean) {
+  return cn(
+    'grid overflow-hidden transition-[grid-template-rows,opacity,transform] duration-[400ms] ease-out',
+    open
+      ? 'visible grid-rows-[1fr] opacity-100 translate-y-0'
+      : 'invisible grid-rows-[0fr] opacity-0 -translate-y-1 pointer-events-none',
+  )
+}
+
+const HWID_PROVIDER_ORDER: Provider[] = [
+  'yookassa',
+  'platega_sbp',
+  'platega_cards',
+  'platega_acquiring',
+  'platega_worldwide',
+  'platega_crypto',
+  'cryptopay',
+  'telegram',
+]
 
 type Props = {
   hwid: SubscriptionHwidExtraInfo
   inactive: boolean
   onUpdated: () => void
+}
+
+function HwidProviderPayButton({
+  selected,
+  onClick,
+  icon,
+  label,
+  hint,
+}: {
+  selected: boolean
+  onClick: () => void
+  icon: ReactNode
+  label: string
+  hint: string
+}) {
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={selected ? 'default' : 'outline'}
+      onClick={onClick}
+      className="flex h-auto min-h-9 items-start gap-2 px-3 py-2 text-left font-normal"
+    >
+      <span className="shrink-0 pt-0.5 [&_svg]:block">{icon}</span>
+      <span className="flex min-w-0 flex-col items-start gap-0.5">
+        <span className="text-sm font-medium leading-tight">{label}</span>
+        <span
+          className={cn(
+            'text-xs font-normal leading-snug',
+            selected ? 'text-primary-foreground/75' : 'text-muted-foreground',
+          )}
+        >
+          {hint}
+        </span>
+      </span>
+    </Button>
+  )
 }
 
 function hwidPreviewDiscountCaption(
@@ -55,13 +121,22 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   const [provider, setProvider] = useState<Provider>('yookassa')
   const [payError, setPayError] = useState<string | null>(null)
   const [payLoading, setPayLoading] = useState(false)
-  const [decreaseModalOpen, setDecreaseModalOpen] = useState(false)
+  const [decreaseModalMounted, setDecreaseModalMounted] = useState(false)
+  const [decreaseModalVisible, setDecreaseModalVisible] = useState(false)
+  const decreaseModalUnmountAfterTransition = useRef(false)
+  const decreaseModalVisibleRef = useRef(false)
 
-  const providerEnabled = {
+  const providerEnabled: Record<Provider, boolean> = {
     yookassa: bootstrap?.payment_providers?.yookassa ?? true,
     cryptopay: bootstrap?.payment_providers?.cryptopay ?? true,
     telegram: bootstrap?.payment_providers?.telegram ?? true,
+    platega_sbp: bootstrap?.payment_providers?.platega_sbp ?? false,
+    platega_cards: bootstrap?.payment_providers?.platega_cards ?? false,
+    platega_acquiring: bootstrap?.payment_providers?.platega_acquiring ?? false,
+    platega_worldwide: bootstrap?.payment_providers?.platega_worldwide ?? false,
+    platega_crypto: bootstrap?.payment_providers?.platega_crypto ?? false,
   }
+  const firstHwidProvider = HWID_PROVIDER_ORDER.find((p) => providerEnabled[p]) ?? 'yookassa'
 
   const buyOptions = useMemo(() => {
     const out: number[] = []
@@ -84,21 +159,59 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
     staleTime: 20_000,
   })
 
+  function openDecreaseConfirmModal() {
+    if (decreaseModalMounted) return
+    decreaseModalUnmountAfterTransition.current = false
+    setDecreaseModalMounted(true)
+    setDecreaseModalVisible(false)
+  }
+
+  useEffect(() => {
+    decreaseModalVisibleRef.current = decreaseModalVisible
+  }, [decreaseModalVisible])
+
+  useEffect(() => {
+    if (!decreaseModalMounted) return
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setDecreaseModalVisible(true))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [decreaseModalMounted])
+
+  function closeDecreaseConfirmModal() {
+    if (!decreaseModalMounted) return
+    decreaseModalUnmountAfterTransition.current = true
+    if (!decreaseModalVisibleRef.current) {
+      decreaseModalUnmountAfterTransition.current = false
+      setDecreaseModalMounted(false)
+      return
+    }
+    setDecreaseModalVisible(false)
+  }
+
+  function onDecreaseModalOverlayTransitionEnd(e: React.TransitionEvent<HTMLDivElement>) {
+    if (e.target !== e.currentTarget) return
+    if (e.propertyName !== 'opacity') return
+    if (!decreaseModalUnmountAfterTransition.current) return
+    decreaseModalUnmountAfterTransition.current = false
+    setDecreaseModalMounted(false)
+  }
+
   const applyDec = useMutation({
     mutationFn: (target: number) => api.hwidExtraApply(target),
     onSuccess: () => {
-      setDecreaseModalOpen(false)
+      closeDecreaseConfirmModal()
       onUpdated()
       setPanel('menu')
     },
     onError: () => {
-      setDecreaseModalOpen(false)
+      closeDecreaseConfirmModal()
     },
   })
 
   const closeSubpanel = () => {
     setPayError(null)
-    setDecreaseModalOpen(false)
+    closeDecreaseConfirmModal()
     setPanel('menu')
   }
 
@@ -136,49 +249,61 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
           <p className="text-sm text-muted-foreground">{t('subscriptionPage.unavailableWhileInactive')}</p>
         )}
 
-        {!inactive && panel === 'menu' && (
-          <div className="space-y-2.5">
-            {hwid.can_increase && (
-              <button
-                type="button"
-                className="group flex w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-card-foreground transition-colors hover:bg-muted/55"
-                onClick={() => {
-                  setBuyTarget(buyOptions[0] ?? hwid.current_limit + 1)
-                  setPanel('buy')
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{t('subscriptionPage.extraDevicesBuyTitle')}</p>
-                  <p className="text-xs text-muted-foreground">{limitLine}</p>
+        {!inactive && (
+          <div className="flex flex-col gap-0">
+            <div className={hwidSubpanelGridCls(panel === 'menu')}>
+              <div className="min-h-0 overflow-hidden">
+                <div className="space-y-2.5">
+                  {hwid.can_increase && (
+                    <button
+                      type="button"
+                      className="group flex w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-card-foreground transition-colors hover:bg-muted/55"
+                      onClick={() => {
+                        setBuyTarget(buyOptions[0] ?? hwid.current_limit + 1)
+                        setProvider(firstHwidProvider)
+                        setPanel('buy')
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{t('subscriptionPage.extraDevicesBuyTitle')}</p>
+                        <p className="text-xs text-muted-foreground">{limitLine}</p>
+                      </div>
+                      <ChevronRight
+                        size={16}
+                        className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                      />
+                    </button>
+                  )}
+                  {hwid.can_decrease && (
+                    <button
+                      type="button"
+                      className="group flex w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-card-foreground transition-colors hover:bg-muted/55"
+                      onClick={() => {
+                        const last = decOptions[decOptions.length - 1] ?? hwid.base_limit
+                        setDecTarget(last)
+                        setPanel('decrease')
+                      }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{t('subscriptionPage.extraDevicesDecreaseTitle')}</p>
+                        <p className="text-xs text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseHint')}</p>
+                      </div>
+                      <ChevronRight
+                        size={16}
+                        className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                      />
+                    </button>
+                  )}
+                  {!hwid.can_increase && !hwid.can_decrease && (
+                    <p className="text-sm text-muted-foreground">{t('subscriptionPage.extraDevicesNoActions')}</p>
+                  )}
                 </div>
-                <ChevronRight size={16} className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-              </button>
-            )}
-            {hwid.can_decrease && (
-              <button
-                type="button"
-                className="group flex w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-card-foreground transition-colors hover:bg-muted/55"
-                onClick={() => {
-                  const last = decOptions[decOptions.length - 1] ?? hwid.base_limit
-                  setDecTarget(last)
-                  setPanel('decrease')
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{t('subscriptionPage.extraDevicesDecreaseTitle')}</p>
-                  <p className="text-xs text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseHint')}</p>
-                </div>
-                <ChevronRight size={16} className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-              </button>
-            )}
-            {!hwid.can_increase && !hwid.can_decrease && (
-              <p className="text-sm text-muted-foreground">{t('subscriptionPage.extraDevicesNoActions')}</p>
-            )}
-          </div>
-        )}
+              </div>
+            </div>
 
-        {!inactive && panel === 'buy' && (
-          <div className="space-y-4">
+            <div className={hwidSubpanelGridCls(panel === 'buy')}>
+              <div className="min-h-0 overflow-hidden">
+                <div className="space-y-4 pt-0">
             <div>
               <label className="text-xs font-medium text-muted-foreground">{t('subscriptionPage.extraDevicesNewLimit')}</label>
               <div className="relative mt-1.5">
@@ -201,42 +326,41 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">{t('checkout.chooseProvider')}</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 items-start">
                 {providerEnabled.yookassa && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={provider === 'yookassa' ? 'default' : 'outline'}
-                    className="gap-1.5"
+                  <HwidProviderPayButton
+                    selected={provider === 'yookassa'}
                     onClick={() => setProvider('yookassa')}
-                  >
-                    <CreditCard size={14} />
-                    {t('checkout.card')}
-                  </Button>
+                    icon={<CreditCard size={14} />}
+                    label={t('checkout.card')}
+                    hint={t('checkout.providerHintYookassa')}
+                  />
                 )}
                 {providerEnabled.cryptopay && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={provider === 'cryptopay' ? 'default' : 'outline'}
-                    className="gap-1.5"
+                  <HwidProviderPayButton
+                    selected={provider === 'cryptopay'}
                     onClick={() => setProvider('cryptopay')}
-                  >
-                    <Bitcoin size={14} />
-                    {t('checkout.crypto')}
-                  </Button>
+                    icon={<Bitcoin size={14} />}
+                    label={t('checkout.crypto')}
+                    hint={t('checkout.providerHintCryptopay')}
+                  />
                 )}
                 {providerEnabled.telegram && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={provider === 'telegram' ? 'default' : 'outline'}
-                    className="gap-1.5"
+                  <HwidProviderPayButton
+                    selected={provider === 'telegram'}
                     onClick={() => setProvider('telegram')}
-                  >
-                    <Star size={14} />
-                    {t('checkout.telegramStars')}
-                  </Button>
+                    icon={<Star size={14} />}
+                    label={t('checkout.telegramStars')}
+                    hint={t('checkout.providerHintTelegram')}
+                  />
+                )}
+                {enabledPlategaMethods(providerEnabled).length > 0 && (
+                  <PlategaPaymentExpand
+                    enabled={providerEnabled}
+                    selected={provider}
+                    onSelect={(id: PlategaMethodId) => setProvider(id)}
+                    variant="compact"
+                  />
                 )}
               </div>
             </div>
@@ -289,7 +413,8 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
             <Button
               type="button"
               className="w-full"
-              disabled={payLoading || !preview || buyTarget <= hwid.current_limit}
+              disabled={!preview || buyTarget <= hwid.current_limit}
+              loading={payLoading}
               onClick={async () => {
                 setPayError(null)
                 setPayLoading(true)
@@ -311,58 +436,72 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
             >
               {t('checkout.pay')}
             </Button>
-          </div>
-        )}
-
-        {!inactive && panel === 'decrease' && (
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">{t('subscriptionPage.extraDevicesNewLimit')}</label>
-              <div className="relative mt-1.5">
-                <select
-                  className="w-full cursor-pointer appearance-none rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm"
-                  value={decTarget}
-                  onChange={(e) => setDecTarget(parseInt(e.target.value, 10))}
-                >
-                  {decOptions.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
+                </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseNote')}</p>
-            {applyDec.isError && <p className="text-sm text-destructive">{t('errors.unknown')}</p>}
-            <Button
-              type="button"
-              className="w-full"
-              variant="secondary"
-              disabled={applyDec.isPending || decTarget >= hwid.current_limit || decTarget < hwid.base_limit}
-              onClick={() => setDecreaseModalOpen(true)}
-            >
-              {t('subscriptionPage.extraDevicesConfirmDecrease')}
-            </Button>
+
+            <div className={hwidSubpanelGridCls(panel === 'decrease')}>
+              <div className="min-h-0 overflow-hidden">
+                <div className="space-y-4 pt-0">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {t('subscriptionPage.extraDevicesNewLimit')}
+                    </label>
+                    <div className="relative mt-1.5">
+                      <select
+                        className="w-full cursor-pointer appearance-none rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm"
+                        value={decTarget}
+                        onChange={(e) => setDecTarget(parseInt(e.target.value, 10))}
+                      >
+                        {decOptions.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        size={16}
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseNote')}</p>
+                  {applyDec.isError && <p className="text-sm text-destructive">{t('errors.unknown')}</p>}
+                  <Button
+                    type="button"
+                    className="w-full"
+                    variant="secondary"
+                    disabled={applyDec.isPending || decTarget >= hwid.current_limit || decTarget < hwid.base_limit}
+                    onClick={() => openDecreaseConfirmModal()}
+                  >
+                    {t('subscriptionPage.extraDevicesConfirmDecrease')}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
 
-      {decreaseModalOpen && typeof document !== 'undefined'
+      {decreaseModalMounted && typeof document !== 'undefined'
         ? createPortal(
             <div
               role="presentation"
-              className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-              onClick={() => !applyDec.isPending && setDecreaseModalOpen(false)}
+              className={cn(
+                'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity duration-[400ms] ease-out',
+                decreaseModalVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
+              )}
+              onClick={() => !applyDec.isPending && closeDecreaseConfirmModal()}
+              onTransitionEnd={onDecreaseModalOverlayTransitionEnd}
             >
               <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="hwid-decrease-warning-title"
-                className="w-full max-w-md rounded-2xl border border-border bg-background/95 p-5 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm"
+                className={cn(
+                  'w-full max-w-md rounded-2xl border border-border bg-background/95 p-5 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm transition-[opacity,transform] duration-[400ms] ease-out',
+                  decreaseModalVisible ? 'scale-100 opacity-100' : 'scale-[0.97] opacity-0',
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex gap-3">
@@ -386,7 +525,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     size="sm"
                     className="w-full sm:w-auto"
                     disabled={applyDec.isPending}
-                    onClick={() => setDecreaseModalOpen(false)}
+                    onClick={() => closeDecreaseConfirmModal()}
                   >
                     {t('common.cancel')}
                   </Button>

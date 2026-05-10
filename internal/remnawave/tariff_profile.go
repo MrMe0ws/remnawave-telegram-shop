@@ -125,7 +125,7 @@ func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *
 		t := profile.Tag
 		userUpdate.Tag = &t
 	}
-	if username := usernameFromCtx(ctx); username != "" {
+	if username := UsernameFromCtx(ctx); username != "" {
 		userUpdate.Description = &username
 	}
 
@@ -179,7 +179,7 @@ func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int
 		t := profile.Tag
 		createReq.Tag = &t
 	}
-	if tgUsername := usernameFromCtx(ctx); tgUsername != "" {
+	if tgUsername := UsernameFromCtx(ctx); tgUsername != "" {
 		createReq.Description = &tgUsername
 	}
 	var resp apiResponse[User]

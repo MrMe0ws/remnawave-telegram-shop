@@ -47,16 +47,24 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : 'button'
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          /* При loading кнопка остаётся disabled, но не «серой»: виден спиннер как на активной CTA */
+          loading && '!opacity-100',
+        )}
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
       >
         {loading ? (
-          <>
-            <span className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+          <span className="inline-flex w-full min-w-0 items-center justify-center gap-2">
+            <span
+              className="box-border inline-block h-4 w-4 shrink-0 rounded-full border-2 border-solid border-current border-t-transparent animate-spin"
+              aria-hidden
+            />
             {children}
-          </>
+          </span>
         ) : (
           children
         )}

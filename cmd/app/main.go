@@ -10,10 +10,10 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"remnawave-tg-shop-bot/internal/cache"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	cabinethttp "remnawave-tg-shop-bot/internal/cabinet/http"
 	cabstartup "remnawave-tg-shop-bot/internal/cabinet/startup"
+	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
@@ -21,6 +21,7 @@ import (
 	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/notification"
 	"remnawave-tg-shop-bot/internal/payment"
+	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/sync"
@@ -116,6 +117,7 @@ func main() {
 	cryptoPayClient := cryptopay.NewCryptoPayClient(config.CryptoPayUrl(), config.CryptoPayToken())                // Криптоплатежи
 	remnawaveClient := remnawave.NewClient(config.RemnawaveUrl(), config.RemnawaveToken(), config.RemnawaveMode()) // Remnawave API
 	yookasaClient := yookasa.NewClient(config.YookasaUrl(), config.YookasaShopId(), config.YookasaSecretKey())     // YooKassa платежи
+	plategaClient := platega.NewClient(config.PlategaMerchantID(), config.PlategaSecret())
 
 	// Создание экземпляра Telegram бота с 3 воркерами для параллельной обработки запросов
 	botOptions := []bot.Option{bot.WithWorkers(3)}
@@ -140,11 +142,11 @@ func main() {
 	promoService := promo.NewService(promoRepository, customerRepository, purchaseRepository, remnawaveClient)
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, referralRepository, cache, moynalogClient, promoService, loyaltyTierRepository)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, referralRepository, cache, moynalogClient, promoService, loyaltyTierRepository)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
-	// Проверяет оплаченные счета в CryptoPay и YooKassa
-	cronScheduler := setupInvoiceChecker(purchaseRepository, cryptoPayClient, paymentService, yookasaClient)
+	// CryptoPay; YooKassa и Platega — поллинг только если не задан соответствующий WEBHOOK_URL.
+	cronScheduler := setupInvoiceChecker(purchaseRepository, cryptoPayClient, paymentService, yookasaClient, plategaClient)
 	if cronScheduler != nil {
 		cronScheduler.Start()
 		defer cronScheduler.Stop()
@@ -689,6 +691,12 @@ func main() {
 		tributeHandler := tribute.NewClient(paymentService, customerRepository)
 		mux.Handle(config.GetTributeWebHookUrl(), tributeHandler.WebHookHandler())
 	}
+	if config.IsYookasaEnabled() && strings.TrimSpace(config.GetYookasaWebHookURL()) != "" {
+		mux.Handle(config.GetYookasaWebHookURL(), yookasa.NewWebhookHandler(yookasaClient, paymentService, purchaseRepository))
+	}
+	if config.IsPlategaEnabled() && strings.TrimSpace(config.GetPlategaWebHookURL()) != "" {
+		mux.Handle(config.GetPlategaWebHookURL(), platega.NewWebhookHandler(purchaseRepository, paymentService, config.PlategaMerchantID(), config.PlategaSecret()))
+	}
 
 	// Web-кабинет: при CABINET_ENABLED=true регистрируем /cabinet/api/*
 	// и /cabinet/* на том же mux и том же порту, что и healthcheck.
@@ -850,9 +858,12 @@ func setupInvoiceChecker(
 	purchaseRepository *database.PurchaseRepository,
 	cryptoPayClient *cryptopay.Client,
 	paymentService *payment.PaymentService,
-	yookasaClient *yookasa.Client) *cron.Cron {
-	// Если обе платежные системы отключены, не создаем cron-задачу
-	if !config.IsYookasaEnabled() && !config.IsCryptoPayEnabled() {
+	yookasaClient *yookasa.Client,
+	plategaClient *platega.Client,
+) *cron.Cron {
+	yookPoll := config.IsYookasaEnabled() && strings.TrimSpace(config.GetYookasaWebHookURL()) == ""
+	plategaPoll := config.IsPlategaEnabled() && strings.TrimSpace(config.GetPlategaWebHookURL()) == ""
+	if !config.IsCryptoPayEnabled() && !yookPoll && !plategaPoll {
 		return nil
 	}
 	c := cron.New(cron.WithSeconds()) // Включаем поддержку секунд в расписании
@@ -869,13 +880,23 @@ func setupInvoiceChecker(
 		}
 	}
 
-	// Задача для проверки счетов YooKassa (каждые 5 секунд)
-	if config.IsYookasaEnabled() {
+	// Задача для проверки счетов YooKassa (каждые 5 секунд), если нет вебхука
+	if yookPoll {
 		_, err := c.AddFunc("*/5 * * * * *", func() {
 			ctx := context.Background()
 			checkYookasaInvoice(ctx, purchaseRepository, yookasaClient, paymentService)
 		})
 
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if plategaPoll && plategaClient != nil && plategaClient.IsConfigured() {
+		_, err := c.AddFunc("*/5 * * * * *", func() {
+			ctx := context.Background()
+			checkPlategaInvoice(ctx, purchaseRepository, plategaClient, paymentService)
+		})
 		if err != nil {
 			panic(err)
 		}
@@ -956,6 +977,63 @@ func checkYookasaInvoice(
 	}
 }
 
+// checkPlategaInvoice — поллинг pending-покупок Platega (если не используется вебхук).
+func checkPlategaInvoice(
+	ctx context.Context,
+	purchaseRepository *database.PurchaseRepository,
+	plategaClient *platega.Client,
+	paymentService *payment.PaymentService,
+) {
+	if plategaClient == nil || !plategaClient.IsConfigured() {
+		return
+	}
+	for _, inv := range database.PlategaInvoiceTypes() {
+		pendingPurchases, err := purchaseRepository.FindByInvoiceTypeAndStatus(
+			ctx,
+			inv,
+			database.PurchaseStatusPending,
+		)
+		if err != nil {
+			slog.Error("platega poll: find pending", "invoice_type", inv, "error", err)
+			continue
+		}
+		if pendingPurchases == nil || len(*pendingPurchases) == 0 {
+			continue
+		}
+		for _, purchase := range *pendingPurchases {
+			if purchase.PlategaID == nil || strings.TrimSpace(*purchase.PlategaID) == "" {
+				continue
+			}
+			tx, err := plategaClient.GetTransaction(ctx, strings.TrimSpace(*purchase.PlategaID))
+			if err != nil {
+				var apiErr *platega.APIError
+				if errors.As(err, &apiErr) && apiErr.IsNotFound() {
+					slog.Warn("Platega transaction not found, canceling purchase", "tx", *purchase.PlategaID, "purchaseId", purchase.ID)
+					if cancelErr := paymentService.CancelPlategaPayment(purchase.ID); cancelErr != nil {
+						slog.Error("Error canceling platega purchase after not found", "purchaseId", purchase.ID, "error", cancelErr)
+					}
+					continue
+				}
+				slog.Error("platega poll: get transaction", "tx", *purchase.PlategaID, "error", err)
+				continue
+			}
+			switch tx.Status {
+			case platega.StatusCanceled, platega.StatusChargebacked:
+				if cancelErr := paymentService.CancelPlategaPayment(purchase.ID); cancelErr != nil {
+					slog.Error("platega poll: cancel", "purchaseId", purchase.ID, "error", cancelErr)
+				}
+			case platega.StatusConfirmed:
+				if err := paymentService.ProcessPurchaseById(ctx, purchase.ID); err != nil {
+					slog.Error("platega poll: process purchase", "purchaseId", purchase.ID, "error", err)
+				} else {
+					slog.Info("platega poll: processed", "purchaseId", purchase.ID)
+				}
+			default:
+			}
+		}
+	}
+}
+
 // checkCryptoPayInvoice - проверяет статус счетов CryptoPay
 // Находит все ожидающие оплаты покупки и проверяет их статус в CryptoPay
 // Если счет оплачен, обрабатывает покупку и активирует подписку
@@ -1013,15 +1091,15 @@ func checkCryptoPayInvoice(
 				feeAmt = *invoice.FeeAmount
 			}
 			ctxPaid := payment.WithCryptoNotifyMeta(ctxWithUsername, payment.CryptoNotifyMeta{
-				Hash:         invoice.Hash,
-				Status:       invoice.Status,
-				CurrencyType: invoice.CurrencyType,
-				Asset:        invoice.Asset,
-				PaidAsset:    invoice.PaidAsset,
-				PaidAmount:   invoice.PaidAmount,
-				PayUrl:       invoice.PayUrl,
+				Hash:          invoice.Hash,
+				Status:        invoice.Status,
+				CurrencyType:  invoice.CurrencyType,
+				Asset:         invoice.Asset,
+				PaidAsset:     invoice.PaidAsset,
+				PaidAmount:    invoice.PaidAmount,
+				PayUrl:        invoice.PayUrl,
 				BotInvoiceUrl: invoice.BotInvoiceUrl,
-				FeeAmount:    feeAmt,
+				FeeAmount:     feeAmt,
 			})
 			err = paymentService.ProcessPurchaseById(ctxPaid, int64(purchaseID))
 			if err != nil {

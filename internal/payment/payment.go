@@ -13,6 +13,7 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/moynalog"
+	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
@@ -99,6 +100,23 @@ func (s PaymentService) withRemnawavePanelUsername(ctx context.Context, customer
 	return ctx
 }
 
+func (s PaymentService) ctxWithTelegramUsernameIfMissing(ctx context.Context, customer *database.Customer) context.Context {
+	if customer == nil {
+		return ctx
+	}
+	if v, ok := ctx.Value(remnawave.CtxKeyUsername).(string); ok && strings.TrimSpace(v) != "" {
+		return ctx
+	}
+	if customer.TelegramUsername != nil {
+		u := strings.TrimSpace(*customer.TelegramUsername)
+		u = strings.TrimPrefix(u, "@")
+		if u != "" {
+			return context.WithValue(ctx, remnawave.CtxKeyUsername, u)
+		}
+	}
+	return ctx
+}
+
 type PaymentService struct {
 	purchaseRepository    *database.PurchaseRepository
 	tariffRepository      *database.TariffRepository
@@ -108,6 +126,7 @@ type PaymentService struct {
 	translation           *translation.Manager
 	cryptoPayClient       *cryptopay.Client
 	yookasaClient         *yookasa.Client
+	plategaClient         *platega.Client
 	referralRepository    *database.ReferralRepository
 	cache                 *cache.Cache
 	moynalogClient        *moynalog.Client
@@ -130,6 +149,7 @@ func NewPaymentService(
 	telegramBot *bot.Bot,
 	cryptoPayClient *cryptopay.Client,
 	yookasaClient *yookasa.Client,
+	plategaClient *platega.Client,
 	referralRepository *database.ReferralRepository,
 	cache *cache.Cache,
 	moynalogClient *moynalog.Client,
@@ -145,6 +165,7 @@ func NewPaymentService(
 		translation:           translation,
 		cryptoPayClient:       cryptoPayClient,
 		yookasaClient:         yookasaClient,
+		plategaClient:         plategaClient,
 		referralRepository:    referralRepository,
 		cache:                 cache,
 		moynalogClient:        moynalogClient,
@@ -173,6 +194,8 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if customer == nil {
 		return fmt.Errorf("customer %s not found", utils.MaskHalfInt64(purchase.CustomerID))
 	}
+
+	ctx = s.ctxWithTelegramUsernameIfMissing(ctx, customer)
 
 	if !config.HwidExtraDevicesEnabled() && purchase.ExtraHwid > 0 {
 		if purchase.Month <= 0 {
@@ -388,8 +411,8 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 		return err
 	}
 
-	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
-		description := buildRubReceiptDescription(0, purchase.ExtraHwid, nil)
+	if s.moynalogClient != nil && invoiceUsesMoynalogReceipt(purchase) {
+		description := buildRubReceiptDescription(0, purchase.ExtraHwid, nil, purchase.InvoiceType)
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
 			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
@@ -624,12 +647,12 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	purchase.PaidAt = &paidNow
 	expireBefore := customer.ExpireAt
 
-	// Отправка чека в МойНалог для платежей YooKassa (сразу после подтверждения платежа)
-	if s.moynalogClient != nil && purchase.InvoiceType == database.InvoiceTypeYookasa {
+	// Отправка дохода в «Мой налог» для способов из MOYNALOG_RECEIPT_FOR (сразу после подтверждения оплаты).
+	if s.moynalogClient != nil && invoiceUsesMoynalogReceipt(purchase) {
 		slog.Debug("Attempting to send moynalog receipt", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 
 		rcExtras := &TariffPurchaseExtras{Kind: purchase.PurchaseKind, IsEarlyDowngrade: purchase.IsEarlyDowngrade}
-		description := buildRubReceiptDescription(purchase.Month, purchase.ExtraHwid, rcExtras)
+		description := buildRubReceiptDescription(purchase.Month, purchase.ExtraHwid, rcExtras, purchase.InvoiceType)
 
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 
@@ -643,8 +666,8 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	} else {
 		if s.moynalogClient == nil {
 			slog.Debug("Moynalog client not available, skipping receipt", "purchase_id", utils.MaskHalfInt64(purchase.ID))
-		} else if purchase.InvoiceType != database.InvoiceTypeYookasa {
-			slog.Debug("Invoice type is not YooKassa, skipping moynalog receipt", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		} else if !invoiceUsesMoynalogReceipt(purchase) {
+			slog.Debug("Invoice type skips moynalog receipt (config or currency)", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 		}
 	}
 
@@ -982,6 +1005,29 @@ func ensurePurchaseKindExtraHwidOnly(pur *database.Purchase) {
 	}
 }
 
+// invoiceUsesMoynalogReceipt — учитывает MOYNALOG_RECEIPT_FOR и валюту (в «Мой налог» только рублёвый эквивалент из purchase.amount).
+func invoiceUsesMoynalogReceipt(p *database.Purchase) bool {
+	if p == nil || !purchaseCurrencyRubForMoynalog(p) {
+		return false
+	}
+	switch p.InvoiceType {
+	case database.InvoiceTypeYookasa:
+		return config.MoynalogReceiptForYookasa()
+	case database.InvoiceTypeCrypto:
+		return config.MoynalogReceiptForCrypto()
+	default:
+		if database.InvoiceTypeIsPlatega(p.InvoiceType) {
+			return config.MoynalogReceiptForPlatega()
+		}
+	}
+	return false
+}
+
+func purchaseCurrencyRubForMoynalog(p *database.Purchase) bool {
+	c := strings.ToUpper(strings.TrimSpace(p.Currency))
+	return c == "" || c == "RUB" || c == "RUR"
+}
+
 func rubMonthWord(months int) string {
 	switch months {
 	case 1:
@@ -993,27 +1039,50 @@ func rubMonthWord(months int) string {
 	}
 }
 
-// buildRubReceiptDescription одна строка для чека YooKassa и «Мой Налог» (рус.).
-func buildRubReceiptDescription(months, extraHwid int, extras *TariffPurchaseExtras) string {
+// buildRubReceiptDescription одна строка для описания в ЮKassa/Platega и комментария дохода в «Мой налог» (рус.).
+// invoiceType добавляет нейтральный суффикс канала для Platega (без слов про «крипто» — в т.ч. для plt_crypto и счетов, уходящих в «Мой налог»).
+func buildRubReceiptDescription(months, extraHwid int, extras *TariffPurchaseExtras, invoiceType database.InvoiceType) string {
 	ms := rubMonthWord(months)
-	if months > 0 && extraHwid > 0 {
-		return fmt.Sprintf("Подписка на %d %s + %d устр.", months, ms, extraHwid)
+	var base string
+	switch {
+	case months > 0 && extraHwid > 0:
+		base = fmt.Sprintf("Подписка на %d %s + %d устр.", months, ms, extraHwid)
+	case extraHwid > 0 && months <= 0:
+		base = fmt.Sprintf("Оплата дополнительного устройства +%d", extraHwid)
+	case extras != nil && extras.Kind == database.PurchaseKindTariffUpgrade && months > 0:
+		base = fmt.Sprintf("Улучшение тарифа (полная оплата периода на %d %s + пересчёт остатка в дни)", months, ms)
+	case extras != nil && extras.IsEarlyDowngrade && months > 0:
+		base = fmt.Sprintf("Понижение тарифа (полная оплата периода на %d %s + пересчёт остатка в дни)", months, ms)
+	case months > 0:
+		base = fmt.Sprintf("Подписка на %d %s", months, ms)
+	default:
+		base = "Оплата"
 	}
-	if extraHwid > 0 && months <= 0 {
-		return fmt.Sprintf("Оплата дополнительного устройства +%d", extraHwid)
+	if database.InvoiceTypeIsPlategaCryptoOrCryptopay(invoiceType) {
+		return base
 	}
-	if extras != nil {
-		if extras.Kind == database.PurchaseKindTariffUpgrade && months > 0 {
-			return fmt.Sprintf("Улучшение тарифа (полная оплата периода на %d %s + пересчёт остатка в дни)", months, ms)
-		}
-		if extras.IsEarlyDowngrade && months > 0 {
-			return fmt.Sprintf("Понижение тарифа (полная оплата периода на %d %s + пересчёт остатка в дни)", months, ms)
-		}
+	if suf := invoiceDescriptionPlategaSuffix(invoiceType); suf != "" {
+		return base + suf
 	}
-	if months > 0 {
-		return fmt.Sprintf("Подписка на %d %s", months, ms)
+	return base
+}
+
+// invoiceDescriptionPlategaSuffix — уточнение способа Platega без упоминания криптовалюты (в т.ч. в текстах для «Мой налог»).
+func invoiceDescriptionPlategaSuffix(t database.InvoiceType) string {
+	switch t {
+	case database.InvoiceTypePlategaSBP:
+		return " — Platega, СБП"
+	case database.InvoiceTypePlategaCards:
+		return " — Platega, карты"
+	case database.InvoiceTypePlategaAcquiring:
+		return " — Platega, эквайринг"
+	case database.InvoiceTypePlategaWorldwide:
+		return " — Platega, worldwide"
+	case database.InvoiceTypePlategaCrypto:
+		return ""
+	default:
+		return ""
 	}
-	return "Оплата"
 }
 
 func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, months int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
@@ -1022,6 +1091,9 @@ func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, mont
 		return s.createCryptoInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeYookasa:
 		return s.createYookasaInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
+	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+		return s.createPlategaInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras, invoiceType)
 	case database.InvoiceTypeTelegram:
 		return s.createTelegramInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTribute:
@@ -1043,6 +1115,9 @@ func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount floa
 		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeYookasa:
 		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
+	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+		return s.createPlategaInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras, invoiceType)
 	case database.InvoiceTypeTelegram:
 		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTribute:
@@ -1064,6 +1139,9 @@ func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, 
 		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeYookasa:
 		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
+	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+		return s.createPlategaInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil, invoiceType)
 	case database.InvoiceTypeTelegram:
 		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeTribute:
@@ -1148,10 +1226,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	}
 
 	username, _ := ctx.Value(remnawave.CtxKeyUsername).(string)
-	description := fmt.Sprintf("Subscription on %d month", months)
-	if extraHwid > 0 {
-		description = fmt.Sprintf("Extra devices +%d", extraHwid)
-	}
+	description := buildRubReceiptDescription(months, extraHwid, extras, database.InvoiceTypeCrypto)
 	paidBtnURL := cryptopay.PaidBtnURLFromCtx(ctx)
 	if paidBtnURL == "" {
 		paidBtnURL = config.BotURL()
@@ -1209,7 +1284,7 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		return "", 0, err
 	}
 
-	invDesc := buildRubReceiptDescription(months, extraHwid, extras)
+	invDesc := buildRubReceiptDescription(months, extraHwid, extras, database.InvoiceTypeYookasa)
 	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), invDesc, customer.ID, purchaseId)
 	if err != nil {
 		slog.Error("Error creating invoice", err)
@@ -1229,6 +1304,60 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 	}
 
 	return invoice.Confirmation.ConfirmationURL, purchaseId, nil
+}
+
+func (s PaymentService) createPlategaInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras, invoiceType database.InvoiceType) (url string, purchaseId int64, err error) {
+	if s.plategaClient == nil || !s.plategaClient.IsConfigured() {
+		return "", 0, fmt.Errorf("platega client not configured")
+	}
+	provider, err := platega.ProviderFor(s.plategaClient, invoiceType)
+	if err != nil {
+		return "", 0, err
+	}
+	pur := &database.Purchase{
+		InvoiceType: invoiceType,
+		Status:      database.PurchaseStatusNew,
+		Amount:      amount,
+		Currency:    "RUB",
+		CustomerID:  customer.ID,
+		Month:       months,
+		ExtraHwid:   extraHwid,
+		TariffID:    tariffID,
+	}
+	applyTariffPurchaseExtras(pur, extras)
+	ensurePurchaseKindExtraHwidOnly(pur)
+	if meta != nil {
+		pur.PromoCodeID = meta.PromoCodeID
+		pur.DiscountPercentApplied = meta.DiscountPercentApplied
+	}
+	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
+	if err != nil {
+		slog.Error("Error creating purchase", err)
+		return "", 0, err
+	}
+
+	ret := platega.ReturnURLFromCtx(ctx)
+	if ret == "" {
+		ret = config.BotURL()
+	}
+	desc := buildRubReceiptDescription(months, extraHwid, extras, invoiceType)
+	username := remnawave.UsernameFromCtx(ctx)
+	redirectURL, transactionID, err := provider.CreateInvoice(ctx, purchaseId, amount, "RUB", desc, ret, username)
+	if err != nil {
+		slog.Error("Error creating platega invoice", err, "invoice_type", invoiceType)
+		return "", 0, err
+	}
+
+	updates := map[string]interface{}{
+		"platega_id":  transactionID,
+		"platega_url": redirectURL,
+		"status":      database.PurchaseStatusPending,
+	}
+	if err := s.purchaseRepository.UpdateFields(ctx, purchaseId, updates); err != nil {
+		slog.Error("Error updating purchase", err)
+		return "", 0, err
+	}
+	return redirectURL, purchaseId, nil
 }
 
 func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
@@ -1342,6 +1471,30 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 	}
 	s.tryNotifyPurchaseCancel(ctx, purchase, cust)
 
+	return nil
+}
+
+func (s PaymentService) CancelPlategaPayment(purchaseId int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	purchase, err := s.purchaseRepository.FindById(ctx, purchaseId)
+	if err != nil {
+		return err
+	}
+	if purchase == nil {
+		return fmt.Errorf("purchase with id %s not found", utils.MaskHalfInt64(purchaseId))
+	}
+	if err := s.purchaseRepository.UpdateFields(ctx, purchaseId, map[string]interface{}{
+		"status": database.PurchaseStatusCancel,
+	}); err != nil {
+		return err
+	}
+	purchase.Status = database.PurchaseStatusCancel
+	cust, ferr := s.customerRepository.FindById(ctx, purchase.CustomerID)
+	if ferr != nil {
+		slog.Warn("payments notify cancel: load customer", "error", ferr)
+	}
+	s.tryNotifyPurchaseCancel(ctx, purchase, cust)
 	return nil
 }
 

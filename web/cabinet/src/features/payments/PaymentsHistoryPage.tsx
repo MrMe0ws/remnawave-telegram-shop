@@ -16,6 +16,14 @@ function invoiceLabel(t: (k: string) => string, invoiceType: string): string {
       return t('payments.methodTelegram')
     case 'tribute':
       return t('payments.methodTribute')
+    case 'plt_sbp':
+      return t('payments.methodSbp')
+    case 'plt_cards':
+    case 'plt_acq':
+    case 'plt_ww':
+      return t('payments.methodCard')
+    case 'plt_crypto':
+      return t('payments.methodPlategaCrypto')
     default:
       return invoiceType
   }

@@ -60,6 +60,11 @@ export interface AuthBootstrapResponse {
     yookassa?: boolean
     cryptopay?: boolean
     telegram?: boolean
+    platega_sbp?: boolean
+    platega_cards?: boolean
+    platega_acquiring?: boolean
+    platega_worldwide?: boolean
+    platega_crypto?: boolean
   }
 }
 

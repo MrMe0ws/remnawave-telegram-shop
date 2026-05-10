@@ -14,78 +14,83 @@ import (
 )
 
 type config struct {
-	telegramToken                                             string
-	price1, price3, price6, price12                           int
-	starsPrice1, starsPrice3, starsPrice6, starsPrice12       int
-	remnawaveUrl, remnawaveToken, remnawaveMode, remnawaveTag string
-	defaultLanguage                                           string
-	databaseURL                                               string
-	cryptoPayURL, cryptoPayToken                              string
-	botURL                                                    string
-	yookasaURL, yookasaShopId, yookasaSecretKey, yookasaEmail string
-	moynalogURL, moynalogUsername, moynalogPassword           string
-	moynalogProxyURL                                          string
-	telegramProxyURL                                          string
-	trafficLimit, trialTrafficLimit                           int
-	feedbackURL                                               string
-	channelURL                                                string
-	serverStatusURL                                           string
-	supportURL                                                string
-	tosURL                                                    string
-	videoGuideURL                                             string
-	serverSelectionURL                                        string
-	publicOfferURL                                            string
-	privacyPolicyURL                                          string
-	termsOfServiceURL                                         string
-	greetingImage                                             string
-	isYookasaEnabled                                          bool
-	isCryptoEnabled                                           bool
-	isTelegramStarsEnabled                                    bool
-	isMoynalogEnabled                                         bool
-	adminTelegramId                                           int64
-	forwardUserMessagesToAdmin                                bool
-	trialDays                                                 int
-	squadUUIDs                                                map[uuid.UUID]uuid.UUID
-	referralDays                                              int
-	referralMode                                              string
-	referralFirstReferrerDays                                 int
-	referralFirstRefereeDays                                  int
-	referralRepeatReferrerDays                                int
-	trialAddsToPaid                                           bool
-	hwidAddPrice                                              int
-	hwidAddStarsPrice                                         int
-	hwidMaxDevices                                            int
-	trialHwidLimit                                            int
-	paidHwidLimit                                             int
-	hwidExtraDevicesEnabled                                   bool
-	miniApp                                                   string
-	enableAutoPayment                                         bool
-	healthCheckPort                                           int
-	tributeWebhookUrl, tributeAPIKey, tributePaymentUrl       string
-	isWebAppLinkEnabled                                       bool
-	daysInMonth                                               int
-	externalSquadUUID                                         uuid.UUID
-	hwidFallbackDeviceLimit                                   int
-	trialTrafficLimitResetStrategy                            string
-	blockedTelegramIds                                        map[int64]bool
-	whitelistedTelegramIds                                    map[int64]bool
-	requirePaidPurchaseForStars                               bool
-	trialInternalSquads                                       map[uuid.UUID]uuid.UUID
-	trialExternalSquadUUID                                    uuid.UUID
-	trialRemnawaveTag                                         string
-	remnawaveHeaders                                          map[string]string
-	trafficLimitResetStrategy                                 string
-	salesMode                                                 string
-	showLongTermSavingsPercent                                bool // подписи кнопок периодов: (-N%) к 3/6/12 мес относительно цены 1 мес
-	rubPerStar                                                float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
-	loyaltyEnabled                                            bool
-	loyaltyMaxTotalDiscountPercent                            int // потолок суммы лояльность+промо (1–100)
-	loyaltyXPMinPerPurchase                                   int64 // минимум XP за оплату если сумма не дала XP
-	paymentsNotifyEnabled                                     bool
-	paymentsNotifyChatID                                      int64
-	paymentsNotifyMessageThreadID                             int
-	paymentsNotifySendPaid                                    bool
-	paymentsNotifySendCancel                                  bool
+	telegramToken                                                                string
+	price1, price3, price6, price12                                              int
+	starsPrice1, starsPrice3, starsPrice6, starsPrice12                          int
+	remnawaveUrl, remnawaveToken, remnawaveMode, remnawaveTag                    string
+	defaultLanguage                                                              string
+	databaseURL                                                                  string
+	cryptoPayURL, cryptoPayToken                                                 string
+	botURL                                                                       string
+	yookasaURL, yookasaShopId, yookasaSecretKey, yookasaEmail, yookasaWebhookURL string
+	plategaMerchantID, plategaSecret, plategaWebhookURL                          string
+	isPlategaSBPEnabled, isPlategaCardsEnabled                                   bool
+	isPlategaAcquiringEnabled, isPlategaWorldwideEnabled                         bool
+	isPlategaCryptoEnabled                                                       bool
+	moynalogURL, moynalogUsername, moynalogPassword                              string
+	moynalogProxyURL                                                             string
+	telegramProxyURL                                                             string
+	trafficLimit, trialTrafficLimit                                              int
+	feedbackURL                                                                  string
+	channelURL                                                                   string
+	serverStatusURL                                                              string
+	supportURL                                                                   string
+	tosURL                                                                       string
+	videoGuideURL                                                                string
+	serverSelectionURL                                                           string
+	publicOfferURL                                                               string
+	privacyPolicyURL                                                             string
+	termsOfServiceURL                                                            string
+	greetingImage                                                                string
+	isYookasaEnabled                                                             bool
+	isCryptoEnabled                                                              bool
+	isTelegramStarsEnabled                                                       bool
+	isMoynalogEnabled                                                            bool
+	moynalogReceiptYookasa, moynalogReceiptPlatega, moynalogReceiptCrypto        bool // MOYNALOG_RECEIPT_FOR
+	adminTelegramId                                                              int64
+	forwardUserMessagesToAdmin                                                   bool
+	trialDays                                                                    int
+	squadUUIDs                                                                   map[uuid.UUID]uuid.UUID
+	referralDays                                                                 int
+	referralMode                                                                 string
+	referralFirstReferrerDays                                                    int
+	referralFirstRefereeDays                                                     int
+	referralRepeatReferrerDays                                                   int
+	trialAddsToPaid                                                              bool
+	hwidAddPrice                                                                 int
+	hwidAddStarsPrice                                                            int
+	hwidMaxDevices                                                               int
+	trialHwidLimit                                                               int
+	paidHwidLimit                                                                int
+	hwidExtraDevicesEnabled                                                      bool
+	miniApp                                                                      string
+	enableAutoPayment                                                            bool
+	healthCheckPort                                                              int
+	tributeWebhookUrl, tributeAPIKey, tributePaymentUrl                          string
+	isWebAppLinkEnabled                                                          bool
+	daysInMonth                                                                  int
+	externalSquadUUID                                                            uuid.UUID
+	hwidFallbackDeviceLimit                                                      int
+	trialTrafficLimitResetStrategy                                               string
+	blockedTelegramIds                                                           map[int64]bool
+	whitelistedTelegramIds                                                       map[int64]bool
+	requirePaidPurchaseForStars                                                  bool
+	trialInternalSquads                                                          map[uuid.UUID]uuid.UUID
+	trialExternalSquadUUID                                                       uuid.UUID
+	trialRemnawaveTag                                                            string
+	remnawaveHeaders                                                             map[string]string
+	trafficLimitResetStrategy                                                    string
+	salesMode                                                                    string
+	showLongTermSavingsPercent                                                   bool    // подписи кнопок периодов: (-N%) к 3/6/12 мес относительно цены 1 мес
+	rubPerStar                                                                   float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
+	loyaltyEnabled                                                               bool
+	loyaltyMaxTotalDiscountPercent                                               int   // потолок суммы лояльность+промо (1–100)
+	loyaltyXPMinPerPurchase                                                      int64 // минимум XP за оплату если сумма не дала XP
+	paymentsNotifyEnabled                                                        bool
+	paymentsNotifyChatID                                                         int64
+	paymentsNotifyMessageThreadID                                                int
+	paymentsNotifySendPaid                                                       bool
+	paymentsNotifySendCancel                                                     bool
 }
 
 var conf config
@@ -113,6 +118,51 @@ func GetTributeAPIKey() string {
 
 func GetTributePaymentUrl() string {
 	return conf.tributePaymentUrl
+}
+
+// GetYookasaWebHookURL — путь или полный URL вебхука YooKassa; пусто = использовать только поллинг.
+func GetYookasaWebHookURL() string {
+	return conf.yookasaWebhookURL
+}
+
+func PlategaMerchantID() string {
+	return conf.plategaMerchantID
+}
+
+func PlategaSecret() string {
+	return conf.plategaSecret
+}
+
+// GetPlategaWebHookURL — путь для mux (как TRIBUTE); пусто = только поллинг Platega.
+func GetPlategaWebHookURL() string {
+	return conf.plategaWebhookURL
+}
+
+func IsPlategaSBPEnabled() bool {
+	return conf.isPlategaSBPEnabled
+}
+
+func IsPlategaCardsEnabled() bool {
+	return conf.isPlategaCardsEnabled
+}
+
+func IsPlategaAcquiringEnabled() bool {
+	return conf.isPlategaAcquiringEnabled
+}
+
+func IsPlategaWorldwideEnabled() bool {
+	return conf.isPlategaWorldwideEnabled
+}
+
+func IsPlategaCryptoEnabled() bool {
+	return conf.isPlategaCryptoEnabled
+}
+
+// IsPlategaEnabled — true, если включён хотя бы один метод Platega (и PLATEGA_ENABLED в env).
+func IsPlategaEnabled() bool {
+	return conf.isPlategaSBPEnabled || conf.isPlategaCardsEnabled ||
+		conf.isPlategaAcquiringEnabled || conf.isPlategaWorldwideEnabled ||
+		conf.isPlategaCryptoEnabled
 }
 
 func GetHwidFallbackDeviceLimit() int {
@@ -167,7 +217,6 @@ func TrialHwidLimit() int {
 func PaidHwidLimit() int {
 	return conf.paidHwidLimit
 }
-
 
 func GetMiniAppURL() string {
 	return conf.miniApp
@@ -447,6 +496,21 @@ func IsMoynalogEnabled() bool {
 	return conf.isMoynalogEnabled
 }
 
+// MoynalogReceiptForYookasa — отправлять доход в «Мой налог» после оплаты ЮKassa (см. MOYNALOG_RECEIPT_FOR).
+func MoynalogReceiptForYookasa() bool {
+	return conf.moynalogReceiptYookasa
+}
+
+// MoynalogReceiptForPlatega — отправлять доход после оплаты любым методом Platega.
+func MoynalogReceiptForPlatega() bool {
+	return conf.moynalogReceiptPlatega
+}
+
+// MoynalogReceiptForCrypto — отправлять доход после оплаты CryptoPay (сумма в purchase в RUB).
+func MoynalogReceiptForCrypto() bool {
+	return conf.moynalogReceiptCrypto
+}
+
 const bytesInGigabyte = 1073741824
 
 func mustEnv(key string) string {
@@ -510,6 +574,42 @@ func envBoolDefault(key string, def bool) bool {
 	return v == "true"
 }
 
+// parseMoynalogReceiptFor задаёт, для каких способов оплаты вызывать API «Мой налог» после успешной оплаты.
+// hasKey=false: переменная MOYNALOG_RECEIPT_FOR не задана — как раньше: ЮKassa и Platega.
+// hasKey=true и пустая строка: явно отключить отправку доходов по всем методам.
+// Иначе: список через запятую (регистр не важен): yookassa, platega, crypto.
+func parseMoynalogReceiptFor(raw string, hasKey bool) {
+	conf.moynalogReceiptYookasa = false
+	conf.moynalogReceiptPlatega = false
+	conf.moynalogReceiptCrypto = false
+	if !hasKey {
+		conf.moynalogReceiptYookasa = true
+		conf.moynalogReceiptPlatega = true
+		slog.Info("MOYNALOG_RECEIPT_FOR is unset — sending income to Мой налог for ЮKassa and Platega; set MOYNALOG_RECEIPT_FOR to override")
+		return
+	}
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		slog.Warn("MOYNALOG_RECEIPT_FOR is empty — income will not be sent to Мой налог for any payment method")
+		return
+	}
+	for _, part := range strings.Split(s, ",") {
+		tok := strings.ToLower(strings.TrimSpace(part))
+		if tok == "" {
+			continue
+		}
+		switch tok {
+		case "yookassa", "yookasa", "youkassa", "юкасса":
+			conf.moynalogReceiptYookasa = true
+		case "platega", "plt":
+			conf.moynalogReceiptPlatega = true
+		case "crypto", "cryptopay", "cryptobot":
+			conf.moynalogReceiptCrypto = true
+		default:
+			slog.Warn("MOYNALOG_RECEIPT_FOR: unknown token, ignored", "token", part)
+		}
+	}
+}
 
 func InitConfig() {
 	if os.Getenv("DISABLE_ENV_FILE") != "true" {
@@ -631,6 +731,18 @@ func InitConfig() {
 		conf.yookasaShopId = mustEnv("YOOKASA_SHOP_ID")
 		conf.yookasaSecretKey = mustEnv("YOOKASA_SECRET_KEY")
 		conf.yookasaEmail = mustEnv("YOOKASA_EMAIL")
+		conf.yookasaWebhookURL = strings.TrimSpace(os.Getenv("YOOKASA_WEBHOOK_URL"))
+	}
+
+	if envBool("PLATEGA_ENABLED") {
+		conf.plategaMerchantID = mustEnv("PLATEGA_MERCHANT_ID")
+		conf.plategaSecret = mustEnv("PLATEGA_SECRET")
+		conf.plategaWebhookURL = strings.TrimSpace(os.Getenv("PLATEGA_WEBHOOK_URL"))
+		conf.isPlategaSBPEnabled = envBool("PLATEGA_SBP_ENABLED")
+		conf.isPlategaCardsEnabled = envBool("PLATEGA_CARDS_ENABLED")
+		conf.isPlategaAcquiringEnabled = envBool("PLATEGA_ACQUIRING_ENABLED")
+		conf.isPlategaWorldwideEnabled = envBool("PLATEGA_WORLDWIDE_ENABLED")
+		conf.isPlategaCryptoEnabled = envBool("PLATEGA_CRYPTO_ENABLED")
 	}
 
 	conf.trafficLimit = mustEnvInt("TRAFFIC_LIMIT")
@@ -816,6 +928,8 @@ func InitConfig() {
 		conf.moynalogProxyURL = envStringDefault("MOYNALOG_PROXY_URL", "")
 		conf.moynalogUsername = mustEnv("MOYNALOG_USERNAME")
 		conf.moynalogPassword = mustEnv("MOYNALOG_PASSWORD")
+		rawReceiptFor, hasReceiptFor := os.LookupEnv("MOYNALOG_RECEIPT_FOR")
+		parseMoynalogReceiptFor(rawReceiptFor, hasReceiptFor)
 	}
 
 	conf.telegramProxyURL = envStringDefault("TELEGRAM_PROXY_URL", "")

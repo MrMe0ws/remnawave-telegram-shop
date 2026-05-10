@@ -135,9 +135,14 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"pwa_app_name":           cabcfg.PWAAppName(),
 		"pwa_short_name":         cabcfg.PWAShortName(),
 		"payment_providers": map[string]bool{
-			"yookassa":  botcfg.IsYookasaEnabled(),
-			"cryptopay": botcfg.IsCryptoPayEnabled(),
-			"telegram":  botcfg.IsTelegramStarsEnabled(),
+			"yookassa":          botcfg.IsYookasaEnabled(),
+			"cryptopay":         botcfg.IsCryptoPayEnabled(),
+			"telegram":          botcfg.IsTelegramStarsEnabled(),
+			"platega_sbp":       botcfg.IsPlategaEnabled() && botcfg.IsPlategaSBPEnabled(),
+			"platega_cards":     botcfg.IsPlategaEnabled() && botcfg.IsPlategaCardsEnabled(),
+			"platega_acquiring": botcfg.IsPlategaEnabled() && botcfg.IsPlategaAcquiringEnabled(),
+			"platega_worldwide": botcfg.IsPlategaEnabled() && botcfg.IsPlategaWorldwideEnabled(),
+			"platega_crypto":    botcfg.IsPlategaEnabled() && botcfg.IsPlategaCryptoEnabled(),
 		},
 	}
 	if cabcfg.TurnstileEnabled() && strings.TrimSpace(cabcfg.TurnstileSiteKey()) != "" {

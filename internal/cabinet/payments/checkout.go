@@ -35,6 +35,7 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/payment"
+	"remnawave-tg-shop-bot/internal/platega"
 	promosvc "remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/yookasa"
@@ -640,12 +641,12 @@ func (s *CheckoutService) PreviewHwid(ctx context.Context, accountID int64, targ
 	base := cabsvc.CalcHwidProportionalRub(priceMonth, delta, lim.DaysLeft)
 	final, loyPct, proPct, _ := s.applyCheckoutDiscounts(ctx, customer, invoiceType, base)
 	out := &HwidPreviewResult{
-		CurrentLimit:  lim.CurrentLimit,
-		TargetLimit:   targetLimit,
-		Delta:         delta,
-		DaysLeft:      lim.DaysLeft,
-		AmountRub:     final,
-		BaseAmountRub: base,
+		CurrentLimit:       lim.CurrentLimit,
+		TargetLimit:        targetLimit,
+		Delta:              delta,
+		DaysLeft:           lim.DaysLeft,
+		AmountRub:          final,
+		BaseAmountRub:      base,
 		LoyaltyDiscountPct: loyPct,
 		PromoDiscountPct:   proPct,
 	}
@@ -783,6 +784,26 @@ func (s *CheckoutService) ensureProviderEnabled(provider string) error {
 	case repository.CheckoutProviderTelegram:
 		if !config.IsTelegramStarsEnabled() {
 			return fmt.Errorf("%w: telegram stars disabled", ErrProviderDisabled)
+		}
+	case repository.CheckoutProviderPlategaSBP:
+		if !config.IsPlategaEnabled() || !config.IsPlategaSBPEnabled() {
+			return fmt.Errorf("%w: platega sbp disabled", ErrProviderDisabled)
+		}
+	case repository.CheckoutProviderPlategaCards:
+		if !config.IsPlategaEnabled() || !config.IsPlategaCardsEnabled() {
+			return fmt.Errorf("%w: platega cards disabled", ErrProviderDisabled)
+		}
+	case repository.CheckoutProviderPlategaAcquiring:
+		if !config.IsPlategaEnabled() || !config.IsPlategaAcquiringEnabled() {
+			return fmt.Errorf("%w: platega acquiring disabled", ErrProviderDisabled)
+		}
+	case repository.CheckoutProviderPlategaWorldwide:
+		if !config.IsPlategaEnabled() || !config.IsPlategaWorldwideEnabled() {
+			return fmt.Errorf("%w: platega worldwide disabled", ErrProviderDisabled)
+		}
+	case repository.CheckoutProviderPlategaCrypto:
+		if !config.IsPlategaEnabled() || !config.IsPlategaCryptoEnabled() {
+			return fmt.Errorf("%w: platega crypto disabled", ErrProviderDisabled)
 		}
 	default:
 		return fmt.Errorf("%w: unknown provider %q", ErrInvalidInput, provider)
@@ -936,6 +957,12 @@ func (s *CheckoutService) withProviderOverrides(
 		if returnURL != "" {
 			ctx = context.WithValue(ctx, cryptopay.CtxKeyPaidBtnURL, returnURL)
 		}
+	case repository.CheckoutProviderPlategaSBP, repository.CheckoutProviderPlategaCards,
+		repository.CheckoutProviderPlategaAcquiring, repository.CheckoutProviderPlategaWorldwide,
+		repository.CheckoutProviderPlategaCrypto:
+		if returnURL != "" {
+			ctx = context.WithValue(ctx, platega.CtxKeyReturnURL, returnURL)
+		}
 	}
 	return ctx
 }
@@ -992,6 +1019,16 @@ func mapProviderToInvoiceType(provider string) (database.InvoiceType, error) {
 		return database.InvoiceTypeCrypto, nil
 	case repository.CheckoutProviderTelegram:
 		return database.InvoiceTypeTelegram, nil
+	case repository.CheckoutProviderPlategaSBP:
+		return database.InvoiceTypePlategaSBP, nil
+	case repository.CheckoutProviderPlategaCards:
+		return database.InvoiceTypePlategaCards, nil
+	case repository.CheckoutProviderPlategaAcquiring:
+		return database.InvoiceTypePlategaAcquiring, nil
+	case repository.CheckoutProviderPlategaWorldwide:
+		return database.InvoiceTypePlategaWorldwide, nil
+	case repository.CheckoutProviderPlategaCrypto:
+		return database.InvoiceTypePlategaCrypto, nil
 	default:
 		return "", fmt.Errorf("%w: unknown provider %q", ErrInvalidInput, provider)
 	}
@@ -1031,6 +1068,11 @@ func paymentURLFromPurchase(p *database.Purchase) string {
 	case database.InvoiceTypeTelegram:
 		if p.CryptoInvoiceLink != nil {
 			return *p.CryptoInvoiceLink
+		}
+	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+		if p.PlategaURL != nil {
+			return *p.PlategaURL
 		}
 	}
 	return ""

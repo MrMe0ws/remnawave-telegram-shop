@@ -309,6 +309,8 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		})
 	}
 
+	keyboard = h.appendPlategaPaymentRows(keyboard, langCode, tidStr, month, amount, extraCount)
+
 	if config.IsTelegramStarsEnabled() {
 		shouldShowStarsButton := true
 
@@ -597,6 +599,95 @@ func parseInt64Safe(value string) int64 {
 }
 
 // paymentCallbackQuery — данные callback для оплаты; для тарифов цена берётся из БД, amount не передаётся.
+func plategaInvoiceEnabled(it database.InvoiceType) bool {
+	if !config.IsPlategaEnabled() {
+		return false
+	}
+	switch it {
+	case database.InvoiceTypePlategaSBP:
+		return config.IsPlategaSBPEnabled()
+	case database.InvoiceTypePlategaCards:
+		return config.IsPlategaCardsEnabled()
+	case database.InvoiceTypePlategaAcquiring:
+		return config.IsPlategaAcquiringEnabled()
+	case database.InvoiceTypePlategaWorldwide:
+		return config.IsPlategaWorldwideEnabled()
+	case database.InvoiceTypePlategaCrypto:
+		return config.IsPlategaCryptoEnabled()
+	default:
+		return false
+	}
+}
+
+func (h Handler) appendPlategaPaymentRows(keyboard [][]models.InlineKeyboardButton, langCode, tidStr, month, amount string, extraCount int) [][]models.InlineKeyboardButton {
+	type row struct {
+		inv database.InvoiceType
+		key string
+	}
+	for _, r := range []row{
+		{database.InvoiceTypePlategaSBP, "platega_sbp_button"},
+		{database.InvoiceTypePlategaCards, "platega_cards_button"},
+		{database.InvoiceTypePlategaAcquiring, "platega_acquiring_button"},
+		{database.InvoiceTypePlategaWorldwide, "platega_worldwide_button"},
+		{database.InvoiceTypePlategaCrypto, "platega_crypto_button"},
+	} {
+		if plategaInvoiceEnabled(r.inv) {
+			keyboard = append(keyboard, []models.InlineKeyboardButton{
+				h.translation.WithButton(langCode, r.key, models.InlineKeyboardButton{
+					CallbackData: paymentCallbackQuery(tidStr, month, string(r.inv), amount, extraCount),
+				}),
+			})
+		}
+	}
+	return keyboard
+}
+
+func (h Handler) appendPlategaAddDevicePaymentRows(keyboard [][]models.InlineKeyboardButton, langCode string, target int) [][]models.InlineKeyboardButton {
+	type row struct {
+		inv database.InvoiceType
+		key string
+	}
+	for _, r := range []row{
+		{database.InvoiceTypePlategaSBP, "platega_sbp_button"},
+		{database.InvoiceTypePlategaCards, "platega_cards_button"},
+		{database.InvoiceTypePlategaAcquiring, "platega_acquiring_button"},
+		{database.InvoiceTypePlategaWorldwide, "platega_worldwide_button"},
+		{database.InvoiceTypePlategaCrypto, "platega_crypto_button"},
+	} {
+		if plategaInvoiceEnabled(r.inv) {
+			keyboard = append(keyboard, []models.InlineKeyboardButton{
+				h.translation.WithButton(langCode, r.key, models.InlineKeyboardButton{
+					CallbackData: fmt.Sprintf("%s?target=%d&invoiceType=%s", CallbackAddDevicePayment, target, r.inv),
+				}),
+			})
+		}
+	}
+	return keyboard
+}
+
+func (h Handler) appendPlategaRenewExtraRows(keyboard [][]models.InlineKeyboardButton, langCode string, extra, months int) [][]models.InlineKeyboardButton {
+	type row struct {
+		inv database.InvoiceType
+		key string
+	}
+	for _, r := range []row{
+		{database.InvoiceTypePlategaSBP, "platega_sbp_button"},
+		{database.InvoiceTypePlategaCards, "platega_cards_button"},
+		{database.InvoiceTypePlategaAcquiring, "platega_acquiring_button"},
+		{database.InvoiceTypePlategaWorldwide, "platega_worldwide_button"},
+		{database.InvoiceTypePlategaCrypto, "platega_crypto_button"},
+	} {
+		if plategaInvoiceEnabled(r.inv) {
+			keyboard = append(keyboard, []models.InlineKeyboardButton{
+				h.translation.WithButton(langCode, r.key, models.InlineKeyboardButton{
+					CallbackData: fmt.Sprintf("%s?extra=%d&months=%d&invoiceType=%s", CallbackRenewExtraHwid, extra, months, r.inv),
+				}),
+			})
+		}
+	}
+	return keyboard
+}
+
 func paymentCallbackQuery(tidStr, month, invoiceType, amount string, extra int) string {
 	if tidStr != "" {
 		return fmt.Sprintf("%s?tid=%s&month=%s&invoiceType=%s&extra=%d", CallbackPayment, tidStr, month, invoiceType, extra)

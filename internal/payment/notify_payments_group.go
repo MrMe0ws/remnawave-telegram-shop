@@ -36,6 +36,9 @@ func invoiceTypeTitle(t database.InvoiceType) string {
 		return "Telegram Stars"
 	case database.InvoiceTypeTribute:
 		return "Tribute"
+	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+		return "Platega"
 	default:
 		return string(t)
 	}
@@ -105,6 +108,11 @@ func paymentLinkBlock(p *database.Purchase) string {
 	case database.InvoiceTypeTelegram:
 		if p.CryptoInvoiceLink != nil && strings.TrimSpace(*p.CryptoInvoiceLink) != "" {
 			return "🔗 счёт Stars:\n   " + htmlCode(strings.TrimSpace(*p.CryptoInvoiceLink))
+		}
+	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+		if p.PlategaID != nil && strings.TrimSpace(*p.PlategaID) != "" {
+			return "🔗 платёж Platega: " + htmlCode(strings.TrimSpace(*p.PlategaID))
 		}
 	}
 	return "🔗 платёж: —"
@@ -401,8 +409,11 @@ func (s *PaymentService) paymentsNotifyToUserReplyMarkup(customerID int64) model
 	}}
 }
 
-func (s *PaymentService) loyaltyDiscountPercentForNotify(ctx context.Context, p *database.Purchase, c *database.Customer) int {
-	if s == nil || s.loyaltyTierRepository == nil || p == nil || c == nil || p.DiscountPercentApplied == nil || *p.DiscountPercentApplied <= 0 {
+// loyaltyDiscountPercentForNotify — процент скидки по текущему уровню лояльности на момент оплаты.
+// Использует c.LoyaltyXP до инкремента XP за эту покупку (в памяти customer не обновляется в applyLoyaltyXPAfterPayment).
+// Не зависит от промо: discount_percent_applied в purchase — только про промокод.
+func (s *PaymentService) loyaltyDiscountPercentForNotify(ctx context.Context, _ *database.Purchase, c *database.Customer) int {
+	if s == nil || s.loyaltyTierRepository == nil || c == nil || !config.LoyaltyEnabled() {
 		return 0
 	}
 	prog, err := s.loyaltyTierRepository.ProgressForXP(ctx, c.LoyaltyXP)
@@ -412,9 +423,6 @@ func (s *PaymentService) loyaltyDiscountPercentForNotify(ctx context.Context, p 
 	pct := prog.CurrentTier.DiscountPercent
 	if pct <= 0 {
 		return 0
-	}
-	if pct > *p.DiscountPercentApplied {
-		pct = *p.DiscountPercentApplied
 	}
 	return pct
 }

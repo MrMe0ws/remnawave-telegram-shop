@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CreditCard, Bitcoin, Check, AlertCircle, Star } from 'lucide-react'
+import { CreditCard, Bitcoin, AlertCircle, Star } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PlategaPaymentExpand, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
+import { ProviderMethodButton } from '@/components/ProviderMethodButton'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,7 +16,26 @@ import { api, ApiError, type TariffItem } from '@/lib/api'
 import { getTelegramInitData, newIdempotencyKey, cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
-type Provider = 'yookassa' | 'cryptopay' | 'telegram'
+type Provider =
+  | 'yookassa'
+  | 'cryptopay'
+  | 'telegram'
+  | 'platega_sbp'
+  | 'platega_cards'
+  | 'platega_acquiring'
+  | 'platega_worldwide'
+  | 'platega_crypto'
+
+const PROVIDER_ORDER: Provider[] = [
+  'yookassa',
+  'platega_sbp',
+  'platega_cards',
+  'platega_acquiring',
+  'platega_worldwide',
+  'platega_crypto',
+  'cryptopay',
+  'telegram',
+]
 
 function openPaymentUrl(url: string): void {
   const inMiniApp = getTelegramInitData().length > 0
@@ -66,7 +87,19 @@ export default function CheckoutPage() {
       ? tariff.id
       : undefined
 
-  const selectedProviderForPreview: Provider = provider ?? 'yookassa'
+  const providerEnabled: Record<Provider, boolean> = {
+    yookassa: bootstrap?.payment_providers?.yookassa ?? true,
+    cryptopay: bootstrap?.payment_providers?.cryptopay ?? true,
+    telegram: bootstrap?.payment_providers?.telegram ?? false,
+    platega_sbp: bootstrap?.payment_providers?.platega_sbp ?? false,
+    platega_cards: bootstrap?.payment_providers?.platega_cards ?? false,
+    platega_acquiring: bootstrap?.payment_providers?.platega_acquiring ?? false,
+    platega_worldwide: bootstrap?.payment_providers?.platega_worldwide ?? false,
+    platega_crypto: bootstrap?.payment_providers?.platega_crypto ?? false,
+  }
+  const defaultPreviewProvider =
+    PROVIDER_ORDER.find((p) => providerEnabled[p]) ?? ('yookassa' as Provider)
+  const selectedProviderForPreview: Provider = provider ?? defaultPreviewProvider
   const { data: preview, isError: previewError } = useQuery({
     queryKey: [
       'paymentPreview',
@@ -136,19 +169,14 @@ export default function CheckoutPage() {
     preview != null &&
     (preview.scenario === 'upgrade' || preview.scenario === 'downgrade') &&
     typeof preview.tariff_switch_total_days === 'number'
-  const providerEnabled = {
-    yookassa: bootstrap?.payment_providers?.yookassa ?? true,
-    cryptopay: bootstrap?.payment_providers?.cryptopay ?? true,
-    telegram: bootstrap?.payment_providers?.telegram ?? false,
-  }
-  const availableProviders: Provider[] = (['yookassa', 'cryptopay', 'telegram'] as Provider[]).filter((p) => providerEnabled[p])
+  const availableProviders: Provider[] = PROVIDER_ORDER.filter((p) => providerEnabled[p])
   const selectedProvider = provider && providerEnabled[provider] ? provider : null
-  const canPay =
+  const canInitiatePay =
     Boolean(selectedProvider) &&
     Boolean(tariff) &&
-    !loading &&
     availableProviders.length > 0 &&
     (!shouldAskExtraRenew || renewExtraHwid != null)
+  const payButtonDisabled = !canInitiatePay || loading
   const disabledPayButtonClass =
     'disabled:opacity-100 disabled:bg-[hsl(174_31.2%_76.18%)] disabled:text-[hsl(0_0%_100%_/_57%)] disabled:brightness-100 dark:disabled:bg-primary dark:disabled:text-primary-foreground dark:disabled:brightness-[.45]'
 
@@ -306,7 +334,7 @@ export default function CheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {availableProviders.includes('yookassa') && (
-              <ProviderButton
+              <ProviderMethodButton
                 selected={selectedProvider === 'yookassa'}
                 onClick={() => setProvider('yookassa')}
                 icon={<CreditCard size={18} className="text-blue-500" />}
@@ -315,7 +343,7 @@ export default function CheckoutPage() {
               />
             )}
             {availableProviders.includes('cryptopay') && (
-              <ProviderButton
+              <ProviderMethodButton
                 selected={selectedProvider === 'cryptopay'}
                 onClick={() => setProvider('cryptopay')}
                 icon={<Bitcoin size={18} className="text-orange-500" />}
@@ -324,7 +352,7 @@ export default function CheckoutPage() {
               />
             )}
             {availableProviders.includes('telegram') && (
-              <ProviderButton
+              <ProviderMethodButton
                 selected={selectedProvider === 'telegram'}
                 onClick={() => setProvider('telegram')}
                 icon={<Star size={18} className="text-amber-500" />}
@@ -332,6 +360,12 @@ export default function CheckoutPage() {
                 description="Telegram Stars"
               />
             )}
+            <PlategaPaymentExpand
+              enabled={providerEnabled}
+              selected={provider}
+              onSelect={(id: PlategaMethodId) => setProvider(id)}
+              variant="checkout"
+            />
             {availableProviders.length === 0 && (
               <p className="text-sm text-muted-foreground">{t('checkout.notAvailable')}</p>
             )}
@@ -347,9 +381,9 @@ export default function CheckoutPage() {
 
         <div className="hidden sm:block">
           <Button
-            className={cn('w-full', disabledPayButtonClass)}
+            className={cn('w-full', !loading && disabledPayButtonClass)}
             size="lg"
-            disabled={!canPay}
+            disabled={payButtonDisabled}
             loading={loading}
             onClick={handlePay}
           >
@@ -367,9 +401,9 @@ export default function CheckoutPage() {
         createPortal(
           <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[73px] px-2">
             <Button
-              className={cn('mx-auto block w-full max-w-lg shadow-none', disabledPayButtonClass)}
+              className={cn('mx-auto inline-flex w-full max-w-lg shadow-none', !loading && disabledPayButtonClass)}
               size="lg"
-              disabled={!canPay}
+              disabled={payButtonDisabled}
               loading={loading}
               onClick={handlePay}
             >
@@ -411,46 +445,6 @@ function SummaryRow({
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium text-right">{value}</span>
     </div>
-  )
-}
-
-function ProviderButton({
-  selected,
-  onClick,
-  icon,
-  label,
-  description,
-}: {
-  selected: boolean
-  onClick: () => void
-  icon: React.ReactNode
-  label: string
-  description: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all duration-150',
-        selected
-          ? 'border-primary bg-primary/5 shadow-sm'
-          : 'border-border hover:border-primary/40 hover:bg-secondary/50',
-      )}
-    >
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-        {icon}
-      </div>
-      <div className="flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-      {selected && (
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
-          <Check size={12} className="text-white" />
-        </div>
-      )}
-    </button>
   )
 }
 

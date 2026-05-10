@@ -386,7 +386,8 @@ func findUserBySuffix(users []User, telegramId int64) *User {
 	return &users[0]
 }
 
-func usernameFromCtx(ctx context.Context) string {
+// UsernameFromCtx извлекает Telegram username из контекста (CtxKeyUsername).
+func UsernameFromCtx(ctx context.Context) string {
 	if v, ok := ctx.Value(CtxKeyUsername).(string); ok {
 		return v
 	}
@@ -501,7 +502,7 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 		userUpdate.Tag = &tag
 	}
 
-	username := usernameFromCtx(ctx)
+	username := UsernameFromCtx(ctx)
 	if username != "" {
 		userUpdate.Description = &username
 	}
@@ -583,7 +584,7 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		createReq.Tag = &tag
 	}
 
-	tgUsername := usernameFromCtx(ctx)
+	tgUsername := UsernameFromCtx(ctx)
 	if tgUsername != "" {
 		createReq.Description = &tgUsername
 	}

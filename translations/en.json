@@ -78,7 +78,22 @@
   "month_6": "6 mo – %d ₽",
   "month_12": "12 mo – %d ₽",
   "crypto_button": "₿ Crypto",
-  "card_button": "💳 Bank Card",
+  "card_button": "💳 Card",
+  "platega_sbp_button": {
+    "text": "💳 SBP"
+  },
+  "platega_cards_button": {
+    "text": "💳 Card"
+  },
+  "platega_acquiring_button": {
+    "text": "💳 Card"
+  },
+  "platega_worldwide_button": {
+    "text": "💳 Card"
+  },
+  "platega_crypto_button": {
+    "text": "₿ Crypto"
+  },
   "pay_button": "💸 Pay",
   "payment_provider_unavailable": "Payments are temporarily unavailable :( Please try again later or use another payment method.",
   "subscription_active": "📅 Subscription active until <b><i>%s</i></b>",
@@ -215,6 +230,9 @@
   "purchase_history_prev": "⬅️ Prev",
   "purchase_history_next": "➡️ Next",
   "purchase_history_method_yookasa": "YooKassa",
+  "purchase_history_method_platega_sbp": "SBP",
+  "purchase_history_method_platega_card": "Card",
+  "purchase_history_method_platega_crypto": "Crypto",
   "purchase_history_method_stars": "Telegram Stars",
   "purchase_history_method_crypto": "Crypto",
   "purchase_history_method_tribute": "Tribute",

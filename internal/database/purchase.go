@@ -19,7 +19,40 @@ const (
 	InvoiceTypeYookasa  InvoiceType = "yookasa"
 	InvoiceTypeTelegram InvoiceType = "telegram"
 	InvoiceTypeTribute  InvoiceType = "tribute"
+	// Platega (разные paymentMethod в одном шлюзе).
+	InvoiceTypePlategaSBP       InvoiceType = "plt_sbp"
+	InvoiceTypePlategaCards     InvoiceType = "plt_cards"
+	InvoiceTypePlategaAcquiring InvoiceType = "plt_acq"
+	InvoiceTypePlategaWorldwide InvoiceType = "plt_ww"
+	InvoiceTypePlategaCrypto    InvoiceType = "plt_crypto"
 )
+
+// PlategaInvoiceTypes перечисляет все invoice_type Platega (поллинг, статистика).
+func PlategaInvoiceTypes() []InvoiceType {
+	return []InvoiceType{
+		InvoiceTypePlategaSBP,
+		InvoiceTypePlategaCards,
+		InvoiceTypePlategaAcquiring,
+		InvoiceTypePlategaWorldwide,
+		InvoiceTypePlategaCrypto,
+	}
+}
+
+// InvoiceTypeIsPlatega — true для любого метода Platega.
+func InvoiceTypeIsPlatega(t InvoiceType) bool {
+	switch t {
+	case InvoiceTypePlategaSBP, InvoiceTypePlategaCards, InvoiceTypePlategaAcquiring,
+		InvoiceTypePlategaWorldwide, InvoiceTypePlategaCrypto:
+		return true
+	default:
+		return false
+	}
+}
+
+// InvoiceTypeIsPlategaCryptoOrCryptopay — оплаты, где в публичных и налоговых формулировках нельзя указывать криптовалюту.
+func InvoiceTypeIsPlategaCryptoOrCryptopay(t InvoiceType) bool {
+	return t == InvoiceTypeCrypto || t == InvoiceTypePlategaCrypto
+}
 
 type PurchaseStatus string
 
@@ -40,26 +73,28 @@ const (
 )
 
 type Purchase struct {
-	ID                int64          `db:"id"`
-	Amount            float64        `db:"amount"`
-	CustomerID        int64          `db:"customer_id"`
-	CreatedAt         time.Time      `db:"created_at"`
-	Month             int            `db:"month"`
-	PaidAt            *time.Time     `db:"paid_at"`
-	Currency          string         `db:"currency"`
-	ExpireAt          *time.Time     `db:"expire_at"`
-	Status            PurchaseStatus `db:"status"`
-	InvoiceType       InvoiceType    `db:"invoice_type"`
-	CryptoInvoiceID   *int64         `db:"crypto_invoice_id"`
-	CryptoInvoiceLink *string        `db:"crypto_invoice_url"`
-	YookasaURL        *string        `db:"yookasa_url"`
-	YookasaID                *uuid.UUID     `db:"yookasa_id"`
-	ExtraHwid                int            `db:"extra_hwid"`
-	PromoCodeID              *int64         `db:"promo_code_id"`
-	DiscountPercentApplied   *int           `db:"discount_percent_applied"`
-	TariffID                 *int64         `db:"tariff_id"`
-	PurchaseKind             PurchaseKind   `db:"purchase_kind"`
-	IsEarlyDowngrade         bool           `db:"is_early_downgrade"`
+	ID                     int64          `db:"id"`
+	Amount                 float64        `db:"amount"`
+	CustomerID             int64          `db:"customer_id"`
+	CreatedAt              time.Time      `db:"created_at"`
+	Month                  int            `db:"month"`
+	PaidAt                 *time.Time     `db:"paid_at"`
+	Currency               string         `db:"currency"`
+	ExpireAt               *time.Time     `db:"expire_at"`
+	Status                 PurchaseStatus `db:"status"`
+	InvoiceType            InvoiceType    `db:"invoice_type"`
+	CryptoInvoiceID        *int64         `db:"crypto_invoice_id"`
+	CryptoInvoiceLink      *string        `db:"crypto_invoice_url"`
+	YookasaURL             *string        `db:"yookasa_url"`
+	YookasaID              *uuid.UUID     `db:"yookasa_id"`
+	PlategaID              *string        `db:"platega_id"`
+	PlategaURL             *string        `db:"platega_url"`
+	ExtraHwid              int            `db:"extra_hwid"`
+	PromoCodeID            *int64         `db:"promo_code_id"`
+	DiscountPercentApplied *int           `db:"discount_percent_applied"`
+	TariffID               *int64         `db:"tariff_id"`
+	PurchaseKind           PurchaseKind   `db:"purchase_kind"`
+	IsEarlyDowngrade       bool           `db:"is_early_downgrade"`
 }
 
 type PurchaseRepository struct {
@@ -73,13 +108,16 @@ func NewPurchaseRepository(pool *pgxpool.Pool) *PurchaseRepository {
 }
 
 // purchaseScanArgs returns pointers for scanning a full purchase row (column order must match SELECT * from purchase).
+// Порядок колонок в PostgreSQL — порядок CREATE + ALTER ADD (см. миграции 000001, 000005 extra_hwid, 000007 promo, 000008 tariff, 000032 platega).
 func purchaseScanArgs(p *Purchase) []interface{} {
 	return []interface{}{
 		&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
 		&p.PaidAt, &p.Currency, &p.ExpireAt, &p.Status, &p.InvoiceType,
-		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID, &p.ExtraHwid,
+		&p.CryptoInvoiceID, &p.CryptoInvoiceLink, &p.YookasaURL, &p.YookasaID,
+		&p.ExtraHwid,
 		&p.PromoCodeID, &p.DiscountPercentApplied,
 		&p.TariffID, &p.PurchaseKind, &p.IsEarlyDowngrade,
+		&p.PlategaID, &p.PlategaURL,
 	}
 }
 
@@ -88,8 +126,8 @@ func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (i
 		purchase.PurchaseKind = PurchaseKindSubscription
 	}
 	buildInsert := sq.Insert("purchase").
-		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade").
-		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade).
+		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "platega_id", "platega_url", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade").
+		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.PlategaID, purchase.PlategaURL, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 
@@ -282,6 +320,11 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 			sq.Or{
 				sq.Eq{"invoice_type": InvoiceTypeCrypto},
 				sq.Eq{"invoice_type": InvoiceTypeYookasa},
+				sq.Eq{"invoice_type": InvoiceTypePlategaSBP},
+				sq.Eq{"invoice_type": InvoiceTypePlategaCards},
+				sq.Eq{"invoice_type": InvoiceTypePlategaAcquiring},
+				sq.Eq{"invoice_type": InvoiceTypePlategaWorldwide},
+				sq.Eq{"invoice_type": InvoiceTypePlategaCrypto},
 			},
 		}).
 		OrderBy("paid_at DESC").

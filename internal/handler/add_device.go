@@ -387,6 +387,8 @@ func (h Handler) showDevicePaymentMethods(ctx context.Context, b *bot.Bot, callb
 		})
 	}
 
+	keyboard = h.appendPlategaAddDevicePaymentRows(keyboard, langCode, target)
+
 	if config.IsTelegramStarsEnabled() {
 		shouldShowStarsButton := true
 		if config.RequirePaidPurchaseForStars() {

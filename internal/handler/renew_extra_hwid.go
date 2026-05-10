@@ -101,6 +101,8 @@ func (h Handler) showRenewPaymentMethods(ctx context.Context, b *bot.Bot, callba
 		})
 	}
 
+	keyboard = h.appendPlategaRenewExtraRows(keyboard, langCode, extra, months)
+
 	if config.IsTelegramStarsEnabled() {
 		shouldShowStarsButton := true
 		if config.RequirePaidPurchaseForStars() {
