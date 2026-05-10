@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 
-import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
 import { formatDateTimeShort, formatRub } from '@/lib/utils'
@@ -64,7 +63,8 @@ function kindLabel(
   }
 }
 
-export default function PaymentsHistoryPage() {
+/** История платежей для встраивания (вкладка «Профиль»). */
+export function PaymentsHistoryCard() {
   const { t } = useTranslation()
 
   const { data, isLoading, error } = useQuery({
@@ -93,51 +93,43 @@ export default function PaymentsHistoryPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('payments.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('payments.subtitle')}</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('payments.historyTitle')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
-            ) : error ? (
-              <p className="text-sm text-destructive">{t('errors.unknown')}</p>
-            ) : items.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">{t('payments.empty')}</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="pb-2 pr-3 font-medium">{t('payments.colPaidAt')}</th>
-                      <th className="pb-2 pr-3 font-medium">{t('payments.colAmount')}</th>
-                      <th className="pb-2 pr-3 font-medium">{t('payments.colMethod')}</th>
-                      <th className="pb-2 font-medium">{t('payments.colKind')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((p) => (
-                      <tr key={p.id} className="border-b border-border/60 last:border-0">
-                        <td className="py-2.5 pr-3 whitespace-nowrap">{formatPaid(p.paid_at)}</td>
-                        <td className="py-2.5 pr-3 font-medium">{formatMoney(p.amount, p.currency)}</td>
-                        <td className="py-2.5 pr-3">{invoiceLabel(t, p.invoice_type)}</td>
-                        <td className="py-2.5 text-muted-foreground">{kindLabel(t, p)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </AppLayout>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{t('payments.historyTitle')}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t('payments.subtitle')}</p>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+        ) : error ? (
+          <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">{t('payments.empty')}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="pb-2 pr-3 font-medium">{t('payments.colPaidAt')}</th>
+                  <th className="pb-2 pr-3 font-medium">{t('payments.colAmount')}</th>
+                  <th className="pb-2 pr-3 font-medium">{t('payments.colMethod')}</th>
+                  <th className="pb-2 font-medium">{t('payments.colKind')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((p) => (
+                  <tr key={p.id} className="border-b border-border/60 last:border-0">
+                    <td className="py-2.5 pr-3 whitespace-nowrap">{formatPaid(p.paid_at)}</td>
+                    <td className="py-2.5 pr-3 font-medium">{formatMoney(p.amount, p.currency)}</td>
+                    <td className="py-2.5 pr-3">{invoiceLabel(t, p.invoice_type)}</td>
+                    <td className="py-2.5 text-muted-foreground">{kindLabel(t, p)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

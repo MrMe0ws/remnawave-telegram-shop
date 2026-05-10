@@ -9,9 +9,7 @@ import {
   User,
   Menu,
   X,
-  CreditCard,
   TicketPercent,
-  Info,
   Users,
   LogOut,
 } from 'lucide-react'
@@ -22,6 +20,7 @@ import { LangToggle } from './LangToggle'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
+import { CabinetOnboarding } from '@/features/onboarding/CabinetOnboarding'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -40,7 +39,6 @@ const navItems: NavItem[] = [
   { to: '/subscription', icon: Sparkles, labelKey: 'nav.subscription', activePrefixes: ['/connections'] },
   { to: '/tariffs', icon: Zap, labelKey: 'nav.tariffs' },
   { to: '/support', icon: MessageCircle, labelKey: 'nav.support' },
-  { to: '/info', icon: Info, labelKey: 'nav.info' },
   { to: '/profile', icon: User, labelKey: 'nav.profile', activePrefixes: ['/accounts', '/link'] },
 ]
 
@@ -52,18 +50,21 @@ const mobileBottomNavItems: NavItem[] = [
   { to: '/profile', icon: User, labelKey: 'nav.profile', activePrefixes: ['/accounts', '/link'] },
 ]
 
-const overflowNavItems: { to: string; icon: typeof CreditCard; labelKey: string }[] = [
+const overflowNavMainItems: { to: string; icon: typeof Home; labelKey: string }[] = [
   { to: '/dashboard', icon: Home, labelKey: 'nav.dashboard' },
   { to: '/subscription', icon: Sparkles, labelKey: 'nav.subscription' },
   { to: '/tariffs', icon: Zap, labelKey: 'nav.tariffs' },
   { to: '/support', icon: MessageCircle, labelKey: 'nav.support' },
-  { to: '/info', icon: Info, labelKey: 'nav.info' },
-  { to: '/profile', icon: User, labelKey: 'nav.profile' },
   { to: '/promocodes', icon: TicketPercent, labelKey: 'nav.promocodes' },
   { to: '/referral', icon: Users, labelKey: 'nav.referral' },
-  { to: '/payments', icon: CreditCard, labelKey: 'nav.payments' },
-  { to: '/loyalty', icon: Sparkles, labelKey: 'nav.loyalty' },
 ]
+
+const overflowNavProfileItem: { to: string; icon: typeof User; labelKey: string; activePrefixes: string[] } = {
+  to: '/profile',
+  icon: User,
+  labelKey: 'nav.profile',
+  activePrefixes: ['/accounts', '/link'],
+}
 
 function navItemActive(pathname: string, item: NavItem): boolean {
   if (pathname === item.to) return true
@@ -75,6 +76,11 @@ function navItemActive(pathname: string, item: NavItem): boolean {
 
 function overflowActive(pathname: string, to: string): boolean {
   return pathname === to || pathname.startsWith(`${to}/`)
+}
+
+function profileNavActive(pathname: string): boolean {
+  if (pathname === overflowNavProfileItem.to) return true
+  return overflowNavProfileItem.activePrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
 
 /** Активный пункт в выпадающем меню и нижней мобильной навигации (как у текста ссылки). */
@@ -106,7 +112,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   useEffect(() => {
     setMenuOpen(false)
-  }, [location.pathname])
+  }, [location.pathname, location.hash])
 
   useEffect(() => {
     setMobileChromeVisible(true)
@@ -248,6 +254,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 >
                   <Link
                     to={to}
+                    id={to === '/profile' ? 'cabinet-onboarding-profile-nav-desktop' : undefined}
                     aria-current={active ? 'page' : undefined}
                     aria-label={label}
                     className="flex items-center"
@@ -296,7 +303,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   role="menu"
                   className="hidden sm:block absolute right-0 top-full mt-1.5 min-w-[14rem] rounded-lg border border-border bg-card py-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] z-[500] ring-1 ring-border/60"
                 >
-                  {overflowNavItems.map(({ to, icon: Icon, labelKey }) => {
+                  {overflowNavMainItems.map(({ to, icon: Icon, labelKey }) => {
                     const label = t(labelKey)
                     const active = overflowActive(location.pathname, to)
                     const isTariffs = to === '/tariffs'
@@ -324,6 +331,32 @@ export function AppLayout({ children }: AppLayoutProps) {
                     )
                   })}
                   <div className="my-1 border-t border-border/70" />
+                  {(() => {
+                    const { to, icon: Icon, labelKey } = overflowNavProfileItem
+                    const label = t(labelKey)
+                    const active = profileNavActive(location.pathname)
+                    return (
+                      <Link
+                        key={to}
+                        to={to}
+                        role="menuitem"
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-muted dark:text-slate-300',
+                          active && cn('bg-secondary', navAccentActiveClass),
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            'size-4 shrink-0',
+                            !active && 'text-muted-foreground',
+                            active && navAccentActiveClass,
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        {label}
+                      </Link>
+                    )
+                  })()}
                   <button
                     type="button"
                     role="menuitem"
@@ -344,7 +377,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="fixed inset-x-0 bottom-0 top-[56px] z-40 flex min-h-0 flex-col bg-background sm:hidden">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border bg-background">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background pt-2 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
-              {overflowNavItems.map(({ to, icon: Icon, labelKey }) => {
+              {overflowNavMainItems.map(({ to, icon: Icon, labelKey }) => {
                 const label = t(labelKey)
                 const active = overflowActive(location.pathname, to)
                 const isTariffs = to === '/tariffs'
@@ -372,6 +405,32 @@ export function AppLayout({ children }: AppLayoutProps) {
                 )
               })}
               <div className="my-1 mx-4 border-t border-border/70" />
+              {(() => {
+                const { to, icon: Icon, labelKey } = overflowNavProfileItem
+                const label = t(labelKey)
+                const active = profileNavActive(location.pathname)
+                return (
+                  <Link
+                    key={`mobile-${to}`}
+                    to={to}
+                    role="menuitem"
+                    className={cn(
+                      'flex items-center gap-3 pl-8 pr-4 py-3 text-base text-slate-700 hover:bg-muted dark:text-slate-300',
+                      active && cn('bg-secondary', navAccentActiveClass),
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        'size-5 shrink-0',
+                        !active && 'text-muted-foreground',
+                        active && navAccentActiveClass,
+                      )}
+                      strokeWidth={1.75}
+                    />
+                    {label}
+                  </Link>
+                )
+              })()}
               <button
                 type="button"
                 role="menuitem"
@@ -414,6 +473,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       </div>
 
+      <CabinetOnboarding />
+
       <nav
         className="fixed inset-x-0 bottom-0 z-50 sm:hidden px-2 pb-2 pointer-events-none"
         aria-label={t('nav.mobile')}
@@ -427,6 +488,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Link
                 key={`${to}-${labelKey}-mob`}
                 to={to}
+                id={to === '/profile' ? 'cabinet-onboarding-profile-nav-mobile' : undefined}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
                 className={cn(

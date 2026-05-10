@@ -98,7 +98,10 @@ export default function SubscriptionPage() {
           <p className="text-sm text-destructive">{t('errors.unknown')}</p>
         ) : !hasRecord ? (
           <Card className="max-w-lg mx-auto">
-            <CardContent className="flex flex-col items-center gap-4 px-8 py-12 text-center">
+            <CardContent
+              id="cabinet-onboarding-step1-target"
+              className="flex flex-col items-center gap-4 px-8 py-12 text-center"
+            >
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
                 <ClipboardList size={28} className="text-muted-foreground" />
               </div>
@@ -115,7 +118,7 @@ export default function SubscriptionPage() {
           <div className="space-y-6">
             <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
               <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-primary/80 dark:text-cyan-200/80">
                       {t('dashboard.subscriptionLabel')}
@@ -177,7 +180,10 @@ export default function SubscriptionPage() {
 
                 {sub?.subscription_link && (
                   isExpired ? (
-                    <div className="rounded-xl border border-border bg-muted/35 px-4 py-3 opacity-70">
+                    <div
+                      id="cabinet-onboarding-step2-target"
+                      className="rounded-xl border border-border bg-muted/35 px-4 py-3 opacity-70"
+                    >
                       <div className="flex items-center gap-3">
                         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                           <MonitorSmartphone size={16} />
@@ -189,7 +195,11 @@ export default function SubscriptionPage() {
                       </div>
                     </div>
                   ) : (
-                    <Link to="/connections" className="connect-device-cta group block rounded-xl">
+                    <Link
+                      id="cabinet-onboarding-step2-target"
+                      to="/connections"
+                      className="connect-device-cta group block rounded-xl"
+                    >
                       <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
                         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary dark:bg-cyan-500/15 dark:text-cyan-200">
                           <MonitorSmartphone size={16} />

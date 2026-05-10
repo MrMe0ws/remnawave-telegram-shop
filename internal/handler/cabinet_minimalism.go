@@ -58,7 +58,7 @@ func (h Handler) buildCabinetMinimalismCoreRows(langCode string, customer *datab
 			WebApp: &models.WebAppInfo{URL: w},
 		}))
 	}
-	if w := cabinetWebAppURL("/cabinet/info"); w != "" {
+	if w := cabinetWebAppURL("/cabinet/support#cabinet-info"); w != "" {
 		add(h.translation.WithButton(langCode, "cabinet_minimal_btn_info", models.InlineKeyboardButton{
 			WebApp: &models.WebAppInfo{URL: w},
 		}))

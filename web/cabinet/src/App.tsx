@@ -28,7 +28,6 @@ import ConnectionsPage from '@/features/connections/ConnectionsPage'
 import DeepLinkRedirectPage from '@/features/connections/DeepLinkRedirectPage'
 import ReferralProgramPage from '@/features/referral/ReferralProgramPage'
 import LoyaltyProgramPage from '@/features/loyalty/LoyaltyProgramPage'
-import PaymentsHistoryPage from '@/features/payments/PaymentsHistoryPage'
 import PromoCodesPage from '@/features/promocodes/PromoCodesPage'
 import SupportPage from '@/features/support/SupportPage'
 import InfoPage from '@/features/info/InfoPage'
@@ -179,7 +178,7 @@ function AppRoutes() {
         path="/payments"
         element={
           <ProtectedRoute requireVerified>
-            <PaymentsHistoryPage />
+            <Navigate to="/profile#history" replace />
           </ProtectedRoute>
         }
       />

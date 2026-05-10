@@ -184,6 +184,15 @@
     background: hsl(var(--connect-device-inner-bg-hover));
   }
 
+  /* Светлая тема: только блок «Привязанные аккаунты» с анимацией — белый фон (не трогаем «Подключить устройство»). */
+  html:not(.dark) .connect-device-cta-inner.profile-linked-accounts-inner {
+    background: hsl(0 0% 100%);
+  }
+
+  html:not(.dark) .connect-device-cta:hover .connect-device-cta-inner.profile-linked-accounts-inner {
+    background: hsl(0 0% 100%);
+  }
+
   .renew-subscription-cta-danger {
     position: relative;
     display: block;
@@ -211,10 +220,24 @@
     background: rgb(68 21 33);
   }
 
+  /* Светлая тема: «Продлить подписку» — белый фон внутри рамки (тёмная тема без изменений). */
+  html:not(.dark) .renew-subscription-cta-danger-inner {
+    background: hsl(0 0% 100%);
+  }
+
+  html:not(.dark) .renew-subscription-cta-danger:hover .renew-subscription-cta-danger-inner {
+    background: hsl(210 40% 97%);
+  }
+
   /* Light "shine" for Tariffs icon in nav. */
   .tariffs-shine-icon {
     animation: tariffs-shine 5s linear infinite;
     will-change: color, filter;
+  }
+
+  /** Как hover карточек тарифов (TariffsPage — tariffOtherCardHoverClassName). */
+  .profile-tariff-hover {
+    @apply transition-[border-color,box-shadow,filter] hover:border-primary/35 hover:shadow-[0_10px_28px_-12px_hsl(var(--foreground)/0.12)] hover:brightness-[1.01] dark:hover:shadow-[0_12px_32px_-10px_hsl(var(--primary)/0.22)];
   }
 }
 
@@ -255,5 +278,16 @@
 @media (prefers-reduced-motion: reduce) {
   .tariffs-shine-icon {
     animation: none;
+  }
+
+  .connect-device-cta,
+  .renew-subscription-cta-danger {
+    animation: none;
+    background: linear-gradient(135deg, rgba(14, 169, 241, 0.35), rgba(14, 169, 241, 0.08));
+    box-shadow: none;
+  }
+
+  .renew-subscription-cta-danger {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(239, 68, 68, 0.08));
   }
 }

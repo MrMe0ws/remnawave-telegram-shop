@@ -194,19 +194,13 @@ function formatMoney(amount: number, currency: string, lang: string) {
 
 /** Заголовок + компактная карточка для профиля (скрывает блок, если лояльность выключена). */
 export function ProfileLoyaltySection() {
-  const { t } = useTranslation()
   const { data, isLoading } = useQuery({
     queryKey: ['loyalty-dashboard'],
     queryFn: () => api.loyalty(),
     staleTime: 60_000,
   })
   if (isLoading || !data?.enabled) return null
-  return (
-    <div className="space-y-2">
-      <h2 className="px-0.5 text-sm font-medium text-muted-foreground">{t('profile.loyaltySection')}</h2>
-      <LoyaltyCompactCard />
-    </div>
-  )
+  return <LoyaltyCompactCard />
 }
 
 /** Компактная плашка для профиля / подписки */
@@ -226,7 +220,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
     <Link
       to="/loyalty"
       className={cn(
-        'flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'profile-tariff-hover flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >

@@ -225,8 +225,41 @@ export default {
       unlinkTelegramForbidden: 'Telegram cannot be unlinked from the cabinet once linked.',
       emailManagedByGoogle: 'Email is managed by Google sign-in',
     },
+    onboarding: {
+      skip: 'Skip',
+      next: 'Next',
+      back: 'Back',
+      done: 'Done',
+      step1: {
+        title: 'Welcome!',
+        body:
+          'This is your personal account area. Here you can manage your subscription, pay for plans, and connect your devices.',
+      },
+      step2: {
+        title: 'Connect your devices',
+        body: 'Tap this button to open step-by-step instructions for connecting VPN on your devices.',
+      },
+      step3: {
+        title: 'Add backup sign-in methods',
+        body:
+          'To avoid losing access to your account, link Telegram and at least one additional sign-in method in the “Profile” section.',
+      },
+    },
+    supportPage: {
+      anchorNavLabel: 'On this page',
+      anchorSupport: 'Support',
+      anchorInfo: 'Guides & documents',
+      infoSectionTitle: 'Guides & information',
+      infoSectionSubtitle: 'FAQ, legal documents, service status, and useful links.',
+      backToSupport: 'Back to support',
+    },
     profile: {
       title: 'Profile',
+      tabGeneral: 'General',
+      tabBonuses: 'Bonuses',
+      tabHistory: 'History',
+      promocodesCardTitle: 'Promo codes',
+      promocodesCardHint: 'Activate codes and view activation history',
       accountInfo: 'Account information',
       telegramId: 'Telegram ID',
       telegramIdUnlinkedHint: 'Shown after you link Telegram under «Linked accounts».',

@@ -96,7 +96,7 @@ export default function DashboardPage() {
         {hasSubscription ? (
           <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white dark:shadow-cyan-500/5">
             <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-primary/80 dark:text-cyan-200/80">
                     {t('dashboard.yourSubscriptionTitle')}
@@ -129,6 +129,7 @@ export default function DashboardPage() {
 
               {sub?.subscription_link && !isInactive && (
                 <Link
+                  id="cabinet-onboarding-step2-target"
                   to="/connections"
                   className="connect-device-cta group block rounded-xl"
                 >
@@ -170,6 +171,7 @@ export default function DashboardPage() {
 
               {isInactive && (
                 <Link
+                  id="cabinet-onboarding-step2-target"
                   to="/tariffs"
                   className="renew-subscription-cta-danger group block rounded-xl"
                 >
@@ -194,7 +196,7 @@ export default function DashboardPage() {
                 <Sparkles size={18} className="text-primary dark:text-cyan-200" />
               </div>
 
-              <div className="text-center">
+              <div className="text-center" id="cabinet-onboarding-step1-target">
                 <h2 className="text-2xl font-semibold">{t('dashboard.trialTitle')}</h2>
                 <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">{t('dashboard.trialSubtitle')}</p>
               </div>
@@ -205,7 +207,7 @@ export default function DashboardPage() {
                 <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
               </div>
 
-              <div className="connect-device-cta rounded-xl">
+              <div className="connect-device-cta rounded-xl" id="cabinet-onboarding-step2-target">
                 <div className="connect-device-cta-inner rounded-[10px] p-[1px]">
                   <Button
                     className="h-11 w-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-white dark:hover:bg-cyan-500/20"
@@ -267,7 +269,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            to="/info"
+            to="/support#cabinet-info"
             className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">

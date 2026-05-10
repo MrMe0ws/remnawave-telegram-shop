@@ -55,20 +55,18 @@ export function ChangePasswordCollapsible({ onSuccess }: { onSuccess: (token: st
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-2 text-left"
-          onClick={() => { setOpen((o) => !o); setError(null) }}
-          aria-expanded={open}
-        >
-          <CardTitle className="text-base">{t('settings.password.title')}</CardTitle>
-          {open ? <ChevronUp className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
-        </button>
-      </CardHeader>
+    <Card className="overflow-hidden">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left outline-none transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        onClick={() => { setOpen((o) => !o); setError(null) }}
+        aria-expanded={open}
+      >
+        <span className="text-base font-semibold leading-none">{t('settings.password.title')}</span>
+        {open ? <ChevronUp className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
+      </button>
       {open && (
-        <CardContent>
+        <CardContent className="border-t border-border/60 px-6 pb-6 pt-4">
           <form onSubmit={submit} className="space-y-3">
             {ok && (
               <Alert variant="success">
