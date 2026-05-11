@@ -184,9 +184,16 @@ export default function FortunePage() {
       if (!soundMutedRef.current) {
         void ensureFortuneAudio().then((ctx) => {
           if (!ctx) return
-          spinSoundRef.current = scheduleSpinWheelSounds(ctx, FORTUNE_SPIN_MS, () => {
-            playWinFanfare(ctx, res.reward_type)
-          })
+          spinSoundRef.current = scheduleSpinWheelSounds(
+            ctx,
+            FORTUNE_SPIN_MS,
+            rotation,
+            target,
+            n,
+            () => {
+              playWinFanfare(ctx, res.reward_type)
+            },
+          )
         })
       }
 

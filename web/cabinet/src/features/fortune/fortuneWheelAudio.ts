@@ -225,6 +225,63 @@ export type SpinSoundSchedule = {
   clear: () => void
 }
 
+function cubicBezierEasing(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
+  // Inverts `x` for the cubic-bezier curve and returns `y`, like CSS `transition-timing-function`.
+  // Enough for UI sync purposes.
+  const cx = 3 * x1
+  const bx = 3 * (x2 - x1) - cx
+  const ax = 1 - cx - bx
+
+  const cy = 3 * y1
+  const by = 3 * (y2 - y1) - cy
+  const ay = 1 - cy - by
+
+  function sampleCurveX(t: number): number {
+    return ((ax * t + bx) * t + cx) * t
+  }
+  function sampleCurveY(t: number): number {
+    return ((ay * t + by) * t + cy) * t
+  }
+  function sampleDerivativeX(t: number): number {
+    return (3 * ax * t + 2 * bx) * t + cx
+  }
+
+  function solveTforX(x: number): number {
+    if (x <= 0) return 0
+    if (x >= 1) return 1
+
+    // Newton-Raphson iterations.
+    let t = x
+    for (let i = 0; i < 8; i++) {
+      const xEst = sampleCurveX(t)
+      const dx = xEst - x
+      const d = sampleDerivativeX(t)
+      if (Math.abs(dx) < 1e-5) return t
+      if (Math.abs(d) < 1e-5) break
+      t = t - dx / d
+      t = Math.min(1, Math.max(0, t))
+    }
+
+    // Fallback: binary search.
+    let lo = 0
+    let hi = 1
+    t = x
+    for (let i = 0; i < 20; i++) {
+      const xEst = sampleCurveX(t)
+      if (Math.abs(xEst - x) < 1e-5) break
+      if (xEst < x) lo = t
+      else hi = t
+      t = (hi + lo) / 2
+    }
+    return t
+  }
+
+  return (x: number) => {
+    const t = solveTforX(x)
+    return sampleCurveY(t)
+  }
+}
+
 /**
  * Тики «прокрута» с нарастающим интервалом (быстро → медленно), синхронно с ~4.2s анимацией.
  * В конце вызывается onLanded (туда же положить fanfare).
@@ -232,37 +289,71 @@ export type SpinSoundSchedule = {
 export function scheduleSpinWheelSounds(
   ctx: AudioContext,
   durationMs: number,
+  spinFromRotationDeg: number,
+  spinToRotationDeg: number,
+  sectorCount: number,
   onLanded: () => void,
 ): SpinSoundSchedule {
-  const duration = durationMs / 1000
-  const tAudio0 = now(ctx)
-  const tickCount = 52
-  const ids: number[] = []
+  // Same timing function as in `FortuneWheelFace`.
+  const ease = cubicBezierEasing(0.22, 0.61, 0.36, 1)
+  const stepAngle = 360 / Math.max(sectorCount, 1)
 
-  for (let i = 0; i < tickCount; i++) {
-    const p = tickCount <= 1 ? 0 : i / (tickCount - 1)
-    // Квадратичный прогресс по времени: плотные тики в начале, редкие в конце
-    const tRel = duration * Math.pow(p, 1.85)
-    const delayMs = tRel * 1000
-    const heavy = i >= tickCount - 4
-    const id = window.setTimeout(() => {
-      playTick(ctx, now(ctx), heavy)
-    }, delayMs)
-    ids.push(id)
+  const delta = spinToRotationDeg - spinFromRotationDeg
+  const totalTransitions = Math.max(1, Math.round(Math.abs(delta) / stepAngle))
+
+  let rafId = 0
+  let alive = true
+  let lastSectorIdx: number | null = null
+  let tickIdx = 0
+
+  // Inline copy of `sectorIndexUnderPointer` logic to keep this file standalone.
+  const sectorIndexUnderPointer = (rotationDeg: number): number => {
+    const Ln = ((-rotationDeg % 360) + 360) % 360
+    const step = 360 / Math.max(sectorCount, 1)
+    for (let i = 0; i < sectorCount; i++) {
+      const start = i * step
+      const end = (i + 1) * step
+      if (Ln >= start && Ln < end) return i
+    }
+    return 0
   }
 
-  const landId = window.setTimeout(() => {
+  const t0Perf = performance.now()
+  const tick = (perfNow: number) => {
+    if (!alive) return
+
+    const elapsedMs = perfNow - t0Perf
+    const u = Math.min(1, elapsedMs / durationMs)
+    const eased = ease(u)
+    const currentR = spinFromRotationDeg + delta * eased
+
+    const sectorIdx = sectorIndexUnderPointer(currentR)
+    if (lastSectorIdx == null) {
+      lastSectorIdx = sectorIdx
+    } else if (sectorIdx !== lastSectorIdx) {
+      const heavy = tickIdx >= totalTransitions - 4
+      playTick(ctx, now(ctx), heavy)
+      tickIdx++
+      lastSectorIdx = sectorIdx
+    }
+
+    if (u < 1) {
+      rafId = requestAnimationFrame(tick)
+      return
+    }
+
+    // Один раз на конец.
+    alive = false
     playWheelLand(ctx)
     onLanded()
-  }, durationMs)
+  }
 
-  ids.push(landId)
+  rafId = requestAnimationFrame(tick)
 
   return {
     clear: () => {
-      for (const id of ids) {
-        window.clearTimeout(id)
-      }
+      alive = false
+      cancelAnimationFrame(rafId)
     },
   }
 }
