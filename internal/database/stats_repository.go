@@ -82,6 +82,28 @@ type AdminStatsSnapshot struct {
 	TariffBreakdown []AdminTariffStat
 }
 
+// AdminFortunePeriodAgg — спины колеса фортуны за полуинтервал времени [start, end).
+type AdminFortunePeriodAgg struct {
+	DistinctUsers   int64
+	TotalSpins      int64
+	FreeSpins       int64
+	PaidSpins       int64
+	PaidCostDaysSum int64
+	// Суммы по reward_value из лога (для сверки «отдали» vs списали cost_days).
+	WonSubsDaysSum    int64 // призы days_* — начисленные дни подписки
+	WonLoyaltyXPSum   int64 // xp + micro
+	WonDiscountPctSum int64 // discount_* — сумма процентных пунктов (не «скидка в ₽»)
+	ByReward          map[string]int64
+}
+
+// AdminFortuneStatsSnapshot — агрегаты по таблице fortune_spins для админки.
+type AdminFortuneStatsSnapshot struct {
+	CapturedAt time.Time
+	Month      AdminFortunePeriodAgg
+	Today      AdminFortunePeriodAgg
+	AllTime    AdminFortunePeriodAgg
+}
+
 func utcDayStart(t time.Time) time.Time {
 	t = t.UTC()
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
@@ -582,4 +604,104 @@ LIMIT $1`
 		list = append(list, tr)
 	}
 	return list, rows.Err()
+}
+
+func newFortunePeriodAgg() AdminFortunePeriodAgg {
+	return AdminFortunePeriodAgg{ByReward: make(map[string]int64)}
+}
+
+func (s *StatsRepository) loadFortuneWindow(ctx context.Context, start, end time.Time) (AdminFortunePeriodAgg, error) {
+	agg := newFortunePeriodAgg()
+	q := `
+SELECT
+  COUNT(DISTINCT customer_id)::bigint,
+  COUNT(*)::bigint,
+  COUNT(*) FILTER (WHERE is_free_spin)::bigint,
+  COUNT(*) FILTER (WHERE NOT is_free_spin)::bigint,
+  COALESCE(SUM(cost_days) FILTER (WHERE NOT is_free_spin), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('days_3','days_5','days_7','days_15','days_30','days_180')), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('xp','micro')), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('discount_3','discount_5')), 0)::bigint
+FROM fortune_spins
+WHERE spin_at >= $1 AND spin_at < $2`
+	if err := s.pool.QueryRow(ctx, q, start, end).Scan(
+		&agg.DistinctUsers, &agg.TotalSpins, &agg.FreeSpins, &agg.PaidSpins, &agg.PaidCostDaysSum,
+		&agg.WonSubsDaysSum, &agg.WonLoyaltyXPSum, &agg.WonDiscountPctSum,
+	); err != nil {
+		return agg, fmt.Errorf("stats fortune window agg: %w", err)
+	}
+	qr := `SELECT reward_type, COUNT(*)::bigint FROM fortune_spins WHERE spin_at >= $1 AND spin_at < $2 GROUP BY reward_type`
+	rows, err := s.pool.Query(ctx, qr, start, end)
+	if err != nil {
+		return agg, fmt.Errorf("stats fortune window by reward: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var rt string
+		var n int64
+		if err := rows.Scan(&rt, &n); err != nil {
+			return agg, err
+		}
+		agg.ByReward[rt] = n
+	}
+	return agg, rows.Err()
+}
+
+func (s *StatsRepository) loadFortuneAllTime(ctx context.Context) (AdminFortunePeriodAgg, error) {
+	agg := newFortunePeriodAgg()
+	q := `
+SELECT
+  COUNT(DISTINCT customer_id)::bigint,
+  COUNT(*)::bigint,
+  COUNT(*) FILTER (WHERE is_free_spin)::bigint,
+  COUNT(*) FILTER (WHERE NOT is_free_spin)::bigint,
+  COALESCE(SUM(cost_days) FILTER (WHERE NOT is_free_spin), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('days_3','days_5','days_7','days_15','days_30','days_180')), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('xp','micro')), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('discount_3','discount_5')), 0)::bigint
+FROM fortune_spins`
+	if err := s.pool.QueryRow(ctx, q).Scan(
+		&agg.DistinctUsers, &agg.TotalSpins, &agg.FreeSpins, &agg.PaidSpins, &agg.PaidCostDaysSum,
+		&agg.WonSubsDaysSum, &agg.WonLoyaltyXPSum, &agg.WonDiscountPctSum,
+	); err != nil {
+		return agg, fmt.Errorf("stats fortune all agg: %w", err)
+	}
+	qr := `SELECT reward_type, COUNT(*)::bigint FROM fortune_spins GROUP BY reward_type`
+	rows, err := s.pool.Query(ctx, qr)
+	if err != nil {
+		return agg, fmt.Errorf("stats fortune all by reward: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var rt string
+		var n int64
+		if err := rows.Scan(&rt, &n); err != nil {
+			return agg, err
+		}
+		agg.ByReward[rt] = n
+	}
+	return agg, rows.Err()
+}
+
+// FetchAdminFortuneStats собирает статистику спинов колеса фортуны (кабинет).
+func (s *StatsRepository) FetchAdminFortuneStats(ctx context.Context) (*AdminFortuneStatsSnapshot, error) {
+	now := time.Now().UTC()
+	today0 := utcDayStart(now)
+	todayEnd := today0.Add(24 * time.Hour)
+	monthStart, monthEnd := monthRangeUTC(now)
+	out := &AdminFortuneStatsSnapshot{CapturedAt: now}
+	var err error
+	out.Month, err = s.loadFortuneWindow(ctx, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
+	out.Today, err = s.loadFortuneWindow(ctx, today0, todayEnd)
+	if err != nil {
+		return nil, err
+	}
+	out.AllTime, err = s.loadFortuneAllTime(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

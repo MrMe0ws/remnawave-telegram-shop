@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,6 +37,7 @@ type Subscription struct {
 	bootstrap *bootstrap.CustomerBootstrap
 	rw        *remnawave.Client
 	purchases *database.PurchaseRepository
+	fortune   *repository.FortuneRepo // опционально nil: слияние истории XP с колесом не выполняется
 }
 
 // NewSubscription — конструктор. Все репозитории обязательны, кроме loyalty,
@@ -49,6 +51,7 @@ func NewSubscription(
 	boot *bootstrap.CustomerBootstrap,
 	rw *remnawave.Client,
 	purchases *database.PurchaseRepository,
+	fortune *repository.FortuneRepo,
 ) *Subscription {
 	return &Subscription{
 		customers: customers,
@@ -58,6 +61,7 @@ func NewSubscription(
 		bootstrap: boot,
 		rw:        rw,
 		purchases: purchases,
+		fortune:   fortune,
 	}
 }
 
@@ -112,6 +116,8 @@ type SubscriptionResponse struct {
 
 type LoyaltyHistoryItem struct {
 	PurchaseID    int64      `json:"purchase_id"`
+	FortuneSpinID int64      `json:"fortune_spin_id,omitempty"`
+	Source        string     `json:"source,omitempty"` // пусто = оплата; fortune_wheel = колесо фортуны
 	PaidAt        *time.Time `json:"paid_at,omitempty"`
 	XPGained      int64      `json:"xp_gained"`
 	Amount        float64    `json:"amount"`
@@ -342,32 +348,102 @@ func (s *Subscription) LoyaltyHistory(ctx context.Context, accountID int64, limi
 		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
 	}
 
-	paid, err := s.purchases.FindPaidByCustomer(ctx, customer.ID, limit, offset)
+	// Сливаем оплаты и XP с колеса (fortune_spins); offset/limit — по объединённой ленте.
+	mergeCap := offset + limit + 100
+	if mergeCap > 400 {
+		mergeCap = 400
+	}
+	if mergeCap < 80 {
+		mergeCap = 80
+	}
+
+	paid, err := s.purchases.FindPaidByCustomer(ctx, customer.ID, mergeCap, 0)
 	if err != nil {
 		return nil, fmt.Errorf("subscription loyalty history: list purchases: %w", err)
 	}
-	if len(paid) == 0 {
-		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
-	}
 
-	items := make([]LoyaltyHistoryItem, 0, len(paid))
-	runningXP := customer.LoyaltyXP
+	type histEv struct {
+		ts       time.Time
+		tie      string
+		item     LoyaltyHistoryItem
+	}
+	evts := make([]histEv, 0, len(paid)+32)
+
 	for _, p := range paid {
 		gain := loyalty.XPRubEquivalentForPurchase(&p)
 		if gain <= 0 {
 			continue
 		}
-		items = append(items, LoyaltyHistoryItem{
-			PurchaseID:   p.ID,
-			PaidAt:       p.PaidAt,
-			XPGained:     gain,
-			Amount:       p.Amount,
-			Currency:     p.Currency,
-			InvoiceType:  string(p.InvoiceType),
-			PurchaseKind: string(p.PurchaseKind),
-			RunningXP:    runningXP,
+		ts := time.Time{}
+		if p.PaidAt != nil {
+			ts = p.PaidAt.UTC()
+		}
+		evts = append(evts, histEv{
+			ts:  ts,
+			tie: fmt.Sprintf("p-%d", p.ID),
+			item: LoyaltyHistoryItem{
+				PurchaseID:   p.ID,
+				PaidAt:       p.PaidAt,
+				XPGained:     gain,
+				Amount:       p.Amount,
+				Currency:     p.Currency,
+				InvoiceType:  string(p.InvoiceType),
+				PurchaseKind: string(p.PurchaseKind),
+			},
 		})
-		runningXP -= gain
+	}
+
+	if s.fortune != nil {
+		frows, ferr := s.fortune.ListXPGainsByCustomer(ctx, customer.ID, mergeCap)
+		if ferr != nil {
+			return nil, fmt.Errorf("subscription loyalty history: fortune xp spins: %w", ferr)
+		}
+		for _, fr := range frows {
+			st := fr.SpinAt.UTC()
+			evts = append(evts, histEv{
+				ts:  st,
+				tie: fmt.Sprintf("f-%d", fr.ID),
+				item: LoyaltyHistoryItem{
+					FortuneSpinID: fr.ID,
+					Source:        "fortune_wheel",
+					PaidAt:        &fr.SpinAt,
+					XPGained:      int64(fr.RewardValue),
+					Amount:        0,
+					Currency:      "",
+					InvoiceType:   "",
+					PurchaseKind:  fr.RewardType,
+				},
+			})
+		}
+	}
+
+	if len(evts) == 0 {
+		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+	}
+
+	sort.Slice(evts, func(i, j int) bool {
+		if !evts[i].ts.Equal(evts[j].ts) {
+			return evts[i].ts.After(evts[j].ts)
+		}
+		return evts[i].tie > evts[j].tie
+	})
+
+	if offset >= len(evts) {
+		return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
+	}
+	end := offset + limit
+	if end > len(evts) {
+		end = len(evts)
+	}
+	slice := evts[offset:end]
+
+	runningXP := customer.LoyaltyXP
+	items := make([]LoyaltyHistoryItem, 0, len(slice))
+	for _, e := range slice {
+		it := e.item
+		it.RunningXP = runningXP
+		items = append(items, it)
+		runningXP -= it.XPGained
 		if runningXP < 0 {
 			runningXP = 0
 		}

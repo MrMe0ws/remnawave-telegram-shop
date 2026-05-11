@@ -55,6 +55,8 @@ export interface AuthBootstrapResponse {
   pwa_enabled?: boolean
   pwa_app_name?: string
   pwa_short_name?: string
+  /** false при FORTUNE_ENABLED=false — пункт «Колесо фортуны» в меню кабинета скрыт (маршрут /fortune доступен по ссылке). */
+  fortune_nav_visible?: boolean
   /** Доступные провайдеры оплаты по backend-конфигурации env. */
   payment_providers?: {
     yookassa?: boolean
@@ -327,6 +329,9 @@ export interface LoyaltyDashboardResponse {
 
 export interface LoyaltyHistoryItem {
   purchase_id: number
+  fortune_spin_id?: number
+  /** Пусто — начисление с оплаты; `fortune_wheel` — колесо фортуны */
+  source?: string
   paid_at?: string
   xp_gained: number
   amount: number
@@ -409,6 +414,45 @@ export interface ReferralsResponse {
   referral_first_referrer_days?: number
   referral_first_referee_days?: number
   referral_repeat_referrer_days?: number
+}
+
+export interface FortuneSectorDTO {
+  index: number
+  reward_type: string
+  display_days?: number
+  display_percent?: number
+}
+
+export interface FortuneStatusResponse {
+  enabled: boolean
+  panel_ready: boolean
+  can_spin: boolean
+  reason_code?: string
+  spins_used_today: number
+  max_spins_per_day: number
+  /** FORTUNE_DAILY_FREE_SPIN */
+  daily_free_enabled?: boolean
+  /** Сегодня по UTC ещё не использован ежедневный бесплатный спин */
+  daily_free_available?: boolean
+  min_subscription_days: number
+  /** FORTUNE_SPIN_COST_DAYS: платный спин списывает столько дней подписки. */
+  spin_cost_days?: number
+  subscription_remain_hours?: number
+  /** Целые дни остатка подписки (ceil от часов), для UI без даты окончания. */
+  subscription_remain_days?: number
+  expire_at?: string
+  sectors: FortuneSectorDTO[]
+}
+
+export interface FortuneSpinResponse {
+  sector_index: number
+  reward_type: string
+  reward_value: number
+  cost_days: number
+  is_free_spin: boolean
+  is_daily_free?: boolean
+  new_expire_at?: string
+  loyalty_xp_new?: number
 }
 
 export interface PurchaseHistoryItem {
@@ -693,6 +737,10 @@ export const api = {
 
   referrals: () =>
     request<ReferralsResponse>('GET', '/me/referrals'),
+
+  fortuneStatus: () => request<FortuneStatusResponse>('GET', '/fortune/status'),
+
+  fortuneSpin: () => request<FortuneSpinResponse>('POST', '/fortune/spin', {}),
 
   promoState: () => request<PromoStateResponse>('GET', '/promocodes/state'),
   applyPromoCode: (code: string) =>

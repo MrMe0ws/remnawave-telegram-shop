@@ -359,6 +359,37 @@ func (r *Client) ExtendSubscriptionByDaysPreserveSquads(ctx context.Context, cus
 	return &resp.Response, nil
 }
 
+// ShrinkSubscriptionByDaysPreserveSquads уменьшает expire_at на days (положительное число дней),
+// не трогая squads/tag/лимиты — зеркало ExtendSubscriptionByDaysPreserveSquads для списания (колесо фортуны).
+func (r *Client) ShrinkSubscriptionByDaysPreserveSquads(ctx context.Context, customerID int64, telegramID int64, days int) (*User, error) {
+	if days <= 0 {
+		return nil, fmt.Errorf("shrink days must be positive, got %d", days)
+	}
+	existingUser, err := r.findExistingUserForCustomer(ctx, customerID, telegramID)
+	if err != nil {
+		return nil, err
+	}
+	if existingUser == nil {
+		return nil, fmt.Errorf("remnawave: user not found for shrink")
+	}
+	newExpire := getNewExpire(-days, existingUser.ExpireAt)
+	userUpdate := &UpdateUserRequest{
+		UUID:     &existingUser.UUID,
+		Status:   "ACTIVE",
+		ExpireAt: &newExpire,
+	}
+	var resp apiResponse[User]
+	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", userUpdate, &resp); err != nil {
+		return nil, err
+	}
+	tgid := ""
+	if existingUser.TelegramID != nil {
+		tgid = strconv.FormatInt(*existingUser.TelegramID, 10)
+	}
+	slog.Info("shrunk subscription (expire only)", "telegramId", utils.MaskHalf(tgid), "days", days)
+	return &resp.Response, nil
+}
+
 // CreateOrUpdateUserFromNow обновляет подписку, считая срок от текущего времени.
 func (r *Client) CreateOrUpdateUserFromNow(ctx context.Context, customerId int64, telegramId int64, trafficLimit int, days int, isTrialUser bool) (*User, error) {
 	existingUser, err := r.findExistingUserForCustomer(ctx, customerId, telegramId)

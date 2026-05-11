@@ -207,10 +207,10 @@ export default function DashboardPage() {
                 <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
               </div>
 
-              <div className="connect-device-cta rounded-xl" id="cabinet-onboarding-step2-target">
-                <div className="connect-device-cta-inner rounded-[10px] p-[1px]">
+              <div className="connect-device-cta trial-activate-cta rounded-full" id="cabinet-onboarding-step2-target">
+                <div className="connect-device-cta-inner trial-activate-cta-inner p-[1px]">
                   <Button
-                    className="h-11 w-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-white dark:hover:bg-cyan-500/20"
+                    className="trial-activate-btn h-11 w-full rounded-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-white dark:hover:bg-cyan-500/20"
                     onClick={() => activateTrial.mutate()}
                     disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
                   >

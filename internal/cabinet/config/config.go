@@ -458,6 +458,8 @@ func InitConfig() {
 
 	conf.httpAccessLogMode = parseHTTPAccessLogMode(strings.TrimSpace(os.Getenv("CABINET_HTTP_ACCESS_LOG")))
 
+	initFortuneWheel()
+
 	slog.Info("cabinet config initialized",
 		"public_url", conf.publicURLRaw,
 		"mini_app_entry_url", conf.miniAppEntryURL,

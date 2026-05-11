@@ -38,6 +38,9 @@ func (h Handler) adminStatsRootKeyboard(lang string) [][]models.InlineKeyboardBu
 			h.translation.WithButton(lang, "admin_stats_btn_ref", models.InlineKeyboardButton{CallbackData: CallbackAdminStatsRef}),
 		},
 		{
+			h.translation.WithButton(lang, "admin_stats_btn_fortune", models.InlineKeyboardButton{CallbackData: CallbackAdminStatsFortune}),
+		},
+		{
 			h.translation.WithButton(lang, "admin_stats_btn_summary", models.InlineKeyboardButton{CallbackData: CallbackAdminStatsSummary}),
 		},
 		{
@@ -392,5 +395,118 @@ func (h Handler) AdminStatsSummaryHandler(ctx context.Context, b *bot.Bot, updat
 	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsSummary)}, nil)
 	if err != nil {
 		slog.Error("admin stats summary edit", "error", err)
+	}
+}
+
+var fortuneDetailDayTypes = []string{"days_3", "days_5", "days_7", "days_15", "days_30", "days_180"}
+
+func fortuneDetailDaysLine(by map[string]int64, dash string) string {
+	var parts []string
+	for _, rt := range fortuneDetailDayTypes {
+		n := by[rt]
+		if n <= 0 {
+			continue
+		}
+		suffix := strings.TrimPrefix(rt, "days_")
+		parts = append(parts, fmt.Sprintf("%dx [+%sд]", n, suffix))
+	}
+	if len(parts) == 0 {
+		return dash
+	}
+	return strings.Join(parts, ", ")
+}
+
+func fortuneDetailXPLine(h Handler, lang string, by map[string]int64, dash string) string {
+	micro := by["micro"]
+	xp := by["xp"]
+	if micro <= 0 && xp <= 0 {
+		return dash
+	}
+	var parts []string
+	if micro > 0 {
+		parts = append(parts, fmt.Sprintf("%dx [%s]", micro, h.translation.GetText(lang, "admin_stats_fortune_bracket_micro")))
+	}
+	if xp > 0 {
+		parts = append(parts, fmt.Sprintf("%dx [%s]", xp, h.translation.GetText(lang, "admin_stats_fortune_bracket_loyalty")))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func fortuneDetailDiscountLine(by map[string]int64, dash string) string {
+	d3 := by["discount_3"]
+	d5 := by["discount_5"]
+	if d3 <= 0 && d5 <= 0 {
+		return dash
+	}
+	var parts []string
+	if d3 > 0 {
+		parts = append(parts, fmt.Sprintf("%dx [3%%]", d3))
+	}
+	if d5 > 0 {
+		parts = append(parts, fmt.Sprintf("%dx [5%%]", d5))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// AdminStatsFortuneHandler экран «Колесо фортуны» (лог fortune_spins).
+func (h Handler) AdminStatsFortuneHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || update.CallbackQuery.From.ID != config.GetAdminTelegramId() {
+		return
+	}
+	cb := update.CallbackQuery
+	lang := cb.From.LanguageCode
+	msg := cb.Message.Message
+	if msg == nil || h.statsRepository == nil {
+		return
+	}
+	snap, err := h.statsRepository.FetchAdminFortuneStats(ctx)
+	if err != nil {
+		slog.Error("admin stats fortune fetch", "error", err)
+		return
+	}
+	t := snap.Today
+	m := snap.Month
+	a := snap.AllTime
+	dash := h.translation.GetText(lang, "admin_stats_fortune_v2_dash")
+
+	var lines []string
+	lines = append(lines, h.translation.GetText(lang, "admin_stats_fortune_title"))
+	lines = append(lines, "")
+	lines = append(lines, h.translation.GetText(lang, "admin_stats_fortune_v2_activity_header"))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_activity_spins"),
+		t.TotalSpins, m.TotalSpins, a.TotalSpins))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_activity_users"),
+		t.DistinctUsers, m.DistinctUsers, a.DistinctUsers))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_activity_paid"),
+		t.PaidSpins, m.PaidSpins, a.PaidSpins))
+	lines = append(lines, "")
+	lines = append(lines, h.translation.GetText(lang, "admin_stats_fortune_v2_wins_header"))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_wins_days"),
+		t.WonSubsDaysSum, m.WonSubsDaysSum, a.WonSubsDaysSum))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_wins_lost_days"),
+		t.PaidCostDaysSum, m.PaidCostDaysSum, a.PaidCostDaysSum))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_wins_xp"),
+		t.WonLoyaltyXPSum, m.WonLoyaltyXPSum, a.WonLoyaltyXPSum))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_wins_discount"),
+		t.WonDiscountPctSum, m.WonDiscountPctSum, a.WonDiscountPctSum))
+	lines = append(lines, "")
+	lines = append(lines, h.translation.GetText(lang, "admin_stats_fortune_v2_details_header"))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_details_days"),
+		fortuneDetailDaysLine(snap.AllTime.ByReward, dash)))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_details_xp"),
+		fortuneDetailXPLine(h, lang, snap.AllTime.ByReward, dash)))
+	lines = append(lines, fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_details_discount"),
+		fortuneDetailDiscountLine(snap.AllTime.ByReward, dash)))
+
+	body := strings.Join(lines, "\n")
+	profitVal := h.translation.GetText(lang, "admin_stats_fortune_v2_profit_no")
+	if a.PaidCostDaysSum > a.WonSubsDaysSum {
+		profitVal = h.translation.GetText(lang, "admin_stats_fortune_v2_profit_yes")
+	}
+	profitLine := fmt.Sprintf(h.translation.GetText(lang, "admin_stats_fortune_v2_profit_prompt"), profitVal)
+	text := body + "\n\n" + profitLine + "\n\n" + h.formatStatsUpdated(lang, snap.CapturedAt)
+	_, err = editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: h.adminStatsKeyboard(lang, CallbackAdminStatsFortune)}, nil)
+	if err != nil {
+		slog.Error("admin stats fortune edit", "error", err)
 	}
 }

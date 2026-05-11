@@ -27,6 +27,7 @@ import ProfilePage from '@/features/profile/ProfilePage'
 import ConnectionsPage from '@/features/connections/ConnectionsPage'
 import DeepLinkRedirectPage from '@/features/connections/DeepLinkRedirectPage'
 import ReferralProgramPage from '@/features/referral/ReferralProgramPage'
+import FortunePage from '@/features/fortune/FortunePage'
 import LoyaltyProgramPage from '@/features/loyalty/LoyaltyProgramPage'
 import PromoCodesPage from '@/features/promocodes/PromoCodesPage'
 import SupportPage from '@/features/support/SupportPage'
@@ -215,6 +216,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requireVerified>
             <ReferralProgramPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/fortune"
+        element={
+          <ProtectedRoute requireVerified>
+            <FortunePage />
           </ProtectedRoute>
         }
       />

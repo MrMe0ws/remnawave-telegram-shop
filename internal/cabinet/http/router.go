@@ -93,7 +93,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// display_name текущего уровня. Ошибки в этой таблице не должны ломать API.
 	loyaltyRepo := database.NewLoyaltyTierRepository(pool)
 	purchaseRepo := database.NewPurchaseRepository(pool)
-	subscriptionSvc := cabsvc.NewSubscription(customerRepo, tariffRepo, loyaltyRepo, linkRepo, customerBootstrap, rw, purchaseRepo)
+	fortRepo := repository.NewFortuneRepo(pool)
+	subscriptionSvc := cabsvc.NewSubscription(customerRepo, tariffRepo, loyaltyRepo, linkRepo, customerBootstrap, rw, purchaseRepo, fortRepo)
 
 	// SMTP + mailer. Если SMTP не настроен — DryRun, чтобы сервис работал в dev.
 	mailerSender := mail.NewSender(mail.Config{
@@ -222,6 +223,11 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 
 	activityHandler := handlers.NewCabinetActivity(linkRepo, identityRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
+
+	promoRepo := database.NewPromoRepository(pool)
+	fortuneSvc := cabsvc.NewFortuneService(pool, linkRepo, customerBootstrap, customerRepo, purchaseRepo, promoRepo, fortRepo, rw)
+	fortuneHandler := handlers.NewFortune(fortuneSvc)
+
 	var promoCodesHandler *handlers.PromoCodesHandler
 	if promoService != nil {
 		promoCodesHandler = handlers.NewPromoCodes(customerBootstrap, customerRepo, linkRepo, promoService)
@@ -300,7 +306,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	api := http.NewServeMux()
 	api.Handle("/cabinet/api/metrics", wrapMetricsBasicAuth(cabmetrics.Handler()))
 
-	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, jwtIssuer,
+	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, jwtIssuer,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
@@ -381,6 +387,7 @@ func registerAPIRoutes(
 	oauthH *handlers.OAuthHandler,
 	pay *handlers.PaymentsHandler,
 	link *handlers.LinkHandler,
+	fortune *handlers.FortuneHandler,
 	jwtIssuer *jwt.Issuer,
 	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
@@ -789,6 +796,28 @@ func registerAPIRoutes(
 			),
 		}),
 	)
+
+	if fortune != nil {
+		api.Handle("/cabinet/api/fortune/status",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(fortune.Status),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("fortune")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/fortune/spin",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(fortune.Spin),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.CSRF(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("fortune_spin")),
+			)),
+		)
+	}
 
 	if activity != nil {
 		api.Handle("/cabinet/api/me/referrals",

@@ -150,6 +150,7 @@ const (
 	CallbackAdminStatsRevenue = "as_v"
 	CallbackAdminStatsRef     = "as_f"
 	CallbackAdminStatsSummary = "as_m"
+	CallbackAdminStatsFortune = "as_w"
 
 	CallbackAdminInfraRoot   = "ib_r"
 	CallbackAdminInfraNodes  = "ib_n"

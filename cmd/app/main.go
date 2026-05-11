@@ -361,6 +361,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsRevenue, bot.MatchTypeExact, h.AdminStatsRevenueHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsRef, bot.MatchTypeExact, h.AdminStatsRefHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsSummary, bot.MatchTypeExact, h.AdminStatsSummaryHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminStatsFortune, bot.MatchTypeExact, h.AdminStatsFortuneHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraRoot, bot.MatchTypeExact, h.AdminInfraRootHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraNodes, bot.MatchTypeExact, h.AdminInfraNodesHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminInfraNotify, bot.MatchTypeExact, h.AdminInfraNotifyHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)

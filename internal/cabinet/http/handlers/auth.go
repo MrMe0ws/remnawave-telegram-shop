@@ -130,6 +130,8 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"vk_oauth_enabled":       h.vkOAuthEnabled,
 		"telegram_oidc_enabled":  h.telegramOIDCEnabled,
 		"telegram_web_auth_mode": h.telegramWebAuthMode,
+		// Совпадает с FORTUNE_ENABLED: скрыть пункт меню в SPA; /fortune по прямой ссылке остаётся.
+		"fortune_nav_visible": cabcfg.GetFortuneWheel().Enabled,
 		"turnstile_enabled":      cabcfg.TurnstileEnabled(),
 		"pwa_enabled":            cabcfg.PWAEnabled(),
 		"pwa_app_name":           cabcfg.PWAAppName(),

@@ -166,14 +166,31 @@ func (s *Service) attachReferralBestEffort(ctx context.Context, accountID int64,
 // ensureCustomerTelegram — bootstrap с учётом реального telegram_id: привязка
 // к существующему customer из бота или relink с synthetic. Ошибки (кроме
 // отсутствия bootstrap) пробрасываются в Telegram login.
-func (s *Service) ensureCustomerTelegram(ctx context.Context, accountID int64, language string, telegramID int64) error {
+// telegramUsername — из Login Widget / Mini App / OIDC; сохраняется в customer.telegram_username
+// для подписи в Remnawave (Description) при триале и оплатах.
+func (s *Service) ensureCustomerTelegram(ctx context.Context, accountID int64, language string, telegramID int64, telegramUsername string) error {
 	if s.bootstrap == nil {
 		return nil
 	}
 	if _, err := s.bootstrap.EnsureForAccountTelegram(ctx, accountID, telegramID, language); err != nil {
 		return err
 	}
+	s.persistTelegramUsernameForAccount(ctx, accountID, telegramUsername)
 	return nil
+}
+
+func (s *Service) persistTelegramUsernameForAccount(ctx context.Context, accountID int64, raw string) {
+	u := strings.TrimSpace(strings.TrimPrefix(raw, "@"))
+	if u == "" || s.lookupLinks == nil || s.lookupCustomers == nil {
+		return
+	}
+	link, err := s.lookupLinks.FindByAccountID(ctx, accountID)
+	if err != nil || link == nil {
+		return
+	}
+	if err := s.lookupCustomers.UpdateFields(ctx, link.CustomerID, map[string]interface{}{"telegram_username": u}); err != nil {
+		slog.Warn("auth: persist telegram_username", "account_id", accountID, "customer_id", link.CustomerID, "error", err)
+	}
 }
 
 // SetTelegramCustomerLookup подключает поиск аккаунта по customer.telegram_id

@@ -163,11 +163,24 @@ export default function LoyaltyProgramPage() {
                       </thead>
                       <tbody>
                         {history.items.map((item) => (
-                          <tr key={`${item.purchase_id}-${item.paid_at ?? 'nopaid'}`} className="border-b border-border/60 last:border-0">
+                          <tr
+                            key={
+                              item.source === 'fortune_wheel' && item.fortune_spin_id
+                                ? `f-${item.fortune_spin_id}-${item.paid_at ?? ''}`
+                                : `p-${item.purchase_id}-${item.paid_at ?? 'nopaid'}`
+                            }
+                            className="border-b border-border/60 last:border-0"
+                          >
                             <td className="py-2.5 pr-3 whitespace-nowrap">
                               {item.paid_at ? formatDateTimeShort(item.paid_at) : '—'}
                             </td>
-                            <td className="py-2.5 pr-3">{formatMoney(item.amount, item.currency, lang)}</td>
+                            <td className="py-2.5 pr-3 text-muted-foreground">
+                              {item.source === 'fortune_wheel' ? (
+                                <span className="text-foreground">{t('loyaltyPage.historyFortuneWheel')}</span>
+                              ) : (
+                                formatMoney(item.amount, item.currency, lang)
+                              )}
+                            </td>
                             <td className="py-2.5 font-medium text-emerald-500">+{item.xp_gained} XP</td>
                           </tr>
                         ))}

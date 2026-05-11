@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,6 +11,7 @@ import {
   X,
   TicketPercent,
   Users,
+  Gift,
   LogOut,
 } from 'lucide-react'
 
@@ -19,6 +20,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useAuthStore } from '@/store/auth'
 import { CabinetOnboarding } from '@/features/onboarding/CabinetOnboarding'
 
@@ -57,6 +59,7 @@ const overflowNavMainItems: { to: string; icon: typeof Home; labelKey: string }[
   { to: '/support', icon: MessageCircle, labelKey: 'nav.support' },
   { to: '/promocodes', icon: TicketPercent, labelKey: 'nav.promocodes' },
   { to: '/referral', icon: Users, labelKey: 'nav.referral' },
+  { to: '/fortune', icon: Gift, labelKey: 'nav.fortune' },
 ]
 
 const overflowNavProfileItem: { to: string; icon: typeof User; labelKey: string; activePrefixes: string[] } = {
@@ -89,6 +92,13 @@ const navAccentActiveClass = 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]'
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
+  const { data: bootstrap } = useAuthBootstrap()
+  const overflowMainNav = useMemo(() => {
+    if (bootstrap?.fortune_nav_visible === false) {
+      return overflowNavMainItems.filter((item) => item.to !== '/fortune')
+    }
+    return overflowNavMainItems
+  }, [bootstrap?.fortune_nav_visible])
   const logout = useAuthStore((s) => s.logout)
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
@@ -303,7 +313,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   role="menu"
                   className="hidden sm:block absolute right-0 top-full mt-1.5 min-w-[14rem] rounded-lg border border-border bg-card py-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] z-[500] ring-1 ring-border/60"
                 >
-                  {overflowNavMainItems.map(({ to, icon: Icon, labelKey }) => {
+                  {overflowMainNav.map(({ to, icon: Icon, labelKey }) => {
                     const label = t(labelKey)
                     const active = overflowActive(location.pathname, to)
                     const isTariffs = to === '/tariffs'
@@ -377,7 +387,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="fixed inset-x-0 bottom-0 top-[56px] z-40 flex min-h-0 flex-col bg-background sm:hidden">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border bg-background">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background pt-2 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
-              {overflowNavMainItems.map(({ to, icon: Icon, labelKey }) => {
+              {overflowMainNav.map(({ to, icon: Icon, labelKey }) => {
                 const label = t(labelKey)
                 const active = overflowActive(location.pathname, to)
                 const isTariffs = to === '/tariffs'

@@ -1035,7 +1035,7 @@ func (s *Service) linkTelegramIdentity(ctx context.Context, accountID, tgID int6
 	if resolved.Status == IdentityLinkedToCurrent {
 		acc, aerr := s.accounts.FindByID(ctx, accountID)
 		if aerr == nil && acc != nil {
-			_ = s.ensureCustomerTelegram(ctx, accountID, acc.Language, tgID)
+			_ = s.ensureCustomerTelegram(ctx, accountID, acc.Language, tgID, username)
 		}
 		// Already linked to current account; no merge flow required.
 		return false, nil
@@ -1046,7 +1046,7 @@ func (s *Service) linkTelegramIdentity(ctx context.Context, accountID, tgID int6
 	}
 	acc, aerr := s.accounts.FindByID(ctx, accountID)
 	if aerr == nil && acc != nil {
-		if err := s.ensureCustomerTelegram(ctx, accountID, acc.Language, tgID); err != nil {
+		if err := s.ensureCustomerTelegram(ctx, accountID, acc.Language, tgID, username); err != nil {
 			return false, err
 		}
 	}
@@ -1117,7 +1117,7 @@ func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username
 		}
 
 		_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
-		if err := s.ensureCustomerTelegram(ctx, acc.ID, acc.Language, tgID); err != nil {
+		if err := s.ensureCustomerTelegram(ctx, acc.ID, acc.Language, tgID, username); err != nil {
 			return nil, err
 		}
 		pair, err := s.issueSession(ctx, acc, uuid.New(), userAgent, ip)
@@ -1134,7 +1134,7 @@ func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username
 			return nil, fmt.Errorf("telegram login: create identity on linked account: %w", err)
 		}
 		_ = s.accounts.UpdateLastLogin(ctx, linkedAcc.ID)
-		if err := s.ensureCustomerTelegram(ctx, linkedAcc.ID, linkedAcc.Language, tgID); err != nil {
+		if err := s.ensureCustomerTelegram(ctx, linkedAcc.ID, linkedAcc.Language, tgID, username); err != nil {
 			return nil, err
 		}
 		pair, err := s.issueSession(ctx, linkedAcc, uuid.New(), userAgent, ip)
@@ -1154,7 +1154,7 @@ func (s *Service) telegramFindOrCreate(ctx context.Context, tgID int64, username
 	if _, err := s.ids.Create(ctx, acc.ID, repository.ProviderTelegram, pid, "", rawProfile); err != nil {
 		return nil, fmt.Errorf("telegram login: create identity: %w", err)
 	}
-	if err := s.ensureCustomerTelegram(ctx, acc.ID, acc.Language, tgID); err != nil {
+	if err := s.ensureCustomerTelegram(ctx, acc.ID, acc.Language, tgID, username); err != nil {
 		return nil, err
 	}
 	s.attachReferralBestEffort(ctx, acc.ID, acc.Language, referralCode)

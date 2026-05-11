@@ -161,6 +161,7 @@
     position: relative;
     display: block;
     border-radius: 0.75rem;
+    overflow: hidden;
     padding: 2px;
     background: conic-gradient(
       from var(--connect-border-angle),
@@ -176,7 +177,7 @@
   }
 
   .connect-device-cta-inner {
-    border-radius: 0.625rem;
+    border-radius: calc(0.75rem - 2px);
     background: hsl(var(--connect-device-inner-bg));
   }
 
@@ -191,6 +192,27 @@
 
   html:not(.dark) .connect-device-cta:hover .connect-device-cta-inner.profile-linked-accounts-inner {
     background: hsl(0 0% 100%);
+  }
+
+  /* Светлая тема: кнопка «Активировать бесплатно» с белой заливкой. */
+  html:not(.dark) .trial-activate-btn {
+    background: hsl(0 0% 100%);
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+
+  html:not(.dark) .trial-activate-btn:hover {
+    background: hsl(210 40% 97%);
+  }
+
+  /* Синхрон радиусов у conic-рамки и реальной кнопки trial CTA */
+  .trial-activate-cta {
+    border-radius: 9999px;
+  }
+
+  .trial-activate-cta .trial-activate-cta-inner,
+  .trial-activate-cta .trial-activate-btn {
+    border-radius: inherit;
   }
 
   .renew-subscription-cta-danger {
@@ -272,6 +294,314 @@
   100% {
     color: hsl(var(--muted-foreground));
     filter: brightness(1);
+  }
+}
+
+/* Горизонтальный скролл «Вы можете получить» — трек/ползунок под светлую и тёмную тему */
+.fortune-prizes-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) hsl(var(--muted) / 0.65);
+}
+
+.fortune-prizes-scroll::-webkit-scrollbar {
+  height: 7px;
+}
+
+.fortune-prizes-scroll::-webkit-scrollbar-track {
+  margin-inline: 4px;
+  border-radius: 9999px;
+  background: hsl(var(--muted) / 0.75);
+}
+
+.fortune-prizes-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.35);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.fortune-prizes-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+  background-clip: padding-box;
+}
+
+/* --- Победа на колесе фортуны --- */
+@keyframes fortune-win-vignette-kf {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fortune-win-vignette {
+  background: radial-gradient(circle at 50% 42%, transparent 32%, rgba(0, 0, 0, 0.52) 100%);
+  animation: fortune-win-vignette-kf 1.35s ease-out forwards;
+}
+
+@keyframes fortune-win-spotlight-kf {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+.fortune-win-spotlight {
+  background: radial-gradient(
+    ellipse 92% 58% at 50% 0%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(253, 224, 71, 0.55) 18%,
+    rgba(251, 146, 60, 0.22) 36%,
+    transparent 62%
+  );
+  mix-blend-mode: overlay;
+  animation: fortune-win-spotlight-kf 1.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.dark .fortune-win-spotlight {
+  background: radial-gradient(
+    ellipse 92% 58% at 50% 0%,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(96, 165, 250, 0.72) 20%,
+    rgba(167, 139, 250, 0.35) 40%,
+    transparent 65%
+  );
+  mix-blend-mode: screen;
+}
+
+.fortune-win-spotlight-delayed {
+  background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.45) 0%, transparent 42%);
+  mix-blend-mode: soft-light;
+  animation: fortune-win-spotlight-kf 1.25s cubic-bezier(0.22, 1, 0.36, 1) 0.08s forwards;
+  opacity: 0;
+}
+
+.dark .fortune-win-spotlight-delayed {
+  background: radial-gradient(circle at 50% 12%, rgba(147, 197, 253, 0.5) 0%, transparent 45%);
+  mix-blend-mode: screen;
+}
+
+@keyframes fortune-win-rays-kf {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+.fortune-win-rays {
+  transform-origin: 50% 6%;
+  animation: fortune-win-rays-kf 1.15s cubic-bezier(0.18, 0.92, 0.32, 1) forwards;
+}
+
+@keyframes fortune-win-rim-kf {
+  0% {
+    opacity: 0;
+    box-shadow:
+      0 -18px 42px -6px rgba(255, 255, 255, 0.55),
+      inset 0 10px 28px -12px rgba(255, 255, 255, 0.35);
+  }
+  35% {
+    opacity: 1;
+    box-shadow:
+      0 -22px 56px -4px rgba(253, 224, 71, 0.65),
+      inset 0 12px 32px -10px rgba(255, 255, 255, 0.45);
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 0 transparent;
+  }
+}
+
+.fortune-win-rim-glint {
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  animation: fortune-win-rim-kf 1.2s ease-out forwards;
+}
+
+.dark .fortune-win-rim-glint {
+  border-color: rgba(186, 230, 253, 0.45);
+}
+
+@keyframes fortune-win-explosion-kf {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+    filter: blur(0);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.12);
+    filter: blur(0);
+  }
+  55% {
+    opacity: 0.75;
+    transform: scale(1.28);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+    filter: blur(3px);
+  }
+}
+
+.fortune-win-explosion {
+  background: radial-gradient(
+    circle at 50% 8%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(253, 224, 71, 0.75) 14%,
+    rgba(251, 146, 60, 0.45) 28%,
+    rgba(244, 114, 182, 0.22) 42%,
+    transparent 58%
+  );
+  mix-blend-mode: screen;
+  animation: fortune-win-explosion-kf 1.35s cubic-bezier(0.18, 0.92, 0.28, 1) forwards;
+}
+
+.dark .fortune-win-explosion {
+  background: radial-gradient(
+    circle at 50% 8%,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(96, 165, 250, 0.82) 16%,
+    rgba(167, 139, 250, 0.5) 32%,
+    rgba(52, 211, 153, 0.2) 48%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+}
+
+@keyframes fortune-confetti-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.25);
+  }
+}
+
+.fortune-confetti-bit {
+  animation: fortune-confetti-fly 1.4s cubic-bezier(0.16, 0.88, 0.32, 1) forwards;
+}
+
+/* Победа: стиль под вариант колеса */
+.fortune-celebration--porcelain .fortune-win-vignette {
+  background: radial-gradient(circle at 50% 42%, transparent 38%, rgba(0, 0, 0, 0.28) 100%);
+}
+
+.fortune-celebration--porcelain .fortune-win-explosion {
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+}
+
+.dark .fortune-celebration--porcelain .fortune-win-explosion {
+  mix-blend-mode: soft-light;
+  opacity: 0.45;
+}
+
+.fortune-celebration--porcelain .fortune-win-rays {
+  opacity: 0.55;
+  animation-duration: 0.95s;
+}
+
+.fortune-celebration--porcelain .fortune-confetti-bit {
+  animation-duration: 1.05s;
+  opacity: 0.85;
+}
+
+.fortune-celebration--void .fortune-win-spotlight {
+  background: radial-gradient(
+    ellipse 88% 52% at 50% 0%,
+    rgba(52, 211, 153, 0.55) 0%,
+    rgba(34, 211, 238, 0.35) 22%,
+    rgba(129, 140, 248, 0.2) 40%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+}
+
+.fortune-celebration--void .fortune-win-explosion {
+  background: radial-gradient(
+    circle at 50% 10%,
+    rgba(167, 243, 208, 0.9) 0%,
+    rgba(45, 212, 191, 0.55) 24%,
+    rgba(99, 102, 241, 0.35) 42%,
+    transparent 58%
+  );
+}
+
+.fortune-celebration--void .fortune-confetti-bit {
+  filter: saturate(1.25) brightness(1.08);
+}
+
+.fortune-celebration--ledger .fortune-win-vignette {
+  background: radial-gradient(circle at 50% 44%, transparent 36%, rgba(62, 39, 18, 0.35) 100%);
+}
+
+.fortune-celebration--ledger .fortune-win-spotlight {
+  background: radial-gradient(
+    ellipse 90% 55% at 50% 0%,
+    rgba(255, 248, 220, 0.85) 0%,
+    rgba(217, 119, 6, 0.35) 28%,
+    transparent 58%
+  );
+  mix-blend-mode: multiply;
+}
+
+.dark .fortune-celebration--ledger .fortune-win-spotlight {
+  mix-blend-mode: soft-light;
+}
+
+.fortune-celebration--ledger .fortune-confetti-bit {
+  filter: sepia(0.35) saturate(0.9);
+}
+
+.fortune-celebration--bento .fortune-win-rays {
+  animation-duration: 0.85s;
+}
+
+.fortune-celebration--bento .fortune-win-explosion {
+  opacity: 0.85;
+  background: radial-gradient(
+    circle at 50% 10%,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(147, 197, 253, 0.4) 30%,
+    rgba(251, 207, 232, 0.25) 48%,
+    transparent 62%
+  );
+}
+
+@keyframes fortune-prize-shine {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(140%);
+    opacity: 0;
   }
 }
 

@@ -1424,6 +1424,7 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 		return "", fmt.Errorf("customer %d not found", telegramId)
 	}
 	rwCtx := s.withRemnawavePanelUsername(ctx, customer)
+	rwCtx = s.ctxWithTelegramUsernameIfMissing(rwCtx, customer)
 	user, err := s.remnawaveClient.CreateOrUpdateUser(rwCtx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), true)
 	if err != nil {
 		slog.Error("Error creating user", err)
