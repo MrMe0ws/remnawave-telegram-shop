@@ -29,6 +29,18 @@ function isTelegramDeepLinkBuggyDesktopOS(): boolean {
 /**
  * Промежуточная страница того же origin + location.assign обходит поломку window.open для deep link.
  */
+/**
+ * На iOS сторонние браузеры (Chrome, Firefox, Edge, Opera) при window.open(customScheme, '_blank')
+ * часто открывают пустую вкладку — навигация на не-http(s) схему в новом окне ломается.
+ * В текущей вкладке (location.assign) или через /deeplink обычно работает; Safari чаще ок с window.open.
+ */
+export function prefersSameTabIosAppDeepLink(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  if (!/iphone|ipad|ipod/i.test(ua)) return false
+  return /CriOS|EdgiOS|FxiOS|OPiOS/i.test(ua)
+}
+
 export function needsTelegramDeepLinkWorkaround(): boolean {
   if (typeof window === 'undefined') return false
   if (!window.Telegram?.WebApp) return false
