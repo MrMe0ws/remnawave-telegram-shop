@@ -808,6 +808,16 @@ func registerAPIRoutes(
 				),
 			}),
 		)
+		api.Handle("/cabinet/api/fortune/recent-wins",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(fortune.RecentWins),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("fortune_feed")),
+				),
+			}),
+		)
 		api.Handle("/cabinet/api/fortune/spin",
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(fortune.Spin),

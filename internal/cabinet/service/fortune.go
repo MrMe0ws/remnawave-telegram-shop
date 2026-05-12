@@ -59,6 +59,7 @@ type FortuneStatusResponse struct {
 	SubscriptionRemainDays   int                `json:"subscription_remain_days"`
 	ExpireAt                 *time.Time         `json:"expire_at,omitempty"`
 	Sectors                  []FortuneSectorDTO `json:"sectors"`
+	WinnerFeed               *FortuneWinnerFeedMeta `json:"winner_feed,omitempty"`
 }
 
 // FortuneSectorDTO — описание сектора для отрисовки колеса (веса RNG не сериализуем).
@@ -254,6 +255,7 @@ func (s *FortuneService) Status(ctx context.Context, accountID int64) (*FortuneS
 		out.ReasonCode = "no_panel"
 		return out, nil
 	}
+	s.appendWinnerFeedMeta(out, cfg)
 
 	cust, err := s.loadCustomer(ctx, accountID)
 	if err != nil {

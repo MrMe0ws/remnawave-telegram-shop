@@ -39,6 +39,11 @@ type FortuneWheelConfig struct {
 	RewardDays15            int
 	RewardDays30            int
 	RewardDays180           int
+
+	// WinnerTickerEnabled — бегущая строка / блок «кто выиграл» на странице колеса (FORTUNE_WINNER_TICKER_ENABLED).
+	WinnerTickerEnabled bool
+	// WinnerTickerFakeFill — подмешивать демо-записи, если реальных мало (FORTUNE_WINNER_TICKER_FAKE_FILL).
+	WinnerTickerFakeFill bool
 }
 
 var fortuneWheel FortuneWheelConfig
@@ -73,6 +78,8 @@ func initFortuneWheel() {
 	if fortuneWheel.SpinCostDays < 1 {
 		fortuneWheel.SpinCostDays = 1
 	}
+	fortuneWheel.WinnerTickerEnabled = fortuneBool("FORTUNE_WINNER_TICKER_ENABLED", true)
+	fortuneWheel.WinnerTickerFakeFill = fortuneBool("FORTUNE_WINNER_TICKER_FAKE_FILL", false)
 	if !fortuneWheel.Enabled {
 		return
 	}

@@ -62,10 +62,15 @@ const config: Config = {
         'spin-slow': {
           to: { transform: 'rotate(360deg)' },
         },
+        'fortune-winners-marquee': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.3s ease-out both',
         'spin-slow': 'spin-slow 2s linear infinite',
+        'fortune-winners-marquee': 'fortune-winners-marquee 250s linear infinite',
       },
     },
   },

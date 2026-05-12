@@ -40,6 +40,28 @@ func (h *FortuneHandler) Status(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// RecentWins — GET /cabinet/api/fortune/recent-wins.
+func (h *FortuneHandler) RecentWins(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	resp, err := h.svc.RecentWinsFeed(r.Context())
+	if err != nil {
+		slog.Error("fortune recent wins", "account_id", claims.AccountID, "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, resp)
+}
+
 // Spin — POST /cabinet/api/fortune/spin.
 func (h *FortuneHandler) Spin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

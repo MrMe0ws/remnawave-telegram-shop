@@ -442,6 +442,24 @@ export interface FortuneStatusResponse {
   subscription_remain_days?: number
   expire_at?: string
   sectors: FortuneSectorDTO[]
+  /** Лента победителей: FORTUNE_WINNER_TICKER_ENABLED и fake-fill. */
+  winner_feed?: FortuneWinnerFeedMeta | null
+}
+
+export interface FortuneWinnerFeedMeta {
+  enabled: boolean
+  fake_fill: boolean
+}
+
+export interface FortuneRecentWinItem {
+  spin_at: string
+  reward_type: string
+  reward_value: number
+  masked_name: string
+}
+
+export interface FortuneRecentWinsResponse {
+  items: FortuneRecentWinItem[]
 }
 
 export interface FortuneSpinResponse {
@@ -739,6 +757,8 @@ export const api = {
     request<ReferralsResponse>('GET', '/me/referrals'),
 
   fortuneStatus: () => request<FortuneStatusResponse>('GET', '/fortune/status'),
+
+  fortuneRecentWins: () => request<FortuneRecentWinsResponse>('GET', '/fortune/recent-wins'),
 
   fortuneSpin: () => request<FortuneSpinResponse>('POST', '/fortune/spin', {}),
 
