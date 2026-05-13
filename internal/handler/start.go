@@ -182,10 +182,13 @@ func (h Handler) sendStartMenuAfterCallback(ctx context.Context, b *bot.Bot, upd
 
 	msg := callback.Message.Message
 	if config.GreetingImage() != "" {
-		_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
-			ChatID:    msg.Chat.ID,
-			MessageID: msg.ID,
-		})
+		// Рассылка (?bc=1): не удалять исходное сообщение — иначе пропадает пост; новое меню только отдельным сообщением.
+		if !IsCallbackFromBroadcast(callback.Data) {
+			_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+				ChatID:    msg.Chat.ID,
+				MessageID: msg.ID,
+			})
+		}
 		return h.sendStartMenu(ctx, b, msg.Chat.ID, langCode, inlineKeyboard, cust, displayName)
 	}
 
