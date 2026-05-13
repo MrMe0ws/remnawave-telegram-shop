@@ -42,7 +42,7 @@ type FortuneWheelConfig struct {
 
 	// WinnerTickerEnabled — бегущая строка / блок «кто выиграл» на странице колеса (FORTUNE_WINNER_TICKER_ENABLED).
 	WinnerTickerEnabled bool
-	// WinnerTickerFakeFill — подмешивать демо-записи, если реальных мало (FORTUNE_WINNER_TICKER_FAKE_FILL).
+	// WinnerTickerFakeFill — только синтетическая лента (без реальных спинов из БД); иначе только реальные данные (FORTUNE_WINNER_TICKER_FAKE_FILL).
 	WinnerTickerFakeFill bool
 }
 

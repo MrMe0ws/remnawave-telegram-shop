@@ -31,6 +31,9 @@ type FortuneRecentWinsResponse struct {
 	Items []FortuneRecentWinDTO `json:"items"`
 }
 
+// Число строк в полностью синтетической ленте (FORTUNE_WINNER_TICKER_FAKE_FILL).
+const fortunePureFakeFeedCount = 24
+
 func resolveFortuneDisplayRaw(tgU, tgFn, em *string) string {
 	if tgU != nil && *tgU != "" {
 		return *tgU
@@ -142,10 +145,6 @@ func fortuneSyntheticOtherEntry(maskedName string, spinAt time.Time, cfg cabcfg.
 	}
 }
 
-func countDaysInTicker(slice []FortuneRecentWinDTO) int {
-	return len(slice) - countNonDaysInTicker(slice)
-}
-
 // tickerMinDaysForLen — минимум записей «дни подписки» при длине n (≈85%, вверх).
 func tickerMinDaysForLen(n int) int {
 	if n <= 0 {
@@ -162,69 +161,41 @@ func tickerMaxNonDaysForLen(n int) int {
 	return n - tickerMinDaysForLen(n)
 }
 
-// fortuneTickerApplyFakeDayRatio — при FORTUNE_WINNER_TICKER_FAKE_FILL: доводит длину 12…48 и удерживает ≈85% days_*,
-// самые старые «не дни» переписываются в синтетические дни (тот же masked_name), нехватка добивается фейковыми днями.
-func fortuneTickerApplyFakeDayRatio(items []FortuneRecentWinDTO, cfg cabcfg.FortuneWheelConfig) []FortuneRecentWinDTO {
-	const minLen, maxLen = 12, 48
-	if len(items) == 0 {
-		return fortuneTickerBuildAllSynthetic(minLen, cfg)
+// fortuneRandSpinAtInWindow — равномерное время в [start, end), UTC (для демо-ленты).
+func fortuneRandSpinAtInWindow(start, end time.Time) time.Time {
+	d := end.Sub(start)
+	if d <= 0 {
+		return end.UTC()
 	}
-	sort.SliceStable(items, func(i, j int) bool {
-		return items[i].SpinAt.After(items[j].SpinAt)
-	})
-	nTarget := len(items)
-	if nTarget < minLen {
-		nTarget = minLen
-	}
-	if nTarget > maxLen {
-		nTarget = maxLen
-	}
-	if len(items) > nTarget {
-		items = items[:nTarget]
-	}
-	out := append([]FortuneRecentWinDTO(nil), items...)
-	now := time.Now().UTC()
-	padSalt := 0
-	for len(out) < nTarget {
-		name := fortuneFakeTickerNames[padSalt%len(fortuneFakeTickerNames)]
-		spin := now.Add(-time.Duration((len(out)+1)*4) * time.Minute).UTC()
-		out = append(out, fortuneSyntheticDayEntry(fortuneMaskDisplayName(name), spin, cfg, padSalt))
-		padSalt++
-	}
-	minDay := tickerMinDaysForLen(len(out))
-	maxNon := tickerMaxNonDaysForLen(len(out))
-	for i := len(out) - 1; i >= 0; i-- {
-		if countNonDaysInTicker(out) <= maxNon && countDaysInTicker(out) >= minDay {
-			break
-		}
-		if isDaysTickerReward(out[i].RewardType) {
-			continue
-		}
-		out[i] = fortuneSyntheticDayEntry(out[i].MaskedName, out[i].SpinAt, cfg, i+padSalt)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].SpinAt.After(out[j].SpinAt)
-	})
-	return out
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	u := binary.BigEndian.Uint64(b[:])
+	ns := int64(u % uint64(d.Nanoseconds()+1))
+	return start.Add(time.Duration(ns)).UTC()
 }
 
-func fortuneTickerBuildAllSynthetic(n int, cfg cabcfg.FortuneWheelConfig) []FortuneRecentWinDTO {
-	if n <= 0 {
-		return nil
-	}
+// fortuneTickerPureFakeFeed — только синтетика: ≈85% days_*, ≈15% прочие призы; spin_at только за последние 24 ч (случайно в окне).
+func fortuneTickerPureFakeFeed(cfg cabcfg.FortuneWheelConfig) []FortuneRecentWinDTO {
+	n := fortunePureFakeFeedCount
+	const maxLookback = 24 * time.Hour
 	minDay := tickerMinDaysForLen(n)
 	maxNon := tickerMaxNonDaysForLen(n)
 	now := time.Now().UTC()
+	windowStart := now.Add(-maxLookback)
+
 	out := make([]FortuneRecentWinDTO, 0, n)
+	salt := 0
 	for i := 0; i < minDay; i++ {
 		name := fortuneFakeTickerNames[i%len(fortuneFakeTickerNames)]
-		spin := now.Add(-time.Duration((i+1)*5) * time.Minute).UTC()
-		out = append(out, fortuneSyntheticDayEntry(fortuneMaskDisplayName(name), spin, cfg, i))
+		spin := fortuneRandSpinAtInWindow(windowStart, now)
+		out = append(out, fortuneSyntheticDayEntry(fortuneMaskDisplayName(name), spin, cfg, salt))
+		salt++
 	}
 	for i := 0; i < maxNon; i++ {
 		name := fortuneFakeTickerNames[(i+minDay)%len(fortuneFakeTickerNames)]
-		spin := now.Add(-time.Duration((minDay+i+1)*5) * time.Minute).UTC()
-		out = append(out, fortuneSyntheticOtherEntry(fortuneMaskDisplayName(name), spin, cfg, i))
+		spin := fortuneRandSpinAtInWindow(windowStart, now)
+		out = append(out, fortuneSyntheticOtherEntry(fortuneMaskDisplayName(name), spin, cfg, salt))
+		salt++
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		return out[i].SpinAt.After(out[j].SpinAt)
@@ -345,16 +316,45 @@ func maybeInjectRareDays180(items []FortuneRecentWinDTO, cfg cabcfg.FortuneWheel
 	return out
 }
 
-// RecentWinsFeed — последние выигрыши для бегущей строки (витрина + редкий фейк +180 дн.).
+// fortuneTickerLimitPerMaskedName — не более limitPer записей на один masked_name (самые свежие по spin_at).
+func fortuneTickerLimitPerMaskedName(items []FortuneRecentWinDTO, limitPer int) []FortuneRecentWinDTO {
+	if limitPer <= 0 || len(items) == 0 {
+		return items
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		return items[i].SpinAt.After(items[j].SpinAt)
+	})
+	cnt := make(map[string]int, 64)
+	out := make([]FortuneRecentWinDTO, 0, len(items))
+	for _, it := range items {
+		if cnt[it.MaskedName] >= limitPer {
+			continue
+		}
+		out = append(out, it)
+		cnt[it.MaskedName]++
+	}
+	return out
+}
+
+// RecentWinsFeed — бегущая строка: при FAKE_FILL только синтетика; иначе реальные спины + витрина 85/15 и редкий фейк +180 дн.
 func (s *FortuneService) RecentWinsFeed(ctx context.Context) (*FortuneRecentWinsResponse, error) {
 	cfg := s.cfg()
 	out := &FortuneRecentWinsResponse{Items: []FortuneRecentWinDTO{}}
 	if !cfg.Enabled || s.rw == nil || !cfg.WinnerTickerEnabled {
 		return out, nil
 	}
+	if cfg.WinnerTickerFakeFill {
+		items := fortuneTickerPureFakeFeed(cfg)
+		items = maybeInjectRareDays180(items, cfg)
+		if len(items) > fortunePureFakeFeedCount {
+			items = items[:fortunePureFakeFeedCount]
+		}
+		out.Items = items
+		return out, nil
+	}
+
 	var feedRows []repository.FortuneFeedRow
-	var err error
-	feedRows, err = s.fortRepo.ListRecentFeed(ctx, 160)
+	feedRows, err := s.fortRepo.ListRecentFeed(ctx, 200)
 	if err != nil {
 		return nil, err
 	}
@@ -373,10 +373,9 @@ func (s *FortuneService) RecentWinsFeed(ctx context.Context) (*FortuneRecentWins
 		})
 	}
 
+	const tickerMaxWinsPerMaskedName = 4
+	items = fortuneTickerLimitPerMaskedName(items, tickerMaxWinsPerMaskedName)
 	items = buildShowcaseTickerList(items, cfg)
-	if cfg.WinnerTickerFakeFill {
-		items = fortuneTickerApplyFakeDayRatio(items, cfg)
-	}
 	items = maybeInjectRareDays180(items, cfg)
 	if len(items) > 48 {
 		items = items[:48]
