@@ -165,9 +165,7 @@ func (s *SubscriptionService) sendNotification(ctx context.Context, customer dat
 		ParseMode: models.ParseModeHTML,
 		ReplyMarkup: models.InlineKeyboardMarkup{
 			InlineKeyboard: [][]models.InlineKeyboardButton{
-				{
-					s.tm.WithButton(customer.Language, "renew_subscription_button", models.InlineKeyboardButton{CallbackData: handler.CallbackBuy}),
-				},
+				{handler.SubscriptionExpiringRenewInlineButton(customer.Language, s.tm)},
 			},
 		},
 	})
