@@ -551,6 +551,10 @@ export default {
       choosePeriodHint: 'Choose billing period',
       backToPlans: 'Back to plans',
       classicChoosePeriod: 'Choose period',
+      carouselListLabel: 'Plans',
+      carouselGoTo: 'Go to plan {{n}} of {{total}}',
+      carouselTotal_one: 'Total: {{count}} plan',
+      carouselTotal_other: 'Total: {{count}} plans',
     },
     checkout: {
       title: 'Checkout',

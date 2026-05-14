@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -62,7 +62,6 @@ export default function TariffsPage() {
           <PageTitleWithBack
             title={t('tariffs.title')}
             subtitle={t('tariffs.subtitle')}
-            showBack={Boolean(planSlug)}
           />
         </div>
 
@@ -104,6 +103,32 @@ export default function TariffsPage() {
 
 // ── Tariffs mode: шаг 1 — только карточки планов ────────────────────────────
 
+function buildCardPeriodsBySlug(tariffs: TariffItem[]): TariffItem[][] {
+  const bySlug = new Map<string, TariffItem[]>()
+  for (const item of tariffs) {
+    const list = bySlug.get(item.slug) ?? []
+    list.push(item)
+    bySlug.set(item.slug, list)
+  }
+  return Array.from(bySlug.values()).map((list) => {
+    list.sort((a, b) => a.months - b.months)
+    return list
+  })
+}
+
+/** Порядок «текущий тариф первым» — только для мобильной карусели (≤500px); сетка на ПК использует исходный порядок API. */
+function orderCardPeriodsCurrentFirst(periods: TariffItem[][], sub?: SubscriptionResponse): TariffItem[][] {
+  if (periods.length <= 1) return periods
+  const active = isSubscriptionActive(sub?.expire_at)
+  const slug = sub?.tariff?.slug
+  if (!active || !slug) return periods
+  const idx = periods.findIndex((p) => p[0]?.slug === slug)
+  if (idx <= 0) return periods
+  const next = [...periods]
+  const [item] = next.splice(idx, 1)
+  return [item, ...next]
+}
+
 function TariffsGrid({
   tariffs,
   onChoosePlan,
@@ -113,25 +138,162 @@ function TariffsGrid({
   onChoosePlan: (slug: string) => void
   sub?: SubscriptionResponse
 }) {
-  const bySlug = new Map<string, TariffItem[]>()
-  for (const item of tariffs) {
-    const list = bySlug.get(item.slug) ?? []
-    list.push(item)
-    bySlug.set(item.slug, list)
+  const cardPeriods = useMemo(() => buildCardPeriodsBySlug(tariffs), [tariffs])
+
+  const carouselPeriods = useMemo(
+    () => orderCardPeriodsCurrentFirst([...cardPeriods], sub),
+    [cardPeriods, sub],
+  )
+
+  const singleGridClass = cn('grid max-w-xs gap-4')
+  const desktopGridClass = cn(
+    'gap-4',
+    cardPeriods.length === 2
+      ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl'
+      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-4xl',
+  )
+
+  if (cardPeriods.length === 1) {
+    return (
+      <div className={singleGridClass}>
+        {cardPeriods.map((periods) => (
+          <TariffPlanCard key={periods[0].slug} periods={periods} onChoosePlan={onChoosePlan} sub={sub} />
+        ))}
+      </div>
+    )
   }
-  const cardPeriods = Array.from(bySlug.values()).map((list) => {
-    list.sort((a, b) => a.months - b.months)
-    return list
-  })
 
   return (
-    <div className={cn(
-      'grid gap-4',
-      cardPeriods.length === 1 ? 'max-w-xs' : cardPeriods.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-4xl',
-    )}>
-      {cardPeriods.map((periods) => (
-        <TariffPlanCard key={periods[0].slug} periods={periods} onChoosePlan={onChoosePlan} sub={sub} />
-      ))}
+    <>
+      <div className="max-[500px]:block min-[501px]:hidden">
+        <TariffsMobileCarousel cardPeriods={carouselPeriods} onChoosePlan={onChoosePlan} sub={sub} />
+      </div>
+      <div className={cn('hidden min-[501px]:grid', desktopGridClass)}>
+        {cardPeriods.map((periods) => (
+          <TariffPlanCard key={periods[0].slug} periods={periods} onChoosePlan={onChoosePlan} sub={sub} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+/** Карусель ≤500px: snap-start — основная карточка почти на всю ширину, сосед у правого края с узким «peek» текста. */
+function TariffsMobileCarousel({
+  cardPeriods,
+  onChoosePlan,
+  sub,
+}: {
+  cardPeriods: TariffItem[][]
+  onChoosePlan: (slug: string) => void
+  sub?: SubscriptionResponse
+}) {
+  const { t } = useTranslation()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [active, setActive] = useState(0)
+
+  const updateActiveFromScroll = useCallback(() => {
+    const root = scrollRef.current
+    if (!root) return
+    const slides = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')
+    if (!slides.length) return
+    const rootRect = root.getBoundingClientRect()
+    let best = 0
+    let bestOverlap = -1
+    slides.forEach((el, i) => {
+      const r = el.getBoundingClientRect()
+      const overlap = Math.min(r.right, rootRect.right) - Math.max(r.left, rootRect.left)
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap
+        best = i
+      }
+    })
+    setActive((prev) => (prev === best ? prev : best))
+  }, [])
+
+  const orderKey = cardPeriods.map((p) => p[0].slug).join(',')
+
+  useLayoutEffect(() => {
+    const root = scrollRef.current
+    if (root) root.scrollLeft = 0
+    setActive(0)
+    requestAnimationFrame(() => updateActiveFromScroll())
+  }, [orderKey, updateActiveFromScroll])
+
+  useEffect(() => {
+    const root = scrollRef.current
+    if (!root) return
+    let raf = 0
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(updateActiveFromScroll)
+    }
+    root.addEventListener('scroll', onScroll, { passive: true })
+    const ro = new ResizeObserver(() => updateActiveFromScroll())
+    ro.observe(root)
+    return () => {
+      cancelAnimationFrame(raf)
+      root.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+    }
+  }, [updateActiveFromScroll])
+
+  const scrollToIndex = (i: number) => {
+    const root = scrollRef.current
+    if (!root) return
+    const slide = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')[i]
+    if (!slide) return
+    slide.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+  }
+
+  const n = cardPeriods.length
+
+  return (
+    <div className="w-full">
+      <div
+        ref={scrollRef}
+        className={cn(
+          'flex min-w-0 w-full items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x',
+          'scroll-pl-3 scroll-pr-3 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]',
+          '[&::-webkit-scrollbar]:hidden',
+        )}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {cardPeriods.map((periods) => (
+          <div
+            key={periods[0].slug}
+            data-tariff-slide
+            className="flex min-h-0 w-[min(22rem,calc(100%-1.9rem))] shrink-0 snap-start flex-col self-stretch"
+          >
+            <TariffPlanCard
+              layout="carousel"
+              periods={periods}
+              onChoosePlan={onChoosePlan}
+              sub={sub}
+            />
+          </div>
+        ))}
+      </div>
+      <nav
+        className="mt-4 flex justify-center gap-2"
+        aria-label={t('tariffs.carouselListLabel')}
+      >
+        {cardPeriods.map((periods, i) => (
+          <button
+            key={periods[0].slug}
+            type="button"
+            aria-label={t('tariffs.carouselGoTo', { n: i + 1, total: n })}
+            aria-current={i === active ? 'true' : undefined}
+            className={cn(
+              'h-2 rounded-full transition-[width,background-color] duration-200',
+              i === active ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/35 hover:bg-muted-foreground/55',
+            )}
+            onClick={() => scrollToIndex(i)}
+          />
+        ))}
+      </nav>
+      <p className="mt-2 text-center text-sm text-muted-foreground">
+        {t('tariffs.carouselTotal', { count: n })}
+      </p>
     </div>
   )
 }
@@ -140,16 +302,19 @@ function TariffPlanCard({
   periods,
   onChoosePlan,
   sub,
+  layout = 'grid',
 }: {
   periods: TariffItem[]
   onChoosePlan: (slug: string) => void
   sub?: SubscriptionResponse
+  layout?: 'grid' | 'carousel'
 }) {
   const { t } = useTranslation()
   const head = periods[0]
   const active = isSubscriptionActive(sub?.expire_at)
   const isCurrent = Boolean(active && sub?.tariff?.slug === head.slug)
   const ctaLabel = !active ? t('tariffs.select') : isCurrent ? t('tariffs.ctaRenew') : t('tariffs.ctaChange')
+  const isCarousel = layout === 'carousel'
 
   return (
     <Card
@@ -164,6 +329,7 @@ function TariffPlanCard({
       }}
       className={cn(
         'relative flex flex-col transition-[border-color,box-shadow,transform,filter] duration-200 cursor-pointer',
+        isCarousel && 'min-h-0 w-full flex-1',
         isCurrent
           ? cn(tariffCurrentCardClassName, 'active:scale-[0.98]')
           : cn(
@@ -198,34 +364,76 @@ function TariffPlanCard({
         </div>
       )}
 
-      <CardContent className="flex flex-col flex-1 gap-4 mt-auto p-4 pt-0">
-        {head.description ? (
-          <TariffDescription text={head.description} className="text-[0.875rem] text-muted-foreground leading-relaxed" />
-        ) : null}
+      <CardContent
+        className={cn(
+          'flex flex-col gap-4 p-4 pt-0',
+          isCarousel ? 'min-h-0 flex-1' : 'mt-auto flex-1',
+        )}
+      >
+        {isCarousel ? (
+          <>
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              {head.description ? (
+                <TariffDescription
+                  text={head.description}
+                  className="text-[0.875rem] text-muted-foreground leading-relaxed"
+                />
+              ) : null}
+              <ul className="space-y-1.5 text-sm shrink-0">
+                <FeatureLine icon={Cloud}>
+                  {head.traffic_gb
+                    ? t('tariffs.traffic', { n: head.traffic_gb })
+                    : t('tariffs.trafficUnlimited')}
+                </FeatureLine>
+                <FeatureLine icon={Smartphone}>
+                  {head.device_limit > 0
+                    ? t('tariffs.devices', { n: head.device_limit })
+                    : t('tariffs.devicesUnlimited')}
+                </FeatureLine>
+              </ul>
+            </div>
+            <Button
+              className={cn(
+                'mt-auto w-full shrink-0 transition-[background-color,box-shadow,transform,filter] duration-200',
+                isCurrent ? tariffRenewButtonClassName : tariffChangeCtaButtonClassName,
+              )}
+              variant="default"
+              type="button"
+            >
+              {ctaLabel}
+            </Button>
+          </>
+        ) : (
+          <>
+            {head.description ? (
+              <TariffDescription text={head.description} className="text-[0.875rem] text-muted-foreground leading-relaxed" />
+            ) : null}
 
-        <ul className="space-y-1.5 text-sm flex-1">
-          <FeatureLine icon={Cloud}>
-            {head.traffic_gb
-              ? t('tariffs.traffic', { n: head.traffic_gb })
-              : t('tariffs.trafficUnlimited')}
-          </FeatureLine>
-          <FeatureLine icon={Smartphone}>
-            {head.device_limit > 0
-              ? t('tariffs.devices', { n: head.device_limit })
-              : t('tariffs.devicesUnlimited')}
-          </FeatureLine>
-        </ul>
+            <ul className="space-y-1.5 text-sm flex-1">
+              <FeatureLine icon={Cloud}>
+                {head.traffic_gb
+                  ? t('tariffs.traffic', { n: head.traffic_gb })
+                  : t('tariffs.trafficUnlimited')}
+              </FeatureLine>
+              <FeatureLine icon={Smartphone}>
+                {head.device_limit > 0
+                  ? t('tariffs.devices', { n: head.device_limit })
+                  : t('tariffs.devicesUnlimited')}
+              </FeatureLine>
+            </ul>
 
-        <Button
-          className={cn(
-            'w-full transition-[background-color,box-shadow,transform,filter] duration-200',
-            isCurrent ? tariffRenewButtonClassName : tariffChangeCtaButtonClassName,
-          )}
-          variant="default"
-          type="button"
-        >
-          {ctaLabel}
-        </Button>
+            <Button
+              className={cn(
+                'w-full transition-[background-color,box-shadow,transform,filter] duration-200',
+                isCurrent ? tariffRenewButtonClassName : tariffChangeCtaButtonClassName,
+              )}
+              variant="default"
+              type="button"
+            >
+              {ctaLabel}
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   )

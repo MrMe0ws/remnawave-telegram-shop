@@ -224,6 +224,11 @@ export default {
       choosePeriodHint: 'Выберите срок оплаты',
       backToPlans: 'К тарифам',
       classicChoosePeriod: 'Выбрать срок',
+      carouselListLabel: 'Тарифы',
+      carouselGoTo: 'Перейти к тарифу {{n}} из {{total}}',
+      carouselTotal_one: 'Всего {{count}} тариф',
+      carouselTotal_few: 'Всего {{count}} тарифа',
+      carouselTotal_many: 'Всего {{count}} тарифов',
     },
     checkout: {
       title: 'Оформление',
