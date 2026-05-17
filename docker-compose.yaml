@@ -16,6 +16,7 @@ services:
         condition: service_healthy
     volumes:
       - ./translations:/translations
+      - ./web/cabinet/src/i18n:/translations/cabinet/i18n:ro
       - ./vpn_cat.png:/vpn_cat.png:ro
     networks:
       - remnawave-network

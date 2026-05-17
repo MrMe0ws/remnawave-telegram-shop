@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import './i18n'
+import { initCabinetI18n } from './i18n'
 import { loadTelegramWebAppScriptIfNeeded } from '@/lib/telegram-web-app-loader'
 import { useAuthStore } from '@/store/auth'
 
@@ -18,15 +18,17 @@ if (savedTheme === 'light') {
 window.Telegram?.WebApp?.ready?.()
 window.Telegram?.WebApp?.expand?.()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+void initCabinetI18n().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  )
 
-// Mini App: SDK в фоне; после загрузки — ready/expand и повтор автологина (первый initialize мог быть без initData).
-void loadTelegramWebAppScriptIfNeeded().then(() => {
-  window.Telegram?.WebApp?.ready?.()
-  window.Telegram?.WebApp?.expand?.()
-  void useAuthStore.getState().tryTelegramMiniAppAfterSdk()
+  // Mini App: SDK в фоне; после загрузки — ready/expand и повтор автологина (первый initialize мог быть без initData).
+  void loadTelegramWebAppScriptIfNeeded().then(() => {
+    window.Telegram?.WebApp?.ready?.()
+    window.Telegram?.WebApp?.expand?.()
+    void useAuthStore.getState().tryTelegramMiniAppAfterSdk()
+  })
 })

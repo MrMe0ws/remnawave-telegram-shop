@@ -52,6 +52,7 @@ COPY --from=builder /bin/app /app/app
 
 COPY --from=builder /app/db /db
 COPY --from=builder /app/translations /translations
+COPY --from=builder /app/web/cabinet/src/i18n /translations/cabinet/i18n
 
 USER 1000
 

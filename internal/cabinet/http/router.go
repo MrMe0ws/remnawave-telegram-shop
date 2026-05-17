@@ -413,6 +413,12 @@ func registerAPIRoutes(
 			http.MethodGet: http.HandlerFunc(content.AppConfig),
 		}),
 	)
+	// GET /content/i18n/{lang} — runtime UI-переводы (из volume /translations/cabinet/i18n).
+	api.Handle("/cabinet/api/content/i18n/{lang}",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(content.I18n),
+		}),
+	)
 	// GET /public/pwa-manifest.webmanifest — runtime PWA manifest из CABINET_PWA_*.
 	api.Handle("/cabinet/api/public/pwa-manifest.webmanifest",
 		methodRouter(map[string]http.Handler{

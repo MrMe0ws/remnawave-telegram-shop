@@ -105,9 +105,22 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/healthz"
 curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 ```
 
-**Доп. устройства (HWID) в кабинете** (`/cabinet/subscription`): при `CABINET_ENABLED=true` и **`HWID_EXTRA_DEVICES_ENABLED=true`** после блока лояльности показывается карточка «Дополнительные опции» — докупка слотов до лимита **`HWID_MAX_DEVICE`** (если `0`, докупка в кабинете недоступна, как в боте) и бесплатное уменьшение лимита до базы тарифа. Видимость как у списка устройств: не **web-only**, не **synthetic** `telegram_id`, активная **оплаченная** подписка (не триал), ответ Remnawave. **API:** поле **`hwid_extra`** в `GET /cabinet/api/me/subscription`; расчёт/оплата — `GET /cabinet/api/payments/hwid/preview?target_limit=&provider=`, `POST /cabinet/api/payments/hwid/checkout` (тело `target_limit`, `provider`, заголовок **`Idempotency-Key`**, CSRF); уменьшение — `POST /cabinet/api/me/hwid-extra/apply` с `{"target_limit":N}` (CSRF, подтверждённый email). После оплаты — тот же poll `GET /cabinet/api/payments/{id}/status`, что и для тарифов. **Код:** `internal/cabinet/service/hwid_extra.go`, `internal/cabinet/service/subscription.go`, `internal/cabinet/payments/checkout.go`, `internal/cabinet/http/handlers/payments.go`, `internal/cabinet/http/handlers/me.go`, UI — `web/cabinet/src/features/subscription/SubscriptionExtraDevices.tsx`, строки в `web/cabinet/src/i18n/ru.ts` / `en.ts` (`subscriptionPage.extraDevices*`).
+**Переводы UI web-кабинета (runtime, без пересборки образа):**
 
-**Колесо фортуны** (`/cabinet/fortune`): при `CABINET_ENABLED=true` и **`FORTUNE_ENABLED=true`** в навигации кабинета показывается пункт «Колесо фортуны» (синхронно с полем **`fortune_nav_visible`** в `GET /cabinet/api/auth/bootstrap`). **API:** `GET /cabinet/api/fortune/status`, `POST /cabinet/api/fortune/spin` (CSRF). Доступ: **хотя бы одна оплаченная подписка** (`month>0` в `purchase`); экономика — **`FORTUNE_*`** (остаток подписки, лимит платных спинов за UTC, опционально **ежедневный** и **разовый** бесплатные спины, списание дней за платный спин); веса и RNG только на сервере. **Админка Telegram:** раздел «Статистика» → «Колесо фортуны» — агрегаты по `fortune_spins`. **Переводы:** кабинет — `web/cabinet/src/i18n/ru.ts` / `en.ts` (`fortune.*`); админка — `translations/admin_ru.json` / `admin_en.json` (`admin_stats_fortune_*`). **Код:** `internal/cabinet/service/fortune.go`, `internal/cabinet/http/handlers/fortune.go`, `internal/cabinet/repository/fortune.go`, `internal/handler/admin_stats.go` (экран фортуны), `internal/database/stats_repository.go` (`FetchAdminFortuneStats`).
+- Файлы: **`web/cabinet/src/i18n/ru.json`** и **`en.json`** (структура i18next: корневой ключ `translation`).
+- При старте SPA (`initCabinetI18n` в `web/cabinet/src/i18n/index.ts`) для каждого языка запрашивается **`GET /cabinet/api/content/i18n/{lang}`**; бэкенд читает JSON с диска (`/translations/cabinet/i18n/` в контейнере).
+- В **docker-compose** смонтирован volume **`./web/cabinet/src/i18n:/translations/cabinet/i18n:ro`** (рядом с `./translations:/translations`) — правка JSON на хосте → `docker compose restart bot` → обновление страницы кабинета (F5), **без** `docker compose build`.
+- Runtime-контент FAQ и гайдов подключений по-прежнему в **`translations/cabinet/FAQ.json`**, **`app-config.json`** (`GET /cabinet/api/content/faq`, `app-config`).
+
+**Fallback, если API переводов недоступен** (сеть, 4xx/5xx, невалидный JSON, кабинет выключен):
+
+- Используются **встроенные в JS-бандл** копии `ru.json` / `en.json` — те, что попали в SPA при последнем **`npm run build`** и затем в бинарник через `go:embed` (`internal/cabinet/web/dist`).
+- Это **не** чтение актуальных файлов с диска в браузере: правки только в `src/i18n/*.json` на сервере **без** рабочего API **не** появятся, пока не заработает эндпоинт или не пересоберёте фронт/образ.
+- Для отсутствующих ключей внутри выбранного языка i18next откатывается на **`fallbackLng: ru`**.
+
+**Доп. устройства (HWID) в кабинете** (`/cabinet/subscription`): при `CABINET_ENABLED=true` и **`HWID_EXTRA_DEVICES_ENABLED=true`** после блока лояльности показывается карточка «Дополнительные опции» — докупка слотов до лимита **`HWID_MAX_DEVICE`** (если `0`, докупка в кабинете недоступна, как в боте) и бесплатное уменьшение лимита до базы тарифа. Видимость как у списка устройств: не **web-only**, не **synthetic** `telegram_id`, активная **оплаченная** подписка (не триал), ответ Remnawave. **API:** поле **`hwid_extra`** в `GET /cabinet/api/me/subscription`; расчёт/оплата — `GET /cabinet/api/payments/hwid/preview?target_limit=&provider=`, `POST /cabinet/api/payments/hwid/checkout` (тело `target_limit`, `provider`, заголовок **`Idempotency-Key`**, CSRF); уменьшение — `POST /cabinet/api/me/hwid-extra/apply` с `{"target_limit":N}` (CSRF, подтверждённый email). После оплаты — тот же poll `GET /cabinet/api/payments/{id}/status`, что и для тарифов. **Код:** `internal/cabinet/service/hwid_extra.go`, `internal/cabinet/service/subscription.go`, `internal/cabinet/payments/checkout.go`, `internal/cabinet/http/handlers/payments.go`, `internal/cabinet/http/handlers/me.go`, UI — `web/cabinet/src/features/subscription/SubscriptionExtraDevices.tsx`, строки в `web/cabinet/src/i18n/ru.json` / `en.json` (`subscriptionPage.extraDevices*`).
+
+**Колесо фортуны** (`/cabinet/fortune`): при `CABINET_ENABLED=true` и **`FORTUNE_ENABLED=true`** в навигации кабинета показывается пункт «Колесо фортуны» (синхронно с полем **`fortune_nav_visible`** в `GET /cabinet/api/auth/bootstrap`). **API:** `GET /cabinet/api/fortune/status`, `POST /cabinet/api/fortune/spin` (CSRF). Доступ: **хотя бы одна оплаченная подписка** (`month>0` в `purchase`); экономика — **`FORTUNE_*`** (остаток подписки, лимит платных спинов за UTC, опционально **ежедневный** и **разовый** бесплатные спины, списание дней за платный спин); веса и RNG только на сервере. **Админка Telegram:** раздел «Статистика» → «Колесо фортуны» — агрегаты по `fortune_spins`. **Переводы:** кабинет — `web/cabinet/src/i18n/ru.json` / `en.json` (`fortune.*`); админка — `translations/admin_ru.json` / `admin_en.json` (`admin_stats_fortune_*`). **Код:** `internal/cabinet/service/fortune.go`, `internal/cabinet/http/handlers/fortune.go`, `internal/cabinet/repository/fortune.go`, `internal/handler/admin_stats.go` (экран фортуны), `internal/database/stats_repository.go` (`FetchAdminFortuneStats`).
 
 ## Промокоды
 
@@ -481,7 +494,15 @@ docker compose down && docker compose up -d
 
 ## Как Изменить Сообщения Бота
 
-Перейдите в папку translations внутри папки бота и измените нужный язык.
+Перейдите в папку **`translations`** внутри папки бота и измените нужный язык (`ru.json`, `en.json`, при необходимости `admin_ru.json` / `admin_en.json`).
+
+### Как Изменить Тексты Web-Кабинета
+
+1. Редактируйте **`web/cabinet/src/i18n/ru.json`** и/или **`en.json`**.
+2. При деплое через Docker убедитесь, что в compose есть volume **`./web/cabinet/src/i18n:/translations/cabinet/i18n`** (см. `docker-compose.yaml`).
+3. Перезапустите бота и обновите страницу кабинета в браузере.
+
+Пересборка образа нужна только при изменении **кода** кабинета (React/Go), а не при правке этих JSON. Чтобы новые строки попали в **fallback** внутри бандла (на случай недоступного API), после правок JSON выполните `cd web/cabinet && npm run build` и пересоберите бинарник/образ.
 
 ## Инструкции по Обновлению
 

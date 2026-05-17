@@ -15,8 +15,9 @@ import (
 // CabinetContentHandler отдаёт runtime-контент кабинета из файлов /translations/*.
 // Это позволяет менять FAQ/тексты без пересборки Docker-образа.
 type CabinetContentHandler struct {
-	faqCandidates []string
+	faqCandidates       []string
 	appConfigCandidates []string
+	i18nCandidates      []string
 }
 
 func NewCabinetContentHandler() *CabinetContentHandler {
@@ -28,6 +29,11 @@ func NewCabinetContentHandler() *CabinetContentHandler {
 		appConfigCandidates: []string{
 			"/translations/cabinet/app-config.json",
 			filepath.Join("translations", "cabinet", "app-config.json"),
+		},
+		i18nCandidates: []string{
+			"/translations/cabinet/i18n",
+			filepath.Join("translations", "cabinet", "i18n"),
+			filepath.Join("web", "cabinet", "src", "i18n"),
 		},
 	}
 }
@@ -48,6 +54,43 @@ func (h *CabinetContentHandler) FAQ(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(body)
+}
+
+// I18n — GET /cabinet/api/content/i18n/{lang}
+func (h *CabinetContentHandler) I18n(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	lang := strings.TrimSpace(r.PathValue("lang"))
+	if lang == "" {
+		http.Error(w, "language required", http.StatusBadRequest)
+		return
+	}
+	if strings.Contains(lang, "..") || strings.ContainsAny(lang, `/\`) {
+		http.Error(w, "invalid language", http.StatusBadRequest)
+		return
+	}
+
+	body, err := h.readFirstExisting(h.i18nFileCandidates(lang))
+	if err != nil {
+		http.Error(w, "i18n bundle not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(body)
+}
+
+func (h *CabinetContentHandler) i18nFileCandidates(lang string) []string {
+	fileName := lang + ".json"
+	out := make([]string, 0, len(h.i18nCandidates))
+	for _, dir := range h.i18nCandidates {
+		out = append(out, filepath.Join(dir, fileName))
+	}
+	return out
 }
 
 // AppConfig — GET /cabinet/api/content/app-config
