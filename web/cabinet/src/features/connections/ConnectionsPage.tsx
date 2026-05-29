@@ -117,6 +117,16 @@ function AppGlyph({ app }: { app: Pick<AppGuide, 'id' | 'name'> }) {
     )
   }
 
+  if (key.includes('incy')) {
+    return (
+      <svg className="size-6 shrink-0" viewBox="0 0 64 64" fill="none" aria-hidden>
+        <rect x="10" y="10" width="44" height="44" rx="12" fill="#A8D63F" />
+        <path d="M21 23H25.2V41H21V23Z" fill="#050505" />
+        <path d="M29 41V23H32.7L39.8 33.2V23H44V41H40.4L33.2 30.8V41H29Z" fill="#050505" />
+      </svg>
+    )
+  }
+
   if (key.includes('shadowrocket') || key.includes('stash')) {
     return (
       <svg className={cls} viewBox="0 0 50 50" fill="none" aria-hidden>
@@ -195,7 +205,7 @@ function subscriptionPayloadForScheme(scheme: string, subscriptionLink: string, 
   }
   const s = scheme.trim().toLowerCase()
   // Deep link: префикс + полный URL подписки без encodeURIComponent (иначе https:// и точки «ломаются»).
-  const rawUrlPrefixes = ['happ://add/', 'v2raytun://import/', 'v2rayn://import/'] as const
+  const rawUrlPrefixes = ['happ://add/', 'incy://add/', 'v2raytun://import/', 'v2rayn://import/'] as const
   if (rawUrlPrefixes.some((p) => s.startsWith(p))) {
     return subscriptionLink
   }
