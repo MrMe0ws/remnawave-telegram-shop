@@ -28,6 +28,20 @@ export function daysUntil(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
 }
 
+/** Подпись над полосой трафика: «148.0 / 500 ГБ» или «Безлимит». */
+export function formatTrafficUsageLabel(
+  usedGb: number | null | undefined,
+  limitGb: number | null | undefined,
+  gigabytesLabel: string,
+  unlimitedLabel: string,
+): string {
+  if (limitGb != null && limitGb > 0) {
+    const used = Math.max(0, usedGb ?? 0).toFixed(1)
+    return `${used} / ${limitGb} ${gigabytesLabel}`
+  }
+  return unlimitedLabel
+}
+
 /** Форматирует дату по локали. */
 export function formatDate(iso: string, lang: string): string {
   return new Date(iso).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {

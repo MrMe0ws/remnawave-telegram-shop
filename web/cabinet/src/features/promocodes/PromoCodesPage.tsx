@@ -93,7 +93,7 @@ export default function PromoCodesPage() {
               </Alert>
             )}
             {result && (
-              <Alert className="mt-3 border-primary/30 bg-primary/5">
+              <Alert variant="success" className="mt-3">
                 <AlertDescription>{formatPromoResult(t, result)}</AlertDescription>
               </Alert>
             )}

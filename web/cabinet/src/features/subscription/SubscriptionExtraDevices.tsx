@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Star, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Smartphone, Star, X } from 'lucide-react'
 
 import { PlategaPaymentExpand, enabledPlategaMethods, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -222,6 +222,15 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   const previewUnit =
     preview?.currency === 'STARS' ? t('checkout.stars') : t('checkout.rub')
 
+  const deviceOptionIcon = (
+    <div
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-cyan-500/15 dark:text-cyan-300"
+      aria-hidden
+    >
+      <Smartphone size={14} strokeWidth={2} />
+    </div>
+  )
+
   return (
     <Card className={inactive ? 'opacity-60 saturate-50 pointer-events-none' : ''}>
       <CardHeader className="pb-3">
@@ -264,6 +273,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                         setPanel('buy')
                       }}
                     >
+                      {deviceOptionIcon}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{t('subscriptionPage.extraDevicesBuyTitle')}</p>
                         <p className="text-xs text-muted-foreground">{limitLine}</p>
@@ -284,6 +294,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                         setPanel('decrease')
                       }}
                     >
+                      {deviceOptionIcon}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{t('subscriptionPage.extraDevicesDecreaseTitle')}</p>
                         <p className="text-xs text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseHint')}</p>

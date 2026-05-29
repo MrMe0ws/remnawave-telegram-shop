@@ -11,7 +11,7 @@ const alertVariants = cva(
         destructive:
           'border-destructive/50 text-destructive bg-destructive/10',
         success:
-          'border-primary/40 text-primary bg-primary/10',
+          'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/35 dark:bg-emerald-500/15 dark:text-emerald-300',
       },
     },
     defaultVariants: { variant: 'default' },

@@ -9,7 +9,7 @@ import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, type SubscriptionResponse } from '@/lib/api'
-import { daysUntil, formatDate } from '@/lib/utils'
+import { daysUntil, formatDate, formatTrafficUsageLabel } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
@@ -112,9 +112,12 @@ export default function DashboardPage() {
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground dark:text-slate-300">{t('dashboard.trafficUsage')}</span>
                   <span className="text-muted-foreground dark:text-slate-300">
-                    {sub?.traffic_limit_gb
-                      ? `${Math.max(0, (sub?.traffic_used_gb ?? 0)).toFixed(1)} ${t('dashboard.gigabytes')}`
-                      : t('subscriptionPage.unlimited')}
+                    {formatTrafficUsageLabel(
+                      sub?.traffic_used_gb,
+                      sub?.traffic_limit_gb,
+                      t('dashboard.gigabytes'),
+                      t('subscriptionPage.unlimited'),
+                    )}
                   </span>
                 </div>
                 <div className="h-2.5 rounded-full bg-muted dark:bg-white/10">
