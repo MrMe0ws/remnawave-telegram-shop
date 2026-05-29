@@ -7,13 +7,14 @@ import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
-import { daysUntil, formatDate, formatTrafficUsageLabel } from '@/lib/utils'
+import { daysUntil, formatDate } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
 export default function SubscriptionPage() {
@@ -139,27 +140,13 @@ export default function SubscriptionPage() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground dark:text-slate-300">{t('dashboard.trafficUsage')}</span>
-                    <span className="text-muted-foreground dark:text-slate-300">
-                      {formatTrafficUsageLabel(
-                        sub?.traffic_used_gb,
-                        sub?.traffic_limit_gb,
-                        t('dashboard.gigabytes'),
-                        t('subscriptionPage.unlimited'),
-                      )}
-                    </span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-muted dark:bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 transition-all dark:from-cyan-400 dark:via-blue-400 dark:to-indigo-500"
-                      style={{
-                        width: `${sub?.traffic_limit_gb ? Math.min(100, Math.max(0, ((sub.traffic_used_gb ?? 0) / sub.traffic_limit_gb) * 100)) : 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+                <TrafficUsageBar
+                  usedGb={sub?.traffic_used_gb}
+                  limitGb={sub?.traffic_limit_gb}
+                  usageTitle={t('dashboard.trafficUsage')}
+                  gigabytesLabel={t('dashboard.gigabytes')}
+                  unlimitedLabel={t('subscriptionPage.unlimited')}
+                />
 
                 {sub?.subscription_link && (
                   <div className={`rounded-xl border px-4 py-3 ${

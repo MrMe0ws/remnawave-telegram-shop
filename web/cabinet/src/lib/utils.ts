@@ -42,6 +42,26 @@ export function formatTrafficUsageLabel(
   return unlimitedLabel
 }
 
+/** Доля использованного трафика 0–100; null — безлимит или лимит не задан. */
+export function trafficUsagePercent(
+  usedGb: number | null | undefined,
+  limitGb: number | null | undefined,
+): number | null {
+  if (limitGb == null || limitGb <= 0) return null
+  return Math.min(100, Math.max(0, ((usedGb ?? 0) / limitGb) * 100))
+}
+
+/** Градиент заливки полосы трафика по порогам: >80% — оранжевый, >90% — красный. */
+export function trafficBarFillClass(percent: number | null): string {
+  if (percent != null && percent > 90) {
+    return 'bg-gradient-to-r from-red-600 via-red-500 to-rose-600 dark:from-red-500 dark:via-red-400 dark:to-[#c70000]'
+  }
+  if (percent != null && percent > 70) {
+    return 'bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-500'
+  }
+  return 'bg-gradient-to-r from-primary via-primary/90 to-primary/70 dark:from-cyan-400 dark:via-blue-400 dark:to-indigo-500'
+}
+
 /** Форматирует дату по локали. */
 export function formatDate(iso: string, lang: string): string {
   return new Date(iso).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
