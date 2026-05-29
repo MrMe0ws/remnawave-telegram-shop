@@ -559,6 +559,9 @@
       "historyAmount": "Платеж",
       "historyFortuneWheel": "Колесо фортуны",
       "historyXp": "Начислено",
+      "historyPrev": "Назад",
+      "historyNext": "Далее",
+      "historyPage": "Страница {{n}}",
       "compactTitle": "💎 Лояльность — Lv.{{n}}",
       "compactDiscount": "🎁 Скидка: {{pct}}%"
     },

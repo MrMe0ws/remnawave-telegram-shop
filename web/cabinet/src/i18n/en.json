@@ -445,6 +445,9 @@
       "historyAmount": "Payment",
       "historyFortuneWheel": "Fortune wheel",
       "historyXp": "Accrued",
+      "historyPrev": "Previous",
+      "historyNext": "Next",
+      "historyPage": "Page {{n}}",
       "compactTitle": "💎 Loyalty — Lv.{{n}}",
       "compactDiscount": "🎁 Discount: {{pct}}%"
     },

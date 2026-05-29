@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, Gem, Gift, Info } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Gem, Gift, Info } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { cn, formatDateTimeShort } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
@@ -17,9 +19,12 @@ const HOW_LINES: Array<'loyaltyPage.howBullet1' | 'loyaltyPage.howBullet2' | 'lo
   'loyaltyPage.howBullet4',
 ]
 
+const LOYALTY_HISTORY_PAGE_SIZE = 10
+
 export default function LoyaltyProgramPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
+  const [historyPage, setHistoryPage] = useState(0)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['loyalty-dashboard'],
@@ -30,14 +35,25 @@ export default function LoyaltyProgramPage() {
   const {
     data: history,
     isLoading: isHistoryLoading,
+    isFetching: isHistoryFetching,
     error: historyError,
   } = useQuery({
-    queryKey: ['loyalty-history'],
-    queryFn: () => api.loyaltyHistory({ limit: 100 }),
+    queryKey: ['loyalty-history', historyPage],
+    queryFn: () =>
+      api.loyaltyHistory({
+        limit: LOYALTY_HISTORY_PAGE_SIZE,
+        offset: historyPage * LOYALTY_HISTORY_PAGE_SIZE,
+      }),
     staleTime: 30_000,
     retry: 1,
     enabled: data?.enabled === true,
+    placeholderData: (prev) => prev,
   })
+
+  const historyItems = history?.items ?? []
+  const hasHistoryPrev = historyPage > 0
+  const hasHistoryNext = historyItems.length === LOYALTY_HISTORY_PAGE_SIZE
+  const showHistoryPagination = hasHistoryPrev || hasHistoryNext
 
   const discount = data?.current?.discount_percent ?? 0
   const levelLabel =
@@ -149,43 +165,74 @@ export default function LoyaltyProgramPage() {
                   <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
                 ) : historyError ? (
                   <p className="text-sm text-destructive">{t('errors.unknown')}</p>
-                ) : !history?.items?.length ? (
+                ) : !historyItems.length ? (
                   <p className="text-sm text-muted-foreground py-4">{t('loyaltyPage.historyEmpty')}</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-left text-muted-foreground">
-                          <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historyDate')}</th>
-                          <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historyAmount')}</th>
-                          <th className="pb-2 font-medium">{t('loyaltyPage.historyXp')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.items.map((item) => (
-                          <tr
-                            key={
-                              item.source === 'fortune_wheel' && item.fortune_spin_id
-                                ? `f-${item.fortune_spin_id}-${item.paid_at ?? ''}`
-                                : `p-${item.purchase_id}-${item.paid_at ?? 'nopaid'}`
-                            }
-                            className="border-b border-border/60 last:border-0"
-                          >
-                            <td className="py-2.5 pr-3 whitespace-nowrap">
-                              {item.paid_at ? formatDateTimeShort(item.paid_at) : '—'}
-                            </td>
-                            <td className="py-2.5 pr-3 text-muted-foreground">
-                              {item.source === 'fortune_wheel' ? (
-                                <span className="text-foreground">{t('loyaltyPage.historyFortuneWheel')}</span>
-                              ) : (
-                                formatMoney(item.amount, item.currency, lang)
-                              )}
-                            </td>
-                            <td className="py-2.5 font-medium text-emerald-500">+{item.xp_gained} XP</td>
+                  <div className={cn(isHistoryFetching && !isHistoryLoading && 'opacity-60 transition-opacity')}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-muted-foreground">
+                            <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historyDate')}</th>
+                            <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historyAmount')}</th>
+                            <th className="pb-2 font-medium">{t('loyaltyPage.historyXp')}</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {historyItems.map((item) => (
+                            <tr
+                              key={
+                                item.source === 'fortune_wheel' && item.fortune_spin_id
+                                  ? `f-${item.fortune_spin_id}-${item.paid_at ?? ''}`
+                                  : `p-${item.purchase_id}-${item.paid_at ?? 'nopaid'}`
+                              }
+                              className="border-b border-border/60 last:border-0"
+                            >
+                              <td className="py-2.5 pr-3 whitespace-nowrap">
+                                {item.paid_at ? formatDateTimeShort(item.paid_at) : '—'}
+                              </td>
+                              <td className="py-2.5 pr-3 text-muted-foreground">
+                                {item.source === 'fortune_wheel' ? (
+                                  <span className="text-foreground">{t('loyaltyPage.historyFortuneWheel')}</span>
+                                ) : (
+                                  formatMoney(item.amount, item.currency, lang)
+                                )}
+                              </td>
+                              <td className="py-2.5 font-medium text-emerald-500">+{item.xp_gained} XP</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {showHistoryPagination && (
+                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          disabled={!hasHistoryPrev || isHistoryFetching}
+                          onClick={() => setHistoryPage((p) => Math.max(0, p - 1))}
+                        >
+                          <ChevronLeft size={16} aria-hidden />
+                          {t('loyaltyPage.historyPrev')}
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          {t('loyaltyPage.historyPage', { n: historyPage + 1 })}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          disabled={!hasHistoryNext || isHistoryFetching}
+                          onClick={() => setHistoryPage((p) => p + 1)}
+                        >
+                          {t('loyaltyPage.historyNext')}
+                          <ChevronRight size={16} aria-hidden />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
