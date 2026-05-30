@@ -7,13 +7,14 @@ import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
-import { daysUntil, formatDate, cn } from '@/lib/utils'
+import { daysUntil, cn } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
 export default function SubscriptionPage() {
@@ -56,7 +57,6 @@ export default function SubscriptionPage() {
   )
   const isExpired = isExpiredByDate || isExpiredByTraffic
   const isActive = !isExpired
-  const expireTone = expireAtTone(days, isActive)
   const showRenewCta = isActive && days !== null && days <= 7
   const renewCtaAnimated = days !== null && days <= 3
   const hasLink = Boolean(sub?.subscription_link && String(sub.subscription_link).trim() !== '')
@@ -101,7 +101,7 @@ export default function SubscriptionPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t('subscriptionPage.title')}</h1>
           {!isLoading && hasRecord && (
@@ -145,7 +145,7 @@ export default function SubscriptionPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
               <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
@@ -213,38 +213,12 @@ export default function SubscriptionPage() {
                 )}
 
                 {hasExpire && (
-                  <div
-                    className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
-                      isExpired ? 'border-destructive/55 bg-destructive/10' : expireTone.cardClass
-                    }`}
-                  >
-                    <span
-                      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-lg ${
-                        isExpired ? 'bg-destructive/15' : expireTone.iconBgClass
-                      }`}
-                    >
-                      <CalendarExpireIcon className={isExpired ? 'text-destructive' : expireTone.iconClass} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`text-[11px] uppercase tracking-[0.14em] ${
-                          isExpired ? 'text-destructive/80' : expireTone.labelClass
-                        }`}
-                      >
-                        {t('subscriptionPage.expireAt')}
-                      </p>
-                      <p className="mt-1 text-[1.1rem] font-medium">
-                        {sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}
-                      </p>
-                      <p className={`mt-1 text-xs ${daysLeftToneClass(days, isActive)}`}>
-                        {days !== null
-                          ? isActive
-                            ? t('subscriptionPage.daysLeft', { n: days })
-                            : t('subscriptionPage.statusExpired')
-                          : t('subscriptionPage.statusNone')}
-                      </p>
-                    </div>
-                  </div>
+                  <SubscriptionExpireAtBlock
+                    expireAt={sub?.expire_at}
+                    lang={lang}
+                    days={days}
+                    isActive={isActive}
+                  />
                 )}
 
                 {isExpired && (
@@ -270,8 +244,8 @@ export default function SubscriptionPage() {
             {sub?.subscription_link && (
               <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
                 <CardContent className="px-5 py-5 sm:px-6">
-                  <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground dark:text-white">
-                    <Wifi size={14} className="text-foreground dark:text-white" />
+                  <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground dark:text-[#f1f5f9]">
+                    <Wifi size={14} className="text-foreground dark:text-[#f1f5f9]" />
                     {t('subscriptionPage.subscriptionLink')}
                   </p>
                   <div className="flex items-center gap-2">
@@ -343,8 +317,8 @@ export default function SubscriptionPage() {
                           const subtitle = [d.platform, d.os_version].filter(Boolean).join(' · ')
                           return (
                             <li key={d.hwid} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                              <div className="flex min-w-0 items-start gap-2">
-                                <DeviceCardIcon className="mt-0.5 shrink-0" />
+                              <div className="flex min-w-0 items-center gap-2">
+                                <DeviceCardIcon className="shrink-0" />
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-medium">{title}</p>
                                   <p className="truncate text-xs text-muted-foreground">{subtitle || d.hwid}</p>
@@ -424,41 +398,6 @@ function subscriptionTariffLabel(sub: Awaited<ReturnType<typeof api.subscription
   return t('dashboard.basicPlan')
 }
 
-function daysLeftToneClass(days: number | null, isActive: boolean): string {
-  if (!isActive) return 'text-destructive'
-  if (days != null && days < 3) return 'text-destructive'
-  if (days != null && days < 7) return 'text-amber-700 dark:text-[#fde68ab3]'
-  return 'text-emerald-600 dark:text-emerald-300'
-}
-
-function expireAtTone(
-  days: number | null,
-  isActive: boolean,
-): { cardClass: string; labelClass: string; iconBgClass: string; iconClass: string } {
-  if (!isActive || days == null || days < 3) {
-    return {
-      cardClass: 'border-destructive/55 bg-destructive/10',
-      labelClass: 'text-destructive/80',
-      iconBgClass: 'bg-destructive/15',
-      iconClass: 'text-destructive',
-    }
-  }
-  if (days < 7) {
-    return {
-      cardClass: 'border-amber-400/80 bg-amber-100/70 dark:border-amber-300/30 dark:bg-amber-500/10',
-      labelClass: 'text-amber-800 dark:text-[#fde68ab3]',
-      iconBgClass: 'bg-amber-200/80 dark:bg-amber-500/15',
-      iconClass: 'text-amber-800 dark:text-[#fde68ab3]',
-    }
-  }
-  return {
-    cardClass: 'border-emerald-300/70 bg-emerald-500/10 dark:border-emerald-300/25 dark:bg-emerald-500/10',
-    labelClass: 'text-emerald-700/85 dark:text-emerald-300/90',
-    iconBgClass: 'bg-emerald-500/15',
-    iconClass: 'text-emerald-600 dark:text-emerald-300',
-  }
-}
-
 function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subtitle: string }) {
   const { t } = useTranslation()
 
@@ -497,26 +436,6 @@ function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subti
         {inner}
       </div>
     </Link>
-  )
-}
-
-function CalendarExpireIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={className}
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
   )
 }
 

@@ -280,7 +280,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
     <Link
       to="/loyalty"
       className={cn(
-        'profile-tariff-hover flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'profile-tariff-hover flex w-full items-center gap-3 rounded-[var(--radius)] border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >
@@ -288,7 +288,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
         <Gem size={16} className="text-primary" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{t('loyaltyPage.compactTitle', { n: data.current?.sort_order ?? 0 })}</p>
+        <p className="text-sm font-medium text-foreground dark:text-[#f1f5f9]">{t('loyaltyPage.compactTitle', { n: data.current?.sort_order ?? 0 })}</p>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-[width]"

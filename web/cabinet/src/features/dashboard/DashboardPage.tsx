@@ -5,12 +5,13 @@ import { useTranslation } from 'react-i18next'
 import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText, Newspaper, Star } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, type SubscriptionResponse } from '@/lib/api'
-import { daysUntil, formatDate } from '@/lib/utils'
+import { daysUntil } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
@@ -56,7 +57,6 @@ export default function DashboardPage() {
   )
   const isInactive = isExpiredByDate || isExpiredByTraffic
   const isActive = !isInactive
-  const expireTone = expireAtTone(days, isActive)
   const connectedDevices = Math.max(0, devices?.connected ?? 0)
   const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
   const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
@@ -135,29 +135,12 @@ export default function DashboardPage() {
                 </Link>
               )}
 
-              <div>
-                <div className={`rounded-xl border px-4 py-3 ${
-                  isInactive
-                    ? 'border-destructive/55 bg-destructive/10'
-                    : expireTone.cardClass
-                }`}>
-                  <p className={`text-[11px] uppercase tracking-[0.14em] ${
-                    isInactive
-                      ? 'text-destructive/80'
-                      : expireTone.labelClass
-                  }`}>
-                    {t('subscriptionPage.expireAt')}
-                  </p>
-                  <p className="mt-1 text-sm font-medium">{sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}</p>
-                  <p
-                    className={`mt-1 text-xs ${isInactive ? 'text-destructive' : expireTone.daysClass}`}
-                  >
-                    {days !== null
-                      ? (isActive ? t('subscriptionPage.daysLeft', { n: days }) : t('subscriptionPage.statusExpired'))
-                      : t('subscriptionPage.statusNone')}
-                  </p>
-                </div>
-              </div>
+              <SubscriptionExpireAtBlock
+                expireAt={sub?.expire_at}
+                lang={lang}
+                days={days}
+                isActive={isActive}
+              />
 
               {isInactive && (
                 <Link
@@ -331,28 +314,6 @@ function hasSubscriptionData(sub?: SubscriptionResponse | null): boolean {
   if (sub.subscription_link && String(sub.subscription_link).trim() !== '') return true
   if (sub.expire_at && String(sub.expire_at).trim() !== '') return true
   return false
-}
-
-function expireAtTone(days: number | null, isActive: boolean): { cardClass: string; labelClass: string; daysClass: string } {
-  if (!isActive || days == null || days < 3) {
-    return {
-      cardClass: 'border-destructive/55 bg-destructive/10',
-      labelClass: 'text-destructive/80',
-      daysClass: 'text-destructive',
-    }
-  }
-  if (days < 7) {
-    return {
-      cardClass: 'border-amber-400/80 bg-amber-100/70 dark:border-amber-300/30 dark:bg-amber-500/10',
-      labelClass: 'text-amber-800 dark:text-[#fde68ab3]',
-      daysClass: 'text-amber-700 dark:text-[#fde68ab3]',
-    }
-  }
-  return {
-    cardClass: 'border-emerald-300/70 bg-emerald-500/10 dark:border-emerald-300/25 dark:bg-emerald-500/10',
-    labelClass: 'text-emerald-700/85 dark:text-emerald-300/90',
-    daysClass: 'text-emerald-600 dark:text-emerald-300',
-  }
 }
 
 function StatusBadge({

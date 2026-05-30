@@ -261,7 +261,7 @@ export default function ProfilePage() {
 
             <Link
               to="/promocodes"
-              className="profile-tariff-hover flex w-full items-center gap-3 rounded-xl border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="profile-tariff-hover flex w-full items-center gap-3 rounded-[var(--radius)] border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 dark:bg-violet-400/20">
                 <Gift size={16} className="text-violet-600 dark:text-violet-300" strokeWidth={1.75} aria-hidden />
