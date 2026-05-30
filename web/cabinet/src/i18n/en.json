@@ -137,6 +137,7 @@
       "emptySubtitle": "You don't have any active subscriptions yet",
       "buySubscription": "Buy a subscription",
       "refresh": "Refresh",
+      "refreshDone": "Updated",
       "expireAt": "Valid until",
       "daysLeft": "{{n}} days left",
       "statusActive": "Active",

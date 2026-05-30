@@ -251,6 +251,31 @@
     background: hsl(210 40% 97%);
   }
 
+  /* «Продлить подписку» без анимации контура (4–7 дней до окончания). */
+  .renew-subscription-cta-static {
+    display: block;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .renew-subscription-cta-static:hover {
+    background: hsl(var(--accent) / 0.45);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+
+  html.dark .renew-subscription-cta-static {
+    border-color: hsl(var(--primary) / 0.25);
+    background: linear-gradient(to bottom right, #0e1529, #0b1324, #0a1222);
+  }
+
+  html.dark .renew-subscription-cta-static:hover {
+    background: linear-gradient(to bottom right, #111b33, #0d1528, #0b1324);
+    border-color: hsl(var(--primary) / 0.4);
+  }
+
   /* Light "shine" for Tariffs icon in nav. */
   .tariffs-shine-icon {
     animation: tariffs-shine 5s linear infinite;

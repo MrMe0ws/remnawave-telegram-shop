@@ -137,6 +137,7 @@
       "emptySubtitle": "У вас пока нет активных подписок",
       "buySubscription": "Купить подписку",
       "refresh": "Обновить",
+      "refreshDone": "Обновлено",
       "expireAt": "Действует до",
       "daysLeft": "{{n}} дн. осталось",
       "statusActive": "Активна",

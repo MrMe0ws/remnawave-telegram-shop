@@ -12,15 +12,16 @@ import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
-import { daysUntil, formatDate } from '@/lib/utils'
+import { daysUntil, formatDate, cn } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
 export default function SubscriptionPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const [copied, setCopied] = useState(false)
+  const [refreshDone, setRefreshDone] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { data: sub, isLoading, error, refetch } = useQuery({
     queryKey: ['subscription'],
@@ -56,6 +57,8 @@ export default function SubscriptionPage() {
   const isExpired = isExpiredByDate || isExpiredByTraffic
   const isActive = !isExpired
   const expireTone = expireAtTone(days, isActive)
+  const showRenewCta = isActive && days !== null && days <= 7
+  const renewCtaAnimated = days !== null && days <= 3
   const hasLink = Boolean(sub?.subscription_link && String(sub.subscription_link).trim() !== '')
   const hasExpire = Boolean(sub?.expire_at && String(sub.expire_at).trim() !== '')
   const hasRecord = hasLink || hasExpire
@@ -81,14 +84,40 @@ export default function SubscriptionPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function handleRefresh() {
+    if (isRefreshing) return
+    setRefreshDone(false)
+    setIsRefreshing(true)
+    try {
+      const [subResult] = await Promise.all([refetch(), refetchDevices()])
+      if (subResult.isSuccess) {
+        setRefreshDone(true)
+        setTimeout(() => setRefreshDone(false), 2000)
+      }
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t('subscriptionPage.title')}</h1>
           {!isLoading && hasRecord && (
-            <Button variant="ghost" size="icon" onClick={() => refetch()} title={t('subscriptionPage.refresh')}>
-              <RefreshCw size={15} />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => void handleRefresh()}
+              disabled={isRefreshing}
+              title={refreshDone ? t('subscriptionPage.refreshDone') : t('subscriptionPage.refresh')}
+              aria-label={refreshDone ? t('subscriptionPage.refreshDone') : t('subscriptionPage.refresh')}
+            >
+              {refreshDone ? (
+                <Check size={15} className="animate-fade-in text-emerald-500 dark:text-emerald-400" />
+              ) : (
+                <RefreshCw size={15} className={cn(isRefreshing && 'animate-spin')} />
+              )}
             </Button>
           )}
         </div>
@@ -149,26 +178,6 @@ export default function SubscriptionPage() {
                 />
 
                 {sub?.subscription_link && (
-                  <div className={`rounded-xl border px-4 py-3 ${
-                    isExpired
-                      ? 'border-destructive/55 bg-destructive/10'
-                      : expireTone.cardClass
-                  }`}>
-                    <p className={`text-[11px] uppercase tracking-[0.14em] ${
-                      isExpired ? 'text-destructive/80' : expireTone.labelClass
-                    }`}>
-                      {t('subscriptionPage.expireAt')}
-                    </p>
-                    <p className="mt-1 text-sm font-medium">{sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}</p>
-                    <p className={`mt-1 text-xs ${daysLeftToneClass(days, isActive)}`}>
-                      {days !== null
-                        ? (isActive ? t('subscriptionPage.daysLeft', { n: days }) : t('subscriptionPage.statusExpired'))
-                        : t('subscriptionPage.statusNone')}
-                    </p>
-                  </div>
-                )}
-
-                {sub?.subscription_link && (
                   isExpired ? (
                     <div
                       id="cabinet-onboarding-step2-target"
@@ -203,31 +212,37 @@ export default function SubscriptionPage() {
                   )
                 )}
 
-                {sub?.subscription_link && (
-                  <div className="pb-0">
-                    <div className="pb-3 pt-1">
-                      <p className="text-base font-medium text-muted-foreground flex items-center gap-2">
-                        <Wifi size={14} />
-                        {t('subscriptionPage.subscriptionLink')}
+                {hasExpire && (
+                  <div
+                    className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
+                      isExpired ? 'border-destructive/55 bg-destructive/10' : expireTone.cardClass
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-lg ${
+                        isExpired ? 'bg-destructive/15' : expireTone.iconBgClass
+                      }`}
+                    >
+                      <CalendarExpireIcon className={isExpired ? 'text-destructive' : expireTone.iconClass} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-[11px] uppercase tracking-[0.14em] ${
+                          isExpired ? 'text-destructive/80' : expireTone.labelClass
+                        }`}
+                      >
+                        {t('subscriptionPage.expireAt')}
                       </p>
-                    </div>
-                    <div className="flex items-center gap-2 pb-0">
-                      <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono text-muted-foreground truncate select-all">
-                        {sub.subscription_link}
-                      </div>
-                      <Button variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5" disabled={isExpired}>
-                        {copied ? (
-                          <>
-                            <Check size={14} className="text-primary" />
-                            {t('subscriptionPage.copied')}
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={14} />
-                            {t('subscriptionPage.copyLink')}
-                          </>
-                        )}
-                      </Button>
+                      <p className="mt-1 text-[1.1rem] font-medium">
+                        {sub?.expire_at ? formatDate(sub.expire_at, lang) : '—'}
+                      </p>
+                      <p className={`mt-1 text-xs ${daysLeftToneClass(days, isActive)}`}>
+                        {days !== null
+                          ? isActive
+                            ? t('subscriptionPage.daysLeft', { n: days })
+                            : t('subscriptionPage.statusExpired')
+                          : t('subscriptionPage.statusNone')}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -252,22 +267,43 @@ export default function SubscriptionPage() {
               </CardContent>
             </Card>
 
-            {!isExpired && (
-              <Link
-                to="/tariffs"
-                className="connect-device-cta group block rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
-              >
-                <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
-                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))]">
-                    <Zap size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-                    <p className="text-xs text-muted-foreground">{t('dashboard.tariffsCardTitle')}</p>
+            {sub?.subscription_link && (
+              <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
+                <CardContent className="px-5 py-5 sm:px-6">
+                  <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground dark:text-white">
+                    <Wifi size={14} className="text-foreground dark:text-white" />
+                    {t('subscriptionPage.subscriptionLink')}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 truncate rounded-lg bg-muted px-3 py-2 font-mono text-xs text-muted-foreground select-all dark:bg-white/10 dark:text-slate-300">
+                      {sub.subscription_link}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyLink}
+                      className="shrink-0 gap-1.5"
+                      disabled={isExpired}
+                    >
+                      {copied ? (
+                        <>
+                          <Check size={14} className="text-primary" />
+                          {t('subscriptionPage.copied')}
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          {t('subscriptionPage.copyLink')}
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </Link>
+                </CardContent>
+              </Card>
+            )}
+
+            {showRenewCta && (
+              <RenewSubscriptionCta animated={renewCtaAnimated} subtitle={t('dashboard.tariffsCardTitle')} />
             )}
 
             <div id="cabinet-loyalty">
@@ -307,9 +343,12 @@ export default function SubscriptionPage() {
                           const subtitle = [d.platform, d.os_version].filter(Boolean).join(' · ')
                           return (
                             <li key={d.hwid} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-medium">{title}</p>
-                                <p className="truncate text-xs text-muted-foreground">{subtitle || d.hwid}</p>
+                              <div className="flex min-w-0 items-start gap-2">
+                                <DeviceCardIcon className="mt-0.5 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium">{title}</p>
+                                  <p className="truncate text-xs text-muted-foreground">{subtitle || d.hwid}</p>
+                                </div>
                               </div>
                               <Button
                                 variant="outline"
@@ -392,23 +431,112 @@ function daysLeftToneClass(days: number | null, isActive: boolean): string {
   return 'text-emerald-600 dark:text-emerald-300'
 }
 
-function expireAtTone(days: number | null, isActive: boolean): { cardClass: string; labelClass: string } {
+function expireAtTone(
+  days: number | null,
+  isActive: boolean,
+): { cardClass: string; labelClass: string; iconBgClass: string; iconClass: string } {
   if (!isActive || days == null || days < 3) {
     return {
       cardClass: 'border-destructive/55 bg-destructive/10',
       labelClass: 'text-destructive/80',
+      iconBgClass: 'bg-destructive/15',
+      iconClass: 'text-destructive',
     }
   }
   if (days < 7) {
     return {
       cardClass: 'border-amber-400/80 bg-amber-100/70 dark:border-amber-300/30 dark:bg-amber-500/10',
       labelClass: 'text-amber-800 dark:text-[#fde68ab3]',
+      iconBgClass: 'bg-amber-200/80 dark:bg-amber-500/15',
+      iconClass: 'text-amber-800 dark:text-[#fde68ab3]',
     }
   }
   return {
     cardClass: 'border-emerald-300/70 bg-emerald-500/10 dark:border-emerald-300/25 dark:bg-emerald-500/10',
     labelClass: 'text-emerald-700/85 dark:text-emerald-300/90',
+    iconBgClass: 'bg-emerald-500/15',
+    iconClass: 'text-emerald-600 dark:text-emerald-300',
   }
+}
+
+function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subtitle: string }) {
+  const { t } = useTranslation()
+
+  const inner = (
+    <>
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))] dark:bg-cyan-500/15 dark:text-cyan-200">
+        <Zap size={16} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
+        <p className="text-xs text-muted-foreground dark:text-slate-300">{subtitle}</p>
+      </div>
+      <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+    </>
+  )
+
+  if (animated) {
+    return (
+      <Link
+        to="/tariffs"
+        className="connect-device-cta group block rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
+      >
+        <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
+          {inner}
+        </div>
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      to="/tariffs"
+      className="renew-subscription-cta-static group"
+    >
+      <div className="flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
+        {inner}
+      </div>
+    </Link>
+  )
+}
+
+function CalendarExpireIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  )
+}
+
+function DeviceCardIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={cn('text-muted-foreground/70 dark:text-white/40', className)}
+    >
+      <path d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+    </svg>
+  )
 }
 
 function StatusBadge({
@@ -424,17 +552,25 @@ function StatusBadge({
 
   if (isActive) {
     return (
-      <Badge variant="success" className="gap-1.5">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
         <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
         {t('subscriptionPage.statusActive')}
-      </Badge>
+      </span>
     )
   }
   if (isExpired) {
-    return <Badge variant="destructive">{t('subscriptionPage.statusExpired')}</Badge>
+    return (
+      <span className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+        {t('subscriptionPage.statusExpired')}
+      </span>
+    )
   }
   if (!hasSubscription) {
-    return <Badge variant="outline">{t('subscriptionPage.statusNone')}</Badge>
+    return (
+      <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        {t('subscriptionPage.statusNone')}
+      </span>
+    )
   }
   return null
 }
