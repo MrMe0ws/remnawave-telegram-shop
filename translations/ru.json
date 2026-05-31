@@ -411,5 +411,9 @@
   "lifecycle_btn_trial_buy": {
     "text": "💳 Купить",
     "style": "green"
-  }
+  },
+  "lifecycle_time_unlimited": "неограниченно",
+  "lifecycle_time_expired": "истекло",
+  "lifecycle_time_hours": "%d ч",
+  "lifecycle_time_days": "%d дн"
 }

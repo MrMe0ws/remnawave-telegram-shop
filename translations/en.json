@@ -361,5 +361,9 @@
   "lifecycle_btn_trial_buy": {
     "text": "💳 Buy subscription",
     "style": "green"
-  }
+  },
+  "lifecycle_time_unlimited": "unlimited",
+  "lifecycle_time_expired": "expired",
+  "lifecycle_time_hours": "%d h",
+  "lifecycle_time_days": "%d d"
 }

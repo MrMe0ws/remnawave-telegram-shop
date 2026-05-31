@@ -246,7 +246,7 @@ func (s *LifecycleService) sendWinbackNotify(ctx context.Context, candidate Winb
 
 	daysExpired := int(time.Since(candidate.ExpireAt).Hours() / 24)
 	loyaltyCap := config.LoyaltyMaxTotalDiscountPercent()
-	timeLeft := s.formatTimeLeft(finalDiscount.ExpiresAt)
+	timeLeft := s.formatTimeLeft(finalDiscount.ExpiresAt, candidate.Language)
 
 	text := fmt.Sprintf(
 		s.tm.GetText(candidate.Language, "lifecycle_winback"),
@@ -417,20 +417,20 @@ func (s *LifecycleService) buildTrialExpiringKeyboard(lang string) models.Inline
 	}
 }
 
-func (s *LifecycleService) formatTimeLeft(expiresAt *time.Time) string {
+func (s *LifecycleService) formatTimeLeft(expiresAt *time.Time, lang string) string {
 	if expiresAt == nil {
-		return "неограниченно"
+		return s.tm.GetText(lang, "lifecycle_time_unlimited")
 	}
 
 	left := time.Until(*expiresAt)
 	if left < 0 {
-		return "истекло"
+		return s.tm.GetText(lang, "lifecycle_time_expired")
 	}
 
 	hours := int(left.Hours())
 	if hours < 24 {
-		return fmt.Sprintf("%d ч", hours)
+		return fmt.Sprintf(s.tm.GetText(lang, "lifecycle_time_hours"), hours)
 	}
 	days := hours / 24
-	return fmt.Sprintf("%d дн", days)
+	return fmt.Sprintf(s.tm.GetText(lang, "lifecycle_time_days"), days)
 }
