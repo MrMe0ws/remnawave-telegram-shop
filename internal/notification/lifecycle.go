@@ -345,9 +345,18 @@ func (s *LifecycleService) buildNoConnectKeyboard(lang string) models.InlineKeyb
 	var rows [][]models.InlineKeyboardButton
 
 	// 1. Подключиться
-	connectBtn := s.tm.WithButton(lang, "lifecycle_btn_connect", models.InlineKeyboardButton{
-		CallbackData: handler.CallbackConnect,
-	})
+	// Если кабинет включён → ссылка на /cabinet/connections, иначе → callback в главное меню
+	cabinetURL := handler.BuildCabinetWebAppURL("/cabinet/connections")
+	var connectBtn models.InlineKeyboardButton
+	if cabinetURL != "" {
+		connectBtn = s.tm.WithButton(lang, "lifecycle_btn_connect", models.InlineKeyboardButton{
+			URL: cabinetURL,
+		})
+	} else {
+		connectBtn = s.tm.WithButton(lang, "lifecycle_btn_connect", models.InlineKeyboardButton{
+			CallbackData: handler.CallbackConnect,
+		})
+	}
 	rows = append(rows, []models.InlineKeyboardButton{connectBtn})
 
 	// 2. Видео инструкция (если задан URL)
