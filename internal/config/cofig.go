@@ -91,6 +91,19 @@ type config struct {
 	paymentsNotifyMessageThreadID                                                int
 	paymentsNotifySendPaid                                                       bool
 	paymentsNotifySendCancel                                                     bool
+	lifecycleNotifyEnabled                                                       bool
+	lifecycleCron                                                                string
+	lifecycleNoConnectPaidEnabled                                                bool
+	lifecycleNoConnectTrialEnabled                                               bool
+	lifecycleNoConnectDelayHours                                                 int
+	lifecycleNoConnectMaxAgeHours                                                int
+	lifecycleWinbackEnabled                                                      bool
+	lifecycleWinbackDaysAfterExpiry                                              int
+	lifecycleWinbackDiscountPercent                                              int
+	lifecycleWinbackDiscountTTLHours                                             int
+	lifecycleTrialExpiringEnabled                                                bool
+	lifecycleVideoGuideURL                                                       string
+	lifecycleSupportContact                                                      string
 }
 
 var conf config
@@ -611,6 +624,59 @@ func parseMoynalogReceiptFor(raw string, hasKey bool) {
 	}
 }
 
+// Lifecycle notifications
+func LifecycleNotifyEnabled() bool {
+	return conf.lifecycleNotifyEnabled
+}
+
+func LifecycleCron() string {
+	return conf.lifecycleCron
+}
+
+func LifecycleNoConnectPaidEnabled() bool {
+	return conf.lifecycleNoConnectPaidEnabled
+}
+
+func LifecycleNoConnectTrialEnabled() bool {
+	return conf.lifecycleNoConnectTrialEnabled
+}
+
+func LifecycleNoConnectDelayHours() int {
+	return conf.lifecycleNoConnectDelayHours
+}
+
+func LifecycleNoConnectMaxAgeHours() int {
+	return conf.lifecycleNoConnectMaxAgeHours
+}
+
+func LifecycleWinbackEnabled() bool {
+	return conf.lifecycleWinbackEnabled
+}
+
+func LifecycleWinbackDaysAfterExpiry() int {
+	return conf.lifecycleWinbackDaysAfterExpiry
+}
+
+func LifecycleWinbackDiscountPercent() int {
+	return conf.lifecycleWinbackDiscountPercent
+}
+
+func LifecycleWinbackDiscountTTLHours() int {
+	return conf.lifecycleWinbackDiscountTTLHours
+}
+
+func LifecycleTrialExpiringEnabled() bool {
+	return conf.lifecycleTrialExpiringEnabled
+}
+
+func LifecycleVideoGuideURL() string {
+	return conf.lifecycleVideoGuideURL
+}
+
+func LifecycleSupportContact() string {
+	return conf.lifecycleSupportContact
+}
+
 func InitConfig() {
 	if os.Getenv("DISABLE_ENV_FILE") != "true" {
 		if err := godotenv.Load(".env"); err != nil {
@@ -1006,6 +1072,21 @@ func InitConfig() {
 			}
 		}
 	}
+
+	// Lifecycle notifications
+	conf.lifecycleNotifyEnabled = envBoolDefault("LIFECYCLE_NOTIFY_ENABLED", false)
+	conf.lifecycleCron = envStringDefault("LIFECYCLE_CRON", "*/30 * * * *")
+	conf.lifecycleNoConnectPaidEnabled = envBoolDefault("LIFECYCLE_NO_CONNECT_PAID_ENABLED", true)
+	conf.lifecycleNoConnectTrialEnabled = envBoolDefault("LIFECYCLE_NO_CONNECT_TRIAL_ENABLED", true)
+	conf.lifecycleNoConnectDelayHours = envIntDefault("LIFECYCLE_NO_CONNECT_DELAY_HOURS", 1)
+	conf.lifecycleNoConnectMaxAgeHours = envIntDefault("LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS", 24)
+	conf.lifecycleWinbackEnabled = envBoolDefault("LIFECYCLE_WINBACK_ENABLED", true)
+	conf.lifecycleWinbackDaysAfterExpiry = envIntDefault("LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY", 5)
+	conf.lifecycleWinbackDiscountPercent = envIntDefault("LIFECYCLE_WINBACK_DISCOUNT_PERCENT", 10)
+	conf.lifecycleWinbackDiscountTTLHours = envIntDefault("LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS", 48)
+	conf.lifecycleTrialExpiringEnabled = envBoolDefault("LIFECYCLE_TRIAL_EXPIRING_ENABLED", true)
+	conf.lifecycleVideoGuideURL = envStringDefault("LIFECYCLE_VIDEO_GUIDE_URL", "")
+	conf.lifecycleSupportContact = envStringDefault("LIFECYCLE_SUPPORT_CONTACT", "")
 }
 
 // PaymentsNotifyEnabled — PAYMENTS_NOTIFY_ENABLED.

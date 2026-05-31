@@ -344,11 +344,15 @@ fabric.properties
 # Локальная копия интеграционных тестов (шаблон в репозитории: localtests_example/)
 localtests/
 
-# Локальная заметка по агентам
-AGENTS.md
-.cursor
 
-# Локальная заметка по релизу
+.cursor
+# Локальные черновики промптов (не коммитить)
+.cursor/promts/
+
+# MCP с токеном (если не используете ${env:GITHUB_PAT})
+.cursor/mcp.json
+
+# Локальная заметка по релизу (генерируется skill)
 RELEASE_NOTES.md
 
 # JVM crash / replay dumps (не коммитить)

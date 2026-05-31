@@ -7,6 +7,11 @@ import (
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 )
 
+// BuildCabinetWebAppURL exported версия для использования вне пакета handler
+func BuildCabinetWebAppURL(path string) string {
+	return cabinetWebAppURL(path)
+}
+
 func cabinetWebAppURL(path string) string {
 	entry := strings.TrimSpace(cabcfg.MiniAppEntryURL())
 	if entry == "" || !strings.HasPrefix(path, "/") {

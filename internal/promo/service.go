@@ -433,3 +433,66 @@ func (s *Service) ClearPendingDiscountAfterSuccessfulSubscriptionPayment(ctx con
 func IsPromoValidationErr(err error) bool {
 	return err != nil && errors.Is(err, database.ErrPromoValidation)
 }
+
+// GrantStackedPendingDiscount создаёт или складывает системную pending discount (lifecycle win-back).
+// Если у customer уже есть pending discount — складывает проценты (cap 100%), продлевает TTL.
+// promoCodeID — FK на системный promo_code (например __lifecycle_winback__).
+func (s *Service) GrantStackedPendingDiscount(ctx context.Context, customerID, promoCodeID int64, percentAdd int, ttlHours int) error {
+	if s == nil || s.PromoRepo == nil {
+		return fmt.Errorf("promo service not initialized")
+	}
+
+	tx, err := s.PromoRepo.Pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	existing, err := s.PromoRepo.GetPendingDiscountByCustomerIDForUpdate(ctx, tx, customerID)
+	if err != nil {
+		return err
+	}
+
+	newPercent := percentAdd
+	var newExpiry *time.Time
+	untilFirst := true // системные скидки — одноразовые (до первой оплаты)
+	remaining := 1
+
+	if existing != nil {
+		// Складываем проценты, cap 100
+		newPercent = existing.Percent + percentAdd
+		if newPercent > 100 {
+			newPercent = 100
+		}
+
+		// TTL: max из существующей и новой
+		now := time.Now().UTC()
+		newDeadline := now.Add(time.Duration(ttlHours) * time.Hour)
+		if existing.ExpiresAt != nil && existing.ExpiresAt.After(newDeadline) {
+			newExpiry = existing.ExpiresAt
+		} else {
+			newExpiry = &newDeadline
+		}
+
+		// Если existing была многоразовой или без дедлайна — сохраняем её настройки
+		if existing.SubscriptionPaymentsRemaining != 1 {
+			remaining = existing.SubscriptionPaymentsRemaining
+		}
+		if !existing.UntilFirstPurchase {
+			untilFirst = false
+		}
+	} else {
+		// Новая скидка с TTL
+		if ttlHours > 0 {
+			exp := time.Now().UTC().Add(time.Duration(ttlHours) * time.Hour)
+			newExpiry = &exp
+		}
+	}
+
+	err = s.PromoRepo.UpsertPendingDiscount(ctx, tx, customerID, promoCodeID, newPercent, newExpiry, untilFirst, remaining)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}

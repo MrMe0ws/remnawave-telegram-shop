@@ -160,6 +160,25 @@ func main() {
 	// Отправляет уведомления пользователям об истечении подписки
 	subscriptionNotificationCronScheduler := subscriptionChecker(subService, infraBillingNotifyService)
 	subscriptionNotificationCronScheduler.Start()
+
+	// Lifecycle notifications cron (отдельно от daily 16:00)
+	var lifecycleCronScheduler *cron.Cron
+	if config.LifecycleNotifyEnabled() {
+		lifecycleRepo := notification.NewLifecycleRepository(pool)
+		lifecycleService := notification.NewLifecycleService(
+			customerRepository,
+			purchaseRepository,
+			promoRepository,
+			promoService,
+			remnawaveClient,
+			b,
+			tm,
+			lifecycleRepo,
+		)
+		lifecycleCronScheduler = lifecycleChecker(lifecycleService)
+		lifecycleCronScheduler.Start()
+		slog.Info("Lifecycle notifications cron started", "schedule", config.LifecycleCron())
+	}
 	defer subscriptionNotificationCronScheduler.Stop()
 
 	// Инициализация сервиса синхронизации с Remnawave
@@ -833,6 +852,24 @@ func subscriptionChecker(subService *notification.SubscriptionService, infraNoti
 
 	if err != nil {
 		panic(err)
+	}
+	return c
+}
+
+// lifecycleChecker - настраивает cron для lifecycle-уведомлений (no-connect, win-back, trial expiring)
+// Запускается по расписанию из LIFECYCLE_CRON (по умолчанию каждые 30 минут)
+func lifecycleChecker(lifecycleService *notification.LifecycleService) *cron.Cron {
+	c := cron.New()
+
+	cronSchedule := config.LifecycleCron()
+	_, err := c.AddFunc(cronSchedule, func() {
+		if err := lifecycleService.ProcessLifecycleNotifications(); err != nil {
+			slog.Error("Error processing lifecycle notifications", "error", err)
+		}
+	})
+
+	if err != nil {
+		panic(fmt.Sprintf("Failed to add lifecycle cron job: %v", err))
 	}
 	return c
 }

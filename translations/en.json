@@ -339,5 +339,27 @@
   "tariff_btn_cancel_edit": "Cancel",
   "tariff_back_to_card": "Open tariff",
   "tariff_wizard_cancel": "Cancel wizard",
-  "tariff_wizard_cancelled": "Tariff creation cancelled."
+  "tariff_wizard_cancelled": "Tariff creation cancelled.",
+  "lifecycle_no_connect_paid": "Hello! We see that you purchased a subscription but haven't connected to the VPN yet.\n\nIf you need help with setup — contact support: %s",
+  "lifecycle_no_connect_trial": "Hello! We see that you activated a trial period but haven't connected to the VPN yet.\n\nIf you need help with setup — contact support: %s",
+  "lifecycle_winback": "Your subscription expired %d days ago — we want to bring you back.\n\n💎 Save %d%% on renewal\nDiscount stacks with the loyalty program (up to %d%%) and applies once.\n\n⏳ Offer available for %s",
+  "lifecycle_trial_expiring": "⚠️ <b>Trial Period Reminder</b>\n\nYour trial period expires tomorrow.\nPlease purchase a subscription to continue using the service.",
+  "lifecycle_btn_connect": {
+    "text": "🔌 Connect",
+    "style": "blue"
+  },
+  "lifecycle_btn_video": {
+    "text": "📺 Video guide"
+  },
+  "lifecycle_btn_support": {
+    "text": "💬 Support"
+  },
+  "lifecycle_btn_winback_renew": {
+    "text": "Renew with −%d%% discount",
+    "style": "green"
+  },
+  "lifecycle_btn_trial_buy": {
+    "text": "💳 Buy subscription",
+    "style": "green"
+  }
 }

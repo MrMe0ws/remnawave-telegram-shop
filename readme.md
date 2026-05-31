@@ -34,8 +34,8 @@
 - **💳 Platega**: рублёвые способы оплаты через [Platega](https://platega.io) в боте и в web-кабинете (подписка в `classic` / `tariffs`, продление, апгрейд/даунгрейд, докупка доп. HWID). Pending-скидка по промокоду и лояльность применяются так же, как к YooKassa. Включение и выбор методов — через `PLATEGA_*` в `.env` (см. таблицу ниже). Миграция БД: **`000032_platega_purchase_and_checkout`**
 - **👥 Админ — «Пользователи»** (`ADMIN_TELEGRAM_ID`): списки всех / неактивных, поиск, карточка; оплаты и сводка в ₽ + Stars (оценка Stars в ₽ при `RUB_PER_STAR`); ветка **«Подписки»** (все / скоро истекают); пагинация с выбором страницы. При **`SALES_MODE=tariffs`** — смена тарифа, доп. HWID, описание, устройства, настройки панели (squads, трафик, срок подписки и др.).
 - **📈 Админ-статистика** (при заданном `ADMIN_TELEGRAM_ID`): раздел **«Статистика»** в админ-панели — пользователи, подписки, доходы в ₽ (фильтр по RUB/RUR/пустой валюте), реферальные начисления **в днях**, общая сводка, **колесо фортуны** (агрегаты по таблице `fortune_spins`: активность, выигрыши, детализация призов); данные из PostgreSQL, кнопки «Обновить» / «Назад».
-- **🎡 Колесо фортуны (web-кабинет)** (`FORTUNE_ENABLED=true`, миграции **`000033_fortune_wheel`**, **`000034_fortune_daily_free_spin`** при ежедневном фри-спине): страница `/cabinet/fortune`, API `GET/POST /cabinet/api/fortune/status|spin`, лог спинов в БД, скидки через якорный промокод `__CABINET_FORTUNE__`. При `FORTUNE_ENABLED=false` пункт меню кабинета скрывается (флаг `fortune_nav_visible` в `GET /cabinet/api/auth/bootstrap`), маршрут по прямой ссылке остаётся. Подробности env и правил — `.cursor/rules/AGENTS.md`, `.env.sample`.
-- **💎 Лояльность** (`LOYALTY_ENABLED`): XP по успешным оплатам (1 ₽ эквивалента ≈ 1 XP, Stars через `RUB_PER_STAR`), уровни и скидки в таблице `loyalty_tier` (миграция `000014_loyalty`), админка уровней и **пересчёт XP из истории `purchase`**, пользовательский экран в «Мой VPN». Подробнее — `.cursor/telegram/SKILLS.md` (лоyальность), код `internal/loyalty/`.
+- **🎡 Колесо фортуны (web-кабинет)** (`FORTUNE_ENABLED=true`, миграции **`000033_fortune_wheel`**, **`000034_fortune_daily_free_spin`** при ежедневном фри-спине): страница `/cabinet/fortune`, API `GET/POST /cabinet/api/fortune/status|spin`, лог спинов в БД, скидки через якорный промокод `__CABINET_FORTUNE__`. При `FORTUNE_ENABLED=false` пункт меню кабинета скрывается (флаг `fortune_nav_visible` в `GET /cabinet/api/auth/bootstrap`), маршрут по прямой ссылке остаётся. Подробности env и правил — `.cursor/AGENTS.md`, `.cursor/rules/`, `.env.sample`.
+- **💎 Лояльность** (`LOYALTY_ENABLED`): … Подробнее — **`.cursor/docs/backend/loyalty.md`**, код `internal/loyalty/`.
 - **🔐 Hardening кабинета**: Turnstile (опционально), rate-limit с trusted proxy логикой IP, Prometheus-метрики (`/cabinet/api/metrics`) с опциональным Basic-auth, merge/link safeguards.
 
 ### 📋 Совместимость Версий:
@@ -146,7 +146,7 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 - **После успешной оплаты:** начисление XP — `XPRubEquivalentForPurchase` (`internal/loyalty/pricing.go`): сумма в ₽ или Stars×`RUB_PER_STAR` (в сумме уже учтены доп. устройства, если они в счёте), затем при нуле — минимум (`LOYALTY_XP_MIN_PER_PURCHASE`). Для Stars задайте **`RUB_PER_STAR`**, иначе вклад в XP из суммы будет нулевым и сработает только минимум (если включён).
 - **Пользователь:** «Мой VPN» — кнопка и экран программы (`internal/handler/connect.go`, `loyalty_ui.go`); напоминания на экране покупки — как у промо, см. маркеры «Способы оплаты» в переводах.
 - **Администратор:** при **`ADMIN_TELEGRAM_ID`** и включённой лояльности в админ-панели появляется кнопка — список уровней, редактирование (в т.ч. подпись для UI), экран **«Правила XP»** (текущие значения из env), добавление уровня, **пересчёт XP из всех успешных строк `purchase`** (полная перезапись `loyalty_xp`; идемпотентно при неизменной истории).
-- Подробная спецификация: код **`internal/loyalty/`** и **`.cursor/telegram/SKILLS.md`**, кратко для ассистентов — **`.cursor/AGENT.md`**.
+- Подробная спецификация: **`internal/loyalty/`**, **`.cursor/docs/backend/loyalty.md`**, кратко для ассистентов — **`.cursor/AGENTS.md`**.
 
 ## Режим продаж: `classic` и `tariffs`
 
@@ -300,6 +300,19 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `PRIVACY_POLICY_URL`                 | URL политики конфиденциальности (опционально) - если установлен, кнопка "🔒 Политика конфиденциальности" отображается в разделе "Помощь"                      |
 | `TERMS_OF_SERVICE_URL`               | URL пользовательского соглашения (опционально) - если установлен, кнопка "📋 Пользовательское соглашение" отображается в разделе "Помощь"                     |
 | `ADMIN_TELEGRAM_ID`                  | ID telegram админа; кнопка «Админ»: рассылка, **пользователи**, статистика, синхронизация, промокоды; при `SALES_MODE=tariffs` — тарифы; при лояльности — раздел лояльности. Промокоды — миграция `000007_promo_codes` |
+| `LIFECYCLE_NOTIFY_ENABLED`           | Включить систему lifecycle-уведомлений (no-connect, win-back, trial expiring). Миграция `000035_lifecycle_notify`. По умолчанию `false` |
+| `LIFECYCLE_CRON`                     | Расписание cron для проверки lifecycle-событий (формат cron). По умолчанию `*/30 * * * *` (каждые 30 минут) |
+| `LIFECYCLE_NO_CONNECT_PAID_ENABLED`  | Напоминание пользователям с оплаченной подпиской, которые не подключались к VPN (`true`/`false`). По умолчанию `true` |
+| `LIFECYCLE_NO_CONNECT_TRIAL_ENABLED` | Напоминание пользователям с триалом, которые не подключались к VPN (`true`/`false`). По умолчанию `true` |
+| `LIFECYCLE_NO_CONNECT_DELAY_HOURS`   | Минимальный интервал в часах после первой оплаты/триала перед отправкой no-connect уведомления. По умолчанию `1` |
+| `LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS` | Максимальное окно в часах для отправки no-connect уведомления (после этого срока уведомление не отправляется). По умолчанию `24` |
+| `LIFECYCLE_WINBACK_ENABLED`          | Win-back кампания для пользователей с истёкшей подпиской: промокод со скидкой через N дней после окончания (`true`/`false`). По умолчанию `true` |
+| `LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY`| Через сколько дней после окончания подписки отправлять win-back уведомление. По умолчанию `5` |
+| `LIFECYCLE_WINBACK_DISCOUNT_PERCENT` | Процент скидки для win-back промокода (целое число 1–100). По умолчанию `10` |
+| `LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS`| Срок действия win-back промокода в часах. По умолчанию `48` |
+| `LIFECYCLE_TRIAL_EXPIRING_ENABLED`   | Напоминание за день до окончания триала с призывом оформить платную подписку (`true`/`false`). По умолчанию `true` |
+| `LIFECYCLE_VIDEO_GUIDE_URL`          | URL видео-инструкции для no-connect уведомлений (опционально, если пусто — кнопка не показывается) |
+| `LIFECYCLE_SUPPORT_CONTACT`          | Контакт поддержки (например, @username или ссылка) для no-connect уведомлений (опционально) |
 | `CABINET_ENABLED`                    | Включить web-кабинет (`true/false`) |
 | `CABINET_PROFILE_DELETE_ENABLED`     | Разрешить самоудаление профиля в кабинете (`POST /cabinet/api/me/account/delete`) |
 | `CABINET_PUBLIC_URL`                 | Публичный URL кабинета (например, `https://cabinet.example.com`) |
@@ -363,11 +376,23 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 
 ## Автоматизированные Уведомления
 
-Бот включает систему уведомлений, которая запускается ежедневно в 16:00 UTC для проверки истекающих подписок:
+Бот включает систему уведомлений двух типов:
+
+### Уведомление об истечении подписки
+
+Запускается ежедневно в 16:00 UTC для проверки истекающих подписок:
 
 - Пользователи получают уведомление за 3 дня до истечения их подписки
 - Уведомление включает точную дату истечения и кнопку для продления: при **`CABINET_TELEGRAM_UI_MODE=minimalism`** (и рабочем Mini App) кнопка открывает WebApp **`/cabinet/tariffs`**, иначе — сценарий оплаты в боте (callback «Купить»).
 - Уведомления отправляются на предпочитаемом языке пользователя
+
+### Lifecycle-уведомления
+
+Настраиваемая система жизненного цикла пользователей (`LIFECYCLE_NOTIFY_ENABLED=true`, cron задаётся в `LIFECYCLE_CRON`, по умолчанию каждые 30 минут):
+
+- **No-connect (paid/trial)** — напоминание пользователям, которые оплатили подписку или активировали триал, но так и не подключились к VPN (не было активности устройств в панели). Проверяется через заданный интервал (`LIFECYCLE_NO_CONNECT_DELAY_HOURS`) после первой оплаты/триала, но не позже максимального окна (`LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS`). Уведомление содержит ссылки на видео-гайд и поддержку (если заданы `LIFECYCLE_VIDEO_GUIDE_URL` / `LIFECYCLE_SUPPORT_CONTACT`).
+- **Win-back** — возврат пользователей с истёкшей подпиской. Через N дней после окончания подписки (`LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY`) отправляется уведомление с промокодом на скидку (`LIFECYCLE_WINBACK_DISCOUNT_PERCENT`) для продления. Промокод действует ограниченное время (`LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS`). Отправляется только пользователям с хотя бы одной оплаченной подпиской (триалы не учитываются).
+- **Trial expiring** — напоминание пользователю с активным триалом за день до окончания пробного периода, с призывом оформить платную подписку (включается через `LIFECYCLE_TRIAL_EXPIRING_ENABLED`).
 
 ### Внутренние Squads (SQUAD_UUIDS)
 

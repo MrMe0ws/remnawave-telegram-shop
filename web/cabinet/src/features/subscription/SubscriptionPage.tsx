@@ -155,13 +155,13 @@ export default function SubscriptionPage() {
                     </p>
                     <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
                     <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">
-                      {sub?.tariff?.device_limit && sub.tariff.device_limit > 0
+                      {deviceLimit > 0
                         ? tariffExtraDevices > 0
-                          ? t('subscriptionPage.tariffDevicesWithExtra', { base: sub.tariff.device_limit, extra: tariffExtraDevices })
-                          : `${sub.tariff.device_limit} ${t('subscriptionPage.devices').toLowerCase()}`
+                          ? t('subscriptionPage.tariffDevicesWithExtra', { base: deviceLimit - tariffExtraDevices, extra: tariffExtraDevices })
+                          : `${deviceLimit} ${t('subscriptionPage.devices').toLowerCase()}`
                         : t('subscriptionPage.unlimited')}
                       {' · '}
-                      {sub?.tariff?.traffic_gb ? `${sub.tariff.traffic_gb} ${t('dashboard.gigabytes')}` : t('subscriptionPage.unlimited')}
+                      {sub?.traffic_limit_gb && sub.traffic_limit_gb > 0 ? `${sub.traffic_limit_gb} ${t('dashboard.gigabytes')}` : t('subscriptionPage.unlimited')}
                     </p>
                   </div>
                   <div className="text-right">

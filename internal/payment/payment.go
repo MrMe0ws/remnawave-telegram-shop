@@ -207,11 +207,11 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if messageId, b := s.cache.Get(purchase.ID); b && !skipTelegramCustomerDM(customer) {
 		_, err = s.telegramBot.DeleteMessage(ctx, &bot.DeleteMessageParams{
 			ChatID:    customer.TelegramID,
-			MessageID: messageId,
-		})
-		if err != nil {
-			slog.Error("Error deleting message", err)
-		}
+		MessageID: messageId,
+	})
+	if err != nil {
+		slog.Error("Error deleting message", "error", err)
+	}
 	}
 
 	if purchase.Month <= 0 && purchase.ExtraHwid > 0 {
@@ -1192,11 +1192,11 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 		_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:    telegramId,
 			ParseMode: models.ParseModeHTML,
-			Text:      s.translation.GetText(customer.Language, "tribute_cancelled"),
-		})
-		if err != nil {
-			slog.Error("Error sending message about tribute cancelled", err, "telegram_id", utils.MaskHalfInt64(telegramId))
-		}
+		Text:      s.translation.GetText(customer.Language, "tribute_cancelled"),
+	})
+	if err != nil {
+		slog.Error("Error sending message about tribute cancelled", "error", err, "telegram_id", utils.MaskHalfInt64(telegramId))
+	}
 	}
 	slog.Info("Canceled tribute purchase", "purchase_id", utils.MaskHalfInt64(tributePurchase.ID), "telegram_id", utils.MaskHalfInt64(telegramId))
 	return nil
@@ -1221,7 +1221,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 	}
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
-		slog.Error("Error creating purchase", err)
+		slog.Error("Error creating purchase", "error", err)
 		return "", 0, err
 	}
 
@@ -1242,7 +1242,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 		PaidBtnUrl:     paidBtnURL,
 	})
 	if err != nil {
-		slog.Error("Error creating invoice", err)
+		slog.Error("Error creating invoice", "error", err)
 		return "", 0, err
 	}
 
@@ -1254,7 +1254,7 @@ func (s PaymentService) createCryptoInvoice(ctx context.Context, amount float64,
 
 	err = s.purchaseRepository.UpdateFields(ctx, purchaseId, updates)
 	if err != nil {
-		slog.Error("Error updating purchase", err)
+		slog.Error("Error updating purchase", "error", err)
 		return "", 0, err
 	}
 
@@ -1280,14 +1280,14 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 	}
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
-		slog.Error("Error creating purchase", err)
+		slog.Error("Error creating purchase", "error", err)
 		return "", 0, err
 	}
 
 	invDesc := buildRubReceiptDescription(months, extraHwid, extras, database.InvoiceTypeYookasa)
 	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), invDesc, customer.ID, purchaseId)
 	if err != nil {
-		slog.Error("Error creating invoice", err)
+		slog.Error("Error creating invoice", "error", err)
 		return "", 0, err
 	}
 
@@ -1299,7 +1299,7 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 
 	err = s.purchaseRepository.UpdateFields(ctx, purchaseId, updates)
 	if err != nil {
-		slog.Error("Error updating purchase", err)
+		slog.Error("Error updating purchase", "error", err)
 		return "", 0, err
 	}
 
@@ -1332,7 +1332,7 @@ func (s PaymentService) createPlategaInvoice(ctx context.Context, amount float64
 	}
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
-		slog.Error("Error creating purchase", err)
+		slog.Error("Error creating purchase", "error", err)
 		return "", 0, err
 	}
 
@@ -1344,7 +1344,7 @@ func (s PaymentService) createPlategaInvoice(ctx context.Context, amount float64
 	username := remnawave.UsernameFromCtx(ctx)
 	redirectURL, transactionID, err := provider.CreateInvoice(ctx, purchaseId, amount, "RUB", desc, ret, username)
 	if err != nil {
-		slog.Error("Error creating platega invoice", err, "invoice_type", invoiceType)
+		slog.Error("Error creating platega invoice", "error", err, "invoice_type", invoiceType)
 		return "", 0, err
 	}
 
@@ -1354,7 +1354,7 @@ func (s PaymentService) createPlategaInvoice(ctx context.Context, amount float64
 		"status":      database.PurchaseStatusPending,
 	}
 	if err := s.purchaseRepository.UpdateFields(ctx, purchaseId, updates); err != nil {
-		slog.Error("Error updating purchase", err)
+		slog.Error("Error updating purchase", "error", err)
 		return "", 0, err
 	}
 	return redirectURL, purchaseId, nil
@@ -1379,7 +1379,7 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 	}
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
-		slog.Error("Error creating purchase", err)
+		slog.Error("Error creating purchase", "error", err)
 		return "", 0, nil
 	}
 
@@ -1404,7 +1404,7 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 
 	err = s.purchaseRepository.UpdateFields(ctx, purchaseId, updates)
 	if err != nil {
-		slog.Error("Error updating purchase", err)
+		slog.Error("Error updating purchase", "error", err)
 		return "", 0, err
 	}
 
@@ -1417,7 +1417,7 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	}
 	customer, err := s.customerRepository.FindByTelegramId(ctx, telegramId)
 	if err != nil {
-		slog.Error("Error finding customer", err)
+		slog.Error("Error finding customer", "error", err)
 		return "", err
 	}
 	if customer == nil {
@@ -1427,13 +1427,15 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	rwCtx = s.ctxWithTelegramUsernameIfMissing(rwCtx, customer)
 	user, err := s.remnawaveClient.CreateOrUpdateUser(rwCtx, customer.ID, telegramId, config.TrialTrafficLimit(), config.TrialDays(), true)
 	if err != nil {
-		slog.Error("Error creating user", err)
+		slog.Error("Error creating user", "error", err)
 		return "", err
 	}
 
+	now := time.Now().UTC()
 	customerFilesToUpdate := map[string]interface{}{
-		"subscription_link": user.SubscriptionUrl,
-		"expire_at":         user.ExpireAt,
+		"subscription_link":        user.SubscriptionUrl,
+		"expire_at":                user.ExpireAt,
+		"subscription_period_start": now,
 	}
 
 	err = s.customerRepository.UpdateFields(ctx, customer.ID, customerFilesToUpdate)
@@ -1514,7 +1516,7 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 	ensurePurchaseKindExtraHwidOnly(pur)
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
-		slog.Error("Error creating purchase", err)
+		slog.Error("Error creating purchase", "error", err)
 		return "", 0, err
 	}
 

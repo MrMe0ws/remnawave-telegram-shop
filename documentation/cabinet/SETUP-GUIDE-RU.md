@@ -676,13 +676,6 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 - меньше поверхность атаки на auth/API маршруты;
 - сложнее массово перебирать auth-эндпоинты в обход внешнего reverse-proxy политики.
 
-### Дополнительное чтение в репозитории
-
-- `documentation/cabinet/cabinet-upgrade-guide.md` — переход с версии без кабинета.
-- `docs/cabinet/account-linking-and-merge.md` — привязка и merge.
-- `docs/cabinet/payments-and-checkout.md` — checkout, Stars, идемпотентность.
-- `AGENTS.md` в корне (если есть в вашей ветке) — краткие правила для разработчиков кабинета.
-
 ---
 
 

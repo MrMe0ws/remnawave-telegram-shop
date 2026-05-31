@@ -13,6 +13,11 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 )
 
+// IsCabinetTelegramMinimalismActive exported версия для использования вне пакета handler
+func IsCabinetTelegramMinimalismActive() bool {
+	return cabinetTelegramMinimalismActive()
+}
+
 // cabinetTelegramMinimalismActive — кабинет включён, в env выбран minimalism и собирается WebApp URL.
 func cabinetTelegramMinimalismActive() bool {
 	if !cabcfg.IsEnabled() {
