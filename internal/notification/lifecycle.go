@@ -345,12 +345,12 @@ func (s *LifecycleService) buildNoConnectKeyboard(lang string) models.InlineKeyb
 	var rows [][]models.InlineKeyboardButton
 
 	// 1. Подключиться
-	// Если кабинет включён → ссылка на /cabinet/connections, иначе → callback в главное меню
+	// Если кабинет включён → WebApp на /cabinet/connections, иначе → callback в главное меню
 	cabinetURL := handler.BuildCabinetWebAppURL("/cabinet/connections")
 	var connectBtn models.InlineKeyboardButton
 	if cabinetURL != "" {
 		connectBtn = s.tm.WithButton(lang, "lifecycle_btn_connect", models.InlineKeyboardButton{
-			URL: cabinetURL,
+			WebApp: &models.WebAppInfo{URL: cabinetURL},
 		})
 	} else {
 		connectBtn = s.tm.WithButton(lang, "lifecycle_btn_connect", models.InlineKeyboardButton{
