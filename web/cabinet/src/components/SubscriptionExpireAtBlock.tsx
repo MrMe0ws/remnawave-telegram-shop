@@ -40,10 +40,10 @@ export function SubscriptionExpireAtBlock({ expireAt, lang, days, isActive, clas
         >
           {t('subscriptionPage.expireAt')}
         </p>
-        <p className="mt-1 text-[1.1rem] font-medium">
+        <p className="text-[1rem] font-medium">
           {expireAt ? formatDate(expireAt, lang) : '—'}
         </p>
-        <p className={cn('mt-1 text-xs', daysLeftToneClass(days, isActive))}>
+        <p className={cn('text-xs', daysLeftToneClass(days, isActive))}>
           {days !== null
             ? isActive
               ? t('subscriptionPage.daysLeft', { n: days })

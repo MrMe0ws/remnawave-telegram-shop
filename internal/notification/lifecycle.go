@@ -312,7 +312,8 @@ func (s *LifecycleService) sendTrialExpiringNotify(ctx context.Context, candidat
 	if candidate.ExpireAt != nil {
 		referenceKey = candidate.ExpireAt.Format("2006-01-02")
 	} else {
-		referenceKey = "unknown"
+		slog.Error("lifecycle: trial_expiring candidate has nil expire_at, skip", "customer_id", utils.MaskHalfInt64(candidate.CustomerID))
+		return fmt.Errorf("trial_expiring: expire_at is nil for customer %d", candidate.CustomerID)
 	}
 
 	if err := s.lifecycleRepo.MarkNotifySent(ctx, candidate.CustomerID, "trial_expiring", referenceKey); err != nil {

@@ -135,7 +135,7 @@ func (s *Service) Activate(ctx context.Context, telegramID int64, username strin
 	res, err := s.applyEffect(ctxUser, telegramID, customer, p)
 	if err != nil {
 		s.compensate(ctx, p.ID, customer.ID)
-		slog.Error("promo effect failed, compensated", "err", err, "promo_id", p.ID, "customer_id", utils.MaskHalfInt64(customer.ID))
+			slog.Error("promo effect failed, compensated", "error", err, "promo_id", p.ID, "customer_id", utils.MaskHalfInt64(customer.ID))
 		return nil, err
 	}
 

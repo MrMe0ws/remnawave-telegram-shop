@@ -207,21 +207,21 @@ func (r *LifecycleRepository) FindTrialExpiringCandidates(ctx context.Context) (
 			WHERE status = 'paid' AND month > 0
 			GROUP BY customer_id
 		),
-		expires_tomorrow AS (
-			SELECT 
-				c.id,
-				c.telegram_id,
-				c.language,
-				c.expire_at,
-				DATE_PART('day', c.expire_at::date - NOW()::date)::int as days_left
-			FROM customer c
-			WHERE 
-				c.subscription_link IS NOT NULL
-				AND c.expire_at IS NOT NULL
-				AND c.expire_at > NOW()
-				AND NOT c.is_web_only
-				AND c.telegram_id > 0
-		)
+	expires_tomorrow AS (
+		SELECT 
+			c.id,
+			c.telegram_id,
+			c.language,
+			c.expire_at,
+			(c.expire_at::date - NOW()::date)::int as days_left
+		FROM customer c
+		WHERE 
+			c.subscription_link IS NOT NULL
+			AND c.expire_at IS NOT NULL
+			AND c.expire_at > NOW()
+			AND NOT c.is_web_only
+			AND c.telegram_id > 0
+	)
 		SELECT 
 			et.id,
 			et.telegram_id,
