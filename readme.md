@@ -310,7 +310,6 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY`| Через сколько дней после окончания подписки отправлять win-back уведомление. По умолчанию `5` |
 | `LIFECYCLE_WINBACK_DISCOUNT_PERCENT` | Процент скидки для win-back промокода (целое число 1–100). По умолчанию `10` |
 | `LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS`| Срок действия win-back промокода в часах. По умолчанию `48` |
-| `LIFECYCLE_TRIAL_EXPIRING_ENABLED`   | Напоминание за день до окончания триала с призывом оформить платную подписку (`true`/`false`). По умолчанию `true` |
 | `LIFECYCLE_VIDEO_GUIDE_URL`          | URL видео-инструкции для no-connect уведомлений (опционально, если пусто — кнопка не показывается) |
 | `LIFECYCLE_SUPPORT_CONTACT`          | Контакт поддержки (например, @username или ссылка) для no-connect уведомлений (опционально) |
 | `CABINET_ENABLED`                    | Включить web-кабинет (`true/false`) |
@@ -392,7 +391,6 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 
 - **No-connect (paid/trial)** — напоминание пользователям, которые оплатили подписку или активировали триал, но так и не подключились к VPN (не было активности устройств в панели). Проверяется через заданный интервал (`LIFECYCLE_NO_CONNECT_DELAY_HOURS`) после первой оплаты/триала, но не позже максимального окна (`LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS`). Уведомление содержит ссылки на видео-гайд и поддержку (если заданы `LIFECYCLE_VIDEO_GUIDE_URL` / `LIFECYCLE_SUPPORT_CONTACT`).
 - **Win-back** — возврат пользователей с истёкшей подпиской. Через N дней после окончания подписки (`LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY`) отправляется уведомление с промокодом на скидку (`LIFECYCLE_WINBACK_DISCOUNT_PERCENT`) для продления. Промокод действует ограниченное время (`LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS`). Отправляется только пользователям с хотя бы одной оплаченной подпиской (триалы не учитываются).
-- **Trial expiring** — напоминание пользователю с активным триалом за день до окончания пробного периода, с призывом оформить платную подписку (включается через `LIFECYCLE_TRIAL_EXPIRING_ENABLED`).
 
 ### Внутренние Squads (SQUAD_UUIDS)
 

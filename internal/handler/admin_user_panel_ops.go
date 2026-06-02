@@ -810,6 +810,8 @@ func (h Handler) AdminUserTrafficCustomAskHandler(ctx context.Context, b *bot.Bo
 	}
 	lang := cb.From.LanguageCode
 	adminUserDescriptionClear(cb.From.ID)
+	adminTrafficLimitClear(cb.From.ID)
+	adminExpireDateClear(cb.From.ID)
 	adminTrafficLimitSet(cb.From.ID, cid)
 	text := h.translation.GetText(lang, "admin_user_panel_traffic_custom_prompt")
 	kb := [][]models.InlineKeyboardButton{
@@ -842,7 +844,7 @@ func (h Handler) AdminUserTrafficLimitTextHandler(ctx context.Context, b *bot.Bo
 	raw := strings.TrimSpace(update.Message.Text)
 	raw = strings.ReplaceAll(raw, ",", ".")
 	gbVal, err := strconv.ParseFloat(raw, 64)
-	if err != nil || gbVal <= 0 || gbVal > 1e6 {
+	if err != nil || gbVal < 0 || gbVal > 1e6 {
 		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:    update.Message.Chat.ID,
 			ParseMode: models.ParseModeHTML,
@@ -1135,6 +1137,7 @@ func (h Handler) AdminUserDescriptionAskHandler(ctx context.Context, b *bot.Bot,
 	}
 	lang := cb.From.LanguageCode
 	adminTrafficLimitClear(cb.From.ID)
+	adminExpireDateClear(cb.From.ID)
 	adminUserDescriptionSet(cb.From.ID, cid)
 	text := h.translation.GetText(lang, "admin_user_desc_prompt")
 	kb := [][]models.InlineKeyboardButton{

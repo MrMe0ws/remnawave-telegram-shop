@@ -92,6 +92,7 @@ const (
 	CallbackAdminUserCalNavPrefix   = "acn"
 	CallbackAdminUserCalPickPrefix  = "acp"
 	CallbackAdminUserCalBlankPrefix = "acb"
+	CallbackAdminUserCalManualPrefix = "acm"
 
 	// Расширенные настройки панели: apm меню, asq сквад, ats/att стратегия, atl/atg лимит трафика, arq/arc отключить, ueq/uec включить, ayq/ayc удалить.
 	CallbackAdminUserPanelMenuPrefix    = "apm"

@@ -339,6 +339,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalNavPrefix, bot.MatchTypePrefix, h.AdminUserCalNavHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalPickPrefix, bot.MatchTypePrefix, h.AdminUserCalPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalBlankPrefix, bot.MatchTypePrefix, h.AdminUserCalBlankHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserCalManualPrefix, bot.MatchTypePrefix, h.AdminUserCalManualHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserPanelMenuPrefix, bot.MatchTypePrefix, h.AdminUserPanelMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSquadMenuPrefix, bot.MatchTypePrefix, h.AdminUserSquadMenuHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminUserSquadPickPrefix, bot.MatchTypePrefix, h.AdminUserSquadPickHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
@@ -519,6 +520,9 @@ func main() {
 			if handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) {
 				return false
 			}
+			if handler.AdminUserExpireDateWaiting(update.Message.From.ID) {
+				return false
+			}
 			if handler.AdminUserDescriptionWaiting(update.Message.From.ID) {
 				return false
 			}
@@ -537,6 +541,7 @@ func main() {
 			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
 			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
 			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
 			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminPromoTextHandler)
 
@@ -551,6 +556,7 @@ func main() {
 			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
 			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
 			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
 			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminTariffTextHandler)
 
@@ -564,6 +570,7 @@ func main() {
 			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
 			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
 			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
 			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminLoyaltyTextHandler)
 
@@ -578,6 +585,7 @@ func main() {
 			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
 			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
 			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
 			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminInfraBillingTextHandler)
 
@@ -596,6 +604,7 @@ func main() {
 			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
 			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
 			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
 			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminUserDMMessageHandler)
 
@@ -614,8 +623,28 @@ func main() {
 			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
 			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
 			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
-			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID)
 	}, h.AdminUserTrafficLimitTextHandler)
+
+	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
+		return update.Message != nil &&
+			update.Message.Text != "" &&
+			!strings.HasPrefix(update.Message.Text, "/") &&
+			update.Message.From.ID == config.GetAdminTelegramId() &&
+			update.Message.ReplyToMessage == nil &&
+			handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersSearchWaiting(update.Message.From.ID) &&
+			!handler.AdminUsersDMWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoWaiting(update.Message.From.ID) &&
+			!handler.AdminPromoEditWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
+			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
+			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
+	}, h.AdminUserExpireDateTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.Message != nil &&
@@ -632,7 +661,8 @@ func main() {
 			!handler.AdminTariffEditWaiting(update.Message.From.ID) &&
 			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
 			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
-			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID)
+			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID)
 	}, h.AdminUserDescriptionTextHandler)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
@@ -650,6 +680,7 @@ func main() {
 			!handler.InfraBillingWizardWaiting(update.Message.From.ID) &&
 			!handler.AdminLoyaltyWaiting(update.Message.From.ID) &&
 			!handler.AdminUserTrafficLimitWaiting(update.Message.From.ID) &&
+			!handler.AdminUserExpireDateWaiting(update.Message.From.ID) &&
 			!handler.AdminUserDescriptionWaiting(update.Message.From.ID)
 	}, h.AdminUsersSearchMessageHandler)
 

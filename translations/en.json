@@ -343,7 +343,6 @@
   "lifecycle_no_connect_paid": "Hello! We see that you purchased a subscription but haven't connected to the VPN yet.\n\nIf you need help with setup — contact support: %s",
   "lifecycle_no_connect_trial": "Hello! We see that you activated a trial period but haven't connected to the VPN yet.\n\nIf you need help with setup — contact support: %s",
   "lifecycle_winback": "Your subscription expired %d days ago — we want to bring you back.\n\n💎 Save %d%% on renewal\nDiscount stacks with the loyalty program (up to %d%%) and applies once.\n\n⏳ Offer available for %s",
-  "lifecycle_trial_expiring": "⚠️ <b>Trial Period Reminder</b>\n\nYour trial period expires tomorrow.\nPlease purchase a subscription to continue using the service.",
   "lifecycle_btn_connect": {
     "text": "🔌 Connect",
     "style": "blue"
@@ -356,10 +355,6 @@
   },
   "lifecycle_btn_winback_renew": {
     "text": "Renew with −%d%% discount",
-    "style": "green"
-  },
-  "lifecycle_btn_trial_buy": {
-    "text": "💳 Buy subscription",
     "style": "green"
   },
   "lifecycle_time_unlimited": "unlimited",

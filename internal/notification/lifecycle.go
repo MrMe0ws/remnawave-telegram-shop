@@ -73,12 +73,6 @@ func (s *LifecycleService) ProcessLifecycleNotifications() error {
 		}
 	}
 
-	if config.LifecycleTrialExpiringEnabled() {
-		if err := s.processTrialExpiring(ctx); err != nil {
-			slog.Error("lifecycle: trial_expiring failed", "error", err)
-		}
-	}
-
 	return nil
 }
 
@@ -277,53 +271,6 @@ func (s *LifecycleService) sendWinbackNotify(ctx context.Context, candidate Winb
 	return nil
 }
 
-func (s *LifecycleService) processTrialExpiring(ctx context.Context) error {
-	candidates, err := s.lifecycleRepo.FindTrialExpiringCandidates(ctx)
-	if err != nil {
-		return fmt.Errorf("find trial_expiring candidates: %w", err)
-	}
-
-	slog.Info("lifecycle: trial_expiring candidates", "count", len(candidates))
-
-	for _, c := range candidates {
-		if err := s.sendTrialExpiringNotify(ctx, c); err != nil {
-			slog.Error("lifecycle: send trial_expiring failed", "customer_id", utils.MaskHalfInt64(c.CustomerID), "error", err)
-		}
-	}
-
-	return nil
-}
-
-func (s *LifecycleService) sendTrialExpiringNotify(ctx context.Context, candidate TrialExpiringCandidate) error {
-	text := s.tm.GetText(candidate.Language, "lifecycle_trial_expiring")
-	keyboard := s.buildTrialExpiringKeyboard(candidate.Language)
-
-	_, err := s.bot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:      candidate.TelegramID,
-		Text:        text,
-		ParseMode:   models.ParseModeHTML,
-		ReplyMarkup: keyboard,
-	})
-	if err != nil {
-		return fmt.Errorf("send message: %w", err)
-	}
-
-	var referenceKey string
-	if candidate.ExpireAt != nil {
-		referenceKey = candidate.ExpireAt.Format("2006-01-02")
-	} else {
-		slog.Error("lifecycle: trial_expiring candidate has nil expire_at, skip", "customer_id", utils.MaskHalfInt64(candidate.CustomerID))
-		return fmt.Errorf("trial_expiring: expire_at is nil for customer %d", candidate.CustomerID)
-	}
-
-	if err := s.lifecycleRepo.MarkNotifySent(ctx, candidate.CustomerID, "trial_expiring", referenceKey); err != nil {
-		slog.Error("lifecycle: mark sent failed", "customer_id", utils.MaskHalfInt64(candidate.CustomerID), "error", err)
-	}
-
-	slog.Info("lifecycle: trial_expiring sent", "customer_id", utils.MaskHalfInt64(candidate.CustomerID))
-	return nil
-}
-
 // buildSupportContact возвращает @username из LIFECYCLE_SUPPORT_CONTACT или URL из SUPPORT_URL.
 func (s *LifecycleService) buildSupportContact() string {
 	contact := config.LifecycleSupportContact()
@@ -405,24 +352,6 @@ func (s *LifecycleService) buildWinbackKeyboard(lang string, discountPercent int
 				CallbackData: handler.CallbackBuy,
 			},
 		}},
-	}
-}
-
-func (s *LifecycleService) buildTrialExpiringKeyboard(lang string) models.InlineKeyboardMarkup {
-	if handler.IsCabinetTelegramMinimalismActive() {
-		btn := s.tm.WithButton(lang, "lifecycle_btn_trial_buy", models.InlineKeyboardButton{
-			WebApp: &models.WebAppInfo{URL: handler.BuildCabinetWebAppURL("/cabinet/tariffs")},
-		})
-		return models.InlineKeyboardMarkup{
-			InlineKeyboard: [][]models.InlineKeyboardButton{{btn}},
-		}
-	}
-
-	btn := s.tm.WithButton(lang, "lifecycle_btn_trial_buy", models.InlineKeyboardButton{
-		CallbackData: handler.CallbackBuy,
-	})
-	return models.InlineKeyboardMarkup{
-		InlineKeyboard: [][]models.InlineKeyboardButton{{btn}},
 	}
 }
 

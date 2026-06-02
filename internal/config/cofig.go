@@ -101,7 +101,6 @@ type config struct {
 	lifecycleWinbackDaysAfterExpiry                                              int
 	lifecycleWinbackDiscountPercent                                              int
 	lifecycleWinbackDiscountTTLHours                                             int
-	lifecycleTrialExpiringEnabled                                                bool
 	lifecycleVideoGuideURL                                                       string
 	lifecycleSupportContact                                                      string
 }
@@ -665,10 +664,6 @@ func LifecycleWinbackDiscountTTLHours() int {
 	return conf.lifecycleWinbackDiscountTTLHours
 }
 
-func LifecycleTrialExpiringEnabled() bool {
-	return conf.lifecycleTrialExpiringEnabled
-}
-
 func LifecycleVideoGuideURL() string {
 	return conf.lifecycleVideoGuideURL
 }
@@ -1084,7 +1079,6 @@ func InitConfig() {
 	conf.lifecycleWinbackDaysAfterExpiry = envIntDefault("LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY", 5)
 	conf.lifecycleWinbackDiscountPercent = envIntDefault("LIFECYCLE_WINBACK_DISCOUNT_PERCENT", 10)
 	conf.lifecycleWinbackDiscountTTLHours = envIntDefault("LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS", 48)
-	conf.lifecycleTrialExpiringEnabled = envBoolDefault("LIFECYCLE_TRIAL_EXPIRING_ENABLED", true)
 	conf.lifecycleVideoGuideURL = envStringDefault("LIFECYCLE_VIDEO_GUIDE_URL", "")
 	conf.lifecycleSupportContact = envStringDefault("LIFECYCLE_SUPPORT_CONTACT", "")
 }

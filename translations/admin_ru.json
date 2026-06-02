@@ -464,11 +464,14 @@
 
   "admin_user_devices_error": "Не удалось получить данные устройств.",
 
-  "admin_user_cal_title": "<b>Срок подписки в панели</b>\n\nПериод <b>%02d / %04d</b> · конец выбранного дня UTC 23:59\nВыберите число:",
+  "admin_user_cal_title": "<b>Срок подписки в панели</b>\n\nПериод <b>%02d / %04d</b> · конец выбранного дня UTC 23:59\nВыберите число в календаре или нажмите «Ввести дату».",
   "admin_user_cal_saved": "Дата применена в Remnawave.",
   "admin_user_cal_no_rw_user": "В панели нет пользователя с этим Telegram — сначала выдайте подписку (+дни).",
   "admin_user_cal_btn_subscription_back": "⬅️ Подписка",
   "admin_user_cal_open_btn": "📅 Дата",
+  "admin_user_cal_btn_manual": "✏️ Ввести дату",
+  "admin_user_cal_manual_prompt": "<b>Дата окончания подписки</b>\n\nОтправьте дату одним сообщением, например:\n<code>21.10.2050</code>, <code>21/10/2050</code> или <code>2050-10-21</code>",
+  "admin_user_cal_manual_invalid": "Некорректная дата. Пример: <code>21.10.2050</code> или <code>2050-10-21</code>.",
 
   "admin_user_panel_adv_btn": "⚙️ Панель",
   "admin_user_panel_adv_title": "<b>Настройки Remnawave</b>",
@@ -486,8 +489,8 @@
   "admin_user_panel_pick_traffic": "<b>Лимит трафика</b>\nПресеты в ГБ:",
   "admin_user_panel_traffic_current": "\n\nТекущий лимит: <b>%s</b>",
   "admin_user_panel_traffic_custom": "✏️ Свой лимит (ГБ)",
-  "admin_user_panel_traffic_custom_prompt": "<b>Свой лимит трафика</b>\nОтправьте число гигабайт одним сообщением (например: <code>25</code> или <code>12.5</code>).",
-  "admin_user_panel_traffic_custom_invalid": "Некорректное число. Укажите положительный лимит в ГБ (например 25 или 12,5), не больше 1 000 000.",
+  "admin_user_panel_traffic_custom_prompt": "<b>Свой лимит трафика</b>\n\nОтправьте число гигабайт одним сообщением (например: <code>25</code>, <code>12.5</code> или <code>0</code> для безлимита в Remnawave).",
+  "admin_user_panel_traffic_custom_invalid": "Некорректное число. Укажите лимит в ГБ от 0 (0 — безлимит) до 1 000 000, например <code>25</code> или <code>12,5</code>.",
   "admin_user_panel_saved": "Сохранено в панели.",
   "admin_user_panel_disabled_ok": "Пользователь отключён (DISABLED).",
   "admin_user_panel_enabled_ok": "Пользователь снова включён (ACTIVE).",

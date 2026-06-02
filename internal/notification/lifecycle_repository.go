@@ -197,75 +197,9 @@ func (r *LifecycleRepository) FindWinbackCandidates(ctx context.Context, daysAft
 	return result, rows.Err()
 }
 
-// FindTrialExpiringCandidates находит триальных пользователей, у которых подписка истекает завтра.
-// Критерии: daysUntilExpiration == 1, CountPaidSubscriptions == 0, subscription_link IS NOT NULL.
-func (r *LifecycleRepository) FindTrialExpiringCandidates(ctx context.Context) ([]TrialExpiringCandidate, error) {
-	query := `
-		WITH paid_counts AS (
-			SELECT customer_id, COUNT(*) as cnt
-			FROM purchase
-			WHERE status = 'paid' AND month > 0
-			GROUP BY customer_id
-		),
-	expires_tomorrow AS (
-		SELECT 
-			c.id,
-			c.telegram_id,
-			c.language,
-			c.expire_at,
-			(c.expire_at::date - NOW()::date)::int as days_left
-		FROM customer c
-		WHERE 
-			c.subscription_link IS NOT NULL
-			AND c.expire_at IS NOT NULL
-			AND c.expire_at > NOW()
-			AND NOT c.is_web_only
-			AND c.telegram_id > 0
-	)
-		SELECT 
-			et.id,
-			et.telegram_id,
-			et.language,
-			et.expire_at
-		FROM expires_tomorrow et
-		LEFT JOIN paid_counts pc ON pc.customer_id = et.id
-		WHERE 
-			et.days_left = 1
-			AND COALESCE(pc.cnt, 0) = 0
-			AND NOT EXISTS (
-				SELECT 1 FROM customer_lifecycle_notify_sent ln
-				WHERE ln.customer_id = et.id 
-				  AND ln.kind = 'trial_expiring'
-				  AND ln.reference_key = TO_CHAR(et.expire_at, 'YYYY-MM-DD')
-			)
-	`
-	rows, err := r.pool.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var result []TrialExpiringCandidate
-	for rows.Next() {
-		var c TrialExpiringCandidate
-		if err := rows.Scan(&c.CustomerID, &c.TelegramID, &c.Language, &c.ExpireAt); err != nil {
-			return nil, err
-		}
-		result = append(result, c)
-	}
-	return result, rows.Err()
-}
-
 type WinbackCandidate struct {
 	CustomerID int64
 	TelegramID int64
 	Language   string
 	ExpireAt   time.Time
-}
-
-type TrialExpiringCandidate struct {
-	CustomerID int64
-	TelegramID int64
-	Language   string
-	ExpireAt   *time.Time
 }

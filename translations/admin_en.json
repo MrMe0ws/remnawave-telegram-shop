@@ -464,11 +464,14 @@
 
   "admin_user_devices_error": "Could not load devices.",
 
-  "admin_user_cal_title": "<b>Panel subscription end</b>\n\nPeriod <b>%02d / %04d</b> · selected day ends UTC 23:59\nPick a day:",
+  "admin_user_cal_title": "<b>Panel subscription end</b>\n\nPeriod <b>%02d / %04d</b> · selected day ends UTC 23:59\nPick a day in the calendar or tap «Enter date».",
   "admin_user_cal_saved": "Date applied in Remnawave.",
   "admin_user_cal_no_rw_user": "No panel user for this Telegram ID — extend subscription (+days) first.",
   "admin_user_cal_btn_subscription_back": "⬅️ Subscription",
   "admin_user_cal_open_btn": "📅 Pick date",
+  "admin_user_cal_btn_manual": "✏️ Enter date",
+  "admin_user_cal_manual_prompt": "<b>Subscription end date</b>\n\nSend one message with a date, e.g. <code>21.10.2050</code>, <code>21/10/2050</code> or <code>2050-10-21</code>",
+  "admin_user_cal_manual_invalid": "Invalid date. Example: <code>21.10.2050</code> or <code>2050-10-21</code>.",
 
   "admin_user_panel_adv_btn": "⚙️ Panel",
   "admin_user_panel_adv_title": "<b>Remnawave settings</b>",
@@ -486,8 +489,8 @@
   "admin_user_panel_pick_traffic": "<b>Traffic limit</b>\nPresets in GB:",
   "admin_user_panel_traffic_current": "\n\nCurrent limit: <b>%s</b>",
   "admin_user_panel_traffic_custom": "✏️ Custom limit (GB)",
-  "admin_user_panel_traffic_custom_prompt": "<b>Custom traffic limit</b>\nSend a single message with gigabytes (e.g. <code>25</code> or <code>12.5</code>).",
-  "admin_user_panel_traffic_custom_invalid": "Invalid number. Send a positive GB value (e.g. 25 or 12.5), max 1,000,000.",
+  "admin_user_panel_traffic_custom_prompt": "<b>Custom traffic limit</b>\nSend a single message with gigabytes (e.g. <code>25</code>, <code>12.5</code>, or <code>0</code> for unlimited in Remnawave).",
+  "admin_user_panel_traffic_custom_invalid": "Invalid number. Send GB from 0 (0 = unlimited) to 1,000,000, e.g. <code>25</code> or <code>12.5</code>.",
   "admin_user_panel_saved": "Saved to the panel.",
   "admin_user_panel_disabled_ok": "User disabled (DISABLED).",
   "admin_user_panel_enabled_ok": "User enabled again (ACTIVE).",

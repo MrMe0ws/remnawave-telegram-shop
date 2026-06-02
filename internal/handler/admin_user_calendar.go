@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"remnawave-tg-shop-bot/internal/config"
+	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
 )
 
@@ -111,11 +113,79 @@ func buildExpireCalendarMarkupWithH(h Handler, lang string, cid int64, ref time.
 		rows = append(rows, row)
 	}
 	rows = append(rows, []models.InlineKeyboardButton{
+		h.translation.WithButton(lang, "admin_user_cal_btn_manual", models.InlineKeyboardButton{
+			CallbackData: fmt.Sprintf("%s%d", CallbackAdminUserCalManualPrefix, cid),
+		}),
+	})
+	rows = append(rows, []models.InlineKeyboardButton{
 		h.translation.WithButton(lang, "admin_user_cal_btn_subscription_back", models.InlineKeyboardButton{
 			CallbackData: fmt.Sprintf("%s%d", CallbackAdminUserSubscriptionPrefix, cid),
 		}),
 	})
 	return rows
+}
+
+func parseAdminExpireDateInput(raw string) (time.Time, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, false
+	}
+	if t, err := time.Parse("2006-01-02", raw); err == nil {
+		return expireAtEndOfDayUTC(t), true
+	}
+	normalized := raw
+	for _, sep := range []string{"/", "-", " "} {
+		normalized = strings.ReplaceAll(normalized, sep, ".")
+	}
+	parts := strings.Split(normalized, ".")
+	if len(parts) != 3 {
+		return time.Time{}, false
+	}
+	d, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	m, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	y, err3 := strconv.Atoi(strings.TrimSpace(parts[2]))
+	if err1 != nil || err2 != nil || err3 != nil {
+		return time.Time{}, false
+	}
+	if y < 100 {
+		y += 2000
+	}
+	if y < 1970 || y > 2999 || m < 1 || m > 12 || d < 1 || d > 31 {
+		return time.Time{}, false
+	}
+	t := time.Date(y, time.Month(m), d, 12, 0, 0, 0, time.UTC)
+	if t.Day() != d || int(t.Month()) != m || t.Year() != y {
+		return time.Time{}, false
+	}
+	return expireAtEndOfDayUTC(t), true
+}
+
+func expireAtEndOfDayUTC(t time.Time) time.Time {
+	now := time.Now().UTC()
+	return time.Date(t.Year(), t.Month(), t.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
+}
+
+func (h Handler) adminApplyPanelExpireAt(ctx context.Context, cust *database.Customer, exp time.Time) (*remnawave.User, error) {
+	rwUser, err := h.adminFindRWUserByCustomer(ctx, cust)
+	if err != nil || rwUser == nil {
+		return nil, fmt.Errorf("no rw user")
+	}
+	req := &remnawave.UpdateUserRequest{
+		UUID:     &rwUser.UUID,
+		Status:   "ACTIVE",
+		ExpireAt: &exp,
+	}
+	out, err := h.remnawaveClient.PatchUser(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.customerRepository.UpdateFields(ctx, cust.ID, map[string]interface{}{
+		"subscription_link": out.SubscriptionUrl,
+		"expire_at":         out.ExpireAt,
+	}); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func parseCalCIDYM(prefix, data string) (cid int64, ym int, ok bool) {
@@ -178,6 +248,7 @@ func (h Handler) AdminUserCalOpenHandler(ctx context.Context, b *bot.Bot, update
 		return
 	}
 	lang := cb.From.LanguageCode
+	adminExpireDateClear(cb.From.ID)
 	ref := time.Now().UTC()
 	text := fmt.Sprintf(h.translation.GetText(lang, "admin_user_cal_title"), int(ref.Month()), ref.Year())
 	var panelExp *time.Time
@@ -252,35 +323,18 @@ func (h Handler) AdminUserCalPickHandler(ctx context.Context, b *bot.Bot, update
 	now := time.Now().UTC()
 	exp := time.Date(y, time.Month(mo), d, now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
 
-	rwUser, err := h.adminFindRWUserByCustomer(ctx, cust)
-	if err != nil || rwUser == nil {
-		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
-			CallbackQueryID: cb.ID,
-			Text:            h.translation.GetText(cb.From.LanguageCode, "admin_user_cal_no_rw_user"),
-			ShowAlert:       true,
-		})
-		return
-	}
-	req := &remnawave.UpdateUserRequest{
-		UUID:     &rwUser.UUID,
-		Status:   "ACTIVE",
-		ExpireAt: &exp,
-	}
-	out, err := h.remnawaveClient.PatchUser(ctx, req)
-	if err != nil {
+	if _, err := h.adminApplyPanelExpireAt(ctx, cust, exp); err != nil {
 		slog.Error("admin cal patch expire", "error", err)
+		alertKey := "admin_user_action_error"
+		if err.Error() == "no rw user" {
+			alertKey = "admin_user_cal_no_rw_user"
+		}
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
-			Text:            h.translation.GetText(cb.From.LanguageCode, "admin_user_action_error"),
+			Text:            h.translation.GetText(cb.From.LanguageCode, alertKey),
 			ShowAlert:       true,
 		})
 		return
-	}
-	if err := h.customerRepository.UpdateFields(ctx, cust.ID, map[string]interface{}{
-		"subscription_link": out.SubscriptionUrl,
-		"expire_at":         out.ExpireAt,
-	}); err != nil {
-		slog.Error("admin cal sync db", "error", err)
 	}
 	cust, _ = h.customerRepository.FindById(ctx, cid)
 	lang := cb.From.LanguageCode
@@ -326,4 +380,99 @@ func (h Handler) AdminUserCalBlankHandler(ctx context.Context, b *bot.Bot, updat
 		slog.Error("admin cal blank", "error", err)
 	}
 	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+func (h Handler) AdminUserCalManualHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.CallbackQuery == nil || !isAdmin(update.CallbackQuery) {
+		return
+	}
+	cb := update.CallbackQuery
+	cid, ok := parseCustomerIDFromPrefix(cb.Data, CallbackAdminUserCalManualPrefix)
+	if !ok {
+		return
+	}
+	msg := cb.Message.Message
+	if msg == nil {
+		return
+	}
+	lang := cb.From.LanguageCode
+	adminTrafficLimitClear(cb.From.ID)
+	adminExpireDateSet(cb.From.ID, cid)
+	text := h.translation.GetText(lang, "admin_user_cal_manual_prompt")
+	kb := [][]models.InlineKeyboardButton{
+		{
+			h.translation.WithButton(lang, "admin_user_cal_btn_subscription_back", models.InlineKeyboardButton{
+				CallbackData: fmt.Sprintf("%s%d", CallbackAdminUserSubscriptionPrefix, cid),
+			}),
+		},
+	}
+	_, err := editCallbackOriginToHTMLText(ctx, b, msg, text, models.ParseModeHTML, models.InlineKeyboardMarkup{InlineKeyboard: kb}, nil)
+	if err != nil {
+		slog.Error("admin cal manual ask", "error", err)
+	}
+	_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID})
+}
+
+func (h Handler) AdminUserExpireDateTextHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	if update.Message == nil || update.Message.Text == "" {
+		return
+	}
+	adminID := update.Message.From.ID
+	if adminID != config.GetAdminTelegramId() || update.Message.ReplyToMessage != nil {
+		return
+	}
+	cid, ok := adminExpireDateCustomer(adminID)
+	if !ok {
+		return
+	}
+	lang := update.Message.From.LanguageCode
+	exp, ok := parseAdminExpireDateInput(update.Message.Text)
+	if !ok {
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:    update.Message.Chat.ID,
+			ParseMode: models.ParseModeHTML,
+			Text:      h.translation.GetText(lang, "admin_user_cal_manual_invalid"),
+		})
+		return
+	}
+	cust, err := h.customerRepository.FindById(ctx, cid)
+	if err != nil || cust == nil {
+		adminExpireDateClear(adminID)
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:    update.Message.Chat.ID,
+			ParseMode: models.ParseModeHTML,
+			Text:      h.translation.GetText(lang, "admin_user_cal_no_rw_user"),
+		})
+		return
+	}
+	if _, err := h.adminApplyPanelExpireAt(ctx, cust, exp); err != nil {
+		slog.Error("admin cal manual patch expire", "error", err)
+		alertKey := "admin_user_action_error"
+		if err.Error() == "no rw user" {
+			alertKey = "admin_user_cal_no_rw_user"
+		}
+		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID:    update.Message.Chat.ID,
+			ParseMode: models.ParseModeHTML,
+			Text:      h.translation.GetText(lang, alertKey),
+		})
+		return
+	}
+	adminExpireDateClear(adminID)
+	cust, _ = h.customerRepository.FindById(ctx, cid)
+	text, markup := h.adminUserManageContent(ctx, b, lang, cust)
+	_, err = b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:      update.Message.Chat.ID,
+		ParseMode:   models.ParseModeHTML,
+		Text:        text,
+		ReplyMarkup: markup,
+	})
+	if err != nil {
+		slog.Error("admin cal manual send card", "error", err)
+		return
+	}
+	_, _ = b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+		ChatID:    update.Message.Chat.ID,
+		MessageID: update.Message.ID,
+	})
 }

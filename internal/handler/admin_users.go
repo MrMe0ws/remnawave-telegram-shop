@@ -89,9 +89,11 @@ func AdminUsersSearchWaiting(adminID int64) bool {
 }
 
 var (
-	adminTrafficLimitMu     sync.Mutex
-	adminTrafficLimitCust   map[int64]int64 // admin telegram id → customer id (ввод лимита ГБ)
-	adminUserDescriptionMu  sync.Mutex
+	adminTrafficLimitMu      sync.Mutex
+	adminTrafficLimitCust    map[int64]int64 // admin telegram id → customer id (ввод лимита ГБ)
+	adminExpireDateMu        sync.Mutex
+	adminExpireDateCust      map[int64]int64 // admin telegram id → customer id (ввод даты окончания)
+	adminUserDescriptionMu   sync.Mutex
 	adminUserDescriptionCust map[int64]int64 // admin id → customer id (ввод описания Remnawave)
 )
 
@@ -128,6 +130,42 @@ func adminTrafficLimitCustomer(adminID int64) (int64, bool) {
 		return 0, false
 	}
 	cid, ok := adminTrafficLimitCust[adminID]
+	return cid, ok
+}
+
+// AdminUserExpireDateWaiting — админ после «Ввести дату» ждёт дату сообщением.
+func AdminUserExpireDateWaiting(adminID int64) bool {
+	adminExpireDateMu.Lock()
+	defer adminExpireDateMu.Unlock()
+	if adminExpireDateCust == nil {
+		return false
+	}
+	_, ok := adminExpireDateCust[adminID]
+	return ok
+}
+
+func adminExpireDateSet(adminID, customerID int64) {
+	adminExpireDateMu.Lock()
+	defer adminExpireDateMu.Unlock()
+	if adminExpireDateCust == nil {
+		adminExpireDateCust = make(map[int64]int64)
+	}
+	adminExpireDateCust[adminID] = customerID
+}
+
+func adminExpireDateClear(adminID int64) {
+	adminExpireDateMu.Lock()
+	defer adminExpireDateMu.Unlock()
+	delete(adminExpireDateCust, adminID)
+}
+
+func adminExpireDateCustomer(adminID int64) (int64, bool) {
+	adminExpireDateMu.Lock()
+	defer adminExpireDateMu.Unlock()
+	if adminExpireDateCust == nil {
+		return 0, false
+	}
+	cid, ok := adminExpireDateCust[adminID]
 	return cid, ok
 }
 
