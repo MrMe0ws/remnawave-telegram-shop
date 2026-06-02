@@ -120,7 +120,7 @@ function AppGlyph({ app }: { app: Pick<AppGuide, 'id' | 'name'> }) {
   if (key.includes('incy')) {
     return (
       <svg className="size-6 shrink-0" viewBox="0 0 64 64" fill="none" aria-hidden>
-        <rect x="10" y="10" width="44" height="44" rx="12" fill="#A8D63F" />
+        <rect x="10" y="10" width="44" height="44" rx="12" fill="#ffffffb3" />
         <path d="M21 23H25.2V41H21V23Z" fill="#050505" />
         <path d="M29 41V23H32.7L39.8 33.2V23H44V41H40.4L33.2 30.8V41H29Z" fill="#050505" />
       </svg>
