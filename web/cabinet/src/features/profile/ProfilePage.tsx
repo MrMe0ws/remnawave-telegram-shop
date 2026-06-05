@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Check, ChevronRight, Copy, CreditCard, Gem, Gift, Upload, User } from 'lucide-react'
+import { ArrowRight, ChevronRight, CreditCard, Gem, Gift, User } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, formatDate, maskEmail } from '@/lib/utils'
@@ -14,6 +13,7 @@ import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { ChangePasswordCollapsible, DeleteAccountSection } from '@/features/profile/account-security'
 import { ProfileLoyaltySection } from '@/features/loyalty/LoyaltyProgramPage'
 import { PaymentsHistoryCard } from '@/features/payments/PaymentsHistoryPage'
+import { ReferralCopyRow } from '@/features/referral/ReferralCopyRow'
 
 type ProfileTab = 'general' | 'bonuses' | 'history'
 
@@ -36,7 +36,7 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, fetchMe } = useAuthStore()
-  const [copied, setCopied] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [tab, setTab] = useState<ProfileTab>(() => tabFromHash(location.hash))
 
   const { data: referrals } = useQuery({
@@ -54,11 +54,13 @@ export default function ProfilePage() {
     setTab(tabFromHash(location.hash))
   }, [location.hash])
 
-  const refUrl =
+  const cabinetRefUrl =
     referrals?.cabinet_register_link ||
     (user?.telegram_id != null && Number.isFinite(user.telegram_id)
       ? `${window.location.origin}/cabinet/register?ref=ref_${user.telegram_id}`
       : null)
+  const botRefUrl = referrals?.bot_start_link ?? null
+  const hasReferralLinks = Boolean(botRefUrl || cabinetRefUrl)
   const canShare = useMemo(() => typeof navigator !== 'undefined' && typeof navigator.share === 'function', [])
 
   function goTab(next: ProfileTab) {
@@ -71,18 +73,17 @@ export default function ProfilePage() {
     }
   }
 
-  async function copyRef() {
-    if (!refUrl) return
-    await navigator.clipboard.writeText(refUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function copyRef(text: string, key: string) {
+    await navigator.clipboard.writeText(text)
+    setCopiedKey(key)
+    setTimeout(() => setCopiedKey(null), 2000)
   }
 
-  async function shareRef() {
-    if (!refUrl || !canShare) return
+  async function shareRef(text: string) {
+    if (!canShare) return
     try {
       await navigator.share({
-        text: `${t('referralPage.shareInviteText')}\n${refUrl}`,
+        text: `${t('referralPage.shareInviteText')}\n${text}`,
       })
     } catch {
       // user cancelled share sheet
@@ -222,33 +223,29 @@ export default function ProfilePage() {
                   <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
                 </Link>
               </CardHeader>
-              <CardContent className="space-y-2 pt-0">
-                {refUrl ? (
+              <CardContent className="space-y-4 pt-0">
+                {hasReferralLinks ? (
                   <>
-                    <div className="rounded-lg bg-muted px-2.5 py-2 text-[11px] font-mono text-muted-foreground truncate select-all">
-                      {refUrl}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => void copyRef()}>
-                        {copied ? (
-                          <>
-                            <Check size={14} className="text-primary" />
-                            {t('subscriptionPage.copied')}
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={14} />
-                            {t('subscriptionPage.copyLink')}
-                          </>
-                        )}
-                      </Button>
-                      {canShare ? (
-                        <Button type="button" size="sm" className="h-8 gap-1 text-xs" onClick={() => void shareRef()}>
-                          <Upload size={14} strokeWidth={1.5} />
-                          {t('common.share')}
-                        </Button>
-                      ) : null}
-                    </div>
+                    {botRefUrl ? (
+                      <ReferralCopyRow
+                        label={t('referralPage.linkBot')}
+                        value={botRefUrl}
+                        copied={copiedKey === 'bot'}
+                        onCopy={() => void copyRef(botRefUrl, 'bot')}
+                        canShare={canShare}
+                        onShare={() => void shareRef(botRefUrl)}
+                      />
+                    ) : null}
+                    {cabinetRefUrl ? (
+                      <ReferralCopyRow
+                        label={t('referralPage.linkCabinet')}
+                        value={cabinetRefUrl}
+                        copied={copiedKey === 'cab'}
+                        onCopy={() => void copyRef(cabinetRefUrl, 'cab')}
+                        canShare={canShare}
+                        onShare={() => void shareRef(cabinetRefUrl)}
+                      />
+                    ) : null}
                     <p className="text-[11px] leading-snug text-muted-foreground">{t('profile.referralFootnote')}</p>
                   </>
                 ) : (

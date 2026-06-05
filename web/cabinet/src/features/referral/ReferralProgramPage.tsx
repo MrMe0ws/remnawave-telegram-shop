@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Trans, useTranslation } from 'react-i18next'
-import { Copy, Check, Users, BookOpen, Upload } from 'lucide-react'
+import { Users, BookOpen } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { ReferralCopyRow } from '@/features/referral/ReferralCopyRow'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
 
@@ -111,7 +111,7 @@ export default function ReferralProgramPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {data?.bot_start_link ? (
-                  <CopyRow
+                  <ReferralCopyRow
                     label={t('referralPage.linkBot')}
                     value={data.bot_start_link}
                     copied={copiedKey === 'bot'}
@@ -121,7 +121,7 @@ export default function ReferralProgramPage() {
                   />
                 ) : null}
                 {data?.cabinet_register_link ? (
-                  <CopyRow
+                  <ReferralCopyRow
                     label={t('referralPage.linkCabinet')}
                     value={data.cabinet_register_link}
                     copied={copiedKey === 'cab'}
@@ -203,45 +203,3 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub: st
   )
 }
 
-function CopyRow({
-  label,
-  value,
-  copied,
-  onCopy,
-  canShare,
-  onShare,
-}: {
-  label: string
-  value: string
-  copied: boolean
-  onCopy: () => void
-  canShare: boolean
-  onShare: () => void
-}) {
-  const { t } = useTranslation()
-  return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-2">
-        <div className="min-w-0 w-full rounded-lg bg-muted px-3 py-2 text-xs font-mono truncate md:flex-1">{value}</div>
-        <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
-          <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1" onClick={onCopy}>
-            {copied ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
-            {copied ? t('subscriptionPage.copied') : t('subscriptionPage.copyLink')}
-          </Button>
-          {canShare ? (
-            <Button
-              type="button"
-              size="sm"
-              className="shrink-0 gap-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
-              onClick={onShare}
-            >
-              <Upload size={14} strokeWidth={1.5} />
-              {t('common.share')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  )
-}
