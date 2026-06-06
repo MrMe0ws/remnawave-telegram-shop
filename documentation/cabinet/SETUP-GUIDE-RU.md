@@ -676,6 +676,109 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 - меньше поверхность атаки на auth/API маршруты;
 - сложнее массово перебирать auth-эндпоинты в обход внешнего reverse-proxy политики.
 
+## 18) Чат поддержки (support bridge)
+
+Опциональная интеграция web-кабинета с отдельным сервисом **[telegram-support-bot](https://github.com/Jolymmiels/telegram-support-bot)**: пользователь пишет в SPA, саппорт отвечает в топике Telegram-группы, ответ возвращается в кабинет.
+
+### Архитектура
+
+```
+Кабинет (SPA) → shop API → support-bot HTTP → топик в супергруппе
+Саппорт отвечает в TG → shop webhook → polling в кабинете
+Telegram DM в support-боте — без изменений (source=telegram)
+```
+
+При **`SUPPORT_BOT_API=false`** (по умолчанию) кнопка «Поддержка» в кабинете ведёт на **`SUPPORT_URL`**, как раньше.
+
+### Требования
+
+- Работающий web-кабинет (`CABINET_ENABLED=true`).
+- Отдельно развёрнутый **telegram-support-bot** (форум-супергруппа, `/setprivacy` → Disable — см. README support-bot).
+- Миграция shop: **`000036_cabinet_support`** (`cabinet_support_ticket`, `cabinet_support_message`).
+
+### Переменные shop (`.env`)
+
+| Переменная | Описание |
+|------------|----------|
+| `SUPPORT_BOT_API` | `true` — включить встроенный чат |
+| `SUPPORT_BOT_API_URL` | Базовый URL HTTP API support-bot, напр. `http://support-bot:8080` |
+| `SUPPORT_BRIDGE_SECRET` | Общий секрет (Bearer); тот же, что в `.env` support-bot |
+
+При `SUPPORT_BOT_API=true` без `SUPPORT_BOT_API_URL` или `SUPPORT_BRIDGE_SECRET` процесс shop не стартует.
+
+Фронт узнаёт о включении из **`GET /cabinet/api/auth/bootstrap`** → поле **`support_chat_enabled`**.
+
+### Переменные support-bot (`.env`)
+
+| Переменная | Описание |
+|------------|----------|
+| `SHOP_WEBHOOK_URL` | URL webhook shop, напр. `http://shop:8080/cabinet/api/internal/support/webhook` |
+| `SUPPORT_BRIDGE_SECRET` | Тот же секрет, что в shop |
+| `HTTP_PORT` | Порт HTTP sidecar (по умолчанию `8080`) |
+
+### Docker: одна сеть
+
+Оба контейнера должны видеть друг друга по **имени сервиса** из compose, не через `localhost` на хосте.
+
+**Shop `.env` (пример):**
+
+```env
+SUPPORT_BOT_API=true
+SUPPORT_BOT_API_URL=http://support-bot:8080
+SUPPORT_BRIDGE_SECRET=<общий-секрет>
+```
+
+**Support-bot `.env` (пример):**
+
+```env
+SHOP_WEBHOOK_URL=http://shop:8080/cabinet/api/internal/support/webhook
+SUPPORT_BRIDGE_SECRET=<тот-же-секрет>
+HTTP_PORT=8080
+```
+
+Имена `shop` / `support-bot` — примеры; подставьте реальные `service:` из ваших `docker-compose.yml`. Порт в `SHOP_WEBHOOK_URL` — **`HEALTH_CHECK_PORT`** shop (не публичный 443 nginx).
+
+Если compose в разных файлах — подключите оба сервиса к одной external network.
+
+### API shop
+
+Пользовательские (JWT + CSRF на POST):
+
+- `GET /cabinet/api/support/summary` — open-тикет, счётчик непрочитанных
+- `GET /cabinet/api/support/conversation` — сообщения open-тикета
+- `POST /cabinet/api/support/messages` — `{"text":"..."}` (только текст)
+- `POST /cabinet/api/support/read` — отметить входящие прочитанными
+
+Внутренний webhook (Bearer `SUPPORT_BRIDGE_SECRET`):
+
+- `POST /cabinet/api/internal/support/webhook` — ответы саппорта и событие закрытия тикета
+
+Idempotency: исходящие сообщения пользователя сохраняют **`client_message_id`** (UUID) в `cabinet_support_message`; повтор при сетевом retry не создаёт дубликат.
+
+### Ограничения MVP
+
+- Только **текст** от пользователя кабинета.
+- **Медиа** от саппорта в кабинет **не доставляются**.
+- **Один open-тикет** на `account_id`.
+- После **`/close`** в топике история в модале **не показывается**; новое сообщение открывает **новый** тикет.
+
+### Проверка после настройки
+
+1. Применить миграции shop (в т.ч. `000036`).
+2. Перезапустить shop и support-bot с согласованным секретом.
+3. Bootstrap:
+
+```bash
+curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap" | jq '.support_chat_enabled'
+# ожидается true
+```
+
+4. В кабинете (авторизованным пользователем): «Поддержка» → модальный чат → отправить текст → в группе support-bot появился топик.
+5. Ответ саппорта в топике → через несколько секунд (polling SPA) текст в кабинете.
+6. `/close` в топике → чат в кабинете закрывается; новое сообщение — новый тикет.
+
+**Код:** `internal/cabinet/service/support.go`, `internal/cabinet/supportbot/client.go`, `web/cabinet/src/features/support/`.
+
 ---
 
 

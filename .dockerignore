@@ -103,3 +103,9 @@ go.work.sum
 # env file
 .env
 
+# Frontend: локальные зависимости и артефакты сборки не должны попадать в образ
+# (иначе Windows node_modules перезапишет npm ci в Alpine и tsc упадёт)
+web/cabinet/node_modules
+web/cabinet/dist
+internal/cabinet/web/dist
+

@@ -244,6 +244,22 @@
       "infoSectionSubtitle": "FAQ, legal documents, service status, and useful links.",
       "backToSupport": "Back to support"
     },
+    "supportChat": {
+      "title": "Support",
+      "openButton": "Contact support",
+      "continueButton": "Continue conversation",
+      "emptyHint": "Describe your issue — we will reply here in the cabinet.",
+      "inputPlaceholder": "Type your message…",
+      "send": "Send",
+      "sendError": "Could not send. Please try again.",
+      "waitingHint": "Waiting for a reply",
+      "supportLabel": "Support",
+      "notDelivered": "Not delivered to support",
+      "unreadAria": "Unread: {{count}}",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ticketClosed": "This ticket is closed. A new message will open a new ticket."
+    },
     "profile": {
       "title": "Profile",
       "tabGeneral": "General",

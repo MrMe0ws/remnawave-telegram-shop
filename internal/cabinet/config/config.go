@@ -91,6 +91,8 @@ type cabinet struct {
 	brandLogoURLRaw string
 	// brandLogoFile — абсолютный путь к файлу на диске (CABINET_BRAND_LOGO_FILE), если валиден.
 	brandLogoFile string
+	// supportLogoFile — абсолютный путь к аватарке поддержки в чате (SUPPORT_LOGO_FILE).
+	supportLogoFile string
 
 	// PWA flags.
 	pwaEnabled   bool
@@ -225,6 +227,17 @@ func BrandName() string {
 
 // BrandLogoFile — абсолютный путь к файлу логотипа на диске (CABINET_BRAND_LOGO_FILE), или "".
 func BrandLogoFile() string { return conf.brandLogoFile }
+
+// SupportLogoFile — абсолютный путь к файлу аватарки поддержки (SUPPORT_LOGO_FILE), или "".
+func SupportLogoFile() string { return conf.supportLogoFile }
+
+// SupportLogoURLForClient — URL для аватарки поддержки в чате (/cabinet/api/public/support-logo).
+func SupportLogoURLForClient() string {
+	if conf.supportLogoFile == "" {
+		return ""
+	}
+	return strings.TrimRight(conf.publicURLRaw, "/") + "/cabinet/api/public/support-logo"
+}
 
 func PWAEnabled() bool { return conf.pwaEnabled }
 func PWAAppName() string {
@@ -452,6 +465,17 @@ func InitConfig() {
 		}
 	}
 
+	supportLogoRaw := strings.TrimSpace(os.Getenv("SUPPORT_LOGO_FILE"))
+	if supportLogoRaw != "" {
+		if resolved := resolveBrandLogoFile(supportLogoRaw); resolved != "" {
+			conf.supportLogoFile = resolved
+		} else {
+			slog.Warn("SUPPORT_LOGO_FILE: file not found — проверьте путь или volume",
+				"path", supportLogoRaw,
+			)
+		}
+	}
+
 	conf.pwaEnabled = envBool("CABINET_PWA_ENABLED", false)
 	conf.pwaAppName = strings.TrimSpace(os.Getenv("CABINET_PWA_APP_NAME"))
 	conf.pwaShortName = strings.TrimSpace(os.Getenv("CABINET_PWA_SHORT_NAME"))
@@ -480,6 +504,7 @@ func InitConfig() {
 		"metrics_basic_auth", conf.metricsUser != "",
 		"brand_name", BrandName(),
 		"brand_logo_configured", BrandLogoURLForClient() != "",
+		"support_logo_configured", SupportLogoURLForClient() != "",
 		"pwa_enabled", conf.pwaEnabled,
 		"pwa_app_name", PWAAppName(),
 		"pwa_short_name", PWAShortName(),

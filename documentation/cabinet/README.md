@@ -12,6 +12,13 @@
 - Переход на версию с кабинетом:
   - `documentation/cabinet/cabinet-upgrade-guide.md`
 
+## Чат поддержки (bridge к telegram-support-bot)
+
+- Встроенный чат в кабинете при `SUPPORT_BOT_API=true` (миграция `000036_cabinet_support`).
+- Настройка env, Docker-сеть shop ↔ support-bot, smoke-проверка:
+  - `documentation/cabinet/SETUP-GUIDE-RU.md` — раздел **«18) Чат поддержки (support bridge)»**
+- Документация support-bot: `README.md` в репозитории [telegram-support-bot](https://github.com/Jolymmiels/telegram-support-bot).
+
 ## Runtime и контент
 
 - Контент из `/translations/cabinet/*`:

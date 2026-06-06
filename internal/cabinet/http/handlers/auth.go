@@ -132,6 +132,7 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"telegram_web_auth_mode": h.telegramWebAuthMode,
 		// Совпадает с FORTUNE_ENABLED: скрыть пункт меню в SPA; /fortune по прямой ссылке остаётся.
 		"fortune_nav_visible": cabcfg.GetFortuneWheel().Enabled,
+		"support_chat_enabled": botcfg.SupportBotAPIEnabled(),
 		"turnstile_enabled":      cabcfg.TurnstileEnabled(),
 		"pwa_enabled":            cabcfg.PWAEnabled(),
 		"pwa_app_name":           cabcfg.PWAAppName(),
@@ -159,6 +160,9 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 	body["brand_name"] = cabcfg.BrandName()
 	if u := cabcfg.BrandLogoURLForClient(); u != "" {
 		body["brand_logo_url"] = u
+	}
+	if u := cabcfg.SupportLogoURLForClient(); u != "" {
+		body["support_logo_url"] = u
 	}
 	// Не кэшировать у nginx/браузере: после смены env фронт должен сразу увидеть флаги.
 	w.Header().Set("Cache-Control", "no-store")

@@ -35,6 +35,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/payments"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
+	"remnawave-tg-shop-bot/internal/cabinet/supportbot"
 	"remnawave-tg-shop-bot/internal/cabinet/web"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -233,6 +234,23 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		promoCodesHandler = handlers.NewPromoCodes(customerBootstrap, customerRepo, linkRepo, promoService)
 	}
 
+	var supportHandler *handlers.SupportHandler
+	if config.SupportBotAPIEnabled() {
+		supportRepo := repository.NewSupportRepo(pool)
+		supportBotClient := supportbot.NewClient(config.SupportBotAPIURL(), config.SupportBridgeSecret())
+		supportSvc := cabsvc.NewSupport(
+			supportRepo,
+			accountRepo,
+			identityRepo,
+			linkRepo,
+			customerRepo,
+			customerBootstrap,
+			subscriptionSvc,
+			supportBotClient,
+		)
+		supportHandler = handlers.NewSupport(supportSvc)
+	}
+
 	// Платёжный слой кабинета: собираем, только если бот прокинул PaymentService.
 	var paymentsHandler *handlers.PaymentsHandler
 	if paymentService != nil {
@@ -284,8 +302,11 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 
 	deleteAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 	trialActivateAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
+	supportAcctLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
+	// Webhook от support-bot: 100/min/IP — внутренний endpoint, но защита от flood при утечке секрета
+	supportWebhookIPLim := ratelimit.New(ratelimit.Rule{Count: 100, Interval: time.Minute})
 
-	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim} {
+	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim} {
 		lim.RunGC(ctx)
 	}
 
@@ -306,8 +327,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	api := http.NewServeMux()
 	api.Handle("/cabinet/api/metrics", wrapMetricsBasicAuth(cabmetrics.Handler()))
 
-	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, jwtIssuer,
-		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
+	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
+		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
 	// 404 JSON на любой неизвестный /cabinet/api/*.
@@ -388,8 +409,9 @@ func registerAPIRoutes(
 	pay *handlers.PaymentsHandler,
 	link *handlers.LinkHandler,
 	fortune *handlers.FortuneHandler,
+	support *handlers.SupportHandler,
 	jwtIssuer *jwt.Issuer,
-	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim,
+	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
 ) {
 	// Healthz — без middleware, открыт всем.
@@ -429,6 +451,13 @@ func registerAPIRoutes(
 	// GET /public/brand-logo — статичный логотип с диска (CABINET_BRAND_LOGO_FILE), без auth.
 	if p := cabcfg.BrandLogoFile(); p != "" {
 		api.Handle("/cabinet/api/public/brand-logo",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: http.HandlerFunc(handlers.ServeBrandLogo(p)),
+			}),
+		)
+	}
+	if p := cabcfg.SupportLogoFile(); p != "" {
+		api.Handle("/cabinet/api/public/support-logo",
 			methodRouter(map[string]http.Handler{
 				http.MethodGet: http.HandlerFunc(handlers.ServeBrandLogo(p)),
 			}),
@@ -855,6 +884,49 @@ func registerAPIRoutes(
 					middleware.RateLimit(subscriptionAcctLim, accountKey("purchases")),
 				),
 			}),
+		)
+	}
+
+	if support != nil {
+		api.Handle("/cabinet/api/support/summary",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(support.Summary),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("support_summary")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/support/conversation",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(support.Conversation),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("support_conversation")),
+				),
+			}),
+		)
+		api.Handle("/cabinet/api/support/messages",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(support.SendMessage),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.CSRF(),
+				middleware.RateLimit(supportAcctLim, accountKey("support_send")),
+			)),
+		)
+		api.Handle("/cabinet/api/support/read",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(support.MarkRead),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.CSRF(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("support_read")),
+			)),
+		)
+		api.Handle("/cabinet/api/internal/support/webhook",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(support.Webhook),
+				middleware.RateLimit(supportWebhookIPLim, ipKey("support_webhook")),
+			)),
 		)
 	}
 

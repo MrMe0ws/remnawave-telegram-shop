@@ -356,6 +356,22 @@
       "infoSectionSubtitle": "FAQ, документы, статус сервисов и полезные ссылки.",
       "backToSupport": "К поддержке"
     },
+    "supportChat": {
+      "title": "Поддержка",
+      "openButton": "Написать в поддержку",
+      "continueButton": "Продолжить диалог",
+      "emptyHint": "Опишите проблему — вам ответят в ближайшее время",
+      "inputPlaceholder": "Введите сообщение…",
+      "send": "Отправить",
+      "sendError": "Не удалось отправить. Попробуйте ещё раз",
+      "waitingHint": "Ожидаем ответа поддержки",
+      "supportLabel": "Поддержка",
+      "notDelivered": "Не доставлено в поддержку",
+      "unreadAria": "Непрочитанных: {{count}}",
+      "today": "Сегодня",
+      "yesterday": "Вчера",
+      "ticketClosed": "Обращение закрыто. Новое сообщение создаст новый тикет"
+    },
     "profile": {
       "title": "Профиль",
       "tabGeneral": "Общее",

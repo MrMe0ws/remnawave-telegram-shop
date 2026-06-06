@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useAuthStore } from '@/store/auth'
 import { CabinetOnboarding } from '@/features/onboarding/CabinetOnboarding'
+import { useSupportSummary } from '@/features/support/useSupportChat'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -89,6 +90,15 @@ function profileNavActive(pathname: string): boolean {
 /** Активный пункт в выпадающем меню и нижней мобильной навигации (как у текста ссылки). */
 const navAccentActiveClass = 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]'
 
+function NavIconWithDot({ showDot, children }: { showDot: boolean; children: ReactNode }) {
+  return (
+    <span className="relative inline-flex">
+      {children}
+      {showDot ? <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-card" aria-hidden /> : null}
+    </span>
+  )
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
@@ -100,6 +110,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     return overflowNavMainItems
   }, [bootstrap?.fortune_nav_visible])
   const logout = useAuthStore((s) => s.logout)
+  const supportChatEnabled = Boolean(bootstrap?.support_chat_enabled)
+  const { data: supportSummary } = useSupportSummary(supportChatEnabled, 60_000)
+  const supportUnread = supportSummary?.unread_count ?? 0
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [mobileChromeVisible, setMobileChromeVisible] = useState(true)
@@ -269,14 +282,16 @@ export function AppLayout({ children }: AppLayoutProps) {
                     aria-label={label}
                     className="flex items-center"
                   >
-                    <Icon
-                      className={cn(
-                        'size-[18px]',
-                        active ? 'text-foreground' : 'text-muted-foreground',
-                        isTariffs && !active && 'tariffs-shine-icon',
-                      )}
-                      strokeWidth={1.75}
-                    />
+                    <NavIconWithDot showDot={to === '/support' && supportUnread > 0}>
+                      <Icon
+                        className={cn(
+                          'size-[18px]',
+                          active ? 'text-foreground' : 'text-muted-foreground',
+                          isTariffs && !active && 'tariffs-shine-icon',
+                        )}
+                        strokeWidth={1.75}
+                      />
+                    </NavIconWithDot>
                     <span
                       className={cn(
                         'max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200',
@@ -506,15 +521,17 @@ export function AppLayout({ children }: AppLayoutProps) {
                   active && cn('bg-secondary', navAccentActiveClass),
                 )}
               >
-                <Icon
-                  className={cn(
-                    'size-[20px] shrink-0',
-                    !active && 'text-muted-foreground',
-                    isTariffs && !active && 'tariffs-shine-icon',
-                    active && navAccentActiveClass,
-                  )}
-                  strokeWidth={1.75}
-                />
+                <NavIconWithDot showDot={to === '/support' && supportUnread > 0}>
+                  <Icon
+                    className={cn(
+                      'size-[20px] shrink-0',
+                      !active && 'text-muted-foreground',
+                      isTariffs && !active && 'tariffs-shine-icon',
+                      active && navAccentActiveClass,
+                    )}
+                    strokeWidth={1.75}
+                  />
+                </NavIconWithDot>
                 <span className="w-full text-center text-[10px] leading-tight font-medium truncate">{label}</span>
               </Link>
             )

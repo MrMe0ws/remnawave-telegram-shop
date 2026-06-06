@@ -35,6 +35,9 @@ type config struct {
 	channelURL                                                                   string
 	serverStatusURL                                                              string
 	supportURL                                                                   string
+	supportBotAPIEnabled                                                         bool
+	supportBotAPIURL                                                             string
+	supportBridgeSecret                                                          string
 	tosURL                                                                       string
 	videoGuideURL                                                                string
 	serverSelectionURL                                                           string
@@ -320,6 +323,18 @@ func ServerStatusURL() string {
 
 func SupportURL() string {
 	return conf.supportURL
+}
+
+func SupportBotAPIEnabled() bool {
+	return conf.supportBotAPIEnabled
+}
+
+func SupportBotAPIURL() string {
+	return conf.supportBotAPIURL
+}
+
+func SupportBridgeSecret() string {
+	return conf.supportBridgeSecret
 }
 
 func TosURL() string {
@@ -828,6 +843,17 @@ func InitConfig() {
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")
+	conf.supportBotAPIEnabled = envBoolDefault("SUPPORT_BOT_API", false)
+	conf.supportBotAPIURL = strings.TrimSpace(os.Getenv("SUPPORT_BOT_API_URL"))
+	conf.supportBridgeSecret = strings.TrimSpace(os.Getenv("SUPPORT_BRIDGE_SECRET"))
+	if conf.supportBotAPIEnabled {
+		if conf.supportBotAPIURL == "" {
+			panic("SUPPORT_BOT_API=true requires SUPPORT_BOT_API_URL")
+		}
+		if conf.supportBridgeSecret == "" {
+			panic("SUPPORT_BOT_API=true requires SUPPORT_BRIDGE_SECRET")
+		}
+	}
 	conf.feedbackURL = os.Getenv("FEEDBACK_URL")
 	conf.channelURL = os.Getenv("CHANNEL_URL")
 	conf.tosURL = os.Getenv("TOS_URL")

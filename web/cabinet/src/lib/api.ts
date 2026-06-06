@@ -51,12 +51,16 @@ export interface AuthBootstrapResponse {
   brand_name?: string
   /** Полный или относительный URL логотипа для <img src>. */
   brand_logo_url?: string
+  /** Аватар поддержки в чате (SUPPORT_LOGO_FILE → /cabinet/api/public/support-logo). */
+  support_logo_url?: string
   /** PWA feature flag + names from CABINET_PWA_* */
   pwa_enabled?: boolean
   pwa_app_name?: string
   pwa_short_name?: string
   /** false при FORTUNE_ENABLED=false — пункт «Колесо фортуны» в меню кабинета скрыт (маршрут /fortune доступен по ссылке). */
   fortune_nav_visible?: boolean
+  /** true при SUPPORT_BOT_API=true — чат поддержки в кабинете вместо внешней ссылки. */
+  support_chat_enabled?: boolean
   /** Доступные провайдеры оплаты по backend-конфигурации env. */
   payment_providers?: {
     yookassa?: boolean
@@ -416,6 +420,25 @@ export interface ReferralsResponse {
   referral_repeat_referrer_days?: number
 }
 
+export interface SupportMessageDTO {
+  id: number
+  direction: 'in' | 'out'
+  text: string
+  author_label?: string
+  delivery_status?: 'pending' | 'sent' | 'failed'
+  created_at: string
+}
+
+export interface SupportSummaryResponse {
+  has_open_ticket: boolean
+  ticket_status?: string
+  unread_count: number
+}
+
+export interface SupportConversationResponse extends SupportSummaryResponse {
+  messages: SupportMessageDTO[]
+}
+
 export interface FortuneSectorDTO {
   index: number
   reward_type: string
@@ -755,6 +778,15 @@ export const api = {
 
   referrals: () =>
     request<ReferralsResponse>('GET', '/me/referrals'),
+
+  supportSummary: () => request<SupportSummaryResponse>('GET', '/support/summary'),
+
+  supportConversation: () => request<SupportConversationResponse>('GET', '/support/conversation'),
+
+  supportSendMessage: (text: string) =>
+    request<SupportMessageDTO>('POST', '/support/messages', { text }),
+
+  supportMarkRead: () => request<{ ok: boolean }>('POST', '/support/read'),
 
   fortuneStatus: () => request<FortuneStatusResponse>('GET', '/fortune/status'),
 
