@@ -9,10 +9,7 @@ import {
   Check,
   ExternalLink,
   ChevronDown,
-  Monitor,
-  Smartphone,
   Tv,
-  Laptop,
   Globe,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -86,12 +83,67 @@ const platformLabel: Record<PlatformKey, string> = {
   appleTV: 'Apple TV',
 }
 
+function PlatformIconSvg({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {children}
+    </svg>
+  )
+}
+
 const platformIcon: Record<string, ReactNode> = {
-  windows: <Monitor size={14} />,
-  ios: <Smartphone size={14} />,
-  android: <Smartphone size={14} />,
-  macos: <Laptop size={14} />,
-  linux: <Laptop size={14} />,
+  ios: (
+    <PlatformIconSvg>
+      <path d="M8.286 7.008c-3.216 0 -4.286 3.23 -4.286 5.92c0 3.229 2.143 8.072 4.286 8.072c1.165 -.05 1.799 -.538 3.214 -.538c1.406 0 1.607 .538 3.214 .538s4.286 -3.229 4.286 -5.381c-.03 -.011 -2.649 -.434 -2.679 -3.23c-.02 -2.335 2.589 -3.179 2.679 -3.228c-1.096 -1.606 -3.162 -2.113 -3.75 -2.153c-1.535 -.12 -3.032 1.077 -3.75 1.077c-.729 0 -2.036 -1.077 -3.214 -1.077z" />
+      <path d="M12 4a2 2 0 0 0 2 -2a2 2 0 0 0 -2 2" />
+    </PlatformIconSvg>
+  ),
+  windows: (
+    <PlatformIconSvg>
+      <path d="M17.8 20l-12 -1.5c-1 -.1 -1.8 -.9 -1.8 -1.9v-9.2c0 -1 .8 -1.8 1.8 -1.9l12 -1.5c1.2 -.1 2.2 .8 2.2 1.9v12.1c0 1.2 -1.1 2.1 -2.2 1.9z" />
+      <path d="M12 5l0 14" />
+      <path d="M4 12l16 0" />
+    </PlatformIconSvg>
+  ),
+  android: (
+    <PlatformIconSvg>
+      <path d="M4 10l0 6" />
+      <path d="M20 10l0 6" />
+      <path d="M7 9h10v8a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-8a5 5 0 0 1 10 0" />
+      <path d="M8 3l1 2" />
+      <path d="M16 3l-1 2" />
+      <path d="M9 18l0 3" />
+      <path d="M15 18l0 3" />
+    </PlatformIconSvg>
+  ),
+  macos: (
+    <PlatformIconSvg>
+      <path d="M3 4m0 1a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1z" />
+      <path d="M7 8v1" />
+      <path d="M17 8v1" />
+      <path d="M12.5 4c-.654 1.486 -1.26 3.443 -1.5 9h2.5c-.19 2.867 .094 5.024 .5 7" />
+      <path d="M7 15.5c3.667 2 6.333 2 10 0" />
+    </PlatformIconSvg>
+  ),
+  linux: (
+    <PlatformIconSvg>
+      <path d="M12 5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M17.723 7.41a7.992 7.992 0 0 0 -3.74 -2.162m-3.971 0a7.993 7.993 0 0 0 -3.789 2.216m-1.881 3.215a8 8 0 0 0 -.342 2.32c0 .738 .1 1.453 .287 2.132m1.96 3.428a7.993 7.993 0 0 0 3.759 2.19m4 0a7.993 7.993 0 0 0 3.747 -2.186m1.962 -3.43a8.008 8.008 0 0 0 .287 -2.131c0 -.764 -.107 -1.503 -.307 -2.203" />
+      <path d="M5 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <path d="M19 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+    </PlatformIconSvg>
+  ),
   androidTV: <Tv size={14} />,
   appleTV: <Tv size={14} />,
 }
