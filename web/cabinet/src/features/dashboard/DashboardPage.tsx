@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText, Newspaper, Star } from 'lucide-react'
+import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText, Newspaper, Star, type LucideIcon } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
@@ -95,11 +95,11 @@ export default function DashboardPage() {
         </div>
 
         {hasSubscription ? (
-          <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white dark:shadow-cyan-500/5">
+          <Card className="subscription-feature-card">
             <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
               <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-primary/80 dark:text-cyan-200/80">
+                  <p className="text-xs uppercase tracking-[0.18em] text-primary/80">
                     {t('dashboard.yourSubscriptionTitle')}
                   </p>
                   <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
@@ -121,15 +121,15 @@ export default function DashboardPage() {
                 <Link
                   id="cabinet-onboarding-step2-target"
                   to="/connections"
-                  className="connect-device-cta group block rounded-xl"
+                  className="connect-device-cta group block"
                 >
-                  <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary dark:bg-cyan-500/15 dark:text-cyan-200">
+                  <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                       <MonitorSmartphone size={16} />
                     </span>
                     <div className="min-w-0">
                       <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                            <p className="text-xs text-muted-foreground dark:text-slate-300">{deviceLimitText}</p>
+                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
                     </div>
                   </div>
                 </Link>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                 <Link
                   id="cabinet-onboarding-step2-target"
                   to="/tariffs"
-                  className="renew-subscription-cta-danger group block rounded-xl"
+                  className="renew-subscription-cta-danger group block"
                 >
                   <div className="renew-subscription-cta-danger-inner flex items-start gap-3 px-4 py-3 text-card-foreground">
                     <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
@@ -163,15 +163,15 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0E1A33] dark:via-[#0D1324] dark:to-[#0A1222] dark:text-white">
+          <Card className="subscription-feature-card">
             <CardContent className="space-y-5 px-6 py-7">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 dark:border-cyan-400/30 dark:bg-cyan-500/10">
-                <Sparkles size={18} className="text-primary dark:text-cyan-200" />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+                <Sparkles size={18} className="text-primary" />
               </div>
 
               <div className="text-center" id="cabinet-onboarding-step1-target">
                 <h2 className="text-2xl font-semibold">{t('dashboard.trialTitle')}</h2>
-                <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">{t('dashboard.trialSubtitle')}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.trialSubtitle')}</p>
               </div>
 
               <div className="grid grid-cols-3 gap-3 text-center">
@@ -183,7 +183,7 @@ export default function DashboardPage() {
               <div className="connect-device-cta trial-activate-cta rounded-full" id="cabinet-onboarding-step2-target">
                 <div className="connect-device-cta-inner trial-activate-cta-inner p-[1px]">
                   <Button
-                    className="trial-activate-btn h-11 w-full rounded-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15 dark:border-cyan-300/20 dark:bg-cyan-500/10 dark:text-white dark:hover:bg-cyan-500/20"
+                    className="trial-activate-btn h-11 w-full rounded-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15"
                     onClick={() => activateTrial.mutate()}
                     disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
                   >
@@ -196,102 +196,15 @@ export default function DashboardPage() {
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Link
-            to="/tariffs"
-            className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
-              <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
-                <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                  <Zap size={16} className="shrink-0 text-primary" aria-hidden />
-                  <span className="truncate">{t('dashboard.tariffsCardTitle')}</span>
-                </p>
-                <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link
-            to="/referral"
-            className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
-              <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
-                <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                  <Users size={16} className="shrink-0 text-primary" aria-hidden />
-                  <span className="truncate">{t('dashboard.referralsCardTitle')}</span>
-                </p>
-                <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link
-            to="/promocodes"
-            className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
-              <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
-                <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                  <Ticket size={16} className="shrink-0 text-primary" aria-hidden />
-                  <span className="truncate">{t('dashboard.promocodesCardTitle')}</span>
-                </p>
-                <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link
-            to="/support#cabinet-info"
-            className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
-              <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
-                <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                  <FileText size={16} className="shrink-0 text-primary" aria-hidden />
-                  <span className="truncate">{t('dashboard.infoCardTitle')}</span>
-                </p>
-                <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
-              </CardContent>
-            </Card>
-          </Link>
-
+          <DashboardQuickLink to="/tariffs" icon={Zap} label={t('dashboard.tariffsCardTitle')} />
+          <DashboardQuickLink to="/referral" icon={Users} label={t('dashboard.referralsCardTitle')} />
+          <DashboardQuickLink to="/promocodes" icon={Ticket} label={t('dashboard.promocodesCardTitle')} />
+          <DashboardQuickLink to="/support#cabinet-info" icon={FileText} label={t('dashboard.infoCardTitle')} />
           {newsUrl && (
-            <a
-              href={newsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
-                <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
-                  <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                    <Newspaper size={16} className="shrink-0 text-primary" aria-hidden />
-                    <span className="truncate">{t('dashboard.newsCardTitle')}</span>
-                  </p>
-                  <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
-                </CardContent>
-              </Card>
-            </a>
+            <DashboardQuickLink href={newsUrl} icon={Newspaper} label={t('dashboard.newsCardTitle')} external />
           )}
-
           {feedbackUrl && (
-            <a
-              href={feedbackUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block rounded-xl outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Card className="bg-card/70 h-full transition-shadow group-active:scale-[0.99]">
-                <CardContent className="flex items-center justify-between gap-2 px-3 py-4 sm:px-4">
-                  <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                    <Star size={16} className="shrink-0 text-primary" aria-hidden />
-                    <span className="truncate">{t('dashboard.feedbackCardTitle')}</span>
-                  </p>
-                  <ChevronRight size={18} className="shrink-0 text-muted-foreground" aria-hidden />
-                </CardContent>
-              </Card>
-            </a>
+            <DashboardQuickLink href={feedbackUrl} icon={Star} label={t('dashboard.feedbackCardTitle')} external />
           )}
         </div>
       </div>
@@ -356,7 +269,52 @@ function TrialStat({ value, label }: { value: number; label: string }) {
   return (
     <div>
       <div className="text-3xl font-semibold leading-none">{value}</div>
-      <div className="mt-1 text-xs uppercase tracking-wide text-slate-300">{label}</div>
+      <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
+  )
+}
+
+function DashboardQuickLink({
+  to,
+  href,
+  icon: Icon,
+  label,
+  external,
+}: {
+  to?: string
+  href?: string
+  icon: LucideIcon
+  label: string
+  external?: boolean
+}) {
+  const className =
+    'group subscription-feature-card dashboard-quick-link flex h-full min-h-[3.25rem] items-center justify-between gap-2 px-3 py-4 sm:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+
+  const inner = (
+    <>
+      <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+        <Icon size={16} className="shrink-0 text-primary" aria-hidden />
+        <span className="truncate">{label}</span>
+      </p>
+      <ChevronRight
+        size={18}
+        className="shrink-0 text-muted-foreground"
+        aria-hidden
+      />
+    </>
+  )
+
+  if (external && href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {inner}
+      </a>
+    )
+  }
+
+  return (
+    <Link to={to ?? '/'} className={className}>
+      {inner}
+    </Link>
   )
 }

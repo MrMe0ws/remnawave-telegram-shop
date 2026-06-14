@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -38,19 +38,20 @@
   }
 
   .dark {
-    --connect-device-inner-bg: 215 55% 15%;
-    --connect-device-inner-bg-hover: 215 50% 18%;
-    --background: 225 48% 9%;
+    --connect-device-inner-bg: 218 32% 20%;
+    --connect-device-inner-bg-hover: 218 32% 23%;
+    /* Поверхности разведены по lightness: фон → muted → card → secondary → border */
+    --background: 226 50% 9%;
     --foreground: 210 40% 96%;
-    --card: 221 49% 13%;
+    --card: 220 38% 16%;
     --card-foreground: 210 40% 96%;
-    --border: 222 37% 20%;
-    --input: 222 37% 20%;
+    --border: 215 28% 26%;
+    --input: 215 28% 24%;
     --primary: 198 89% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 40% 16%;
+    --secondary: 218 32% 20%;
     --secondary-foreground: 210 40% 96%;
-    --muted: 222 40% 16%;
+    --muted: 222 28% 14%;
     --muted-foreground: 214 24% 63%;
     --accent: 198 89% 50%;
     --accent-foreground: 0 0% 100%;
@@ -60,6 +61,25 @@
     --tariffs-shine-color: 214 214 214;
     --tariffs-shine-shadow: 255 255 255;
     --radius: 1.25rem;
+    /* Многослойный фон кабинета: свечение сверху + угол + вертикальный blue-depth */
+    --cabinet-dark-bg-image:
+      radial-gradient(
+        ellipse 150% 92% at 50% -16%,
+        rgba(55, 78, 112, 0.3) 0%,
+        rgba(14, 169, 241, 0.075) 40%,
+        transparent 68%
+      ),
+      radial-gradient(
+        ellipse 70% 55% at 100% 100%,
+        rgba(36, 64, 108, 0.28) 0%,
+        transparent 58%
+      ),
+      linear-gradient(
+        168deg,
+        hsl(222 46% 12%) 0%,
+        hsl(var(--background)) 42%,
+        hsl(229 54% 7%) 100%
+      );
   }
 
   * {
@@ -95,19 +115,17 @@
     }
   }
 
-  h1, h2, h3, h4 {
-    font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Manrope", "Inter", system-ui, sans-serif;
     font-weight: 700;
   }
 
-  /* Тёмная тема: широкий эллипс сверху, приглушённое «midnight» свечение (ближе к референсу, без яркого неона). */
+  /* Тёмная тема: midnight-синеватый depth + cyan-свечение сверху. */
   .dark body {
-    background-image: radial-gradient(
-      ellipse 150% 95% at 50% -18%,
-      rgba(55, 78, 112, 0.26) 0%,
-      rgba(14, 169, 241, 0.055) 44%,
-      transparent 70%
-    );
+    background-image: var(--cabinet-dark-bg-image);
   }
 
   /* Слой под контентом кабинета (поверх сплошного bg у layout не кладём — иначе градиент не виден). */
@@ -125,12 +143,7 @@
   }
 
   .dark .cabinet-shell-gradient {
-    background-image: radial-gradient(
-      ellipse 150% 95% at 50% -18%,
-      rgba(55, 78, 112, 0.26) 0%,
-      rgba(14, 169, 241, 0.055) 44%,
-      transparent 70%
-    );
+    background-image: var(--cabinet-dark-bg-image);
   }
 
   /* Smooth scrollbar in dark mode */
@@ -142,6 +155,244 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply bg-border rounded-full;
+  }
+
+  /* Native date/time pickers follow light/dark theme (calendar icon in datetime-local). */
+  .admin-input[type="datetime-local"],
+  .admin-input[type="date"],
+  .admin-input[type="time"] {
+    color-scheme: light;
+  }
+
+  .dark .admin-input[type="datetime-local"],
+  .dark .admin-input[type="date"],
+  .dark .admin-input[type="time"] {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  /* Elevated card surface — user cabinet + admin (shared dark-theme tokens). */
+  .cabinet-elevated-card,
+  .subscription-feature-card {
+    overflow: hidden;
+    border-radius: var(--radius);
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .dark .cabinet-elevated-card,
+  .dark .subscription-feature-card {
+    border-color: hsl(var(--primary) / 0.22) !important;
+    background-color: hsl(var(--card));
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--secondary) / 0.55) 100%
+    ) !important;
+    box-shadow:
+      0 12px 30px rgba(3, 10, 24, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* Admin modals — та же поверхность, чуть сильнее отделение от overlay. */
+  .admin-modal-panel {
+    border-color: hsl(var(--border));
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  @media (min-width: 640px) {
+    .admin-modal-panel {
+      border-bottom-left-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+    }
+  }
+
+  .dark .admin-modal-panel {
+    border-color: hsl(var(--primary) / 0.28) !important;
+    box-shadow:
+      0 20px 48px rgba(0, 0, 0, 0.55),
+      0 12px 30px rgba(3, 10, 24, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  }
+
+  /* Admin form fields — в тёмной теме не bg-background (темнее модалки), а --input. */
+  .admin-input {
+    @apply rounded-lg border border-input bg-background text-sm text-foreground transition-colors;
+    @apply placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .dark .admin-input {
+    background-color: hsl(var(--input));
+    border-color: hsl(var(--border));
+    color-scheme: dark;
+  }
+
+  .dark .admin-input:focus-visible {
+    border-color: hsl(var(--primary) / 0.45);
+  }
+
+  /* Поля форм в админке: модалки + страницы (не bg-background — он темнее карточек). */
+  .dark .admin-modal-panel input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="hidden"]),
+  .dark .admin-modal-panel select,
+  .dark .admin-modal-panel textarea,
+  .dark .admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="hidden"]),
+  .dark .admin-shell select,
+  .dark .admin-shell textarea {
+    background-color: hsl(var(--input));
+    border-color: hsl(var(--border));
+    color-scheme: dark;
+  }
+
+  .dark .admin-modal-panel input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+  .dark .admin-modal-panel select:focus-visible,
+  .dark .admin-modal-panel textarea:focus-visible,
+  .dark .admin-shell input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+  .dark .admin-shell select:focus-visible,
+  .dark .admin-shell textarea:focus-visible {
+    border-color: hsl(var(--primary) / 0.45);
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.14);
+  }
+
+  /* Quick-link сетка на главной — заметный hover: primary-border + чуть светлее поверхность. */
+  .dashboard-quick-link {
+    @apply transition-[border-color,box-shadow,filter,background-color];
+  }
+
+  .dashboard-quick-link:hover,
+  .dashboard-quick-link:focus-visible {
+    @apply border-primary/35 brightness-[1.01];
+    box-shadow: 0 10px 28px -12px hsl(var(--foreground) / 0.12);
+  }
+
+  .dark .dashboard-quick-link:hover,
+  .dark .dashboard-quick-link:focus-visible {
+    border-color: hsl(var(--primary) / 0.4) !important;
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--secondary) / 0.85) 0%,
+      hsl(var(--primary) / 0.12) 100%
+    ) !important;
+    filter: brightness(1.03);
+    box-shadow:
+      0 12px 30px rgba(3, 10, 24, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  }
+
+  /* Admin dashboard quick-link cards: scale + gradient ring on hover/focus. */
+  .admin-dash-link {
+    display: block;
+    border-radius: var(--radius);
+    outline: none;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .admin-dash-link:hover,
+    .admin-dash-link:focus-visible {
+      transform: scale(1.02);
+    }
+  }
+
+  .admin-dash-link:focus-visible {
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(var(--primary) / 0.45);
+  }
+
+  .admin-dash-card-frame {
+    position: relative;
+    border-radius: var(--radius);
+    isolation: isolate;
+    transition: box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Gradient ring via mask — без артефактов на углах (padding-trick). */
+  .admin-dash-card-frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(
+      135deg,
+      rgb(var(--dash-accent-from) / var(--dash-ring-from, 0.55)) 0%,
+      rgb(var(--dash-accent-to) / var(--dash-ring-to, 0.35)) 50%,
+      rgb(var(--dash-accent-from) / var(--dash-ring-from, 0.55)) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .admin-dash-link:hover .admin-dash-card-frame::before,
+  .admin-dash-link:focus-visible .admin-dash-card-frame::before {
+    opacity: 1;
+  }
+
+  html:not(.dark) .admin-dash-card-frame {
+    --dash-ring-from: 0.5;
+    --dash-ring-to: 0.32;
+  }
+
+  .dark .admin-dash-card-frame {
+    --dash-ring-from: 0.82;
+    --dash-ring-to: 0.48;
+  }
+
+  html:not(.dark) .admin-dash-link:hover .admin-dash-card-frame,
+  html:not(.dark) .admin-dash-link:focus-visible .admin-dash-card-frame {
+    box-shadow:
+      0 2px 6px -2px rgb(var(--dash-accent-glow) / 0.1),
+      0 10px 22px -8px rgb(var(--dash-accent-glow) / 0.16);
+  }
+
+  .dark .admin-dash-link:hover .admin-dash-card-frame,
+  .dark .admin-dash-link:focus-visible .admin-dash-card-frame {
+    box-shadow:
+      0 2px 8px -2px rgb(var(--dash-accent-glow) / 0.14),
+      0 14px 32px -10px rgb(var(--dash-accent-glow) / 0.3);
+  }
+
+  .admin-dash-card-inner {
+    position: relative;
+    z-index: 1;
+    border-radius: var(--radius);
+    border: 1px solid hsl(var(--border) / 0.55);
+    background-color: hsl(var(--card));
+    transition:
+      border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .admin-dash-link:hover .admin-dash-card-inner,
+  .admin-dash-link:focus-visible .admin-dash-card-inner {
+    border-color: transparent;
+  }
+
+  html:not(.dark) .admin-dash-link:hover .admin-dash-card-inner,
+  html:not(.dark) .admin-dash-link:focus-visible .admin-dash-card-inner {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.65);
+  }
+
+  .dark .admin-dash-link:hover .admin-dash-card-inner,
+  .dark .admin-dash-link:focus-visible .admin-dash-card-inner {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
   }
 }
 
@@ -160,8 +411,9 @@
   .connect-device-cta {
     position: relative;
     display: block;
-    border-radius: 0.75rem;
+    border-radius: var(--radius);
     overflow: hidden;
+    isolation: isolate;
     padding: 2px;
     background: conic-gradient(
       from var(--connect-border-angle),
@@ -174,24 +426,37 @@
     );
     animation: connect-border-spin 4s linear infinite;
     box-shadow: 0 0 20px rgba(14, 169, 241, 0.12);
+    transition: box-shadow 0.2s ease;
   }
 
+  .connect-device-cta:hover,
+  .connect-device-cta:focus-visible {
+    transform: none;
+  }
+
+  /* Inner непрозрачный и на всю ширину — иначе conic «просвечивает» (см. renew-subscription-cta-danger-inner). */
   .connect-device-cta-inner {
-    border-radius: calc(0.75rem - 2px);
-    background: hsl(var(--connect-device-inner-bg));
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 100%;
+    border-radius: calc(var(--radius) - 2px);
+    background-color: hsl(var(--connect-device-inner-bg));
   }
 
   .connect-device-cta:hover .connect-device-cta-inner {
-    background: hsl(var(--connect-device-inner-bg-hover));
+    background-color: hsl(var(--connect-device-inner-bg-hover));
   }
 
   /* Светлая тема: только блок «Привязанные аккаунты» с анимацией — белый фон (не трогаем «Подключить устройство»). */
   html:not(.dark) .connect-device-cta-inner.profile-linked-accounts-inner {
-    background: hsl(0 0% 100%);
+    background-color: hsl(0 0% 100%);
   }
 
-  html:not(.dark) .connect-device-cta:hover .connect-device-cta-inner.profile-linked-accounts-inner {
-    background: hsl(0 0% 100%);
+  html:not(.dark)
+    .connect-device-cta:hover
+    .connect-device-cta-inner.profile-linked-accounts-inner {
+    background-color: hsl(0 0% 100%);
   }
 
   /* Светлая тема: кнопка «Активировать бесплатно» с белой заливкой. */
@@ -218,7 +483,8 @@
   .renew-subscription-cta-danger {
     position: relative;
     display: block;
-    border-radius: 0.75rem;
+    border-radius: var(--radius);
+    overflow: hidden;
     padding: 2px;
     background: conic-gradient(
       from var(--connect-border-angle),
@@ -231,34 +497,73 @@
     );
     animation: connect-border-spin 4s linear infinite;
     box-shadow: 0 0 20px rgba(239, 68, 68, 0.14);
+    transition: box-shadow 0.2s ease;
+  }
+
+  .renew-subscription-cta-danger:hover,
+  .renew-subscription-cta-danger:focus-visible,
+  .renew-subscription-cta-static:hover,
+  .renew-subscription-cta-static:focus-visible {
+    transform: none;
   }
 
   .renew-subscription-cta-danger-inner {
-    border-radius: 0.625rem;
-    background: #291619;
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 100%;
+    border-radius: calc(var(--radius) - 2px);
+    background-color: hsl(var(--card));
   }
 
   .renew-subscription-cta-danger:hover .renew-subscription-cta-danger-inner {
-    background: rgb(68 21 33);
+    background-color: hsl(var(--secondary));
   }
 
-  /* Светлая тема: «Продлить подписку» — белый фон внутри рамки (тёмная тема без изменений). */
+  /* Inner должен быть непрозрачным — иначе conic «просвечивает» клином (эффект сирены). */
+  .dark .renew-subscription-cta-danger-inner {
+    background-color: hsl(var(--card));
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--card)) 0%,
+      color-mix(in srgb, hsl(var(--card)) 88%, hsl(var(--destructive)) 12%) 100%
+    );
+  }
+
+  .dark
+    .renew-subscription-cta-danger:hover
+    .renew-subscription-cta-danger-inner {
+    background-color: hsl(var(--secondary));
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--secondary)) 0%,
+      color-mix(in srgb, hsl(var(--secondary)) 84%, hsl(var(--destructive)) 16%) 100%
+    );
+  }
+
+  /* Светлая тема: «Продлить подписку» — белый фон внутри рамки (тёмная тема — токены выше). */
   html:not(.dark) .renew-subscription-cta-danger-inner {
     background: hsl(0 0% 100%);
   }
 
-  html:not(.dark) .renew-subscription-cta-danger:hover .renew-subscription-cta-danger-inner {
+  html:not(.dark)
+    .renew-subscription-cta-danger:hover
+    .renew-subscription-cta-danger-inner {
     background: hsl(210 40% 97%);
   }
 
   /* «Продлить подписку» без анимации контура (4–7 дней до окончания). */
   .renew-subscription-cta-static {
     display: block;
-    border-radius: 0.75rem;
+    border-radius: var(--radius);
     border: 1px solid hsl(var(--border));
     background: hsl(var(--card));
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .renew-subscription-cta-static:hover {
@@ -268,11 +573,14 @@
 
   html.dark .renew-subscription-cta-static {
     border-color: hsl(var(--primary) / 0.25);
-    background: linear-gradient(to bottom right, #0e1529, #0b1324, #0a1222);
+    background: hsl(var(--secondary) / 0.65);
+    box-shadow:
+      0 12px 30px rgba(3, 10, 24, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   html.dark .renew-subscription-cta-static:hover {
-    background: linear-gradient(to bottom right, #111b33, #0d1528, #0b1324);
+    background: hsl(var(--secondary));
     border-color: hsl(var(--primary) / 0.4);
   }
 
@@ -285,6 +593,38 @@
   /** Как hover карточек тарифов (TariffsPage — tariffOtherCardHoverClassName). */
   .profile-tariff-hover {
     @apply transition-[border-color,box-shadow,filter] hover:border-primary/35 hover:shadow-[0_10px_28px_-12px_hsl(var(--foreground)/0.12)] hover:brightness-[1.01] dark:hover:shadow-[0_12px_32px_-10px_hsl(var(--primary)/0.22)];
+  }
+
+  /*
+   * Кликабельные feature-card (лояльность, промокоды): hover как renew-subscription-cta-static.
+   * Базовые .dark .subscription-feature-card ставят border/shadow с !important — без
+   * переопределения hover в тёмной теме почти не виден.
+   */
+  .subscription-feature-card.profile-tariff-hover {
+    @apply transition-[border-color,box-shadow,filter,background-color,background-image];
+  }
+
+  .subscription-feature-card.profile-tariff-hover:hover,
+  .subscription-feature-card.profile-tariff-hover:focus-visible {
+    border-color: hsl(var(--primary) / 0.35);
+    background-color: hsl(var(--accent) / 0.1);
+    box-shadow: 0 10px 28px -12px hsl(var(--foreground) / 0.12);
+    filter: brightness(1.01);
+  }
+
+  .dark .subscription-feature-card.profile-tariff-hover:hover,
+  .dark .subscription-feature-card.profile-tariff-hover:focus-visible {
+    border-color: hsl(var(--primary) / 0.4) !important;
+    background-color: hsl(var(--secondary)) !important;
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--secondary) / 0.85) 0%,
+      hsl(var(--primary) / 0.12) 100%
+    ) !important;
+    filter: brightness(1.03);
+    box-shadow:
+      0 12px 30px rgba(3, 10, 24, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
   }
 }
 
@@ -364,7 +704,11 @@
 }
 
 .fortune-win-vignette {
-  background: radial-gradient(circle at 50% 42%, transparent 32%, rgba(0, 0, 0, 0.52) 100%);
+  background: radial-gradient(
+    circle at 50% 42%,
+    transparent 32%,
+    rgba(0, 0, 0, 0.52) 100%
+  );
   animation: fortune-win-vignette-kf 1.35s ease-out forwards;
 }
 
@@ -392,7 +736,8 @@
     transparent 62%
   );
   mix-blend-mode: overlay;
-  animation: fortune-win-spotlight-kf 1.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fortune-win-spotlight-kf 1.32s cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
 }
 
 .dark .fortune-win-spotlight {
@@ -407,14 +752,23 @@
 }
 
 .fortune-win-spotlight-delayed {
-  background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.45) 0%, transparent 42%);
+  background: radial-gradient(
+    circle at 50% 12%,
+    rgba(255, 255, 255, 0.45) 0%,
+    transparent 42%
+  );
   mix-blend-mode: soft-light;
-  animation: fortune-win-spotlight-kf 1.25s cubic-bezier(0.22, 1, 0.36, 1) 0.08s forwards;
+  animation: fortune-win-spotlight-kf 1.25s cubic-bezier(0.22, 1, 0.36, 1) 0.08s
+    forwards;
   opacity: 0;
 }
 
 .dark .fortune-win-spotlight-delayed {
-  background: radial-gradient(circle at 50% 12%, rgba(147, 197, 253, 0.5) 0%, transparent 45%);
+  background: radial-gradient(
+    circle at 50% 12%,
+    rgba(147, 197, 253, 0.5) 0%,
+    transparent 45%
+  );
   mix-blend-mode: screen;
 }
 
@@ -435,7 +789,8 @@
 
 .fortune-win-rays {
   transform-origin: 50% 6%;
-  animation: fortune-win-rays-kf 1.15s cubic-bezier(0.18, 0.92, 0.32, 1) forwards;
+  animation: fortune-win-rays-kf 1.15s cubic-bezier(0.18, 0.92, 0.32, 1)
+    forwards;
 }
 
 @keyframes fortune-win-rim-kf {
@@ -499,7 +854,8 @@
     transparent 58%
   );
   mix-blend-mode: screen;
-  animation: fortune-win-explosion-kf 1.35s cubic-bezier(0.18, 0.92, 0.28, 1) forwards;
+  animation: fortune-win-explosion-kf 1.35s cubic-bezier(0.18, 0.92, 0.28, 1)
+    forwards;
 }
 
 .dark .fortune-win-explosion {
@@ -521,17 +877,23 @@
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.25);
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy))
+      rotate(var(--rot)) scale(0.25);
   }
 }
 
 .fortune-confetti-bit {
-  animation: fortune-confetti-fly 1.4s cubic-bezier(0.16, 0.88, 0.32, 1) forwards;
+  animation: fortune-confetti-fly 1.4s cubic-bezier(0.16, 0.88, 0.32, 1)
+    forwards;
 }
 
 /* Победа: стиль под вариант колеса */
 .fortune-celebration--porcelain .fortune-win-vignette {
-  background: radial-gradient(circle at 50% 42%, transparent 38%, rgba(0, 0, 0, 0.28) 100%);
+  background: radial-gradient(
+    circle at 50% 42%,
+    transparent 38%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
 }
 
 .fortune-celebration--porcelain .fortune-win-explosion {
@@ -580,7 +942,11 @@
 }
 
 .fortune-celebration--ledger .fortune-win-vignette {
-  background: radial-gradient(circle at 50% 44%, transparent 36%, rgba(62, 39, 18, 0.35) 100%);
+  background: radial-gradient(
+    circle at 50% 44%,
+    transparent 36%,
+    rgba(62, 39, 18, 0.35) 100%
+  );
 }
 
 .fortune-celebration--ledger .fortune-win-spotlight {
@@ -638,11 +1004,19 @@
   .connect-device-cta,
   .renew-subscription-cta-danger {
     animation: none;
-    background: linear-gradient(135deg, rgba(14, 169, 241, 0.35), rgba(14, 169, 241, 0.08));
+    background: linear-gradient(
+      135deg,
+      rgba(14, 169, 241, 0.35),
+      rgba(14, 169, 241, 0.08)
+    );
     box-shadow: none;
   }
 
   .renew-subscription-cta-danger {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(239, 68, 68, 0.08));
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.35),
+      rgba(239, 68, 68, 0.08)
+    );
   }
 }

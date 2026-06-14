@@ -1,0 +1,311 @@
+package handlers
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"remnawave-tg-shop-bot/internal/database"
+)
+
+func extractPromoID(path string) (int64, bool) {
+	s := strings.TrimPrefix(path, "/cabinet/api/admin/promos/")
+	s = strings.TrimRight(s, "/")
+	id, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return id, true
+}
+
+type AdminPromosHandler struct {
+	promos *database.PromoRepository
+}
+
+func NewAdminPromos(promos *database.PromoRepository) *AdminPromosHandler {
+	return &AdminPromosHandler{promos: promos}
+}
+
+type promoDTO struct {
+	ID                                         int64      `json:"id"`
+	Code                                       string     `json:"code"`
+	Type                                       string     `json:"type"`
+	SubscriptionDays                           *int       `json:"subscription_days"`
+	TrialDays                                  *int       `json:"trial_days"`
+	ExtraHwidDelta                             *int       `json:"extra_hwid_delta"`
+	DiscountPercent                            *int       `json:"discount_percent"`
+	DiscountTTLHours                           *int       `json:"discount_ttl_hours"`
+	MaxUses                                    *int       `json:"max_uses"`
+	UsesCount                                  int        `json:"uses_count"`
+	ValidUntil                                 *time.Time `json:"valid_until"`
+	Active                                     bool       `json:"active"`
+	FirstPurchaseOnly                          bool       `json:"first_purchase_only"`
+	RequireCustomerInDB                        bool       `json:"require_customer_in_db"`
+	AllowTrialWithoutPayment                   bool       `json:"allow_trial_without_payment"`
+	CreatedAt                                  time.Time  `json:"created_at"`
+	DiscountMaxSubscriptionPaymentsPerCustomer int        `json:"discount_max_subscription_payments_per_customer"`
+	TariffID                                   *int64     `json:"tariff_id"`
+}
+
+func promoToDTO(p *database.PromoCode) promoDTO {
+	return promoDTO{
+		ID: p.ID, Code: p.Code, Type: p.Type,
+		SubscriptionDays: p.SubscriptionDays, TrialDays: p.TrialDays,
+		ExtraHwidDelta: p.ExtraHwidDelta, DiscountPercent: p.DiscountPercent,
+		DiscountTTLHours: p.DiscountTTLHours, MaxUses: p.MaxUses,
+		UsesCount: p.UsesCount, ValidUntil: p.ValidUntil,
+		Active: p.Active, FirstPurchaseOnly: p.FirstPurchaseOnly,
+		RequireCustomerInDB: p.RequireCustomerInDB, AllowTrialWithoutPayment: p.AllowTrialWithoutPayment,
+		CreatedAt: p.CreatedAt, TariffID: p.TariffID,
+		DiscountMaxSubscriptionPaymentsPerCustomer: p.DiscountMaxSubscriptionPaymentsPerCustomer,
+	}
+}
+
+type promoListResp struct {
+	Items []promoDTO `json:"items"`
+	Total int        `json:"total"`
+	Page  int        `json:"page"`
+	Limit int        `json:"limit"`
+}
+
+// List — GET /cabinet/api/admin/promos
+func (h *AdminPromosHandler) List(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	items, total, err := h.promos.List(r.Context(), offset, limit)
+	if err != nil {
+		slog.Error("admin promos list", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	dtos := make([]promoDTO, 0, len(items))
+	for i := range items {
+		dtos = append(dtos, promoToDTO(&items[i]))
+	}
+	writeJSON(w, http.StatusOK, promoListResp{
+		Items: dtos,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
+}
+
+type createPromoReq struct {
+	Code                                       string     `json:"code"`
+	Type                                       string     `json:"type"`
+	SubscriptionDays                           *int       `json:"subscription_days"`
+	TrialDays                                  *int       `json:"trial_days"`
+	ExtraHwidDelta                             *int       `json:"extra_hwid_delta"`
+	DiscountPercent                            *int       `json:"discount_percent"`
+	DiscountTTLHours                           *int       `json:"discount_ttl_hours"`
+	MaxUses                                    *int       `json:"max_uses"`
+	ValidUntil                                 *time.Time `json:"valid_until"`
+	FirstPurchaseOnly                          bool       `json:"first_purchase_only"`
+	TariffID                                   *int64     `json:"tariff_id"`
+	DiscountMaxSubscriptionPaymentsPerCustomer int        `json:"discount_max_subscription_payments_per_customer"`
+}
+
+// Create — POST /cabinet/api/admin/promos
+func (h *AdminPromosHandler) Create(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req createPromoReq
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if strings.TrimSpace(req.Code) == "" || strings.TrimSpace(req.Type) == "" {
+		http.Error(w, "code and type are required", http.StatusBadRequest)
+		return
+	}
+
+	p := database.PromoCode{
+		Code:                     strings.ToUpper(strings.TrimSpace(req.Code)),
+		Type:                     req.Type,
+		SubscriptionDays:         req.SubscriptionDays,
+		TrialDays:                req.TrialDays,
+		ExtraHwidDelta:           req.ExtraHwidDelta,
+		DiscountPercent:          req.DiscountPercent,
+		DiscountTTLHours:         req.DiscountTTLHours,
+		MaxUses:                  req.MaxUses,
+		ValidUntil:               req.ValidUntil,
+		Active:                   true,
+		FirstPurchaseOnly:        req.FirstPurchaseOnly,
+		AllowTrialWithoutPayment: true,
+		TariffID:                 req.TariffID,
+		DiscountMaxSubscriptionPaymentsPerCustomer: req.DiscountMaxSubscriptionPaymentsPerCustomer,
+	}
+
+	id, err := h.promos.Create(r.Context(), &p)
+	if err != nil {
+		slog.Error("admin promos create", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	p.ID = id
+	writeJSON(w, http.StatusCreated, promoToDTO(&p))
+}
+
+type promoGetResp struct {
+	Promo            promoDTO `json:"promo"`
+	Redemptions      int      `json:"redemptions"`
+	RedemptionsToday int      `json:"redemptions_today"`
+}
+
+// Get — GET /cabinet/api/admin/promos/{id}
+func (h *AdminPromosHandler) Get(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, ok := extractPromoID(r.URL.Path)
+	if !ok {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	p, err := h.promos.FindByID(r.Context(), id)
+	if err != nil {
+		slog.Error("admin promos get", "error", err.Error())
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	redemptions, _ := h.promos.CountRedemptions(r.Context(), id)
+	redemptionsToday, _ := h.promos.CountRedemptionsToday(r.Context(), id)
+
+	writeJSON(w, http.StatusOK, promoGetResp{
+		Promo:            promoToDTO(p),
+		Redemptions:      redemptions,
+		RedemptionsToday: redemptionsToday,
+	})
+}
+
+// Update — PATCH /cabinet/api/admin/promos/{id}
+func (h *AdminPromosHandler) Update(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, ok := extractPromoID(r.URL.Path)
+	if !ok {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	existing, err := h.promos.FindByID(r.Context(), id)
+	if err != nil || existing == nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	var raw map[string]json.RawMessage
+	if !decodeJSON(w, r, &raw) {
+		return
+	}
+
+	allowed := map[string]bool{
+		"active": true, "max_uses": true, "valid_until": true,
+		"first_purchase_only": true, "subscription_days": true, "trial_days": true,
+		"extra_hwid_delta": true, "discount_percent": true, "discount_ttl_hours": true,
+		"discount_max_subscription_payments_per_customer": true, "tariff_id": true,
+	}
+
+	fields, err := parsePromoPatchFields(raw, allowed)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(fields) == 0 {
+		http.Error(w, "no valid fields", http.StatusBadRequest)
+		return
+	}
+
+	if err := validatePromoUpdateFields(existing.Type, fields); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.promos.UpdateFields(r.Context(), id, fields); err != nil {
+		slog.Error("admin promos update", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	p, err := h.promos.FindByID(r.Context(), id)
+	if err != nil {
+		slog.Error("admin promos get after update", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, promoToDTO(p))
+}
+
+// Delete — DELETE /cabinet/api/admin/promos/{id}
+func (h *AdminPromosHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, ok := extractPromoID(r.URL.Path)
+	if !ok {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.promos.Delete(r.Context(), id); err != nil {
+		slog.Error("admin promos delete", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// Handle dispatches /cabinet/api/admin/promos (no trailing path).
+func (h *AdminPromosHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.List(w, r)
+	case http.MethodPost:
+		h.Create(w, r)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleByID dispatches /cabinet/api/admin/promos/{id}.
+func (h *AdminPromosHandler) HandleByID(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.Get(w, r)
+	case http.MethodPatch:
+		h.Update(w, r)
+	case http.MethodDelete:
+		h.Delete(w, r)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

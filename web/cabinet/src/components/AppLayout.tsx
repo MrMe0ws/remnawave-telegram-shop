@@ -13,6 +13,7 @@ import {
   Users,
   Gift,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react'
 
 import { Logo } from './Logo'
@@ -37,7 +38,7 @@ type NavItem = {
   activePrefixes?: string[]
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { to: '/dashboard', icon: Home, labelKey: 'nav.dashboard' },
   { to: '/subscription', icon: Sparkles, labelKey: 'nav.subscription', activePrefixes: ['/connections'] },
   { to: '/tariffs', icon: Zap, labelKey: 'nav.tariffs' },
@@ -109,6 +110,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
     return overflowNavMainItems
   }, [bootstrap?.fortune_nav_visible])
+  const user = useAuthStore((s) => s.user)
+  const navItems = useMemo(() => {
+    if (user?.is_admin) {
+      return [
+        ...baseNavItems,
+        { to: '/admin', icon: ShieldCheck, labelKey: 'admin.dashboard.title' as const, activePrefixes: [] as string[] },
+      ]
+    }
+    return baseNavItems
+  }, [user?.is_admin])
   const logout = useAuthStore((s) => s.logout)
   const supportChatEnabled = Boolean(bootstrap?.support_chat_enabled)
   const { data: supportSummary } = useSupportSummary(supportChatEnabled, 60_000)
@@ -244,7 +255,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="cabinet-shell-gradient" aria-hidden />
       <header
         className={cn(
-          'sticky top-0 z-50 isolate shrink-0 border-b border-border bg-card/60 backdrop-blur-sm shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-transform duration-300 will-change-transform',
+          'sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 will-change-transform',
           !mobileChromeVisible && !menuOpen && 'max-sm:-translate-y-full',
         )}
       >
@@ -382,6 +393,29 @@ export function AppLayout({ children }: AppLayoutProps) {
                       </Link>
                     )
                   })()}
+                  {user?.is_admin ? (
+                    <>
+                      <div className="my-1 border-t border-border/70" />
+                      <Link
+                        to="/admin"
+                        role="menuitem"
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-muted dark:text-slate-300',
+                          overflowActive(location.pathname, '/admin') && cn('bg-secondary', navAccentActiveClass),
+                        )}
+                      >
+                        <ShieldCheck
+                          className={cn(
+                            'size-4 shrink-0',
+                            !overflowActive(location.pathname, '/admin') && 'text-muted-foreground',
+                            overflowActive(location.pathname, '/admin') && navAccentActiveClass,
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        {t('admin.dashboard.title')}
+                      </Link>
+                    </>
+                  ) : null}
                   <button
                     type="button"
                     role="menuitem"
@@ -456,6 +490,29 @@ export function AppLayout({ children }: AppLayoutProps) {
                   </Link>
                 )
               })()}
+              {user?.is_admin ? (
+                <>
+                  <div className="my-1 mx-4 border-t border-border/70" />
+                  <Link
+                    to="/admin"
+                    role="menuitem"
+                    className={cn(
+                      'flex items-center gap-3 pl-8 pr-4 py-3 text-base text-slate-700 hover:bg-muted dark:text-slate-300',
+                      overflowActive(location.pathname, '/admin') && cn('bg-secondary', navAccentActiveClass),
+                    )}
+                  >
+                    <ShieldCheck
+                      className={cn(
+                        'size-5 shrink-0',
+                        !overflowActive(location.pathname, '/admin') && 'text-muted-foreground',
+                        overflowActive(location.pathname, '/admin') && navAccentActiveClass,
+                      )}
+                      strokeWidth={1.75}
+                    />
+                    {t('admin.dashboard.title')}
+                  </Link>
+                </>
+              ) : null}
               <button
                 type="button"
                 role="menuitem"

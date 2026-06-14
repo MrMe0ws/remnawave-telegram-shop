@@ -3,12 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Cloud, Smartphone, Zap, type LucideIcon } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize from 'rehype-sanitize'
-
 import { AppLayout } from '@/components/AppLayout'
+import { TariffDescription } from '@/components/TariffDescription'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -725,27 +721,6 @@ function FeatureLine({
       <Icon size={14} className="text-primary shrink-0" strokeWidth={2} />
       {children}
     </li>
-  )
-}
-
-function decodeHtmlEntities(input: string): string {
-  if (typeof document === 'undefined') return input
-  const el = document.createElement('textarea')
-  el.innerHTML = input
-  return el.value
-}
-
-function TariffDescription({ text, className }: { text: string; className?: string }) {
-  const decoded = decodeHtmlEntities(String(text))
-  return (
-    <div className={cn(
-      '[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:whitespace-pre-line [&_blockquote]:break-words [&_li]:ml-4 [&_li]:list-disc [&_p]:mb-1 [&_p]:whitespace-pre-line [&_li]:whitespace-pre-line',
-      className,
-    )}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
-        {decoded}
-      </ReactMarkdown>
-    </div>
   )
 }
 

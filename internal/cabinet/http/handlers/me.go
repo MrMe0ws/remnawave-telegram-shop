@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	adminauth "remnawave-tg-shop-bot/internal/cabinet/admin/auth"
 	googleoauth "remnawave-tg-shop-bot/internal/cabinet/auth/oauth"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/service"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
@@ -34,6 +35,7 @@ type MeHandler struct {
 	payments            *payment.PaymentService
 	purchases           *database.PurchaseRepository
 	rw                  *remnawave.Client
+	adminChecker        *adminauth.Checker
 	cookieDomain        string
 	telegramWidgetBot   string // username без @ для Login Widget; "" — виджет недоступен
 	googleOAuthEnabled  bool
@@ -54,6 +56,7 @@ func NewMe(
 	purchases *database.PurchaseRepository,
 	rw *remnawave.Client,
 	customers *database.CustomerRepository,
+	adminChecker *adminauth.Checker,
 	cookieDomain string,
 	telegramWidgetBot string,
 	googleOAuthEnabled bool,
@@ -63,7 +66,7 @@ func NewMe(
 ) *MeHandler {
 	return &MeHandler{
 		svc: svc, accounts: accounts, ids: ids, links: links, bootstrap: boot, payments: payments, purchases: purchases, rw: rw,
-		customers: customers, cookieDomain: cookieDomain, telegramWidgetBot: telegramWidgetBot,
+		customers: customers, adminChecker: adminChecker, cookieDomain: cookieDomain, telegramWidgetBot: telegramWidgetBot,
 		googleOAuthEnabled: googleOAuthEnabled, yandexOAuthEnabled: yandexOAuthEnabled, vkOAuthEnabled: vkOAuthEnabled, telegramOIDCEnabled: telegramOIDCEnabled,
 	}
 }
@@ -119,6 +122,8 @@ type meResp struct {
 	GoogleMaskedEmail  *string `json:"google_masked_email,omitempty"`
 	YandexMaskedEmail  *string `json:"yandex_masked_email,omitempty"`
 	VKMaskedEmail      *string `json:"vk_masked_email,omitempty"`
+	// IsAdmin — true, если linked Telegram identity == ADMIN_TELEGRAM_ID.
+	IsAdmin bool `json:"is_admin"`
 }
 
 // Me — GET /cabinet/api/me.
@@ -246,6 +251,8 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	isAdmin := middleware.ResolveIsAdmin(r.Context(), h.adminChecker, claims)
+
 	resp := meResp{
 		ID:                       acc.ID,
 		Email:                    acc.Email,
@@ -266,6 +273,7 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 		GoogleMaskedEmail:        googleMasked,
 		YandexMaskedEmail:        yandexMasked,
 		VKMaskedEmail:            vkMasked,
+		IsAdmin:                  isAdmin,
 	}
 	if h.telegramWidgetBot != "" {
 		resp.TelegramWidgetBot = h.telegramWidgetBot

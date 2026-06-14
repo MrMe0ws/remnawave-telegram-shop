@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.11.0] - 2026-06-15
+
+### Added
+
+- **Web-админка кабинета** (`/cabinet/admin/*`, `CABINET_ENABLED=true`, `ADMIN_TELEGRAM_ID`): статистика (в т.ч. колесо фортуны), пользователи и панель Remnawave, промокоды, тарифы, лояльность, **рассылка** (audiences, preview, send через Telegram), infra billing, sync.
+- **Admin API** `/cabinet/api/admin/*`: `RequireAuth` + `RequireAdmin`, CSRF на мутациях, rate-limit 120 req/min/аккаунт; feature flags — `GET /admin/bootstrap`.
+- **Admin SPA**: `AdminChrome` (отдельный header без user nav), sidebar, breadcrumbs, typed `types/admin.ts`, i18n `admin.*` (ru/en).
+
+### Changed
+
+- **Тёмная тема кабинета**: разведение поверхностей (background → card → header), многослойный фон, elevated cards (`.cabinet-elevated-card`), улучшенный sticky header с blur и cyan-accent border.
+- **User cabinet pages**: единые elevated-card поверхности на dashboard, subscription, tariffs, loyalty, profile.
+
+### Technical
+
+- Handlers `internal/cabinet/http/handlers/admin_*.go`, middleware `admin.go`, auth `internal/cabinet/admin/auth/`.
+- **Shared broadcast layer** — `internal/broadcast/` (Sender, markup, links); TG-админка и web-админка используют одну логику доставки.
+- HTTP-тесты admin middleware и handlers; deep merge i18n для admin keys.
+
 ## [4.4.0] - 2026-04-20
 
 ### Added

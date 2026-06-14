@@ -88,23 +88,23 @@ export default function LoyaltyProgramPage() {
                 </p>
               )}
 
-            <Card className="overflow-hidden border border-border bg-card text-card-foreground dark:border-primary/20 dark:bg-gradient-to-br dark:from-[#0E1A33] dark:via-[#0D1324] dark:to-[#0A1222] dark:text-white">
+            <Card className="subscription-feature-card">
               <CardContent className="space-y-5 px-6 py-7">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 dark:border-teal-400/30 dark:bg-teal-500/15">
-                    <Gem size={20} className="text-primary dark:text-teal-200" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+                    <Gem size={20} className="text-primary" />
                   </div>
                   <div>
                     <p className="text-lg font-semibold leading-tight">
                       {t('loyaltyPage.heroTitle', { level: levelLabel })}
                     </p>
-                    <p className="text-xs text-muted-foreground dark:text-slate-400">{t('loyaltyPage.heroXp', { xp: data.xp.toLocaleString('ru-RU') })}</p>
+                    <p className="text-xs text-muted-foreground">{t('loyaltyPage.heroXp', { xp: data.xp.toLocaleString('ru-RU') })}</p>
                   </div>
                 </div>
 
                 {data.next != null && data.xp_segment_span > 0 ? (
                   <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-muted-foreground dark:text-slate-400">
+                    <div className="flex justify-between text-xs text-muted-foreground">
                       <span>
                         {t('loyaltyPage.progressLabel', {
                           cur: data.xp_in_segment.toLocaleString('ru-RU'),
@@ -113,13 +113,13 @@ export default function LoyaltyProgramPage() {
                       </span>
                       <span>{data.progress_percent}%</span>
                     </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted dark:bg-slate-800/80">
+                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 transition-[width] duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary transition-[width] duration-500"
                         style={{ width: `${Math.min(100, Math.max(0, data.progress_percent))}%` }}
                       />
                     </div>
-                    <p className="text-xs text-primary/90 dark:text-teal-200/90">
+                    <p className="text-xs text-primary/90">
                       {t('loyaltyPage.untilNext', {
                         xp: data.xp_until_next.toLocaleString('ru-RU'),
                         next: data.next.sort_order,
@@ -127,11 +127,11 @@ export default function LoyaltyProgramPage() {
                     </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground dark:text-slate-300">{t('loyaltyPage.maxLevel')}</p>
+                  <p className="text-sm text-muted-foreground">{t('loyaltyPage.maxLevel')}</p>
                 )}
 
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                  <Gift size={18} className="shrink-0 text-primary dark:text-teal-200" />
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3">
+                  <Gift size={18} className="shrink-0 text-primary" />
                   <p className="text-sm font-medium">{t('loyaltyPage.discountLine', { pct: discount })}</p>
                 </div>
               </CardContent>
@@ -280,7 +280,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
     <Link
       to="/loyalty"
       className={cn(
-        'profile-tariff-hover flex w-full items-center gap-3 rounded-[var(--radius)] border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'subscription-feature-card profile-tariff-hover flex w-full items-center gap-3 p-4 text-left transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >
@@ -288,7 +288,7 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
         <Gem size={16} className="text-primary" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground dark:text-[#f1f5f9]">{t('loyaltyPage.compactTitle', { n: data.current?.sort_order ?? 0 })}</p>
+        <p className="text-sm font-medium text-foreground">{t('loyaltyPage.compactTitle', { n: data.current?.sort_order ?? 0 })}</p>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-primary transition-[width]"

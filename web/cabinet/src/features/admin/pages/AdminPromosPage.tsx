@@ -1,0 +1,620 @@
+import { useState, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
+import {
+  TicketPercent,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  Loader2,
+} from 'lucide-react'
+
+import { AdminLayout } from '../layout/AdminLayout'
+import { AdminPageHeader } from '../components/AdminPageHeader'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import {
+  useAdminPromoList,
+  useAdminPromoGet,
+  useAdminPromoCreate,
+  useAdminPromoUpdate,
+  useAdminPromoDelete,
+  type AdminPromoCode,
+  type CreatePromoInput,
+} from '../hooks/useAdminPromos'
+import { useAdminTariffList } from '../hooks/useAdminTariffs'
+import { AdminFeedback } from '../components/AdminFeedback'
+import { AdminModal } from '../components/AdminModal'
+import { AdminConfirmModal } from '../components/AdminConfirmModal'
+import { AdminCheckboxField } from '../components/AdminCheckbox'
+import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
+
+const PROMO_CODE_PREVIEW_LEN = 6
+
+const PROMO_TYPES = ['subscription_days', 'trial', 'extra_hwid', 'discount'] as const
+
+const PROMO_TYPE_KEYS: Record<string, string> = {
+  subscription_days: 'admin.promos.typeSubscriptionDays',
+  trial: 'admin.promos.typeTrial',
+  extra_hwid: 'admin.promos.typeExtraHwid',
+  discount: 'admin.promos.typeDiscount',
+}
+
+function truncatePromoCode(code: string, maxLen = PROMO_CODE_PREVIEW_LEN): string {
+  if (code.length <= maxLen) return code
+  return `${code.slice(0, maxLen)}…`
+}
+
+function promoTypeLabel(type: string, t: TFunction) {
+  const key = PROMO_TYPE_KEYS[type]
+  return key ? t(key) : type
+}
+
+function typeBadge(type: string, t: TFunction) {
+  const colors: Record<string, string> = {
+    subscription_days: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+    trial: 'bg-green-500/15 text-green-600 dark:text-green-400',
+    extra_hwid: 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
+    discount: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  }
+  return (
+    <span className={cn('inline-flex rounded-full px-2 py-0.5 text-xs font-medium', colors[type] ?? 'bg-muted text-muted-foreground')}>
+      {promoTypeLabel(type, t)}
+    </span>
+  )
+}
+
+function statusBadge(active: boolean, t: TFunction) {
+  return active ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+      {t('admin.promos.statusActive')}
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-500 dark:text-red-400">
+      {t('admin.promos.statusInactive')}
+    </span>
+  )
+}
+
+function CreatePromoModal({ onClose, onCreate }: { onClose: () => void; onCreate: (d: CreatePromoInput) => void }) {
+  const { t } = useTranslation()
+  const [form, setForm] = useState<CreatePromoInput>({
+    code: '',
+    type: 'subscription_days',
+  })
+
+  const set = <K extends keyof CreatePromoInput>(k: K, v: CreatePromoInput[K]) =>
+    setForm((p) => ({ ...p, [k]: v }))
+
+  return (
+    <AdminModal open onClose={onClose} title={t('admin.promos.createTitle')} panelClassName="sm:max-w-lg" icon={TicketPercent} iconAccent="violet">
+      <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('admin.promos.code')}</label>
+            <input
+              className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              value={form.code}
+              onChange={(e) => set('code', e.target.value.toUpperCase())}
+              placeholder="PROMO2024"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('admin.promos.type')}</label>
+            <select
+              className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              value={form.type}
+              onChange={(e) => set('type', e.target.value)}
+            >
+              {PROMO_TYPES.map((pt) => (
+                <option key={pt} value={pt}>{promoTypeLabel(pt, t)}</option>
+              ))}
+            </select>
+          </div>
+          {form.type === 'subscription_days' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('admin.promos.subscriptionDays')}</label>
+              <input type="number" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.subscription_days ?? ''} onChange={(e) => set('subscription_days', e.target.value ? Number(e.target.value) : null)} />
+            </div>
+          )}
+          {form.type === 'trial' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('admin.promos.trialDays')}</label>
+              <input type="number" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.trial_days ?? ''} onChange={(e) => set('trial_days', e.target.value ? Number(e.target.value) : null)} />
+            </div>
+          )}
+          {form.type === 'extra_hwid' && (
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('admin.promos.extraHwidDelta')}</label>
+              <input type="number" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.extra_hwid_delta ?? ''} onChange={(e) => set('extra_hwid_delta', e.target.value ? Number(e.target.value) : null)} />
+            </div>
+          )}
+          {form.type === 'discount' && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t('admin.promos.discountPercent')}</label>
+                <input type="number" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.discount_percent ?? ''} onChange={(e) => set('discount_percent', e.target.value ? Number(e.target.value) : null)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t('admin.promos.discountTTL')}</label>
+                <input type="number" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.discount_ttl_hours ?? ''} onChange={(e) => set('discount_ttl_hours', e.target.value ? Number(e.target.value) : null)} />
+              </div>
+            </>
+          )}
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('admin.promos.maxUses')}</label>
+            <input type="number" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.max_uses ?? ''} onChange={(e) => set('max_uses', e.target.value ? Number(e.target.value) : null)} placeholder={t('admin.promos.unlimited')} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{t('admin.promos.validUntil')}</label>
+            <input type="datetime-local" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.valid_until ? form.valid_until.slice(0, 16) : ''} onChange={(e) => set('valid_until', e.target.value ? new Date(e.target.value).toISOString() : null)} />
+          </div>
+          <AdminCheckboxField
+            checked={form.first_purchase_only ?? false}
+            onChange={(v) => set('first_purchase_only', v)}
+            label={t('admin.promos.firstPurchaseOnly')}
+          />
+      </div>
+      <div className="mt-4 flex justify-end gap-2 border-t border-border/50 pt-4">
+          <button className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent" onClick={onClose}>
+            {t('admin.cancel')}
+          </button>
+          <button
+            className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            disabled={!form.code.trim() || !form.type}
+            onClick={() => onCreate(form)}
+          >
+            {t('admin.create')}
+          </button>
+      </div>
+    </AdminModal>
+  )
+}
+
+function PromoRow({
+  promo,
+  mutationHandlers,
+}: {
+  promo: AdminPromoCode
+  mutationHandlers: (successMessage?: string) => { onSuccess: () => void; onError: (err: unknown) => void }
+}) {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const update = useAdminPromoUpdate()
+  const del = useAdminPromoDelete()
+  const { data: detail } = useAdminPromoGet(expanded ? promo.id : null)
+
+  const toggle = useCallback(() => {
+    update.mutate(
+      { id: promo.id, fields: { active: !promo.active } },
+      mutationHandlers(t('admin.feedback.saved')),
+    )
+  }, [promo.id, promo.active, update, mutationHandlers, t])
+
+  const codePreview = truncatePromoCode(promo.code)
+
+  return (
+    <>
+      <tr
+        className="cursor-pointer border-b border-border/50 transition-colors hover:bg-accent/50"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <td className="whitespace-nowrap px-4 py-3">
+          <span
+            className="font-mono text-sm font-medium"
+            title={promo.code.length > PROMO_CODE_PREVIEW_LEN ? promo.code : undefined}
+          >
+            {codePreview}
+          </span>
+        </td>
+        <td className="px-4 py-3">{typeBadge(promo.type, t)}</td>
+        <td className="px-4 py-3">{statusBadge(promo.active, t)}</td>
+        <td className="px-4 py-3 text-sm tabular-nums">
+          {promo.uses_count}{promo.max_uses != null ? `/${promo.max_uses}` : ''}
+        </td>
+        <td className="px-4 py-3 text-sm text-muted-foreground">
+          {promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : '—'}
+        </td>
+        <td className="px-4 py-3">
+          {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={6} className="bg-accent/20 px-4 py-4">
+            <div className="space-y-3">
+              {detail && (
+                <div className="flex gap-6 text-sm">
+                  <span>{t('admin.promos.redemptions')}: <strong>{detail.redemptions}</strong></span>
+                  <span>{t('admin.promos.redemptionsToday')}: <strong>{detail.redemptions_today}</strong></span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                <div className="col-span-2 sm:col-span-3">
+                  <span className="text-muted-foreground">{t('admin.promos.code')}: </span>
+                  <span className="font-mono font-medium">{promo.code}</span>
+                </div>
+                {promo.subscription_days != null && <div>{t('admin.promos.detailSubDays')}: {promo.subscription_days}</div>}
+                {promo.trial_days != null && <div>{t('admin.promos.detailTrialDays')}: {promo.trial_days}</div>}
+                {promo.extra_hwid_delta != null && <div>{t('admin.promos.detailHwidDelta')}: {promo.extra_hwid_delta}</div>}
+                {promo.discount_percent != null && <div>{t('admin.promos.detailDiscount')}: {promo.discount_percent}%</div>}
+                {promo.discount_ttl_hours != null && <div>{t('admin.promos.detailTTL')}: {promo.discount_ttl_hours}h</div>}
+                {promo.tariff_id != null && <div>{t('admin.promos.detailTariffId')}: {promo.tariff_id}</div>}
+                <div>{t('admin.promos.detailFirstPurchase')}: {promo.first_purchase_only ? t('admin.yes') : t('admin.no')}</div>
+                <div>{t('admin.promos.detailCreated')}: {new Date(promo.created_at).toLocaleDateString()}</div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditOpen(true)
+                  }}
+                >
+                  <Pencil className="size-3.5" /> {t('admin.edit')}
+                </button>
+                <button
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium',
+                    promo.active
+                      ? 'border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400'
+                      : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400',
+                  )}
+                  onClick={(e) => { e.stopPropagation(); toggle() }}
+                >
+                  {promo.active ? <ToggleRight className="size-3.5" /> : <ToggleLeft className="size-3.5" />}
+                  {promo.active ? t('admin.promos.deactivate') : t('admin.promos.activate')}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <Trash2 className="size-3.5" /> {t('admin.delete')}
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      <EditPromoModal
+        open={editOpen}
+        promo={promo}
+        onClose={() => setEditOpen(false)}
+        mutationHandlers={mutationHandlers}
+      />
+
+      <AdminConfirmModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={() => {
+          del.mutate(promo.id, {
+            ...mutationHandlers(t('admin.feedback.saved')),
+            onSuccess: () => {
+              mutationHandlers(t('admin.feedback.saved')).onSuccess()
+              setDeleteOpen(false)
+              setExpanded(false)
+            },
+          })
+        }}
+        title={t('admin.delete')}
+        message={t('admin.promos.confirmDeletePrompt')}
+        confirmLabel={t('admin.delete')}
+        variant="destructive"
+        loading={del.isPending}
+        icon={Trash2}
+        iconAccent="rose"
+      />
+    </>
+  )
+}
+
+function EditPromoModal({
+  open,
+  promo,
+  onClose,
+  mutationHandlers,
+}: {
+  open: boolean
+  promo: AdminPromoCode
+  onClose: () => void
+  mutationHandlers: (successMessage?: string) => { onSuccess: () => void; onError: (err: unknown) => void }
+}) {
+  const { t } = useTranslation()
+  const update = useAdminPromoUpdate()
+  const { data: tariffs } = useAdminTariffList()
+
+  const [maxUses, setMaxUses] = useState(promo.max_uses?.toString() ?? '')
+  const [subDays, setSubDays] = useState(promo.subscription_days?.toString() ?? '')
+  const [trialDays, setTrialDays] = useState(promo.trial_days?.toString() ?? '')
+  const [extraHwidDelta, setExtraHwidDelta] = useState(promo.extra_hwid_delta?.toString() ?? '')
+  const [discountPercent, setDiscountPercent] = useState(promo.discount_percent?.toString() ?? '')
+  const [discountTTL, setDiscountTTL] = useState(promo.discount_ttl_hours?.toString() ?? '')
+  const [tariffId, setTariffId] = useState(promo.tariff_id?.toString() ?? '')
+  const [discountMaxPayments, setDiscountMaxPayments] = useState(
+    String(promo.discount_max_subscription_payments_per_customer ?? 0),
+  )
+  const [validUntil, setValidUntil] = useState(
+    promo.valid_until ? promo.valid_until.slice(0, 16) : '',
+  )
+  const [firstPurchaseOnly, setFirstPurchaseOnly] = useState(promo.first_purchase_only)
+
+  useEffect(() => {
+    if (!open) return
+    setMaxUses(promo.max_uses?.toString() ?? '')
+    setSubDays(promo.subscription_days?.toString() ?? '')
+    setTrialDays(promo.trial_days?.toString() ?? '')
+    setExtraHwidDelta(promo.extra_hwid_delta?.toString() ?? '')
+    setDiscountPercent(promo.discount_percent?.toString() ?? '')
+    setDiscountTTL(promo.discount_ttl_hours?.toString() ?? '')
+    setTariffId(promo.tariff_id?.toString() ?? '')
+    setDiscountMaxPayments(String(promo.discount_max_subscription_payments_per_customer ?? 0))
+    setValidUntil(promo.valid_until ? promo.valid_until.slice(0, 16) : '')
+    setFirstPurchaseOnly(promo.first_purchase_only)
+  }, [open, promo])
+
+  const save = () => {
+    const fields: Record<string, unknown> = {}
+
+    const setIfChanged = (key: string, newVal: unknown, oldVal: unknown) => {
+      if (newVal !== oldVal) fields[key] = newVal
+    }
+
+    const maxUsesVal = maxUses.trim() ? Number(maxUses) : null
+    setIfChanged('max_uses', maxUsesVal, promo.max_uses ?? null)
+
+    if (promo.type === 'subscription_days') {
+      const v = subDays.trim() ? Number(subDays) : null
+      setIfChanged('subscription_days', v, promo.subscription_days ?? null)
+    }
+    if (promo.type === 'trial') {
+      const v = trialDays.trim() ? Number(trialDays) : null
+      setIfChanged('trial_days', v, promo.trial_days ?? null)
+    }
+    if (promo.type === 'extra_hwid') {
+      const v = extraHwidDelta.trim() ? Number(extraHwidDelta) : null
+      setIfChanged('extra_hwid_delta', v, promo.extra_hwid_delta ?? null)
+    }
+    if (promo.type === 'discount') {
+      const dp = discountPercent.trim() ? Number(discountPercent) : null
+      const ttl = discountTTL.trim() ? Number(discountTTL) : null
+      const tid = tariffId.trim() ? Number(tariffId) : null
+      const dmax = discountMaxPayments.trim() ? Number(discountMaxPayments) : 0
+      setIfChanged('discount_percent', dp, promo.discount_percent ?? null)
+      setIfChanged('discount_ttl_hours', ttl, promo.discount_ttl_hours ?? null)
+      setIfChanged('tariff_id', tid, promo.tariff_id ?? null)
+      setIfChanged(
+        'discount_max_subscription_payments_per_customer',
+        dmax,
+        promo.discount_max_subscription_payments_per_customer,
+      )
+    }
+
+    const validUntilIso = validUntil ? new Date(validUntil).toISOString() : null
+    const oldValidSlice = promo.valid_until ? promo.valid_until.slice(0, 16) : ''
+    if (validUntil !== oldValidSlice) {
+      fields.valid_until = validUntilIso
+    }
+
+    setIfChanged('first_purchase_only', firstPurchaseOnly, promo.first_purchase_only)
+
+    if (Object.keys(fields).length === 0) {
+      onClose()
+      return
+    }
+
+    update.mutate(
+      { id: promo.id, fields },
+      {
+        ...mutationHandlers(t('admin.feedback.saved')),
+        onSuccess: () => {
+          mutationHandlers(t('admin.feedback.saved')).onSuccess()
+          onClose()
+        },
+      },
+    )
+  }
+
+  return (
+    <AdminModal
+      open={open}
+      onClose={onClose}
+      title={t('admin.promos.editPromo')}
+      panelClassName="sm:max-w-lg"
+      icon={Pencil}
+      iconAccent="violet"
+      footer={
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
+          >
+            {t('admin.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={update.isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {update.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {t('admin.save')}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <p className="font-mono text-sm font-medium">{promo.code}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium">{t('admin.promos.maxUses')}</label>
+            <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder={t('admin.promos.unlimited')} />
+          </div>
+          {promo.type === 'subscription_days' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium">{t('admin.promos.subscriptionDays')}</label>
+              <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={subDays} onChange={(e) => setSubDays(e.target.value)} />
+            </div>
+          )}
+          {promo.type === 'trial' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium">{t('admin.promos.trialDays')}</label>
+              <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
+            </div>
+          )}
+          {promo.type === 'extra_hwid' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium">{t('admin.promos.extraHwidDelta')}</label>
+              <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={extraHwidDelta} onChange={(e) => setExtraHwidDelta(e.target.value)} />
+            </div>
+          )}
+          {promo.type === 'discount' && (
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium">{t('admin.promos.discountPercent')}</label>
+                <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={discountPercent} onChange={(e) => setDiscountPercent(e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">{t('admin.promos.discountTTL')}</label>
+                <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={discountTTL} onChange={(e) => setDiscountTTL(e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">{t('admin.promos.tariffId')}</label>
+                <select className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={tariffId} onChange={(e) => setTariffId(e.target.value)}>
+                  <option value="">{t('admin.promos.noTariff')}</option>
+                  {tariffs?.map((tariff) => (
+                    <option key={tariff.id} value={tariff.id}>{tariff.name ?? tariff.slug}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">{t('admin.promos.discountMaxPayments')}</label>
+                <input type="number" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={discountMaxPayments} onChange={(e) => setDiscountMaxPayments(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium">{t('admin.promos.validUntil')}</label>
+            <input type="datetime-local" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+          </div>
+        </div>
+        <AdminCheckboxField
+          checked={firstPurchaseOnly}
+          onChange={setFirstPurchaseOnly}
+          label={t('admin.promos.firstPurchaseOnly')}
+        />
+      </div>
+    </AdminModal>
+  )
+}
+
+export default function AdminPromosPage() {
+  const { t } = useTranslation()
+  const [page, setPage] = useState(1)
+  const [showCreate, setShowCreate] = useState(false)
+  const { data, isLoading } = useAdminPromoList(page)
+  const create = useAdminPromoCreate()
+  const { feedback, clear, handlers } = useAdminMutationFeedback()
+
+  const totalPages = data ? Math.ceil(data.total / data.limit) : 1
+
+  const handleCreate = (input: CreatePromoInput) => {
+    create.mutate(input, {
+      ...handlers(t('admin.feedback.saved')),
+      onSuccess: () => {
+        handlers(t('admin.feedback.saved')).onSuccess()
+        setShowCreate(false)
+      },
+    })
+  }
+
+  return (
+    <AdminLayout>
+      <AdminFeedback feedback={feedback} onDismiss={clear} />
+      <div className="space-y-6">
+        <AdminPageHeader
+          icon={TicketPercent}
+          title={t('admin.promos.title')}
+          subtitle={t('admin.promos.subtitle')}
+          accent="amber"
+          actions={
+            <button
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="size-4" />
+              {t('admin.promos.create')}
+            </button>
+          }
+        />
+
+        <Card className="overflow-hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground">{t('admin.loading')}</div>
+          ) : !data || data.items.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">{t('admin.promos.empty')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <th className="whitespace-nowrap px-4 py-3">{t('admin.promos.code')}</th>
+                    <th className="px-4 py-3">{t('admin.promos.type')}</th>
+                    <th className="px-4 py-3">{t('admin.promos.active')}</th>
+                    <th className="px-4 py-3">{t('admin.promos.uses')}</th>
+                    <th className="px-4 py-3">{t('admin.promos.validUntil')}</th>
+                    <th className="px-4 py-3 w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((promo) => (
+                    <PromoRow key={promo.id} promo={promo} mutationHandlers={handlers} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2">
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <span className="text-sm text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50"
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showCreate && <CreatePromoModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
+    </AdminLayout>
+  )
+}

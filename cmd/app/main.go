@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"remnawave-tg-shop-bot/internal/broadcast"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	cabinethttp "remnawave-tg-shop-bot/internal/cabinet/http"
 	cabstartup "remnawave-tg-shop-bot/internal/cabinet/startup"
@@ -754,7 +755,8 @@ func main() {
 	// cabcfg.InitConfig() вызван ранее (сразу после миграций), здесь только
 	// монтируем роуты.
 	if cabcfg.IsEnabled() {
-		if err := cabinethttp.Mount(ctx, mux, pool, paymentService, remnawaveClient, promoService); err != nil {
+		broadcastSender := broadcast.NewSender(customerRepository, tm)
+		if err := cabinethttp.Mount(ctx, mux, pool, paymentService, remnawaveClient, promoService, syncService, b, broadcastSender); err != nil {
 			panic(fmt.Errorf("failed to mount cabinet routes: %w", err))
 		}
 		slog.Info("cabinet routes mounted", "prefix", "/cabinet")

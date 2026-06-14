@@ -10,6 +10,31 @@
  */
 
 import { getCookie } from './utils'
+import type {
+  AdminBootstrapDTO,
+  AdminBroadcastAudienceDTO,
+  AdminBroadcastMediaDTO,
+  AdminBroadcastPreviewDTO,
+  AdminBroadcastSendDTO,
+  AdminCustomerDTO,
+  AdminFortuneStatsDTO,
+  AdminLoyaltyTierDTO,
+  AdminOkDTO,
+  AdminPaymentsDTO,
+  AdminPromoCodeDTO,
+  AdminPromoGetDTO,
+  AdminPromoListDTO,
+  AdminReferralsDTO,
+  AdminStatsDTO,
+  AdminTariffDTO,
+  AdminUserPanelDTO,
+  AdminUsersListDTO,
+  AdminDeviceDTO,
+  AdminInfraNodesDTO,
+  AdminInfraProvidersDTO,
+  AdminInfraHistoryDTO,
+  AdminInfraSettingsDTO,
+} from './types/admin'
 
 /** Имя cookie с double-submit CSRF (совпадает с csrf.CookieName на бэкенде). */
 function readCsrfCookie(): string {
@@ -100,6 +125,8 @@ export interface MeResponse {
   google_masked_email?: string | null
   yandex_masked_email?: string | null
   vk_masked_email?: string | null
+  /** true, если linked Telegram identity == ADMIN_TELEGRAM_ID. */
+  is_admin?: boolean
 }
 
 export interface MergeCustomerSnapshot {
@@ -535,6 +562,9 @@ export interface PromoApplyResponse {
   trial_skipped_active_sub?: boolean
 }
 
+/** GET /admin/bootstrap — feature flags для SPA-админки. */
+export type AdminBootstrapResponse = AdminBootstrapDTO
+
 // --- Singleton клиент -------------------------------------------------------
 
 const BASE = '/cabinet/api'
@@ -863,6 +893,173 @@ export const api = {
 
   paymentStatus: (id: number) =>
     request<PaymentStatusResponse>('GET', `/payments/${id}/status`),
+
+  // Admin
+  adminBootstrap: () =>
+    request<AdminBootstrapResponse>('GET', '/admin/bootstrap'),
+
+  adminStats: () => request<AdminStatsDTO>('GET', '/admin/stats'),
+  adminFortuneStats: () => request<AdminFortuneStatsDTO>('GET', '/admin/stats/fortune'),
+
+  adminUsers: (params?: { scope?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    q.set('scope', params?.scope ?? 'all')
+    if (params?.page != null) q.set('page', String(params.page))
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminUsersListDTO>('GET', `/admin/users${suffix}`)
+  },
+  adminUserSearch: (query: string) =>
+    request<{ items: AdminCustomerDTO[] }>('GET', `/admin/users/search?q=${encodeURIComponent(query)}`),
+  adminUser: (id: number) =>
+    request<AdminCustomerDTO>('GET', `/admin/users/${id}`),
+  adminUserExtend: (id: number, days: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/extend`, { days }),
+  adminUserDisable: (id: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/disable`),
+  adminUserEnable: (id: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/enable`),
+  adminUserDelete: (id: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/delete`),
+  adminUserResetTraffic: (id: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/reset-traffic`),
+  adminUserSetExpire: (id: number, expireAt: string) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/expire`, { expire_at: expireAt }),
+  adminUserSetHwidLimit: (id: number, limit: number) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/hwid-limit`, { limit }),
+  adminUserPayments: (id: number, params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.page != null) q.set('page', String(params.page))
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminPaymentsDTO>('GET', `/admin/users/${id}/payments${suffix}`)
+  },
+  adminUserReferrals: (id: number) =>
+    request<AdminReferralsDTO>('GET', `/admin/users/${id}/referrals`),
+  adminUserPanel: (id: number) =>
+    request<AdminUserPanelDTO>('GET', `/admin/users/${id}/panel`),
+  adminUserSetSquads: (id: number, squadUuids: string[]) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/squads`, { squad_uuids: squadUuids }),
+  adminUserSetTraffic: (id: number, limitBytes: number) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/traffic`, { limit_bytes: limitBytes }),
+  adminUserSetStrategy: (id: number, strategy: string) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/strategy`, { strategy }),
+  adminUserSetDescription: (id: number, description: string | null) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/description`, { description }),
+  adminUserSetTariff: (id: number, tariffId: number) =>
+    request<AdminOkDTO>('PATCH', `/admin/users/${id}/tariff`, { tariff_id: tariffId }),
+  adminUserDevices: (id: number) =>
+    request<{ items: AdminDeviceDTO[] }>('GET', `/admin/users/${id}/devices`),
+  adminUserDeleteDevice: (id: number, hwid: string) =>
+    request<AdminOkDTO>('DELETE', `/admin/users/${id}/devices/${encodeURIComponent(hwid)}`),
+  adminUserExtraHwid: (id: number, delta: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/extra-hwid`, { delta }),
+
+  adminSquads: () => request<{ items: { uuid: string; name: string }[] }>('GET', '/admin/squads'),
+
+  adminPromos: (params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.page != null) q.set('page', String(params.page))
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminPromoListDTO>('GET', `/admin/promos${suffix}`)
+  },
+  adminPromoGet: (id: number) => request<AdminPromoGetDTO>('GET', `/admin/promos/${id}`),
+  adminPromoCreate: (body: unknown) => request<AdminPromoCodeDTO>('POST', '/admin/promos', body),
+  adminPromoUpdate: (id: number, fields: Record<string, unknown>) =>
+    request<AdminPromoCodeDTO>('PATCH', `/admin/promos/${id}`, fields),
+  adminPromoDelete: (id: number) => request<AdminOkDTO>('DELETE', `/admin/promos/${id}`),
+
+  adminTariffs: () => request<AdminTariffDTO[]>('GET', '/admin/tariffs'),
+  adminTariffGet: (id: number) => request<AdminTariffDTO>('GET', `/admin/tariffs/${id}`),
+  adminTariffCreate: (body: unknown) => request<AdminTariffDTO>('POST', '/admin/tariffs', body),
+  adminTariffUpdate: (id: number, fields: Record<string, unknown>) =>
+    request<AdminTariffDTO>('PATCH', `/admin/tariffs/${id}`, fields),
+  adminTariffDelete: (id: number) => request<AdminOkDTO>('DELETE', `/admin/tariffs/${id}`),
+
+  adminLoyaltyTiers: () => request<AdminLoyaltyTierDTO[]>('GET', '/admin/loyalty/tiers'),
+  adminLoyaltyCreateTier: (body: unknown) =>
+    request<AdminLoyaltyTierDTO>('POST', '/admin/loyalty/tiers', body),
+  adminLoyaltyUpdateTier: (id: number, body: Record<string, unknown>) =>
+    request<AdminLoyaltyTierDTO>('PATCH', `/admin/loyalty/tiers/${id}`, body),
+  adminLoyaltyDeleteTier: (id: number) => request<AdminOkDTO>('DELETE', `/admin/loyalty/tiers/${id}`),
+  adminLoyaltyRecalc: () => request<AdminOkDTO>('POST', '/admin/loyalty/recalc'),
+
+  adminBroadcastAudiences: () =>
+    request<{ audiences: AdminBroadcastAudienceDTO[] }>('GET', '/admin/broadcast/audiences'),
+  adminBroadcastTariffs: () =>
+    request<{ tariffs: { id: number; name: string; slug: string }[] }>('GET', '/admin/broadcast/tariffs'),
+  adminBroadcastPreview: (body: {
+    audience: string
+    tariff_id?: number | null
+    text?: string
+  }) => request<AdminBroadcastPreviewDTO>('POST', '/admin/broadcast/preview', body),
+  adminBroadcastUploadMedia: async (file: File): Promise<AdminBroadcastMediaDTO> => {
+    const form = new FormData()
+    form.append('media', file)
+    const headers: Record<string, string> = {}
+    const csrf = readCsrfCookie()
+    if (csrf) headers['X-CSRF-Token'] = csrf
+    const token = _authRef?.getAccessToken()
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const res = await fetch(`${BASE}/admin/broadcast/upload-media`, {
+      method: 'POST',
+      headers,
+      body: form,
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new ApiError(res.status, text)
+    }
+    return res.json() as Promise<AdminBroadcastMediaDTO>
+  },
+  adminBroadcastSend: (body: {
+    audience: string
+    tariff_id?: number | null
+    text: string
+    buttons?: {
+      buy?: boolean
+      connect?: boolean
+      promo?: boolean
+      main_menu?: boolean
+    }
+    media?: {
+      file_id: string
+      as_photo: boolean
+    } | null
+  }) => request<AdminBroadcastSendDTO>('POST', '/admin/broadcast/send', body),
+
+  adminInfraNodes: () => request<AdminInfraNodesDTO>('GET', '/admin/infra/nodes'),
+  adminInfraCreateNode: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
+    request<AdminInfraNodesDTO>('POST', '/admin/infra/nodes', body),
+  adminInfraPatchNode: (body: { uuid: string; next_billing_at: string }) =>
+    request<AdminInfraNodesDTO>('PATCH', '/admin/infra/nodes', body),
+  adminInfraDeleteNode: (uuid: string) => request<AdminInfraNodesDTO>('DELETE', `/admin/infra/nodes/${uuid}`),
+  adminInfraProviders: () => request<AdminInfraProvidersDTO>('GET', '/admin/infra/providers'),
+  adminInfraCreateProvider: (body: { name: string; favicon_link?: string; login_url?: string }) =>
+    request<AdminInfraProvidersDTO>('POST', '/admin/infra/providers', body),
+  adminInfraPatchProvider: (body: { uuid: string; name?: string; favicon_link?: string; login_url?: string }) =>
+    request<AdminInfraProvidersDTO>('PATCH', '/admin/infra/providers', body),
+  adminInfraDeleteProvider: (uuid: string) =>
+    request<AdminInfraProvidersDTO>('DELETE', `/admin/infra/providers/${uuid}`),
+  adminInfraHistory: (start?: number, size?: number) => {
+    const q = new URLSearchParams()
+    if (start != null) q.set('start', String(start))
+    if (size != null) q.set('size', String(size))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminInfraHistoryDTO>('GET', `/admin/infra/history${suffix}`)
+  },
+  adminInfraCreateHistory: (body: { provider_uuid: string; amount: number; billed_at: string }) =>
+    request<AdminInfraHistoryDTO>('POST', '/admin/infra/history', body),
+  adminInfraDeleteHistory: (uuid: string) =>
+    request<AdminInfraHistoryDTO>('DELETE', `/admin/infra/history/${uuid}`),
+  adminInfraSettings: () => request<AdminInfraSettingsDTO>('GET', '/admin/infra/settings'),
+  adminInfraUpdateSettings: (body: { days: number; enabled: boolean }) =>
+    request<AdminOkDTO>('PATCH', '/admin/infra/settings', body),
+
+  adminSync: () => request<AdminOkDTO>('POST', '/admin/sync'),
 
   // Link / Merge
   linkTelegramStart: () =>

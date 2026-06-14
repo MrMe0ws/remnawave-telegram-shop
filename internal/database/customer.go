@@ -850,6 +850,8 @@ const (
 	CustomerListScopeAll CustomerListScope = iota
 	CustomerListScopeInactive
 	CustomerListScopeExpiringSoon
+	CustomerListScopeTrial
+	CustomerListScopeActive
 )
 
 func customerListWhere(scope CustomerListScope) sq.Sqlizer {
@@ -859,6 +861,10 @@ func customerListWhere(scope CustomerListScope) sq.Sqlizer {
 		return sq.Expr("(customer.expire_at IS NULL OR customer.expire_at <= NOW())")
 	case CustomerListScopeExpiringSoon:
 		return sq.Expr("(customer.expire_at IS NOT NULL AND customer.expire_at > NOW() AND customer.expire_at <= NOW() + INTERVAL '7 days')")
+	case CustomerListScopeTrial:
+		return sq.Expr(`(customer.expire_at IS NOT NULL AND customer.expire_at > NOW() AND customer.subscription_link IS NOT NULL AND TRIM(customer.subscription_link) <> '' AND NOT EXISTS (SELECT 1 FROM purchase p WHERE p.customer_id = customer.id AND p.status = 'paid' AND p.month > 0))`)
+	case CustomerListScopeActive:
+		return sq.Expr(`(customer.subscription_link IS NOT NULL AND TRIM(customer.subscription_link) <> '' AND customer.expire_at IS NOT NULL AND customer.expire_at > NOW())`)
 	default:
 		return nil
 	}
@@ -870,6 +876,10 @@ func customerListOrder(scope CustomerListScope) string {
 		return "expire_at ASC NULLS FIRST"
 	case CustomerListScopeExpiringSoon:
 		return "expire_at ASC"
+	case CustomerListScopeTrial:
+		return "id DESC"
+	case CustomerListScopeActive:
+		return "expire_at DESC"
 	default:
 		return "id DESC"
 	}

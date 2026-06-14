@@ -7,15 +7,14 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/broadcast"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
-	"remnawave-tg-shop-bot/utils"
 )
 
 // BroadcastType определяет тип рассылки
@@ -32,18 +31,10 @@ const (
 )
 
 // BroadcastRecipientButtons — какие inline-кнопки прикрепить к рассылке.
-type BroadcastRecipientButtons struct {
-	Buy      bool
-	MainMenu bool
-	Promo    bool
-	Connect  bool
-}
+type BroadcastRecipientButtons = broadcast.RecipientButtons
 
 // broadcastDraftMedia — черновик рассылки с картинкой (фото или файл JPEG/PNG/WebP).
-type broadcastDraftMedia struct {
-	FileID  string
-	AsPhoto bool // true → sendPhoto, false → sendDocument (файлом)
-}
+type broadcastDraftMedia = broadcast.Media
 
 // BroadcastState хранит состояние рассылки для каждого админа
 type BroadcastState struct {
@@ -575,46 +566,8 @@ func (h Handler) broadcastButtonPickerKeyboard(lang string, flags BroadcastRecip
 	}
 }
 
-// broadcastConnectRow — «Мой VPN» в рассылке: то же поведение, что resolveConnectButton в /start при включённом кабинете.
-func (h Handler) broadcastConnectRow(lang string) []models.InlineKeyboardButton {
-	if u := cabinetWebAppURL("/cabinet/dashboard"); u != "" {
-		return []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{
-				WebApp: &models.WebAppInfo{URL: u},
-			}),
-		}
-	}
-	return []models.InlineKeyboardButton{
-		h.translation.WithButton(lang, "connect_button", models.InlineKeyboardButton{
-			CallbackData: CallbackConnect + BroadcastInlineQuery,
-		}),
-	}
-}
-
 func (h Handler) buildBroadcastReplyMarkup(lang string, flags BroadcastRecipientButtons) models.ReplyMarkup {
-	if !flags.Buy && !flags.MainMenu && !flags.Promo && !flags.Connect {
-		return nil
-	}
-	var rows [][]models.InlineKeyboardButton
-	if flags.Buy {
-		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "buy_button", models.InlineKeyboardButton{CallbackData: CallbackBuy + BroadcastInlineQuery}),
-		})
-	}
-	if flags.Connect {
-		rows = append(rows, h.broadcastConnectRow(lang))
-	}
-	if flags.Promo {
-		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "promo_code_button", models.InlineKeyboardButton{CallbackData: CallbackEnterPromo + BroadcastInlineQuery}),
-		})
-	}
-	if flags.MainMenu {
-		rows = append(rows, []models.InlineKeyboardButton{
-			h.translation.WithButton(lang, "broadcast_inline_main", models.InlineKeyboardButton{CallbackData: CallbackStart + BroadcastInlineQuery}),
-		})
-	}
-	return models.InlineKeyboardMarkup{InlineKeyboard: rows}
+	return broadcast.BuildReplyMarkup(h.translation, lang, flags)
 }
 
 func (h Handler) broadcastButtonsSummaryLine(lang string, flags BroadcastRecipientButtons) string {
@@ -1027,109 +980,16 @@ func (h Handler) BroadcastBackToAdminHandler(ctx context.Context, b *bot.Bot, up
 	}
 }
 
-// sendBroadcast отправляет сообщение пользователям пачками в зависимости от типа рассылки
+// sendBroadcast отправляет сообщение пользователям пачками в зависимости от типа рассылки.
 func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, messageText string, entities []models.MessageEntity, media *broadcastDraftMedia, flags BroadcastRecipientButtons, broadcastType BroadcastType, tariffFilter *int64) {
 	audience := broadcastTypeToAudience(broadcastType)
 	var tf *int64
 	if (broadcastType == BroadcastTypeActivePaid || broadcastType == BroadcastTypeInactivePaid) && tariffFilter != nil {
 		tf = tariffFilter
 	}
-	recipients, err := h.customerRepository.GetBroadcastRecipients(ctx, audience, tf)
-	if err != nil {
-		slog.Error("error getting broadcast recipients", "error", err, "type", broadcastType)
-		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: adminID,
-			Text:   fmt.Sprintf("❌ Ошибка при получении списка пользователей: %v", err),
-		})
+	if h.broadcastSender == nil {
+		slog.Error("broadcast sender not configured")
 		return
 	}
-
-	if len(recipients) == 0 {
-		_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: adminID,
-			Text:   "❌ Нет пользователей для рассылки",
-		})
-		return
-	}
-
-	totalUsers := len(recipients)
-	sentCount := 0
-	failedCount := 0
-
-	const batchSize = 29
-	const delayBetweenBatches = time.Second
-
-	for i := 0; i < totalUsers; i += batchSize {
-		end := i + batchSize
-		if end > totalUsers {
-			end = totalUsers
-		}
-
-		batch := recipients[i:end]
-
-		for _, rec := range batch {
-			if utils.IsSyntheticTelegramID(rec.TelegramID) {
-				continue
-			}
-			markup := h.buildBroadcastReplyMarkup(rec.Language, flags)
-			var err error
-			if media != nil {
-				if media.AsPhoto {
-					pp := &bot.SendPhotoParams{
-						ChatID:          rec.TelegramID,
-						Photo:           &models.InputFileString{Data: media.FileID},
-						Caption:         messageText,
-						CaptionEntities: entities,
-					}
-					if markup != nil {
-						pp.ReplyMarkup = markup
-					}
-					_, err = b.SendPhoto(ctx, pp)
-				} else {
-					dp := &bot.SendDocumentParams{
-						ChatID:          rec.TelegramID,
-						Document:        &models.InputFileString{Data: media.FileID},
-						Caption:         messageText,
-						CaptionEntities: entities,
-					}
-					if markup != nil {
-						dp.ReplyMarkup = markup
-					}
-					_, err = b.SendDocument(ctx, dp)
-				}
-			} else {
-				params := bot.SendMessageParams{
-					ChatID: rec.TelegramID,
-					Text:   messageText,
-				}
-				if len(entities) > 0 {
-					params.Entities = entities
-				}
-				if markup != nil {
-					params.ReplyMarkup = markup
-				}
-				_, err = b.SendMessage(ctx, &params)
-			}
-			if err != nil {
-				slog.Warn("error sending broadcast message", "userId", rec.TelegramID, "error", err)
-				failedCount++
-			} else {
-				sentCount++
-			}
-		}
-
-		if end < totalUsers {
-			time.Sleep(delayBetweenBatches)
-		}
-	}
-
-	resultText := fmt.Sprintf("✅ Рассылка завершена!\n\n📊 Статистика:\n• Всего пользователей: %d\n• Успешно отправлено: %d\n• Ошибок: %d",
-		totalUsers, sentCount, failedCount)
-
-	_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: adminID,
-		Text:   resultText,
-	})
-
-	slog.Info("broadcast completed", "totalUsers", totalUsers, "sent", sentCount, "failed", failedCount)
+	h.broadcastSender.Send(ctx, b, adminID, audience, tf, messageText, entities, media, flags)
 }

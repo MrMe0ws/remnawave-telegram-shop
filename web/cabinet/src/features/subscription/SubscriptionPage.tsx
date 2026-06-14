@@ -146,15 +146,15 @@ export default function SubscriptionPage() {
           </Card>
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
+            <Card className="subscription-feature-card">
               <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-primary/80 dark:text-cyan-200/80">
+                    <p className="text-xs uppercase tracking-[0.18em] text-primary/80">
                       {t('dashboard.subscriptionLabel')}
                     </p>
                     <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
-                    <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {deviceLimit > 0
                         ? tariffExtraDevices > 0
                           ? t('subscriptionPage.tariffDevicesWithExtra', { base: deviceLimit - tariffExtraDevices, extra: tariffExtraDevices })
@@ -197,15 +197,15 @@ export default function SubscriptionPage() {
                     <Link
                       id="cabinet-onboarding-step2-target"
                       to="/connections"
-                      className="connect-device-cta group block rounded-xl"
+                      className="connect-device-cta group block"
                     >
-                      <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary dark:bg-cyan-500/15 dark:text-cyan-200">
+                      <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                           <MonitorSmartphone size={16} />
                         </span>
                         <div className="min-w-0">
                           <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                          <p className="text-xs text-muted-foreground dark:text-slate-300">{deviceLimitText}</p>
+                          <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
                         </div>
                       </div>
                     </Link>
@@ -224,7 +224,7 @@ export default function SubscriptionPage() {
                 {isExpired && (
                   <Link
                     to="/tariffs"
-                    className="renew-subscription-cta-danger group block rounded-xl"
+                    className="renew-subscription-cta-danger group block"
                   >
                     <div className="renew-subscription-cta-danger-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
                       <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
@@ -242,14 +242,14 @@ export default function SubscriptionPage() {
             </Card>
 
             {sub?.subscription_link && (
-              <Card className="overflow-hidden border border-border bg-card text-card-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-[#0e1529] dark:via-[#0b1324] dark:to-[#0a1222] dark:text-white">
+              <Card className="subscription-feature-card">
                 <CardContent className="px-5 py-5 sm:px-6">
-                  <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground dark:text-[#f1f5f9]">
-                    <Wifi size={14} className="text-foreground dark:text-[#f1f5f9]" />
+                  <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground">
+                    <Wifi size={14} className="text-primary" />
                     {t('subscriptionPage.subscriptionLink')}
                   </p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 truncate rounded-lg bg-muted px-3 py-2 font-mono text-xs text-muted-foreground select-all dark:bg-white/10 dark:text-slate-300">
+                    <div className="flex-1 truncate rounded-lg bg-muted px-3 py-2 font-mono text-xs text-muted-foreground select-all">
                       {sub.subscription_link}
                     </div>
                     <Button
@@ -403,12 +403,12 @@ function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subti
 
   const inner = (
     <>
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[rgb(16_185_129/var(--tw-text-opacity,1))] dark:bg-cyan-500/15 dark:text-cyan-200">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
         <Zap size={16} />
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-        <p className="text-xs text-muted-foreground dark:text-slate-300">{subtitle}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
       <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
     </>
@@ -418,9 +418,9 @@ function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subti
     return (
       <Link
         to="/tariffs"
-        className="connect-device-cta group block rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
+        className="connect-device-cta group block shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
       >
-        <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
+        <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
           {inner}
         </div>
       </Link>
@@ -432,7 +432,7 @@ function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subti
       to="/tariffs"
       className="renew-subscription-cta-static group"
     >
-      <div className="flex items-center gap-3 px-4 py-3 text-card-foreground dark:text-white">
+      <div className="flex items-center gap-3 px-4 py-3 text-card-foreground">
         {inner}
       </div>
     </Link>

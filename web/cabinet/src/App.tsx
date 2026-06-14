@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
 import { useAuthStore } from '@/store/auth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { AdminRoute } from '@/components/AdminRoute'
 import { BrandFavicon } from '@/components/BrandFavicon'
 
 // Auth pages (9a)
@@ -32,6 +33,16 @@ import LoyaltyProgramPage from '@/features/loyalty/LoyaltyProgramPage'
 import PromoCodesPage from '@/features/promocodes/PromoCodesPage'
 import SupportPage from '@/features/support/SupportPage'
 import InfoPage from '@/features/info/InfoPage'
+import AdminDashboardPage from '@/features/admin/pages/AdminDashboardPage'
+import AdminStatsPage from '@/features/admin/pages/AdminStatsPage'
+import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
+import AdminUserDetailPage from '@/features/admin/pages/AdminUserDetailPage'
+import AdminPromosPage from '@/features/admin/pages/AdminPromosPage'
+import AdminTariffsPage from '@/features/admin/pages/AdminTariffsPage'
+import AdminLoyaltyPage from '@/features/admin/pages/AdminLoyaltyPage'
+import AdminBroadcastPage from '@/features/admin/pages/AdminBroadcastPage'
+import AdminInfraPage from '@/features/admin/pages/AdminInfraPage'
+import AdminSyncPage from '@/features/admin/pages/AdminSyncPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -240,6 +251,108 @@ function AppRoutes() {
         element={
           <ProtectedRoute requireVerified>
             <MergePreviewPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Admin routes ─────────────────────────────── */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminDashboardPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/stats"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminStatsPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminUsersPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users/:id"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminUserDetailPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/promos"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminPromosPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/tariffs"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminTariffsPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/loyalty"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminLoyaltyPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/broadcast"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminBroadcastPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/infra"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminInfraPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/sync"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminSyncPage />
+            </AdminRoute>
           </ProtectedRoute>
         }
       />

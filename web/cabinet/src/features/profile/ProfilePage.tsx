@@ -165,11 +165,11 @@ export default function ProfilePage() {
             </Card>
 
             {pulseLinkedAccounts ? (
-              <Link to="/accounts" className="connect-device-cta group block rounded-xl">
-                <div className="connect-device-cta-inner profile-linked-accounts-inner flex items-center gap-3 px-4 py-3.5 text-card-foreground dark:text-white">
+              <Link to="/accounts" className="connect-device-cta group block">
+                <div className="connect-device-cta-inner profile-linked-accounts-inner flex items-center gap-3 px-4 py-3.5 text-card-foreground">
                   <div className="min-w-0 flex-1">
                     <p className="text-[16px] font-medium leading-snug sm:text-[18px]">{t('profile.linkedAccountsTitle')}</p>
-                    <p className="mt-0.5 text-sm text-muted-foreground dark:text-slate-300">{t('profile.linkedAccountsHint')}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{t('profile.linkedAccountsHint')}</p>
                   </div>
                   <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
                 </div>
@@ -258,7 +258,7 @@ export default function ProfilePage() {
 
             <Link
               to="/promocodes"
-              className="profile-tariff-hover flex w-full items-center gap-3 rounded-[var(--radius)] border border-border bg-card/80 p-4 text-left shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="subscription-feature-card profile-tariff-hover flex w-full items-center gap-3 p-4 text-left transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 dark:bg-violet-400/20">
                 <Gift size={16} className="text-violet-600 dark:text-violet-300" strokeWidth={1.75} aria-hidden />

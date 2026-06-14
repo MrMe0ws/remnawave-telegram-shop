@@ -10,6 +10,7 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/broadcast"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
@@ -39,6 +40,7 @@ type Handler struct {
 	statsRepository         *database.StatsRepository
 	infraBillingRepository  *database.InfraBillingRepository
 	loyaltyTierRepository   *database.LoyaltyTierRepository
+	broadcastSender         *broadcast.Sender
 }
 
 func NewHandler(
@@ -76,6 +78,7 @@ func NewHandler(
 		statsRepository:        statsRepository,
 		infraBillingRepository: infraBillingRepository,
 		loyaltyTierRepository:  loyaltyTierRepository,
+		broadcastSender:        broadcast.NewSender(customerRepository, translation),
 	}
 }
 

@@ -18,8 +18,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-telegram/bot"
 	"github.com/jackc/pgx/v4/pgxpool"
 
+	adminauth "remnawave-tg-shop-bot/internal/cabinet/admin/auth"
+	"remnawave-tg-shop-bot/internal/broadcast"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/jwt"
 	googleoauth "remnawave-tg-shop-bot/internal/cabinet/auth/oauth"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/password"
@@ -42,6 +45,7 @@ import (
 	botpayment "remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"remnawave-tg-shop-bot/internal/sync"
 )
 
 // Mount регистрирует роуты кабинета в переданном mux. Возвращает ошибку, если
@@ -57,7 +61,7 @@ import (
 // (например, локальная разработка без YooKassa/CryptoPay).
 // Mount регистрирует роуты кабинета.
 // rw — клиент Remnawave API; может быть nil (тогда merge-шаг обновления RW пропускается).
-func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentService *botpayment.PaymentService, rw *remnawave.Client, promoService *promo.Service) error {
+func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentService *botpayment.PaymentService, rw *remnawave.Client, promoService *promo.Service, syncService *sync.SyncService, tgBot *bot.Bot, broadcastSender *broadcast.Sender) error {
 	spaFS, err := web.FS()
 	if err != nil {
 		return err
@@ -217,9 +221,11 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		cabcfg.TelegramOIDCEnabled(),
 		cabcfg.TelegramWebAuthMode(),
 	)
+	adminChecker := adminauth.NewChecker(identityRepo)
+
 	contentHandler := handlers.NewCabinetContentHandler()
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
-		paymentService, purchaseRepo, rw, customerRepo, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
+		paymentService, purchaseRepo, rw, customerRepo, adminChecker, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 
@@ -327,7 +333,28 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	api := http.NewServeMux()
 	api.Handle("/cabinet/api/metrics", wrapMetricsBasicAuth(cabmetrics.Handler()))
 
+	adminBootstrapHandler := handlers.NewAdminBootstrap()
+	adminAcctLim := ratelimit.New(ratelimit.Rule{Count: 120, Interval: time.Minute})
+	adminAcctLim.RunGC(ctx)
+
+	statsRepo := database.NewStatsRepository(pool)
+	infraBillingRepo := database.NewInfraBillingRepository(pool)
+
+	adminStatsHandler := handlers.NewAdminStats(statsRepo)
+	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, rw)
+	adminPromosHandler := handlers.NewAdminPromos(promoRepo)
+	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo)
+	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
+	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, broadcastSender, tgBot)
+	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
+	adminSquadsHandler := handlers.NewAdminSquads(rw)
+	var adminSyncHandler *handlers.AdminSyncHandler
+	if syncService != nil {
+		adminSyncHandler = handlers.NewAdminSync(syncService)
+	}
+
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
+		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
@@ -411,6 +438,18 @@ func registerAPIRoutes(
 	fortune *handlers.FortuneHandler,
 	support *handlers.SupportHandler,
 	jwtIssuer *jwt.Issuer,
+	adminChecker *adminauth.Checker,
+	adminBootstrap *handlers.AdminBootstrapHandler,
+	adminStats *handlers.AdminStatsHandler,
+	adminUsers *handlers.AdminUsersHandler,
+	adminPromos *handlers.AdminPromosHandler,
+	adminTariffs *handlers.AdminTariffsHandler,
+	adminLoyalty *handlers.AdminLoyaltyHandler,
+	adminBroadcast *handlers.AdminBroadcastHandler,
+	adminInfra *handlers.AdminInfraHandler,
+	adminSquads *handlers.AdminSquadsHandler,
+	adminSync *handlers.AdminSyncHandler,
+	adminAcctLim,
 	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
 ) {
@@ -1047,6 +1086,279 @@ func registerAPIRoutes(
 			middleware.RateLimit(linkAcctLim, accountKey("link_merge_confirm")),
 		)),
 	)
+
+	// ======== Admin panel (RequireAuth + RequireAdmin) ========
+
+	api.Handle("/cabinet/api/admin/bootstrap",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminBootstrap.Bootstrap),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_bootstrap")),
+			),
+		}),
+	)
+
+	api.Handle("/cabinet/api/admin/squads",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminSquads.List),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_squads")),
+			),
+		}),
+	)
+
+	// Admin Stats
+	api.Handle("/cabinet/api/admin/stats",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminStats.Stats),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_stats")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/stats/fortune",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminStats.FortuneStats),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_stats_fortune")),
+			),
+		}),
+	)
+
+	// Admin Users
+	api.Handle("/cabinet/api/admin/users",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminUsers.List),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_users")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/users/search",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminUsers.Search),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_users_search")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/users/",
+		middleware.Chain(
+			http.HandlerFunc(adminUsers.HandleByID),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_users_byid")),
+		),
+	)
+
+	// Admin Promos
+	api.Handle("/cabinet/api/admin/promos",
+		middleware.Chain(
+			http.HandlerFunc(adminPromos.Handle),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_promos")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/promos/",
+		middleware.Chain(
+			http.HandlerFunc(adminPromos.HandleByID),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_promos_byid")),
+		),
+	)
+
+	// Admin Tariffs
+	api.Handle("/cabinet/api/admin/tariffs",
+		middleware.Chain(
+			http.HandlerFunc(adminTariffs.Handle),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_tariffs")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/tariffs/",
+		middleware.Chain(
+			http.HandlerFunc(adminTariffs.HandleByID),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_tariffs_byid")),
+		),
+	)
+
+	// Admin Loyalty
+	api.Handle("/cabinet/api/admin/loyalty/tiers",
+		middleware.Chain(
+			http.HandlerFunc(adminLoyalty.Handle),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_loyalty")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/loyalty/tiers/",
+		middleware.Chain(
+			http.HandlerFunc(adminLoyalty.HandleByID),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_loyalty_byid")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/loyalty/recalc",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(adminLoyalty.TriggerRecalc),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_loyalty_recalc")),
+		)),
+	)
+
+	// Admin Broadcast
+	api.Handle("/cabinet/api/admin/broadcast/audiences",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminBroadcast.Audiences),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_audiences")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/broadcast/preview",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(adminBroadcast.Preview),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_preview")),
+		)),
+	)
+	api.Handle("/cabinet/api/admin/broadcast/tariffs",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminBroadcast.Tariffs),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_tariffs")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/broadcast/send",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(adminBroadcast.Send),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_send")),
+		)),
+	)
+	api.Handle("/cabinet/api/admin/broadcast/upload-media",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(adminBroadcast.UploadMedia),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_upload")),
+		)),
+	)
+
+	// Admin Infra
+	api.Handle("/cabinet/api/admin/infra/nodes",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.HandleNodes),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_nodes")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/nodes/",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.DeleteNode),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_nodes_del")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/providers",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.HandleProviders),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_providers")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/providers/",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.DeleteProvider),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_providers_del")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/history",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.HandleHistory),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_history")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/history/",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.DeleteHistory),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_history_del")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/settings",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.HandleSettings),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_settings")),
+		),
+	)
+
+	// Admin Sync
+	if adminSync != nil {
+		api.Handle("/cabinet/api/admin/sync",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(adminSync.TriggerSync),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.CSRF(),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_sync")),
+			)),
+		)
+	}
 }
 
 // ============================================================================

@@ -39,13 +39,46 @@ async function fetchRuntimeBundle(lang: Lang): Promise<I18nBundle | null> {
   }
 }
 
+function deepMergeTranslation(
+  base: Record<string, unknown>,
+  overlay: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(overlay)) {
+    const existing = out[key]
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      existing !== null &&
+      typeof existing === 'object' &&
+      !Array.isArray(existing)
+    ) {
+      out[key] = deepMergeTranslation(
+        existing as Record<string, unknown>,
+        value as Record<string, unknown>,
+      )
+    } else {
+      out[key] = value
+    }
+  }
+  return out
+}
+
 async function loadResources(): Promise<Record<Lang, I18nBundle>> {
   const resources = { ...bundled }
   await Promise.all(
     SUPPORTED_LANGS.map(async (lang) => {
       const runtime = await fetchRuntimeBundle(lang)
       if (runtime?.translation) {
-        resources[lang] = runtime
+        // Runtime-файл с диска может отставать от SPA-бандла (например admin.*).
+        // Мержим поверх bundled, а не заменяем целиком.
+        resources[lang] = {
+          translation: deepMergeTranslation(
+            bundled[lang].translation,
+            runtime.translation,
+          ),
+        }
       }
     }),
   )
