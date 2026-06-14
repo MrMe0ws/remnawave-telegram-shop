@@ -122,7 +122,7 @@ function NodesTab() {
       {data?.stats && (
         <div className="grid gap-3 sm:grid-cols-3">
           <StatCard label={t('admin.infra.upcomingNodes')} value={data.stats.upcomingNodesCount} />
-          <StatCard label={t('admin.infra.monthPayments')} value={data.stats.currentMonthPayments} />
+          <StatCard label={t('admin.infra.monthPayments')} value={`$${data.stats.currentMonthPayments.toFixed(2)}`} />
           <StatCard label={t('admin.infra.totalSpent')} value={`$${data.stats.totalSpent.toFixed(2)}`} />
         </div>
       )}

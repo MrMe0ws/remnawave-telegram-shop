@@ -39,7 +39,7 @@ type InfraBillingBillingNode struct {
 // InfraBillingNodesStats — сводка в ответе /nodes.
 type InfraBillingNodesStats struct {
 	UpcomingNodesCount   int     `json:"upcomingNodesCount"`
-	CurrentMonthPayments int     `json:"currentMonthPayments"`
+	CurrentMonthPayments float64 `json:"currentMonthPayments"`
 	TotalSpent           float64 `json:"totalSpent"`
 }
 
