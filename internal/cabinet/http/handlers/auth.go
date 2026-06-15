@@ -137,6 +137,7 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"pwa_enabled":            cabcfg.PWAEnabled(),
 		"pwa_app_name":           cabcfg.PWAAppName(),
 		"pwa_short_name":         cabcfg.PWAShortName(),
+		"light_theme_enabled":    cabcfg.LightThemeEnabled(),
 		"payment_providers": map[string]bool{
 			"yookassa":          botcfg.IsYookasaEnabled(),
 			"cryptopay":         botcfg.IsCryptoPayEnabled(),

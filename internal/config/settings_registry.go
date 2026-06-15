@@ -248,6 +248,11 @@ func RuntimeSettingsRegistry() []SettingField {
 			},
 			Current: func() string { return formatTelegramIDList(conf.whitelistedTelegramIds) },
 		},
+		{
+			Key: "CABINET_LIGHT_THEME_ENABLED", Group: "access", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_LIGHT_THEME_ENABLED"),
+			Current: cabinetLightThemeCurrent(),
+		},
 
 		// --- lifecycle (без cron / master toggle) ---
 		{
@@ -554,4 +559,14 @@ func applyFortuneInt(key string, min int) func(string) error {
 
 func fortuneCurrent(key string) func() string {
 	return func() string { return effectiveEnvUnderRLock(key) }
+}
+
+func cabinetLightThemeCurrent() func() string {
+	return func() string {
+		v := strings.TrimSpace(effectiveEnvUnderRLock("CABINET_LIGHT_THEME_ENABLED"))
+		if v == "" {
+			return "true"
+		}
+		return v
+	}
 }

@@ -15,6 +15,8 @@ function applyTheme(theme: Theme) {
   localStorage.setItem('cab_theme', theme)
 }
 
+export { applyTheme }
+
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
 

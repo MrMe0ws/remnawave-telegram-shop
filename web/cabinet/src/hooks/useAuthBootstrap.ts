@@ -13,6 +13,7 @@ function bootstrapFallback(): AuthBootstrapResponse {
     telegram_oidc_enabled: false,
     telegram_web_auth_mode: 'widget',
     turnstile_enabled: false,
+    light_theme_enabled: true,
   }
 }
 

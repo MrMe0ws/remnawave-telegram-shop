@@ -1424,6 +1424,7 @@
             "delivery": "Куда и что слать"
           },
           "access": {
+            "cabinet_ui": "Кабинет",
             "moderation": "Модерация",
             "lists": "Списки доступа"
           },
@@ -1497,6 +1498,7 @@
           "FORWARD_USER_MESSAGES_TO_ADMIN": { "label": "Пересылать сообщения админу", "hint": "Текст и неизвестные команды" },
           "BLOCKED_TELEGRAM_IDS": { "label": "Заблокированные Telegram ID", "hint": "Через запятую" },
           "WHITELISTED_TELEGRAM_IDS": { "label": "Белый список Telegram ID", "hint": "Пропускают фильтр имён" },
+          "CABINET_LIGHT_THEME_ENABLED": { "label": "Светлая тема", "hint": "Выключите, чтобы оставить только тёмную тему для всех пользователей" },
           "LIFECYCLE_NO_CONNECT_PAID_ENABLED": { "label": "Напоминание после оплаты", "hint": "" },
           "LIFECYCLE_NO_CONNECT_TRIAL_ENABLED": { "label": "Напоминание после триала", "hint": "" },
           "LIFECYCLE_NO_CONNECT_DELAY_HOURS": { "label": "Отправить через, ч", "hint": "" },

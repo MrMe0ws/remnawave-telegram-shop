@@ -18,6 +18,7 @@ import {
   Shield,
   Smartphone,
   Star,
+  Sun,
   Tag,
   Trophy,
   Undo2,
@@ -147,6 +148,12 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
     },
   ],
   access: [
+    {
+      id: 'cabinet_ui',
+      titleKey: 'admin.settings.subsections.access.cabinet_ui',
+      icon: Sun,
+      keys: ['CABINET_LIGHT_THEME_ENABLED'],
+    },
     {
       id: 'moderation',
       titleKey: 'admin.settings.subsections.access.moderation',
@@ -296,5 +303,15 @@ export function adminSettingsGroupAnchor(id: string): string {
 }
 
 export function scrollToSettingsGroup(id: string): void {
-  document.getElementById(adminSettingsGroupAnchor(id))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const el = document.getElementById(adminSettingsGroupAnchor(id))
+  if (!el) return
+
+  const scroll = () => {
+    const headerOffset = 96
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+  }
+
+  scroll()
+  window.setTimeout(scroll, 320)
 }

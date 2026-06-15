@@ -457,7 +457,9 @@ export default function AdminSettingsPage() {
   const handleSectionNav = useCallback((id: string) => {
     setActiveSection(id)
     setExpandedGroups((prev) => new Set(prev).add(id))
-    scrollToSettingsGroup(id)
+    window.requestAnimationFrame(() => {
+      scrollToSettingsGroup(id)
+    })
   }, [])
 
   return (

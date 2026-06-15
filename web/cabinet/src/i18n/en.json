@@ -1417,6 +1417,7 @@
             "delivery": "Delivery target"
           },
           "access": {
+            "cabinet_ui": "Cabinet",
             "moderation": "Moderation",
             "lists": "Access lists"
           },
@@ -1490,6 +1491,7 @@
           "FORWARD_USER_MESSAGES_TO_ADMIN": { "label": "Forward messages to admin", "hint": "Text and unknown commands" },
           "BLOCKED_TELEGRAM_IDS": { "label": "Blocked Telegram IDs", "hint": "Comma-separated" },
           "WHITELISTED_TELEGRAM_IDS": { "label": "Whitelisted Telegram IDs", "hint": "Skip name filter" },
+          "CABINET_LIGHT_THEME_ENABLED": { "label": "Light theme", "hint": "Turn off to force dark theme for all users" },
           "LIFECYCLE_NO_CONNECT_PAID_ENABLED": { "label": "Reminder after payment", "hint": "" },
           "LIFECYCLE_NO_CONNECT_TRIAL_ENABLED": { "label": "Reminder after trial", "hint": "" },
           "LIFECYCLE_NO_CONNECT_DELAY_HOURS": { "label": "Send after, hours", "hint": "" },

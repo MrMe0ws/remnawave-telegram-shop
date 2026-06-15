@@ -337,6 +337,7 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `CABINET_PWA_ENABLED`                | Включить PWA-манифест кабинета (`true/false`) |
 | `CABINET_PWA_APP_NAME`               | Имя PWA-приложения (опционально) |
 | `CABINET_PWA_SHORT_NAME`             | Короткое имя PWA-приложения (опционально) |
+| `CABINET_LIGHT_THEME_ENABLED`        | Светлая тема в кабинете (`true` по умолчанию; `false` — только тёмная, без переключателя в шапке). Можно менять в админке без перезапуска |
 | `CABINET_MINI_APP_URL`               | URL Mini App для web↔telegram flow (опционально) |
 | `CABINET_MINI_APP_PATH`              | Path Mini App (опционально, обычно `/cabinet/`) |
 | `CABINET_TELEGRAM_UI_MODE`           | При включённом кабинете: `classic` (меню как раньше) или `minimalism` (кнопки в кабинет: тарифы, подписка, поддержка, инфо + короткий greeting; подписи в `translations/*`) |

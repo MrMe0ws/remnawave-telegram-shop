@@ -92,6 +92,8 @@ export interface AuthBootstrapResponse {
   fortune_nav_visible?: boolean
   /** true при SUPPORT_BOT_API=true — чат поддержки в кабинете вместо внешней ссылки. */
   support_chat_enabled?: boolean
+  /** false — только тёмная тема, переключатель в шапке скрыт (CABINET_LIGHT_THEME_ENABLED). */
+  light_theme_enabled?: boolean
   /** Доступные провайдеры оплаты по backend-конфигурации env. */
   payment_providers?: {
     yookassa?: boolean

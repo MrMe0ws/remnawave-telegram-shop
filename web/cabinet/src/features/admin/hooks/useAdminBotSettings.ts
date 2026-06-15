@@ -15,9 +15,12 @@ export function useAdminBotSettingsPatch() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (settings: Record<string, string>) => api.adminBotSettingsPatch({ settings }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['admin-bot-settings'] })
       void queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] })
+      if ('CABINET_LIGHT_THEME_ENABLED' in variables) {
+        void queryClient.invalidateQueries({ queryKey: ['auth-bootstrap'] })
+      }
     },
   })
 }
