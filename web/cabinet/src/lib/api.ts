@@ -18,6 +18,7 @@ import type {
   AdminBroadcastSendDTO,
   AdminCustomerDTO,
   AdminFortuneStatsDTO,
+  AdminLoyaltyStatsDTO,
   AdminLoyaltyTierDTO,
   AdminOkDTO,
   AdminPaymentsDTO,
@@ -25,6 +26,7 @@ import type {
   AdminPromoGetDTO,
   AdminPromoRedemptionsListDTO,
   AdminPromoListDTO,
+  AdminPromoStatsDTO,
   AdminReferralsDTO,
   AdminStatsDTO,
   AdminStatsTimeSeriesDTO,
@@ -36,6 +38,8 @@ import type {
   AdminInfraProvidersDTO,
   AdminInfraHistoryDTO,
   AdminInfraSettingsDTO,
+  AdminBotSettingsDTO,
+  AdminBotSettingsPatchDTO,
 } from './types/admin'
 
 /** Имя cookie с double-submit CSRF (совпадает с csrf.CookieName на бэкенде). */
@@ -904,6 +908,8 @@ export const api = {
   adminStatsTimeSeries: (period: string) =>
     request<AdminStatsTimeSeriesDTO>('GET', `/admin/stats/timeseries?period=${encodeURIComponent(period)}`),
   adminFortuneStats: () => request<AdminFortuneStatsDTO>('GET', '/admin/stats/fortune'),
+  adminLoyaltyStats: () => request<AdminLoyaltyStatsDTO>('GET', '/admin/stats/loyalty'),
+  adminPromoStats: () => request<AdminPromoStatsDTO>('GET', '/admin/stats/promos'),
 
   adminUsers: (params?: { scope?: string; page?: number; limit?: number }) => {
     const q = new URLSearchParams()
@@ -1074,6 +1080,10 @@ export const api = {
   adminInfraSettings: () => request<AdminInfraSettingsDTO>('GET', '/admin/infra/settings'),
   adminInfraUpdateSettings: (body: { days: number; enabled: boolean }) =>
     request<AdminOkDTO>('PATCH', '/admin/infra/settings', body),
+
+  adminBotSettings: () => request<AdminBotSettingsDTO>('GET', '/admin/settings'),
+  adminBotSettingsPatch: (body: { settings: Record<string, string> }) =>
+    request<AdminBotSettingsPatchDTO>('PATCH', '/admin/settings', body),
 
   adminSync: () => request<AdminOkDTO>('POST', '/admin/sync'),
 

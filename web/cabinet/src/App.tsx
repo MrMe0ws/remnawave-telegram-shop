@@ -43,6 +43,7 @@ import AdminLoyaltyPage from '@/features/admin/pages/AdminLoyaltyPage'
 import AdminBroadcastPage from '@/features/admin/pages/AdminBroadcastPage'
 import AdminInfraPage from '@/features/admin/pages/AdminInfraPage'
 import AdminSyncPage from '@/features/admin/pages/AdminSyncPage'
+import AdminSettingsPage from '@/features/admin/pages/AdminSettingsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -342,6 +343,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AdminRoute>
               <AdminInfraPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminSettingsPage />
             </AdminRoute>
           </ProtectedRoute>
         }

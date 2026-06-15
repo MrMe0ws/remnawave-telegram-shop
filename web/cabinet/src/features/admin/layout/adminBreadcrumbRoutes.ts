@@ -7,6 +7,7 @@ export const ADMIN_BREADCRUMB_ROUTE_KEYS: Record<string, string> = {
   tariffs: 'admin.nav.tariffs',
   loyalty: 'admin.nav.loyalty',
   broadcast: 'admin.nav.broadcast',
+  settings: 'admin.nav.settings',
   infra: 'admin.nav.infra',
   sync: 'admin.nav.sync',
 }

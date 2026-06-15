@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ArrowRight,
   ShieldCheck,
+  SlidersHorizontal,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -74,6 +75,15 @@ export default function AdminDashboardPage() {
       accent: { from: '245 158 11', to: '249 115 22', glow: '245 158 11' },
     },
     {
+      to: '/admin/broadcast',
+      icon: Megaphone,
+      titleKey: 'admin.nav.broadcast',
+      descKey: 'admin.dashboard.linkBroadcast',
+      bg: 'from-indigo-500/12 via-blue-500/6 to-card',
+      iconBg: 'bg-indigo-500/12 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400',
+      accent: { from: '99 102 241', to: '59 130 246', glow: '99 102 241' },
+    },
+    {
       to: '/admin/tariffs',
       icon: Zap,
       titleKey: 'admin.nav.tariffs',
@@ -94,13 +104,13 @@ export default function AdminDashboardPage() {
       condition: loyaltyEnabled,
     },
     {
-      to: '/admin/broadcast',
-      icon: Megaphone,
-      titleKey: 'admin.nav.broadcast',
-      descKey: 'admin.dashboard.linkBroadcast',
-      bg: 'from-indigo-500/12 via-blue-500/6 to-card',
-      iconBg: 'bg-indigo-500/12 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400',
-      accent: { from: '99 102 241', to: '59 130 246', glow: '99 102 241' },
+      to: '/admin/settings',
+      icon: SlidersHorizontal,
+      titleKey: 'admin.nav.settings',
+      descKey: 'admin.dashboard.linkSettings',
+      bg: 'from-violet-500/12 via-purple-500/6 to-card',
+      iconBg: 'bg-violet-500/12 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+      accent: { from: '124 58 237', to: '168 85 247', glow: '124 58 237' },
     },
     {
       to: '/admin/infra',

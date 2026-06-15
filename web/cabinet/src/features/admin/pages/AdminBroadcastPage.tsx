@@ -9,6 +9,7 @@ import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminBroadcastMessagePreview } from '../components/AdminBroadcastMessagePreview'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
+import { AdminSelect } from '../components/AdminSelect'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
 
@@ -239,20 +240,22 @@ export default function AdminBroadcastPage() {
 
           {isTariffsMode && (selectedAudience === 'active_paid' || selectedAudience === 'inactive_paid') && (
             <div className="mt-3">
-              <label className="mb-1 block text-xs text-muted-foreground">{t('admin.broadcast.filterTariff')}</label>
-              <select
-                className="rounded-md border border-border bg-background px-2 py-1 text-sm"
-                value={selectedTariff ?? ''}
-                onChange={(e) => {
-                  setSelectedTariff(e.target.value ? Number(e.target.value) : null)
+              <label className="mb-1.5 block text-xs text-muted-foreground">{t('admin.broadcast.filterTariff')}</label>
+              <AdminSelect<number>
+                value={selectedTariff}
+                allowEmpty
+                emptyLabel={t('admin.broadcast.allTariffs')}
+                placeholder={t('admin.broadcast.allTariffs')}
+                ariaLabel={t('admin.broadcast.filterTariff')}
+                options={(tariffsData?.tariffs ?? []).map((tariff) => ({
+                  value: tariff.id,
+                  label: tariff.name,
+                }))}
+                onChange={(id) => {
+                  setSelectedTariff(id)
                   invalidatePreview()
                 }}
-              >
-                <option value="">{t('admin.broadcast.allTariffs')}</option>
-                {tariffsData?.tariffs?.map((tariff) => (
-                  <option key={tariff.id} value={tariff.id}>{tariff.name}</option>
-                ))}
-              </select>
+              />
             </div>
           )}
         </div>

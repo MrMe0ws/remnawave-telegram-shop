@@ -128,6 +128,38 @@ export interface AdminFortuneStatsDTO {
   all_time: AdminFortunePeriodDTO
 }
 
+export interface AdminLoyaltyTierStatDTO {
+  sort_order: number
+  xp_min: number
+  discount_percent: number
+  display_name?: string | null
+  user_count: number
+}
+
+export interface AdminLoyaltyStatsDTO {
+  captured_at: string
+  enabled: boolean
+  tiers: AdminLoyaltyTierStatDTO[]
+}
+
+export interface AdminPromoStatsTopDTO {
+  id: number
+  code: string
+  active: boolean
+  uses_count: number
+  redemptions: number
+}
+
+export interface AdminPromoStatsDTO {
+  captured_at: string
+  total: number
+  active: number
+  inactive: number
+  total_redemptions: number
+  redemptions_today: number
+  top_by_redemptions: AdminPromoStatsTopDTO[]
+}
+
 export interface AdminCustomerDTO {
   id: number
   telegram_id: number
@@ -142,6 +174,8 @@ export interface AdminCustomerDTO {
   subscription_period_start?: string | null
   subscription_period_months?: number | null
   loyalty_xp: number
+  loyalty_level?: number | null
+  loyalty_discount_percent?: number | null
   is_web_only: boolean
   status: 'active' | 'expired' | 'trial' | 'disabled'
   rw_status?: string | null
@@ -441,4 +475,39 @@ export interface AdminInfraSettingsDTO {
   notify_before_3: boolean
   notify_before_7: boolean
   notify_before_14: boolean
+}
+
+export type AdminSettingFieldType =
+  | 'bool'
+  | 'int'
+  | 'float'
+  | 'text'
+  | 'url'
+  | 'enum'
+  | 'csv_int'
+  | 'csv'
+
+export interface AdminSettingFieldDTO {
+  key: string
+  type: AdminSettingFieldType
+  value: string
+  source: 'db' | 'env' | 'default'
+  instant: boolean
+  enum_values?: string[]
+  min_int?: number
+  max_int?: number
+}
+
+export interface AdminSettingGroupDTO {
+  id: string
+  fields: AdminSettingFieldDTO[]
+}
+
+export interface AdminBotSettingsDTO {
+  groups: AdminSettingGroupDTO[]
+}
+
+export interface AdminBotSettingsPatchDTO {
+  ok: boolean
+  changed: string[]
 }

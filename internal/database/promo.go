@@ -187,6 +187,71 @@ func (r *PromoRepository) CountTotals(ctx context.Context) (total, active, inact
 	return
 }
 
+// PromoAdminStatsTopRow — промокод в топе по активациям.
+type PromoAdminStatsTopRow struct {
+	ID          int64
+	Code        string
+	Active      bool
+	UsesCount   int
+	Redemptions int
+}
+
+// PromoAdminStatsSnapshot — агрегат для админ-статистики промокодов.
+type PromoAdminStatsSnapshot struct {
+	Total            int
+	Active           int
+	Inactive         int
+	TotalRedemptions int
+	RedemptionsToday int
+	TopByRedemptions []PromoAdminStatsTopRow
+}
+
+// AdminStatsSnapshot — сводка по промокодам для кабинета.
+func (r *PromoRepository) AdminStatsSnapshot(ctx context.Context) (PromoAdminStatsSnapshot, error) {
+	var snap PromoAdminStatsSnapshot
+	total, active, inactive, err := r.CountTotals(ctx)
+	if err != nil {
+		return snap, err
+	}
+	snap.Total = total
+	snap.Active = active
+	snap.Inactive = inactive
+
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*)::int FROM promo_redemption`).Scan(&snap.TotalRedemptions); err != nil {
+		return snap, err
+	}
+
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	if err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*)::int FROM promo_redemption WHERE used_at >= $1`,
+		startOfDay,
+	).Scan(&snap.RedemptionsToday); err != nil {
+		return snap, err
+	}
+
+	rows, err := r.pool.Query(ctx, `
+SELECT pc.id, pc.code, pc.active, pc.uses_count, COUNT(pr.id)::int AS redemptions
+FROM promo_code pc
+LEFT JOIN promo_redemption pr ON pr.promo_code_id = pc.id
+GROUP BY pc.id
+ORDER BY redemptions DESC, pc.code ASC
+LIMIT 12`)
+	if err != nil {
+		return snap, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row PromoAdminStatsTopRow
+		if err := rows.Scan(&row.ID, &row.Code, &row.Active, &row.UsesCount, &row.Redemptions); err != nil {
+			return snap, err
+		}
+		snap.TopByRedemptions = append(snap.TopByRedemptions, row)
+	}
+	return snap, rows.Err()
+}
+
 func (r *PromoRepository) UpdateFields(ctx context.Context, id int64, fields map[string]interface{}) error {
 	if len(fields) == 0 {
 		return nil

@@ -8,6 +8,7 @@ import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
+import { imageSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
 import { Card } from '@/components/ui/card'
 
 type TabKey = 'nodes' | 'providers' | 'history' | 'settings'
@@ -352,7 +353,14 @@ function ProvidersTab() {
             <div key={prov.uuid} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3">
                 {prov.faviconLink && (
-                  <img src={prov.faviconLink} alt="" className="size-6 rounded" />
+                  <img
+                    src={imageSrcFromUrl(prov.faviconLink)}
+                    alt=""
+                    className="size-6 rounded object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
                 )}
                 <div>
                   <div className="text-sm font-medium">{prov.name}</div>
@@ -363,7 +371,7 @@ function ProvidersTab() {
               </div>
               <div className="flex items-center gap-1">
                 {prov.loginUrl && (
-                  <a href={prov.loginUrl} target="_blank" rel="noopener noreferrer" className="rounded-md p-1.5 text-muted-foreground hover:text-foreground" title={t('admin.infra.openLogin')}>
+                  <a href={normalizeHttpUrl(prov.loginUrl)} target="_blank" rel="noopener noreferrer" className="rounded-md p-1.5 text-muted-foreground hover:text-foreground" title={t('admin.infra.openLogin')}>
                     <Globe className="size-4" />
                   </a>
                 )}
@@ -372,8 +380,8 @@ function ProvidersTab() {
                   onClick={() => setEditProv({
                     uuid: prov.uuid,
                     name: prov.name,
-                    favicon_link: prov.faviconLink ?? '',
-                    login_url: prov.loginUrl ?? '',
+                    favicon_link: normalizeHttpUrl(prov.faviconLink ?? ''),
+                    login_url: normalizeHttpUrl(prov.loginUrl ?? ''),
                   })}
                   className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
@@ -403,8 +411,8 @@ function ProvidersTab() {
           onCancel={() => setCreateOpen(false)}
           onSave={() => createMutation.mutate({
             name: form.name.trim(),
-            favicon_link: form.favicon_link.trim() || undefined,
-            login_url: form.login_url.trim() || undefined,
+            favicon_link: form.favicon_link.trim() ? normalizeHttpUrl(form.favicon_link) : undefined,
+            login_url: form.login_url.trim() ? normalizeHttpUrl(form.login_url) : undefined,
           })}
           saving={createMutation.isPending}
           saveLabel={t('admin.create')}
@@ -420,8 +428,8 @@ function ProvidersTab() {
             onSave={() => patchMutation.mutate({
               uuid: editProv.uuid,
               name: editProv.name.trim(),
-              favicon_link: editProv.favicon_link.trim() || undefined,
-              login_url: editProv.login_url.trim() || undefined,
+              favicon_link: editProv.favicon_link.trim() ? normalizeHttpUrl(editProv.favicon_link) : undefined,
+              login_url: editProv.login_url.trim() ? normalizeHttpUrl(editProv.login_url) : undefined,
             })}
             saving={patchMutation.isPending}
             saveLabel={t('admin.save')}
@@ -461,17 +469,35 @@ function ProviderForm({
       <div>
         <label className="mb-1 block text-sm font-medium">{t('admin.infra.faviconLink')}</label>
         <input
+          type="text"
+          inputMode="url"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           value={form.favicon_link}
           onChange={(e) => setForm({ ...form, favicon_link: e.target.value })}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v) setForm({ ...form, favicon_link: normalizeHttpUrl(v) })
+          }}
         />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium">{t('admin.infra.loginUrl')}</label>
         <input
+          type="text"
+          inputMode="url"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           value={form.login_url}
           onChange={(e) => setForm({ ...form, login_url: e.target.value })}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v) setForm({ ...form, login_url: normalizeHttpUrl(v) })
+          }}
         />
       </div>
       <div className="flex justify-end gap-2 pt-2">

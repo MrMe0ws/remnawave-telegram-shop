@@ -216,6 +216,14 @@ func (h *AdminInfraHandler) CreateProvider(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "name must be 2-30 chars", http.StatusBadRequest)
 		return
 	}
+	if req.FaviconLink != nil {
+		n := normalizeInfraURL(*req.FaviconLink)
+		req.FaviconLink = &n
+	}
+	if req.LoginURL != nil {
+		n := normalizeInfraURL(*req.LoginURL)
+		req.LoginURL = &n
+	}
 
 	body, err := h.rw.CreateInfraProvider(r.Context(), remnawave.CreateInfraProviderRequest{
 		Name:        req.Name,
@@ -256,6 +264,14 @@ func (h *AdminInfraHandler) PatchProvider(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		http.Error(w, "invalid uuid", http.StatusBadRequest)
 		return
+	}
+	if req.FaviconLink != nil {
+		n := normalizeInfraURL(*req.FaviconLink)
+		req.FaviconLink = &n
+	}
+	if req.LoginURL != nil {
+		n := normalizeInfraURL(*req.LoginURL)
+		req.LoginURL = &n
 	}
 
 	body, err := h.rw.PatchInfraProvider(r.Context(), remnawave.UpdateInfraProviderRequest{
@@ -525,4 +541,19 @@ func (h *AdminInfraHandler) HandleSettings(w http.ResponseWriter, r *http.Reques
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func normalizeInfraURL(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	lower := strings.ToLower(s)
+	if strings.HasPrefix(lower, "http://") {
+		return "http://" + s[len("http://"):]
+	}
+	if strings.HasPrefix(lower, "https://") {
+		return "https://" + s[len("https://"):]
+	}
+	return "https://" + s
 }

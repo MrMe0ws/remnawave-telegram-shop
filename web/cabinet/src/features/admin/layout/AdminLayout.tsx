@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ShieldCheck,
   X,
+  SlidersHorizontal,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -97,6 +98,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
     {
       labelKey: 'admin.nav.group.system',
       items: [
+        { to: '/admin/settings', icon: SlidersHorizontal, labelKey: 'admin.nav.settings' },
         { to: '/admin/infra', icon: Server, labelKey: 'admin.nav.infra' },
         { to: '/admin/sync', icon: RefreshCw, labelKey: 'admin.nav.sync' },
       ],
@@ -212,13 +214,13 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
           <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-4">
             <AdminBreadcrumbs pathname={location.pathname} pageMeta={pageMeta} className="lg:col-start-2 lg:row-start-1" />
 
-            <aside className="hidden w-56 shrink-0 lg:col-start-1 lg:row-start-2 lg:flex lg:flex-col lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
+            <aside className="hidden w-56 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem)] lg:flex-col lg:self-start lg:overflow-y-auto lg:overscroll-y-contain lg:sticky lg:top-[3.75rem]">
               <div className="rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur-sm">
                 {sidebarContent}
               </div>
             </aside>
 
-            <main className="relative z-[1] min-w-0 lg:col-start-2 lg:row-start-2">
+            <main className="relative z-[1] min-w-0 overflow-x-clip lg:col-start-2 lg:row-start-2">
               {children}
             </main>
           </div>

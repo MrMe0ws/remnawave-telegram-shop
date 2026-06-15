@@ -5,17 +5,31 @@ import (
 	"net/http"
 	"time"
 
+	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 )
 
-// AdminStatsHandler — эндпоинты GET /cabinet/api/admin/stats, /cabinet/api/admin/stats/fortune, /cabinet/api/admin/stats/timeseries.
+// AdminStatsHandler — эндпоинты GET /cabinet/api/admin/stats и связанные.
 type AdminStatsHandler struct {
-	stats *database.StatsRepository
+	stats     *database.StatsRepository
+	loyalty   *database.LoyaltyTierRepository
+	customers *database.CustomerRepository
+	promos    *database.PromoRepository
 }
 
 // NewAdminStats — конструктор.
-func NewAdminStats(stats *database.StatsRepository) *AdminStatsHandler {
-	return &AdminStatsHandler{stats: stats}
+func NewAdminStats(
+	stats *database.StatsRepository,
+	loyalty *database.LoyaltyTierRepository,
+	customers *database.CustomerRepository,
+	promos *database.PromoRepository,
+) *AdminStatsHandler {
+	return &AdminStatsHandler{
+		stats:     stats,
+		loyalty:   loyalty,
+		customers: customers,
+		promos:    promos,
+	}
 }
 
 type adminTopReferrerDTO struct {
@@ -326,6 +340,127 @@ func (h *AdminStatsHandler) FortuneStats(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+type adminLoyaltyTierStatDTO struct {
+	SortOrder       int     `json:"sort_order"`
+	XpMin           int64   `json:"xp_min"`
+	DiscountPercent int     `json:"discount_percent"`
+	DisplayName     *string `json:"display_name,omitempty"`
+	UserCount       int64   `json:"user_count"`
+}
+
+type adminLoyaltyStatsResp struct {
+	CapturedAt string                    `json:"captured_at"`
+	Enabled    bool                      `json:"enabled"`
+	Tiers      []adminLoyaltyTierStatDTO `json:"tiers"`
+}
+
+// LoyaltyStats — GET /cabinet/api/admin/stats/loyalty (RequireAdmin).
+func (h *AdminStatsHandler) LoyaltyStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	resp := adminLoyaltyStatsResp{
+		CapturedAt: time.Now().UTC().Format(time.RFC3339),
+		Enabled:    config.LoyaltyEnabled(),
+		Tiers:      []adminLoyaltyTierStatDTO{},
+	}
+	if !config.LoyaltyEnabled() || h.loyalty == nil || h.customers == nil {
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+
+	tiers, err := h.loyalty.ListAllOrderedByXpMinAsc(r.Context())
+	if err != nil {
+		slog.Error("admin stats: loyalty tiers failed", "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	out := make([]adminLoyaltyTierStatDTO, 0, len(tiers))
+	for i, t := range tiers {
+		var maxEx *int64
+		if i+1 < len(tiers) {
+			nx := tiers[i+1].XpMin
+			maxEx = &nx
+		}
+		n, cntErr := h.customers.CountCustomersLoyaltyXPHalfOpen(r.Context(), t.XpMin, maxEx)
+		if cntErr != nil {
+			slog.Error("admin stats: loyalty tier count failed", "error", cntErr, "tier", t.SortOrder)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		out = append(out, adminLoyaltyTierStatDTO{
+			SortOrder:       t.SortOrder,
+			XpMin:           t.XpMin,
+			DiscountPercent: t.DiscountPercent,
+			DisplayName:     t.DisplayName,
+			UserCount:       n,
+		})
+	}
+	resp.Tiers = out
+	writeJSON(w, http.StatusOK, resp)
+}
+
+type adminPromoStatsTopDTO struct {
+	ID          int64  `json:"id"`
+	Code        string `json:"code"`
+	Active      bool   `json:"active"`
+	UsesCount   int    `json:"uses_count"`
+	Redemptions int    `json:"redemptions"`
+}
+
+type adminPromoStatsResp struct {
+	CapturedAt         string                  `json:"captured_at"`
+	Total              int                     `json:"total"`
+	Active             int                     `json:"active"`
+	Inactive           int                     `json:"inactive"`
+	TotalRedemptions   int                     `json:"total_redemptions"`
+	RedemptionsToday   int                     `json:"redemptions_today"`
+	TopByRedemptions   []adminPromoStatsTopDTO `json:"top_by_redemptions"`
+}
+
+// PromoStats — GET /cabinet/api/admin/stats/promos (RequireAdmin).
+func (h *AdminStatsHandler) PromoStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if h.promos == nil {
+		http.Error(w, "promo repository not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	snap, err := h.promos.AdminStatsSnapshot(r.Context())
+	if err != nil {
+		slog.Error("admin stats: promo snapshot failed", "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	top := make([]adminPromoStatsTopDTO, 0, len(snap.TopByRedemptions))
+	for _, row := range snap.TopByRedemptions {
+		top = append(top, adminPromoStatsTopDTO{
+			ID:          row.ID,
+			Code:        row.Code,
+			Active:      row.Active,
+			UsesCount:   row.UsesCount,
+			Redemptions: row.Redemptions,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, adminPromoStatsResp{
+		CapturedAt:       time.Now().UTC().Format(time.RFC3339),
+		Total:            snap.Total,
+		Active:           snap.Active,
+		Inactive:         snap.Inactive,
+		TotalRedemptions: snap.TotalRedemptions,
+		RedemptionsToday: snap.RedemptionsToday,
+		TopByRedemptions: top,
+	})
 }
 
 func mapFortunePeriod(p database.AdminFortunePeriodAgg) adminFortunePeriodDTO {

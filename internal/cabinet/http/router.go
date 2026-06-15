@@ -339,14 +339,16 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 
 	statsRepo := database.NewStatsRepository(pool)
 	infraBillingRepo := database.NewInfraBillingRepository(pool)
+	runtimeSettingsRepo := database.NewRuntimeSettingsRepository(pool)
 
-	adminStatsHandler := handlers.NewAdminStats(statsRepo)
-	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, rw)
+	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo)
+	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw)
 	adminPromosHandler := handlers.NewAdminPromos(promoRepo)
 	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
 	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, broadcastSender, tgBot)
 	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
+	adminSettingsHandler := handlers.NewAdminSettings(runtimeSettingsRepo)
 	adminSquadsHandler := handlers.NewAdminSquads(rw)
 	var adminSyncHandler *handlers.AdminSyncHandler
 	if syncService != nil {
@@ -354,7 +356,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	}
 
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
-		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
+		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
@@ -447,6 +449,7 @@ func registerAPIRoutes(
 	adminLoyalty *handlers.AdminLoyaltyHandler,
 	adminBroadcast *handlers.AdminBroadcastHandler,
 	adminInfra *handlers.AdminInfraHandler,
+	adminSettings *handlers.AdminSettingsHandler,
 	adminSquads *handlers.AdminSquadsHandler,
 	adminSync *handlers.AdminSyncHandler,
 	adminAcctLim,
@@ -1142,6 +1145,26 @@ func registerAPIRoutes(
 			),
 		}),
 	)
+	api.Handle("/cabinet/api/admin/stats/loyalty",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminStats.LoyaltyStats),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_stats_loyalty")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/stats/promos",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminStats.PromoStats),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_stats_promos")),
+			),
+		}),
+	)
 
 	// Admin Users
 	api.Handle("/cabinet/api/admin/users",
@@ -1354,6 +1377,16 @@ func registerAPIRoutes(
 			middleware.RequireAdmin(adminChecker),
 			middleware.CSRF(),
 			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_settings")),
+		),
+	)
+
+	api.Handle("/cabinet/api/admin/settings",
+		middleware.Chain(
+			http.HandlerFunc(adminSettings.Handle),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_bot_settings")),
 		),
 	)
 

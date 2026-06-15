@@ -23,6 +23,7 @@ type AdminUsersHandler struct {
 	purchases *database.PurchaseRepository
 	referrals *database.ReferralRepository
 	tariffs   *database.TariffRepository
+	loyalty   *database.LoyaltyTierRepository
 	rw        *remnawave.Client
 }
 
@@ -32,6 +33,7 @@ func NewAdminUsers(
 	purchases *database.PurchaseRepository,
 	referrals *database.ReferralRepository,
 	tariffs *database.TariffRepository,
+	loyalty *database.LoyaltyTierRepository,
 	rw *remnawave.Client,
 ) *AdminUsersHandler {
 	return &AdminUsersHandler{
@@ -39,6 +41,7 @@ func NewAdminUsers(
 		purchases: purchases,
 		referrals: referrals,
 		tariffs:   tariffs,
+		loyalty:   loyalty,
 		rw:        rw,
 	}
 }
@@ -59,6 +62,8 @@ type adminCustomerDTO struct {
 	SubscriptionPeriodStart *string `json:"subscription_period_start"`
 	SubscriptionPeriodMonths *int   `json:"subscription_period_months"`
 	LoyaltyXP               int64  `json:"loyalty_xp"`
+	LoyaltyLevel            *int   `json:"loyalty_level,omitempty"`
+	LoyaltyDiscountPercent  *int   `json:"loyalty_discount_percent,omitempty"`
 	IsWebOnly               bool   `json:"is_web_only"`
 	Status                  string `json:"status"`
 	RwStatus                *string `json:"rw_status,omitempty"`
@@ -130,7 +135,11 @@ func deriveCustomerStatus(c *database.Customer, paidSubs *int) string {
 
 func (h *AdminUsersHandler) customerDTOWithStatus(ctx context.Context, c *database.Customer) adminCustomerDTO {
 	dto := mapCustomerToDTO(c)
-	if c == nil || h.purchases == nil {
+	if c == nil {
+		return dto
+	}
+	h.enrichLoyaltyDTO(ctx, c.LoyaltyXP, &dto)
+	if h.purchases == nil {
 		return dto
 	}
 	if c.ExpireAt == nil || !c.ExpireAt.After(time.Now()) {
@@ -143,6 +152,21 @@ func (h *AdminUsersHandler) customerDTOWithStatus(ctx context.Context, c *databa
 	}
 	dto.Status = deriveCustomerStatus(c, &n)
 	return dto
+}
+
+func (h *AdminUsersHandler) enrichLoyaltyDTO(ctx context.Context, loyaltyXP int64, dto *adminCustomerDTO) {
+	if dto == nil || !config.LoyaltyEnabled() || h.loyalty == nil {
+		return
+	}
+	prog, err := h.loyalty.ProgressForXP(ctx, loyaltyXP)
+	if err != nil {
+		slog.Warn("admin users: loyalty progress failed", "error", err)
+		return
+	}
+	lvl := prog.CurrentTier.SortOrder
+	pct := prog.CurrentTier.DiscountPercent
+	dto.LoyaltyLevel = &lvl
+	dto.LoyaltyDiscountPercent = &pct
 }
 
 func applyRWStatusToDTO(dto *adminCustomerDTO, rw *remnawave.User) {

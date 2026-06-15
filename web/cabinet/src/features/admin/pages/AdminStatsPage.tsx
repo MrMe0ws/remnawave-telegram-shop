@@ -10,7 +10,11 @@ import { cn } from '@/lib/utils'
 import { useAdminStats } from '../hooks/useAdminStats'
 import { useAdminStatsTimeSeries } from '../hooks/useAdminStatsTimeSeries'
 import { useAdminFortuneStats } from '../hooks/useAdminFortuneStats'
+import { useAdminLoyaltyStats } from '../hooks/useAdminLoyaltyStats'
+import { useAdminPromoStats } from '../hooks/useAdminPromoStats'
 import { FortuneStatsAccordion } from '../stats/components/FortuneStatsAccordion'
+import { LoyaltyStatsAccordion } from '../stats/components/LoyaltyStatsAccordion'
+import { PromoStatsAccordion } from '../stats/components/PromoStatsAccordion'
 import { ReferralsStatsWidget } from '../stats/components/ReferralsStatsWidget'
 import { RevenueStatsWidget } from '../stats/components/RevenueStatsWidget'
 import { SalesStatsWidget } from '../stats/components/SalesStatsWidget'
@@ -47,8 +51,20 @@ function AdminStatsPageContent() {
     refetch: refetchFortune,
     isFetching: fortuneFetching,
   } = useAdminFortuneStats()
+  const {
+    data: loyaltyData,
+    isLoading: loyaltyLoading,
+    refetch: refetchLoyalty,
+    isFetching: loyaltyFetching,
+  } = useAdminLoyaltyStats()
+  const {
+    data: promoData,
+    isLoading: promoLoading,
+    refetch: refetchPromo,
+    isFetching: promoFetching,
+  } = useAdminPromoStats()
 
-  const refreshing = isFetching || fortuneFetching || timeseriesFetching
+  const refreshing = isFetching || fortuneFetching || timeseriesFetching || loyaltyFetching || promoFetching
   const numberLocale = statsNumberLocale(i18n.language)
   const tariffRows = data?.tariff_breakdown ?? []
 
@@ -56,6 +72,8 @@ function AdminStatsPageContent() {
     void refetch()
     void refetchTimeseries()
     void refetchFortune()
+    void refetchLoyalty()
+    void refetchPromo()
   }
 
   const updatedLabel = useMemo(() => {
@@ -191,6 +209,14 @@ function AdminStatsPageContent() {
 
           {!fortuneLoading && fortuneData && (
             <FortuneStatsAccordion data={fortuneData} globalPeriod={period} />
+          )}
+
+          {!loyaltyLoading && loyaltyData?.enabled && (
+            <LoyaltyStatsAccordion data={loyaltyData} />
+          )}
+
+          {!promoLoading && promoData && (
+            <PromoStatsAccordion data={promoData} />
           )}
         </div>
       )}

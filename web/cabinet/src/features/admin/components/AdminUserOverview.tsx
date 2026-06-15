@@ -28,8 +28,40 @@ import { AdminSetExpireModal } from './AdminSetExpireModal'
 import { ClickableOverviewControl } from './overview/ClickableOverviewControl'
 import type { UserEditModalKey } from './user-modals/types'
 import { useAdminUserSetExpire, useAdminUserDevices } from '../hooks/useAdminUsers'
+import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
+import { useAdminLoyaltyTiers, type AdminLoyaltyTier } from '../hooks/useAdminLoyalty'
 
 const GB = 1024 * 1024 * 1024
+
+function resolveLoyaltyDiscountPercent(
+  user: AdminCustomerDTO,
+  tiers: AdminLoyaltyTier[] | undefined,
+  loyaltyEnabled: boolean,
+): number | null {
+  if (!loyaltyEnabled) return null
+  if (user.loyalty_discount_percent != null) return user.loyalty_discount_percent
+  if (!tiers?.length) return null
+
+  let discount = tiers[0].discount_percent
+  for (const tier of tiers) {
+    if (user.loyalty_xp >= tier.xp_min) {
+      discount = tier.discount_percent
+    }
+  }
+  return discount
+}
+
+function XpOverviewValue({ xp, discount }: { xp: number; discount: number | null }) {
+  if (discount == null) {
+    return <span className="tabular-nums">{xp}</span>
+  }
+  return (
+    <span>
+      <span className="tabular-nums">{xp}</span>
+      <span className="font-medium text-muted-foreground"> · {discount}%</span>
+    </span>
+  )
+}
 
 function bytesToGb(bytes: number): number {
   return bytes / GB
@@ -73,7 +105,7 @@ function DesktopStatCard({
 }: {
   icon: typeof Star
   label: string
-  value: string
+  value: ReactNode
   onClick?: () => void
   clickTitle?: string
 }) {
@@ -147,6 +179,11 @@ export function AdminUserOverview({
 
   const setExpire = useAdminUserSetExpire(userId)
   const { data: devicesData } = useAdminUserDevices(userId)
+  const { data: bootstrap } = useAdminBootstrap()
+  const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false
+  const { data: loyaltyTiers } = useAdminLoyaltyTiers()
+  const loyaltyDiscount = resolveLoyaltyDiscountPercent(user, loyaltyTiers, loyaltyEnabled)
+  const xpValue = <XpOverviewValue xp={user.loyalty_xp} discount={loyaltyDiscount} />
 
   const rw = panel?.rw
   const hasRwUser = panel?.has_rw_user && rw
@@ -410,7 +447,7 @@ export function AdminUserOverview({
                 <DesktopStatCard
                   icon={Star}
                   label={t('admin.users.overview.statXp')}
-                  value={String(user.loyalty_xp)}
+                  value={xpValue}
                 />
               </div>
               {onOpenModal ? (
@@ -493,7 +530,7 @@ export function AdminUserOverview({
                 )}
                 <li className="flex items-center gap-2">
                   <Star className="size-4 shrink-0 text-amber-500" aria-hidden />
-                  <span className="tabular-nums">{user.loyalty_xp}</span>
+                  <span className="text-sm">{xpValue}</span>
                 </li>
                 {onOpenModal && (
                   <li>

@@ -89,6 +89,13 @@ func main() {
 		panic(err)
 	}
 
+	runtimeSettingsRepo := database.NewRuntimeSettingsRepository(pool)
+	if overrides, loadErr := runtimeSettingsRepo.GetAll(ctx); loadErr != nil {
+		panic(fmt.Errorf("load runtime settings: %w", loadErr))
+	} else if err := config.LoadRuntimeOverrides(overrides); err != nil {
+		panic(fmt.Errorf("apply runtime settings: %w", err))
+	}
+
 	// Инициализация конфигурации web-кабинета. Делаем сразу после миграций,
 	// чтобы startup-check мог обратиться к уже созданной колонке customer.is_web_only
 	// и чтобы падать рано при невалидных CABINET_* переменных.

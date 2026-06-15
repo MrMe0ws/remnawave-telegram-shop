@@ -242,11 +242,23 @@ func SquadUUIDs() map[uuid.UUID]uuid.UUID {
 }
 
 func GetBlockedTelegramIds() map[int64]bool {
-	return conf.blockedTelegramIds
+	confMu.RLock()
+	defer confMu.RUnlock()
+	out := make(map[int64]bool, len(conf.blockedTelegramIds))
+	for k, v := range conf.blockedTelegramIds {
+		out[k] = v
+	}
+	return out
 }
 
 func GetWhitelistedTelegramIds() map[int64]bool {
-	return conf.whitelistedTelegramIds
+	confMu.RLock()
+	defer confMu.RUnlock()
+	out := make(map[int64]bool, len(conf.whitelistedTelegramIds))
+	for k, v := range conf.whitelistedTelegramIds {
+		out[k] = v
+	}
+	return out
 }
 
 func TrialInternalSquads() map[uuid.UUID]uuid.UUID {

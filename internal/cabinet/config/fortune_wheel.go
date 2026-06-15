@@ -2,9 +2,10 @@ package config
 
 import (
 	"log/slog"
-	"os"
 	"strconv"
 	"strings"
+
+	botcfg "remnawave-tg-shop-bot/internal/config"
 )
 
 // FortuneWheelConfig — настройки колеса фортуны (FORTUNE_* env). Безопасно до InitConfig кабинета.
@@ -48,8 +49,12 @@ type FortuneWheelConfig struct {
 
 var fortuneWheel FortuneWheelConfig
 
+func fortuneEffectiveEnv(key string) string {
+	return botcfg.EffectiveEnv(key)
+}
+
 func fortuneInt(key string, def int) int {
-	v := strings.TrimSpace(os.Getenv(key))
+	v := strings.TrimSpace(fortuneEffectiveEnv(key))
 	if v == "" {
 		return def
 	}
@@ -66,7 +71,16 @@ func fortuneInt(key string, def int) int {
 }
 
 func fortuneBool(key string, def bool) bool {
-	return envBool(key, def)
+	v := strings.TrimSpace(fortuneEffectiveEnv(key))
+	if v == "" {
+		return def
+	}
+	return v == "true"
+}
+
+// ReloadFortuneWheel перечитывает FORTUNE_* (в т.ч. runtime overrides) без restart.
+func ReloadFortuneWheel() {
+	initFortuneWheel()
 }
 
 // initFortuneWheel вызывается из InitConfig() после conf.enabled=true.
