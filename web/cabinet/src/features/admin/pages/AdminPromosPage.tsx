@@ -39,6 +39,7 @@ import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import { truncatePreview } from '../utils/truncatePreview'
 import { formatAdminCustomerLabel } from '../utils/formatAdminCustomerLabel'
+import { resolvePromoDisplayStatus, type PromoDisplayStatus } from '../utils/promoStatus'
 
 const PROMO_CODE_PREVIEW_LEN = 6
 
@@ -70,14 +71,21 @@ function typeBadge(type: string, t: TFunction) {
   )
 }
 
-function statusBadge(active: boolean, t: TFunction) {
-  return active ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-      {t('admin.promos.statusActive')}
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-500 dark:text-red-400">
-      {t('admin.promos.statusInactive')}
+function statusBadge(promo: Pick<AdminPromoCode, 'active' | 'valid_until'>, t: TFunction) {
+  const status: PromoDisplayStatus = resolvePromoDisplayStatus(promo)
+  const styles: Record<PromoDisplayStatus, string> = {
+    active: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    inactive: 'bg-red-500/15 text-red-500 dark:text-red-400',
+    expired: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  }
+  const labelKeys: Record<PromoDisplayStatus, string> = {
+    active: 'admin.promos.statusActive',
+    inactive: 'admin.promos.statusInactive',
+    expired: 'admin.promos.statusExpired',
+  }
+  return (
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', styles[status])}>
+      {t(labelKeys[status])}
     </span>
   )
 }
@@ -505,7 +513,7 @@ function PromoListItem({
                 {typeBadge(promo.type, t)}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {statusBadge(promo.active, t)}
+                {statusBadge(promo, t)}
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {t('admin.promos.uses')}: {usesLabel}
                 </span>
@@ -540,7 +548,7 @@ function PromoListItem({
           </span>
         </td>
         <td className="px-4 py-3">{typeBadge(promo.type, t)}</td>
-        <td className="px-4 py-3">{statusBadge(promo.active, t)}</td>
+        <td className="px-4 py-3">{statusBadge(promo, t)}</td>
         <td className="px-4 py-3 text-sm tabular-nums">{usesLabel}</td>
         <td className="px-4 py-3 text-sm text-muted-foreground">{validUntilLabel}</td>
         <td className="px-4 py-3">
@@ -817,7 +825,7 @@ export default function AdminPromosPage() {
                     <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       <th className="whitespace-nowrap px-4 py-3">{t('admin.promos.code')}</th>
                       <th className="px-4 py-3">{t('admin.promos.type')}</th>
-                      <th className="px-4 py-3">{t('admin.promos.active')}</th>
+                      <th className="px-4 py-3">{t('admin.promos.status')}</th>
                       <th className="px-4 py-3">{t('admin.promos.uses')}</th>
                       <th className="px-4 py-3">{t('admin.promos.validUntil')}</th>
                       <th className="w-8 px-4 py-3" />

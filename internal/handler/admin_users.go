@@ -912,13 +912,13 @@ func (h Handler) adminUsersMergeSearchResults(ctx context.Context, dbRows []data
 		if c == nil {
 			return
 		}
-		if _, ok := seen[c.TelegramID]; ok {
+		if _, ok := seen[c.ID]; ok {
 			return
 		}
 		if len(out) >= limit {
 			return
 		}
-		seen[c.TelegramID] = struct{}{}
+		seen[c.ID] = struct{}{}
 		out = append(out, *c)
 	}
 	for i := range dbRows {
@@ -928,10 +928,7 @@ func (h Handler) adminUsersMergeSearchResults(ctx context.Context, dbRows []data
 		}
 	}
 	for _, u := range rwRows {
-		if u.TelegramID == nil {
-			continue
-		}
-		cust, err := h.customerRepository.FindByTelegramId(ctx, *u.TelegramID)
+		cust, err := remnawave.CustomerFromAdminSearchUser(ctx, h.customerRepository, u)
 		if err != nil || cust == nil {
 			continue
 		}

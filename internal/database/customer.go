@@ -197,6 +197,48 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 	return &customer, nil
 }
 
+// FindBySubscriptionLink returns a customer with an exact subscription_link match.
+func (cr *CustomerRepository) FindBySubscriptionLink(ctx context.Context, link string) (*Customer, error) {
+	link = strings.TrimSpace(link)
+	if link == "" {
+		return nil, nil
+	}
+	buildSelect := sq.Select(customerSelectColumns).
+		From("customer").
+		Where(sq.Eq{"subscription_link": link}).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build select query: %w", err)
+	}
+
+	var customer Customer
+	err = cr.pool.QueryRow(ctx, sql, args...).Scan(
+		&customer.ID,
+		&customer.TelegramID,
+		&customer.ExpireAt,
+		&customer.CreatedAt,
+		&customer.SubscriptionLink,
+		&customer.Language,
+		&customer.ExtraHwid,
+		&customer.ExtraHwidExpiresAt,
+		&customer.CurrentTariffID,
+		&customer.SubscriptionPeriodStart,
+		&customer.SubscriptionPeriodMonths,
+		&customer.LoyaltyXP,
+		&customer.TelegramUsername,
+		&customer.IsWebOnly,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to query customer: %w", err)
+	}
+	return &customer, nil
+}
+
 func (cr *CustomerRepository) Create(ctx context.Context, customer *Customer) (*Customer, error) {
 	return cr.FindOrCreate(ctx, customer)
 }
