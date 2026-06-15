@@ -62,10 +62,10 @@ export function useAdminUserPayments(id: number | null, page = 1, limit = 20) {
   })
 }
 
-export function useAdminUserReferrals(id: number | null) {
+export function useAdminUserReferrals(id: number | null, page = 1, limit = 20) {
   return useQuery<AdminReferralsResponse>({
-    queryKey: ['admin-user-referrals', id],
-    queryFn: () => api.adminUserReferrals(id!),
+    queryKey: ['admin-user-referrals', id, page, limit],
+    queryFn: () => api.adminUserReferrals(id!, { page, limit }),
     enabled: id != null && id > 0,
     staleTime: 15_000,
   })

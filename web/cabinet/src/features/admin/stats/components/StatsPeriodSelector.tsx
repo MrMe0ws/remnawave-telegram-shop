@@ -47,7 +47,7 @@ export function StatsPeriodSelector({ value, onChange, className }: StatsPeriodS
         aria-expanded={open}
         aria-label={t('admin.stats.period.label')}
         className={cn(
-          'cabinet-elevated-card flex min-h-11 min-w-[9.5rem] items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/40',
+          'cabinet-elevated-card flex min-h-11 w-full min-w-[9.5rem] items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/40',
           open && 'border-primary/40 ring-1 ring-primary/20',
         )}
       >

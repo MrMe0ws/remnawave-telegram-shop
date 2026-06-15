@@ -373,20 +373,19 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
               {t('admin.tariffs.description')}
             </TariffEditorSectionHeader>
             <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.descriptionHint')}</p>
-            <div className="grid gap-3 lg:grid-cols-2">
-              <div>
+            <div className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
+              <div className="flex min-h-[13.5rem] flex-col">
                 <TariffFieldLabel>{t('admin.tariffs.descriptionSource')}</TariffFieldLabel>
                 <textarea
-                  rows={8}
                   spellCheck={false}
-                  className="admin-input w-full resize-y px-3 py-2 font-mono text-xs leading-relaxed"
+                  className="admin-input min-h-0 flex-1 w-full resize-none px-3 py-2 font-mono text-xs leading-relaxed"
                   value={form.description}
                   onChange={(e) => set('description', e.target.value)}
                 />
               </div>
-              <div>
+              <div className="flex min-h-[13.5rem] flex-col">
                 <TariffFieldLabel>{t('admin.tariffs.descriptionPreview')}</TariffFieldLabel>
-                <div className="min-h-[12rem] rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
                   {form.description.trim() ? (
                     <TariffDescription text={form.description} className="text-sm" />
                   ) : (

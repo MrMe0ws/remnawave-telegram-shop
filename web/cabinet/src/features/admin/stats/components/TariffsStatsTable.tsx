@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Table2 } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 import {
   formatPeriodRub,
@@ -12,13 +13,17 @@ import {
 } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { STATS_CHART_PALETTE } from '../utils/statsChartTheme'
+import { findTariffTimeSeries, tariffSeriesSparklineValues } from '../utils/timeseriesFormat'
+
+import { TariffSparkline } from './TariffSparkline'
 
 interface TariffsStatsTableProps {
   rows: AdminStatsResponse['tariff_breakdown']
   period: StatsPeriod
+  timeseries?: AdminStatsTimeSeriesDTO | null
 }
 
-export function TariffsStatsTable({ rows, period }: TariffsStatsTableProps) {
+export function TariffsStatsTable({ rows, period, timeseries }: TariffsStatsTableProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
 
@@ -40,6 +45,9 @@ export function TariffsStatsTable({ rows, period }: TariffsStatsTableProps) {
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="w-[38%] pb-2 pr-1 font-medium sm:pr-4 md:w-auto">{t('admin.stats.tariffName')}</th>
+              <th className="hidden w-24 pb-2 pr-4 text-center font-medium lg:table-cell">
+                {t('admin.stats.trend')}
+              </th>
               <th className="w-[31%] pb-2 pr-1 text-right font-medium leading-tight sm:pr-4 md:w-auto">
                 <span className="md:hidden">{t('admin.stats.salesShort')}</span>
                 <span className="hidden md:inline">{t('admin.stats.sales')}</span>
@@ -49,7 +57,10 @@ export function TariffsStatsTable({ rows, period }: TariffsStatsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((tr, idx) => (
+            {rows.map((tr, idx) => {
+              const tariffSeries = findTariffTimeSeries(timeseries?.tariff_series, tr.tariff_id)
+              const sparkValues = tariffSeriesSparklineValues(tariffSeries, 'sales')
+              return (
               <tr
                 key={tr.tariff_id}
                 className="border-b border-border/50 transition-colors last:border-0 hover:bg-muted/20"
@@ -65,6 +76,12 @@ export function TariffsStatsTable({ rows, period }: TariffsStatsTableProps) {
                     <span className="truncate font-medium">{tr.display_name}</span>
                   </div>
                 </td>
+                <td className="hidden py-2.5 pr-4 lg:table-cell">
+                  <TariffSparkline
+                    values={sparkValues}
+                    color={STATS_CHART_PALETTE[idx % STATS_CHART_PALETTE.length]}
+                  />
+                </td>
                 <td className="py-2 pr-1 text-right tabular-nums sm:py-2.5 sm:pr-4">
                   {tariffPeriodSales(tr, period).toLocaleString(numberLocale)}
                 </td>
@@ -75,7 +92,7 @@ export function TariffsStatsTable({ rows, period }: TariffsStatsTableProps) {
                   {tr.active_paid_users.toLocaleString(numberLocale)}
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </CardContent>

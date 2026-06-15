@@ -54,7 +54,13 @@ export interface AdminStatsDTO {
   ref_bonus_days_month: number
   ref_bonus_days_half_year: number
   ref_bonus_days_year: number
-  top_referrers: { referrer_id: number; paid_referees: number }[]
+  top_referrers: {
+    referrer_id: number
+    customer_id: number
+    telegram_username?: string | null
+    nickname?: string | null
+    paid_referees: number
+  }[]
   tariff_breakdown: {
     tariff_id: number
     display_name: string
@@ -71,6 +77,36 @@ export interface AdminStatsDTO {
     revenue_all: number
     active_paid_users: number
   }[]
+}
+
+export interface AdminStatsTimeSeriesPointDTO {
+  date: string
+  revenue_rub: number
+  sales: number
+  new_users: number
+  transactions: number
+}
+
+export interface AdminTariffTimeSeriesPointDTO {
+  date: string
+  sales: number
+  revenue_rub: number
+}
+
+export interface AdminTariffTimeSeriesDTO {
+  tariff_id: number
+  display_name: string
+  points: AdminTariffTimeSeriesPointDTO[]
+}
+
+export interface AdminStatsTimeSeriesDTO {
+  captured_at: string
+  period: string
+  granularity: 'day' | 'week' | 'month'
+  from: string
+  to: string
+  points: AdminStatsTimeSeriesPointDTO[]
+  tariff_series: AdminTariffTimeSeriesDTO[]
 }
 
 export interface AdminFortunePeriodDTO {
@@ -174,6 +210,20 @@ export interface AdminPromoGetDTO {
   promo: AdminPromoCodeDTO
   redemptions: number
   redemptions_today: number
+}
+
+export interface AdminPromoRedemptionDTO {
+  used_at: string
+  customer_id: number
+  telegram_username?: string | null
+  nickname?: string | null
+}
+
+export interface AdminPromoRedemptionsListDTO {
+  items: AdminPromoRedemptionDTO[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface AdminTariffPriceDTO {

@@ -25,8 +25,11 @@ const sqlRubCurrency = `(UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR',
 
 // AdminTopReferrer строка топа рефереров (дни начислений рефереру добиваются в handler через ReferralRepository).
 type AdminTopReferrer struct {
-	ReferrerID   int64
-	PaidReferees int64
+	ReferrerID       int64
+	CustomerID       int64
+	TelegramUsername *string
+	Nickname         *string
+	PaidReferees     int64
 }
 
 // AdminTariffStat метрики по одному тарифу (SALES_MODE=tariffs).
@@ -721,13 +724,20 @@ FROM ranked p
 
 func (s *StatsRepository) topReferrers(ctx context.Context, limit int) ([]AdminTopReferrer, error) {
 	q := `
-SELECT r.referrer_id, COUNT(DISTINCT r.referee_id) AS n
+SELECT r.referrer_id, c.id, c.telegram_username,
+  (SELECT NULLIF(TRIM(ii.raw_profile_json->>'first_name'), '')
+   FROM cabinet_account_customer_link l
+   JOIN cabinet_identity ii ON ii.account_id = l.account_id AND ii.unlinked_at IS NULL
+   WHERE l.customer_id = c.id AND l.link_status = 'linked'
+   ORDER BY ii.created_at DESC
+   LIMIT 1) AS nickname,
+  COUNT(DISTINCT r.referee_id) AS n
 FROM referral r
-JOIN customer c ON c.telegram_id = r.referee_id
+JOIN customer c ON c.telegram_id = r.referrer_id
 WHERE EXISTS (
   SELECT 1 FROM purchase p WHERE p.customer_id = c.id AND p.status = 'paid' AND p.month > 0
 )
-GROUP BY r.referrer_id
+GROUP BY r.referrer_id, c.id, c.telegram_username
 ORDER BY n DESC
 LIMIT $1`
 	rows, err := s.pool.Query(ctx, q, limit)
@@ -738,7 +748,7 @@ LIMIT $1`
 	var list []AdminTopReferrer
 	for rows.Next() {
 		var tr AdminTopReferrer
-		if err := rows.Scan(&tr.ReferrerID, &tr.PaidReferees); err != nil {
+		if err := rows.Scan(&tr.ReferrerID, &tr.CustomerID, &tr.TelegramUsername, &tr.Nickname, &tr.PaidReferees); err != nil {
 			return nil, err
 		}
 		list = append(list, tr)

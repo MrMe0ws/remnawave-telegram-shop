@@ -23,9 +23,11 @@ import type {
   AdminPaymentsDTO,
   AdminPromoCodeDTO,
   AdminPromoGetDTO,
+  AdminPromoRedemptionsListDTO,
   AdminPromoListDTO,
   AdminReferralsDTO,
   AdminStatsDTO,
+  AdminStatsTimeSeriesDTO,
   AdminTariffDTO,
   AdminUserPanelDTO,
   AdminUsersListDTO,
@@ -899,6 +901,8 @@ export const api = {
     request<AdminBootstrapResponse>('GET', '/admin/bootstrap'),
 
   adminStats: () => request<AdminStatsDTO>('GET', '/admin/stats'),
+  adminStatsTimeSeries: (period: string) =>
+    request<AdminStatsTimeSeriesDTO>('GET', `/admin/stats/timeseries?period=${encodeURIComponent(period)}`),
   adminFortuneStats: () => request<AdminFortuneStatsDTO>('GET', '/admin/stats/fortune'),
 
   adminUsers: (params?: { scope?: string; page?: number; limit?: number }) => {
@@ -934,8 +938,13 @@ export const api = {
     const suffix = q.toString() ? `?${q.toString()}` : ''
     return request<AdminPaymentsDTO>('GET', `/admin/users/${id}/payments${suffix}`)
   },
-  adminUserReferrals: (id: number) =>
-    request<AdminReferralsDTO>('GET', `/admin/users/${id}/referrals`),
+  adminUserReferrals: (id: number, params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.page != null) q.set('page', String(params.page))
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminReferralsDTO>('GET', `/admin/users/${id}/referrals${suffix}`)
+  },
   adminUserPanel: (id: number) =>
     request<AdminUserPanelDTO>('GET', `/admin/users/${id}/panel`),
   adminUserSetSquads: (id: number, squadUuids: string[]) =>
@@ -965,6 +974,13 @@ export const api = {
     return request<AdminPromoListDTO>('GET', `/admin/promos${suffix}`)
   },
   adminPromoGet: (id: number) => request<AdminPromoGetDTO>('GET', `/admin/promos/${id}`),
+  adminPromoRedemptions: (id: number, params?: { page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.page != null) q.set('page', String(params.page))
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminPromoRedemptionsListDTO>('GET', `/admin/promos/${id}/redemptions${suffix}`)
+  },
   adminPromoCreate: (body: unknown) => request<AdminPromoCodeDTO>('POST', '/admin/promos', body),
   adminPromoUpdate: (id: number, fields: Record<string, unknown>) =>
     request<AdminPromoCodeDTO>('PATCH', `/admin/promos/${id}`, fields),

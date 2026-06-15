@@ -934,6 +934,19 @@ func (h *AdminUsersHandler) Referrals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	q := r.URL.Query()
+	page, _ := strconv.Atoi(q.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
 	stats, err := h.referrals.GetStats(ctx, cust.TelegramID)
 	if err != nil {
 		slog.Error("admin users: referral stats failed", "error", err.Error())
@@ -941,7 +954,8 @@ func (h *AdminUsersHandler) Referrals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summaries, err := h.referrals.FindRefereeSummariesByReferrer(ctx, cust.TelegramID)
+	offset := (page - 1) * limit
+	summaries, err := h.referrals.FindRefereeSummariesByReferrerPage(ctx, cust.TelegramID, limit, offset)
 	if err != nil {
 		slog.Warn("admin users: referral summaries failed", "error", err.Error())
 		summaries = nil

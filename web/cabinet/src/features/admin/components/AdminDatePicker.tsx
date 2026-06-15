@@ -36,6 +36,8 @@ interface AdminDatePickerProps {
   minDate?: Date
   showTime?: boolean
   className?: string
+  /** Текущий срок подписки (ISO) — подсвечивается в календаре, если ещё не истёк. */
+  currentExpireAt?: string | null
 }
 
 export function AdminDatePicker({
@@ -44,10 +46,18 @@ export function AdminDatePicker({
   minDate,
   showTime = true,
   className,
+  currentExpireAt,
 }: AdminDatePickerProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
   const today = useMemo(() => startOfDay(new Date()), [])
+
+  const currentExpireDay = useMemo(() => {
+    if (!currentExpireAt) return null
+    const d = new Date(currentExpireAt)
+    if (Number.isNaN(d.getTime()) || d.getTime() <= Date.now()) return null
+    return startOfDay(d)
+  }, [currentExpireAt])
 
   const initialView = value ?? today
   const [viewMode, setViewMode] = useState<ViewMode>('days')
@@ -251,6 +261,8 @@ export function AdminDatePicker({
               const disabled = minDay != null && date < minDay
               const selected = value != null && isSameDay(date, value)
               const isToday = isSameDay(date, today)
+              const isCurrentExpire =
+                currentExpireDay != null && isSameDay(date, currentExpireDay)
 
               return (
                 <button
@@ -258,11 +270,19 @@ export function AdminDatePicker({
                   type="button"
                   disabled={disabled}
                   onClick={() => pickDay(date)}
+                  title={
+                    isCurrentExpire && !selected
+                      ? t('admin.users.currentExpireDay')
+                      : undefined
+                  }
                   className={cn(
                     'aspect-square rounded-lg text-sm tabular-nums transition-colors',
                     !inMonth && 'text-muted-foreground/40',
                     inMonth && !selected && !disabled && 'hover:bg-accent',
-                    isToday && !selected && 'ring-1 ring-primary/40',
+                    isToday && !selected && !isCurrentExpire && 'ring-1 ring-primary/40',
+                    isCurrentExpire &&
+                      !selected &&
+                      'bg-emerald-500/15 font-semibold text-emerald-700 ring-2 ring-emerald-500/55 dark:text-emerald-300',
                     selected && 'bg-primary text-primary-foreground hover:bg-primary/90',
                     disabled && 'pointer-events-none opacity-30',
                   )}

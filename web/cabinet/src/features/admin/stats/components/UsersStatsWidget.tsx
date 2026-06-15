@@ -13,6 +13,7 @@ import {
   YAxis,
 } from 'recharts'
 
+import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 import {
   activeSubsPct,
@@ -22,6 +23,7 @@ import {
 } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { buildNewUsersTrend } from '../utils/statsChartData'
+import { formatTimeseriesLabel } from '../utils/timeseriesFormat'
 import {
   STATS_CHART_COLORS,
   statsChartAxisTick,
@@ -38,10 +40,11 @@ const VPN_COLORS = [STATS_CHART_COLORS.blue, STATS_CHART_COLORS.purple, STATS_CH
 interface UsersStatsWidgetProps {
   data: AdminStatsResponse
   period: StatsPeriod
+  timeseries?: AdminStatsTimeSeriesDTO | null
   className?: string
 }
 
-export function UsersStatsWidget({ data, period, className }: UsersStatsWidgetProps) {
+export function UsersStatsWidget({ data, period, timeseries, className }: UsersStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const slice = getStatsPeriodSlice(data, period)
@@ -55,10 +58,15 @@ export function UsersStatsWidget({ data, period, className }: UsersStatsWidgetPr
     [data.paid_active, data.trial_active, data.inactive, t],
   )
 
-  const regTrend = useMemo(
-    () => buildNewUsersTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value })),
-    [data, period, t],
-  )
+  const regTrend = useMemo(() => {
+    if (timeseries?.points.length) {
+      return timeseries.points.map((pt) => ({
+        name: formatTimeseriesLabel(pt.date, timeseries.granularity, numberLocale),
+        value: pt.new_users,
+      }))
+    }
+    return buildNewUsersTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value }))
+  }, [timeseries, data, period, t, numberLocale])
 
   const regGrowth = buildGrowth(slice.newUsers, slice.newUsersPrev)
   const subsPct = activeSubsPct(data)
@@ -158,7 +166,7 @@ export function UsersStatsWidget({ data, period, className }: UsersStatsWidgetPr
           </div>
         </div>
 
-        {regTrend.length > 1 && (
+        {regTrend.length > 0 && (
           <div className="mt-auto h-20 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={regTrend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>

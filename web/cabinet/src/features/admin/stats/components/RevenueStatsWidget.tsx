@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { Wallet } from 'lucide-react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
+import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 import { formatPeriodRub, getStatsPeriodSlice, statsPeriodLabel, type StatsPeriod } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { buildRevenueTrend } from '../utils/statsChartData'
+import { formatTimeseriesLabel } from '../utils/timeseriesFormat'
 import {
   STATS_CHART_COLORS,
   statsChartAxisTick,
@@ -20,23 +22,28 @@ import { StatsWidgetCard } from './StatsWidgetCard'
 interface RevenueStatsWidgetProps {
   data: AdminStatsResponse
   period: StatsPeriod
+  timeseries?: AdminStatsTimeSeriesDTO | null
   className?: string
 }
 
-export function RevenueStatsWidget({ data, period, className }: RevenueStatsWidgetProps) {
+export function RevenueStatsWidget({ data, period, timeseries, className }: RevenueStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const slice = getStatsPeriodSlice(data, period)
   const periodLabel = statsPeriodLabel(t, period)
 
-  const trend = useMemo(
-    () =>
-      buildRevenueTrend(data, t, period).map((pt) => ({
-        name: pt.label,
-        value: pt.value,
-      })),
-    [data, period, t],
-  )
+  const trend = useMemo(() => {
+    if (timeseries?.points.length) {
+      return timeseries.points.map((pt) => ({
+        name: formatTimeseriesLabel(pt.date, timeseries.granularity, numberLocale),
+        value: pt.revenue_rub,
+      }))
+    }
+    return buildRevenueTrend(data, t, period).map((pt) => ({
+      name: pt.label,
+      value: pt.value,
+    }))
+  }, [timeseries, data, period, t, numberLocale])
 
   return (
     <StatsWidgetCard

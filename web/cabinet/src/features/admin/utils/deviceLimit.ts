@@ -16,3 +16,11 @@ export function computeDeviceLimitBreakdown(
   if (baseLimit < 1) baseLimit = 1
   return { baseLimit, activeExtra, totalLimit }
 }
+
+/** Базовый лимит из итогового лимита RW и записи customer. */
+export function baseLimitFromTotal(
+  totalLimit: number,
+  customer?: AdminCustomerDTO | null,
+): number {
+  return computeDeviceLimitBreakdown(totalLimit, customer).baseLimit
+}

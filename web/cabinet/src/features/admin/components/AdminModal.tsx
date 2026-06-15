@@ -71,44 +71,44 @@ export function AdminModal({
       )}
       onClick={onClose}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          'cabinet-elevated-card admin-modal-panel flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden',
-          'rounded-b-none rounded-t-2xl sm:max-w-md sm:rounded-xl',
-          panelClassName,
-        )}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            {Icon && (
-              <div
-                className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                  iconStyles.boxClassName,
-                )}
-              >
-                <Icon className={cn('size-4', iconStyles.iconClassName)} />
-              </div>
-            )}
-            <h3 className="min-w-0 truncate text-lg font-semibold leading-tight">{title}</h3>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'cabinet-elevated-card admin-modal-panel flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden',
+            'rounded-b-none rounded-t-2xl sm:max-w-md sm:rounded-xl',
+            panelClassName,
+          )}
+        >
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              {Icon && (
+                <div
+                  className={cn(
+                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    iconStyles.boxClassName,
+                  )}
+                >
+                  <Icon className={cn('size-4', iconStyles.iconClassName)} />
+                </div>
+              )}
+              <h3 className="min-w-0 truncate text-lg font-semibold leading-tight">{title}</h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1 hover:bg-accent"
+              aria-label={t('common.close')}
+            >
+              <X className="size-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 hover:bg-accent"
-            aria-label={t('common.close')}
-          >
-            <X className="size-4" />
-          </button>
+          <div className={cn('min-h-0 flex-1 overflow-y-auto p-5', bodyClassName)}>{children}</div>
+          {footer && (
+            <div className="shrink-0 border-t border-border/70 bg-muted/25 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-secondary/25">
+              {footer}
+            </div>
+          )}
         </div>
-        <div className={cn('min-h-0 flex-1 overflow-y-auto p-5', bodyClassName)}>{children}</div>
-        {footer && (
-          <div className="shrink-0 border-t border-border/70 bg-muted/25 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-secondary/25">
-            {footer}
-          </div>
-        )}
-      </div>
     </div>,
     document.body,
   )

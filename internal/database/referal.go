@@ -157,6 +157,10 @@ func (r *ReferralRepository) CountActiveReferralsByReferrer(ctx context.Context,
 }
 
 func (r *ReferralRepository) FindRefereeSummariesByReferrer(ctx context.Context, referrerID int64) ([]RefereeSummary, error) {
+	return r.FindRefereeSummariesByReferrerPage(ctx, referrerID, 0, 0)
+}
+
+func (r *ReferralRepository) FindRefereeSummariesByReferrerPage(ctx context.Context, referrerID int64, limit, offset int) ([]RefereeSummary, error) {
 	query := sq.Select("r.referee_id", "c.expire_at", "c.telegram_username", "a.email").
 		From("referral r").
 		Join("customer c ON c.telegram_id = r.referee_id").
@@ -165,6 +169,10 @@ func (r *ReferralRepository) FindRefereeSummariesByReferrer(ctx context.Context,
 		Where(sq.Eq{"r.referrer_id": referrerID}).
 		OrderBy("r.used_at DESC").
 		PlaceholderFormat(sq.Dollar)
+
+	if limit > 0 {
+		query = query.Limit(uint64(limit)).Offset(uint64(offset))
+	}
 
 	sql, args, err := query.ToSql()
 	if err != nil {

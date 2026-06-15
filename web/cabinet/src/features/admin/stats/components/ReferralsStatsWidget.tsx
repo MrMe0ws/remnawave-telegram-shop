@@ -16,6 +16,7 @@ import {
 } from '../utils/statsChartTheme'
 
 import { StatsWidgetCard } from './StatsWidgetCard'
+import { formatAdminCustomerLabel } from '../../utils/formatAdminCustomerLabel'
 
 interface ReferralsStatsWidgetProps {
   data: AdminStatsResponse
@@ -108,7 +109,12 @@ export function ReferralsStatsWidget({ data, period, className }: ReferralsStats
               {data.top_referrers.slice(0, 3).map((r, i) => (
                 <li key={r.referrer_id} className="flex justify-between gap-2 tabular-nums">
                   <span className="truncate text-muted-foreground">
-                    #{i + 1} ID {r.referrer_id}
+                    #{i + 1}{' '}
+                    {formatAdminCustomerLabel({
+                      telegram_username: r.telegram_username,
+                      nickname: r.nickname,
+                      customer_id: r.customer_id,
+                    })}
                   </span>
                   <span className="shrink-0 font-medium">
                     {r.paid_referees} {t('admin.stats.paidRefs')}

@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { CreditCard } from 'lucide-react'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
+import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 import { buildGrowth, getStatsPeriodSlice, statsPeriodLabel, type StatsPeriod } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { buildSalesTrend } from '../utils/statsChartData'
+import { formatTimeseriesLabel } from '../utils/timeseriesFormat'
 import {
   STATS_CHART_COLORS,
   statsChartAxisTick,
@@ -20,20 +22,26 @@ import { StatsWidgetCard } from './StatsWidgetCard'
 interface SalesStatsWidgetProps {
   data: AdminStatsResponse
   period: StatsPeriod
+  timeseries?: AdminStatsTimeSeriesDTO | null
   className?: string
 }
 
-export function SalesStatsWidget({ data, period, className }: SalesStatsWidgetProps) {
+export function SalesStatsWidget({ data, period, timeseries, className }: SalesStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const slice = getStatsPeriodSlice(data, period)
   const periodLabel = statsPeriodLabel(t, period)
   const salesGrowth = buildGrowth(slice.sales, slice.salesPrev)
 
-  const trend = useMemo(
-    () => buildSalesTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value })),
-    [data, period, t],
-  )
+  const trend = useMemo(() => {
+    if (timeseries?.points.length) {
+      return timeseries.points.map((pt) => ({
+        name: formatTimeseriesLabel(pt.date, timeseries.granularity, numberLocale),
+        value: pt.sales,
+      }))
+    }
+    return buildSalesTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value }))
+  }, [timeseries, data, period, t, numberLocale])
 
   return (
     <StatsWidgetCard
@@ -76,7 +84,7 @@ export function SalesStatsWidget({ data, period, className }: SalesStatsWidgetPr
           </div>
         </div>
 
-        {trend.length > 1 ? (
+        {trend.length > 0 ? (
           <div className="min-h-[120px] flex-1 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trend} margin={{ top: 8, right: 4, left: -16, bottom: 0 }}>

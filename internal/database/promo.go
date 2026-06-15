@@ -249,6 +249,13 @@ type PromoRedemptionRow struct {
 	TelegramID int64     `db:"telegram_id"`
 }
 
+type PromoRedemptionDetailRow struct {
+	UsedAt           time.Time `db:"used_at"`
+	CustomerID       int64     `db:"customer_id"`
+	TelegramUsername *string   `db:"telegram_username"`
+	Nickname         *string   `db:"nickname"`
+}
+
 func (r *PromoRepository) ListRecentRedemptions(ctx context.Context, promoID int64, limit int) ([]PromoRedemptionRow, error) {
 	q := `
 SELECT pr.used_at, c.telegram_id
@@ -266,6 +273,42 @@ LIMIT $2`
 	for rows.Next() {
 		var row PromoRedemptionRow
 		if err := rows.Scan(&row.UsedAt, &row.TelegramID); err != nil {
+			return nil, err
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (r *PromoRepository) ListRedemptionsPage(ctx context.Context, promoID int64, offset, limit int) ([]PromoRedemptionDetailRow, error) {
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	q := `
+SELECT pr.used_at, c.id, c.telegram_username,
+  (SELECT NULLIF(TRIM(ii.raw_profile_json->>'first_name'), '')
+   FROM cabinet_account_customer_link l
+   JOIN cabinet_identity ii ON ii.account_id = l.account_id AND ii.unlinked_at IS NULL
+   WHERE l.customer_id = c.id AND l.link_status = 'linked'
+   ORDER BY ii.created_at DESC
+   LIMIT 1) AS nickname
+FROM promo_redemption pr
+JOIN customer c ON c.id = pr.customer_id
+WHERE pr.promo_code_id = $1
+ORDER BY pr.used_at DESC
+LIMIT $2 OFFSET $3`
+	rows, err := r.pool.Query(ctx, q, promoID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []PromoRedemptionDetailRow
+	for rows.Next() {
+		var row PromoRedemptionDetailRow
+		if err := rows.Scan(&row.UsedAt, &row.CustomerID, &row.TelegramUsername, &row.Nickname); err != nil {
 			return nil, err
 		}
 		out = append(out, row)

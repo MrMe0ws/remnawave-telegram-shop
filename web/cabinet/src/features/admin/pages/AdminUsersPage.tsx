@@ -94,7 +94,7 @@ function UserMobileCard({
   onClick: () => void
   t: (k: string) => string
 }) {
-  const displayName = user.telegram_username ? `@${user.telegram_username}` : '—'
+  const displayName = user.telegram_username ? `@${user.telegram_username}` : `#${user.id}`
 
   return (
     <button

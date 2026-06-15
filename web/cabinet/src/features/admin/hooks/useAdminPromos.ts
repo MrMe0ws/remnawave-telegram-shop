@@ -93,3 +93,11 @@ export function useAdminPromoDelete() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-promos'] }),
   })
 }
+
+export function useAdminPromoRedemptions(promoId: number | null, page: number, limit = 20) {
+  return useQuery({
+    queryKey: ['admin-promo-redemptions', promoId, page, limit],
+    queryFn: () => api.adminPromoRedemptions(promoId!, { page, limit }),
+    enabled: promoId != null,
+  })
+}

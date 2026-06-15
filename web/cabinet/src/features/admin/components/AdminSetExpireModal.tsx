@@ -23,6 +23,8 @@ interface AdminSetExpireModalProps {
   onClearError?: () => void
   icon?: LucideIcon
   iconAccent?: AdminSectionIconAccent
+  /** Текущий срок подписки пользователя (ISO). */
+  currentExpireAt?: string | null
 }
 
 export function AdminSetExpireModal({
@@ -36,6 +38,7 @@ export function AdminSetExpireModal({
   onClearError,
   icon = Calendar,
   iconAccent = 'amber',
+  currentExpireAt,
 }: AdminSetExpireModalProps) {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
@@ -72,6 +75,7 @@ export function AdminSetExpireModal({
           value={date}
           onChange={setDate}
           minDate={minDate}
+          currentExpireAt={currentExpireAt}
         />
         {date && (
           <p className="text-sm tabular-nums text-muted-foreground">

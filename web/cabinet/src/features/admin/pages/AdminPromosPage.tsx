@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import {
@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Save,
   Loader2,
+  Users,
 } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
@@ -26,6 +27,7 @@ import {
   useAdminPromoCreate,
   useAdminPromoUpdate,
   useAdminPromoDelete,
+  useAdminPromoRedemptions,
   type AdminPromoCode,
   type CreatePromoInput,
 } from '../hooks/useAdminPromos'
@@ -36,6 +38,7 @@ import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import { truncatePreview } from '../utils/truncatePreview'
+import { formatAdminCustomerLabel } from '../utils/formatAdminCustomerLabel'
 
 const PROMO_CODE_PREVIEW_LEN = 6
 
@@ -173,6 +176,149 @@ function CreatePromoModal({ onClose, onCreate }: { onClose: () => void; onCreate
   )
 }
 
+const promoNeutralButtonClass =
+  'admin-overview-clickable admin-overview-clickable--surface border-border/50 bg-muted/15 hover:bg-muted/35'
+
+function PromoActionButton({
+  icon: Icon,
+  label,
+  className,
+  onClick,
+}: {
+  icon: typeof Pencil
+  label: string
+  className?: string
+  onClick: (e: MouseEvent) => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={cn(
+        'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors max-md:size-10 max-md:px-0',
+        className,
+      )}
+      onClick={onClick}
+    >
+      <Icon className="size-3.5 shrink-0" />
+      <span className="hidden md:inline">{label}</span>
+    </button>
+  )
+}
+
+function PromoUsedByModal({
+  promo,
+  open,
+  onClose,
+}: {
+  promo: AdminPromoCode
+  open: boolean
+  onClose: () => void
+}) {
+  const { t, i18n } = useTranslation()
+  const [page, setPage] = useState(1)
+  const limit = 20
+  const { data, isLoading, isError } = useAdminPromoRedemptions(open ? promo.id : null, page, limit)
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1
+
+  useEffect(() => {
+    if (open) setPage(1)
+  }, [open, promo.id])
+
+  const formatUsedAt = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString(i18n.language, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return iso
+    }
+  }
+
+  return (
+    <AdminModal
+      open={open}
+      onClose={onClose}
+      title={t('admin.promos.usedByTitle', { code: promo.code })}
+      panelClassName="sm:max-w-md"
+      icon={Users}
+      iconAccent="violet"
+      footer={
+        totalPages > 1 ? (
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50"
+            >
+              <ChevronLeft className="size-4" />
+              {t('admin.prev')}
+            </button>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent disabled:opacity-50"
+            >
+              {t('admin.next')}
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
+      {isLoading && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {isError && (
+        <p className="py-6 text-center text-sm text-destructive">{t('common.error')}</p>
+      )}
+      {data && data.items.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted-foreground">{t('admin.promos.usedByEmpty')}</p>
+      )}
+      {data && data.items.length > 0 && (
+        <ul className="space-y-2 text-sm">
+          {data.items.map((row) => (
+            <li
+              key={`${row.customer_id}-${row.used_at}`}
+              className="flex gap-2 rounded-lg border border-border/50 bg-muted/15 px-3 py-2"
+            >
+              <span className="shrink-0 text-muted-foreground tabular-nums">•</span>
+              <span className="min-w-0">
+                <span className="text-muted-foreground tabular-nums">{formatUsedAt(row.used_at)}</span>
+                <span className="text-muted-foreground"> — </span>
+                <span className="font-medium">
+                  {formatAdminCustomerLabel({
+                    telegram_username: row.telegram_username,
+                    nickname: row.nickname,
+                    customer_id: row.customer_id,
+                  })}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {data && data.total > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t('admin.promos.usedByTotal', { count: data.total })}
+        </p>
+      )}
+    </AdminModal>
+  )
+}
+
 function PromoExpandedDetails({
   promo,
   detail,
@@ -180,6 +326,7 @@ function PromoExpandedDetails({
   onEdit,
   onToggle,
   onDelete,
+  onShowUsed,
 }: {
   promo: AdminPromoCode
   detail?: { redemptions: number; redemptions_today: number }
@@ -187,6 +334,7 @@ function PromoExpandedDetails({
   onEdit: () => void
   onToggle: () => void
   onDelete: () => void
+  onShowUsed: () => void
 }) {
   return (
     <div className="space-y-3 border-t border-border/50 bg-accent/20 px-4 py-4">
@@ -212,42 +360,46 @@ function PromoExpandedDetails({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+        <PromoActionButton
+          icon={Pencil}
+          label={t('admin.edit')}
+          className={promoNeutralButtonClass}
           onClick={(e) => {
             e.stopPropagation()
             onEdit()
           }}
-        >
-          <Pencil className="size-3.5" /> {t('admin.edit')}
-        </button>
-        <button
-          type="button"
-          className={cn(
-            'inline-flex min-h-10 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium',
+        />
+        <PromoActionButton
+          icon={Users}
+          label={t('admin.promos.usedBy')}
+          className={promoNeutralButtonClass}
+          onClick={(e) => {
+            e.stopPropagation()
+            onShowUsed()
+          }}
+        />
+        <PromoActionButton
+          icon={promo.active ? ToggleRight : ToggleLeft}
+          label={promo.active ? t('admin.promos.deactivate') : t('admin.promos.activate')}
+          className={
             promo.active
               ? 'border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400'
-              : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400',
-          )}
+              : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400'
+          }
           onClick={(e) => {
             e.stopPropagation()
             onToggle()
           }}
-        >
-          {promo.active ? <ToggleRight className="size-3.5" /> : <ToggleLeft className="size-3.5" />}
-          {promo.active ? t('admin.promos.deactivate') : t('admin.promos.activate')}
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10"
+        />
+        <PromoActionButton
+          icon={Trash2}
+          label={t('admin.delete')}
+          className="border-red-500/30 bg-red-500/5 text-red-500 hover:bg-red-500/10"
           onClick={(e) => {
             e.stopPropagation()
             onDelete()
           }}
-        >
-          <Trash2 className="size-3.5" /> {t('admin.delete')}
-        </button>
+        />
       </div>
     </div>
   )
@@ -266,6 +418,7 @@ function PromoListItem({
   const [expanded, setExpanded] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [usedOpen, setUsedOpen] = useState(false)
   const update = useAdminPromoUpdate()
   const del = useAdminPromoDelete()
   const { data: detail } = useAdminPromoGet(expanded ? promo.id : null)
@@ -289,6 +442,7 @@ function PromoListItem({
         onClose={() => setEditOpen(false)}
         mutationHandlers={mutationHandlers}
       />
+      <PromoUsedByModal promo={promo} open={usedOpen} onClose={() => setUsedOpen(false)} />
       <AdminConfirmModal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
@@ -321,6 +475,7 @@ function PromoListItem({
       onEdit={() => setEditOpen(true)}
       onToggle={toggle}
       onDelete={() => setDeleteOpen(true)}
+      onShowUsed={() => setUsedOpen(true)}
     />
   ) : null
 

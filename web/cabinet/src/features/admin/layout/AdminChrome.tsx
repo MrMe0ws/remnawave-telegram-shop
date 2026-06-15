@@ -6,6 +6,7 @@ import { ChevronLeft, Menu, ShieldCheck } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LangToggle } from '@/components/LangToggle'
+import { cn } from '@/lib/utils'
 import { useAdminShell } from './AdminShellContext'
 
 interface AdminChromeProps {
@@ -17,12 +18,18 @@ interface AdminChromeProps {
  */
 export function AdminChrome({ children }: AdminChromeProps) {
   const { t } = useTranslation()
-  const { openMobileNav } = useAdminShell()
+  const { openMobileNav, mobileHeaderVisible } = useAdminShell()
 
   return (
     <div className="relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
-      <header className="sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <header
+        className={cn(
+          'sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm transition-transform duration-200 ease-out will-change-transform',
+          'dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]',
+          !mobileHeaderVisible && 'max-md:-translate-y-full',
+        )}
+      >
         <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
           <button
             type="button"

@@ -221,6 +221,35 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
   }
 
+  .admin-overview-clickable {
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .admin-overview-clickable--surface {
+    text-decoration: none;
+  }
+
+  @media (hover: hover) {
+    .admin-overview-clickable--surface:hover {
+      border-color: hsl(var(--primary) / 0.35);
+      background-color: hsl(var(--muted) / 0.35);
+      box-shadow: 0 1px 4px hsl(var(--primary) / 0.08);
+    }
+  }
+
+  .admin-overview-clickable--surface:active {
+    border-color: hsl(var(--primary) / 0.45);
+    background-color: hsl(var(--muted) / 0.45);
+  }
+
+  .admin-overview-clickable:active {
+    color: hsl(var(--primary));
+  }
+
   /* Admin form fields — в тёмной теме не bg-background (темнее модалки), а --input. */
   .admin-input {
     @apply rounded-lg border border-input bg-background text-sm text-foreground transition-colors;

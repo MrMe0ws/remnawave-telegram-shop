@@ -8,7 +8,7 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 )
 
-// AdminStatsHandler — эндпоинты GET /cabinet/api/admin/stats, /cabinet/api/admin/stats/fortune.
+// AdminStatsHandler — эндпоинты GET /cabinet/api/admin/stats, /cabinet/api/admin/stats/fortune, /cabinet/api/admin/stats/timeseries.
 type AdminStatsHandler struct {
 	stats *database.StatsRepository
 }
@@ -19,8 +19,11 @@ func NewAdminStats(stats *database.StatsRepository) *AdminStatsHandler {
 }
 
 type adminTopReferrerDTO struct {
-	ReferrerID   int64 `json:"referrer_id"`
-	PaidReferees int64 `json:"paid_referees"`
+	ReferrerID       int64   `json:"referrer_id"`
+	CustomerID       int64   `json:"customer_id"`
+	TelegramUsername *string `json:"telegram_username"`
+	Nickname         *string `json:"nickname"`
+	PaidReferees     int64   `json:"paid_referees"`
 }
 
 type adminTariffStatDTO struct {
@@ -108,6 +111,36 @@ type adminFortuneStatsResp struct {
 	AllTime    adminFortunePeriodDTO `json:"all_time"`
 }
 
+type adminStatsTimeSeriesPointDTO struct {
+	Date         string  `json:"date"`
+	RevenueRub   float64 `json:"revenue_rub"`
+	Sales        int64   `json:"sales"`
+	NewUsers     int64   `json:"new_users"`
+	Transactions int64   `json:"transactions"`
+}
+
+type adminTariffTimeSeriesPointDTO struct {
+	Date       string  `json:"date"`
+	Sales      int64   `json:"sales"`
+	RevenueRub float64 `json:"revenue_rub"`
+}
+
+type adminTariffTimeSeriesDTO struct {
+	TariffID    int64                           `json:"tariff_id"`
+	DisplayName string                          `json:"display_name"`
+	Points      []adminTariffTimeSeriesPointDTO `json:"points"`
+}
+
+type adminStatsTimeSeriesResp struct {
+	CapturedAt   string                         `json:"captured_at"`
+	Period       string                         `json:"period"`
+	Granularity  string                         `json:"granularity"`
+	From         string                         `json:"from"`
+	To           string                         `json:"to"`
+	Points       []adminStatsTimeSeriesPointDTO `json:"points"`
+	TariffSeries []adminTariffTimeSeriesDTO     `json:"tariff_series"`
+}
+
 // Stats — GET /cabinet/api/admin/stats (RequireAdmin).
 func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -125,8 +158,11 @@ func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	topRef := make([]adminTopReferrerDTO, 0, len(snap.TopReferrers))
 	for _, tr := range snap.TopReferrers {
 		topRef = append(topRef, adminTopReferrerDTO{
-			ReferrerID:   tr.ReferrerID,
-			PaidReferees: tr.PaidReferees,
+			ReferrerID:       tr.ReferrerID,
+			CustomerID:       tr.CustomerID,
+			TelegramUsername: tr.TelegramUsername,
+			Nickname:         tr.Nickname,
+			PaidReferees:     tr.PaidReferees,
 		})
 	}
 
@@ -197,6 +233,72 @@ func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		RefBonusDaysYear:     snap.RefBonusDaysYear,
 		TopReferrers:         topRef,
 		TariffBreakdown:      tariffs,
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// TimeSeries — GET /cabinet/api/admin/stats/timeseries?period=month (RequireAdmin).
+func (h *AdminStatsHandler) TimeSeries(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "month"
+	}
+	switch period {
+	case "day", "week", "month", "half_year", "year", "all_time":
+	default:
+		http.Error(w, "invalid period", http.StatusBadRequest)
+		return
+	}
+
+	series, err := h.stats.FetchAdminStatsTimeSeries(r.Context(), period)
+	if err != nil {
+		slog.Error("admin stats: fetch timeseries failed", "error", err.Error(), "period", period)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	points := make([]adminStatsTimeSeriesPointDTO, 0, len(series.Points))
+	for _, p := range series.Points {
+		points = append(points, adminStatsTimeSeriesPointDTO{
+			Date:         p.Date,
+			RevenueRub:   p.RevenueRub,
+			Sales:        p.Sales,
+			NewUsers:     p.NewUsers,
+			Transactions: p.Transactions,
+		})
+	}
+
+	tariffSeries := make([]adminTariffTimeSeriesDTO, 0, len(series.TariffSeries))
+	for _, ts := range series.TariffSeries {
+		pts := make([]adminTariffTimeSeriesPointDTO, 0, len(ts.Points))
+		for _, p := range ts.Points {
+			pts = append(pts, adminTariffTimeSeriesPointDTO{
+				Date:       p.Date,
+				Sales:      p.Sales,
+				RevenueRub: p.RevenueRub,
+			})
+		}
+		tariffSeries = append(tariffSeries, adminTariffTimeSeriesDTO{
+			TariffID:    ts.TariffID,
+			DisplayName: ts.DisplayName,
+			Points:      pts,
+		})
+	}
+
+	resp := adminStatsTimeSeriesResp{
+		CapturedAt:   series.CapturedAt.Format(time.RFC3339),
+		Period:       series.Period,
+		Granularity:  series.Granularity,
+		From:         series.From,
+		To:           series.To,
+		Points:       points,
+		TariffSeries: tariffSeries,
 	}
 
 	writeJSON(w, http.StatusOK, resp)

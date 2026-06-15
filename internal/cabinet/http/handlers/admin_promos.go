@@ -13,6 +13,7 @@ import (
 
 func extractPromoID(path string) (int64, bool) {
 	s := strings.TrimPrefix(path, "/cabinet/api/admin/promos/")
+	s = strings.TrimSuffix(s, "/redemptions")
 	s = strings.TrimRight(s, "/")
 	id, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
@@ -284,6 +285,80 @@ func (h *AdminPromosHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+type promoRedemptionItemDTO struct {
+	UsedAt           string  `json:"used_at"`
+	CustomerID       int64   `json:"customer_id"`
+	TelegramUsername *string `json:"telegram_username"`
+	Nickname         *string `json:"nickname"`
+}
+
+type promoRedemptionsResp struct {
+	Items []promoRedemptionItemDTO `json:"items"`
+	Total int                      `json:"total"`
+	Page  int                      `json:"page"`
+	Limit int                      `json:"limit"`
+}
+
+// Redemptions — GET /cabinet/api/admin/promos/{id}/redemptions
+func (h *AdminPromosHandler) Redemptions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, ok := extractPromoID(r.URL.Path)
+	if !ok {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := h.promos.FindByID(r.Context(), id); err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	total, err := h.promos.CountRedemptions(r.Context(), id)
+	if err != nil {
+		slog.Error("admin promos redemptions count", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := h.promos.ListRedemptionsPage(r.Context(), id, offset, limit)
+	if err != nil {
+		slog.Error("admin promos redemptions list", "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	items := make([]promoRedemptionItemDTO, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, promoRedemptionItemDTO{
+			UsedAt:           row.UsedAt.UTC().Format(time.RFC3339),
+			CustomerID:       row.CustomerID,
+			TelegramUsername: row.TelegramUsername,
+			Nickname:         row.Nickname,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, promoRedemptionsResp{
+		Items: items,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	})
+}
+
 // Handle dispatches /cabinet/api/admin/promos (no trailing path).
 func (h *AdminPromosHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -296,8 +371,12 @@ func (h *AdminPromosHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleByID dispatches /cabinet/api/admin/promos/{id}.
+// HandleByID dispatches /cabinet/api/admin/promos/{id}[/redemptions].
 func (h *AdminPromosHandler) HandleByID(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/redemptions") {
+		h.Redemptions(w, r)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		h.Get(w, r)

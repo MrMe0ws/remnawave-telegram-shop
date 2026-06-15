@@ -7,13 +7,17 @@ import {
   Loader2,
   Calendar,
   Star,
-  Cpu,
+  Smartphone,
   Users,
   Share2,
+  Shield,
+  FileText,
 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { TrafficUsageBar } from '@/components/TrafficUsageBar'
+import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
+import { cn, daysUntil } from '@/lib/utils'
 import type { AdminCustomerDTO, AdminUserPanelDTO } from '@/lib/types/admin'
 import { unifiedAccountStatus, accountStatusBadgeClasses } from '../utils/accountStatus'
 import { rwIconToneClassNames } from '../utils/rwStatusStyles'
@@ -21,22 +25,14 @@ import { formatAdminDateTime } from '../utils/datetime'
 import { copyToClipboard } from '../utils/copyToClipboard'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
 import { AdminSetExpireModal } from './AdminSetExpireModal'
+import { ClickableOverviewControl } from './overview/ClickableOverviewControl'
+import type { UserEditModalKey } from './user-modals/types'
 import { useAdminUserSetExpire, useAdminUserDevices } from '../hooks/useAdminUsers'
 
 const GB = 1024 * 1024 * 1024
 
-const STRATEGY_KEYS: Record<string, string> = {
-  DAY: 'admin.users.subscription.strategies.day',
-  WEEK: 'admin.users.subscription.strategies.week',
-  MONTH: 'admin.users.subscription.strategies.month',
-  MONTH_ROLLING: 'admin.users.subscription.strategies.monthRolling',
-  NO_RESET: 'admin.users.subscription.strategies.noReset',
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '∞'
-  const gb = bytes / GB
-  return `${gb.toFixed(1)} GB`
+function bytesToGb(bytes: number): number {
+  return bytes / GB
 }
 
 function OverviewSection({
@@ -68,62 +64,40 @@ function OverviewSection({
   )
 }
 
-function TrafficBar({
-  used,
-  limit,
-  unlimitedLabel,
-  hideCaption = false,
-}: {
-  used: number
-  limit: number
-  unlimitedLabel: string
-  hideCaption?: boolean
-}) {
-  const isUnlimited = limit <= 0
-  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0
-
-  return (
-    <div className="space-y-2">
-      {!hideCaption &&
-        (isUnlimited ? (
-          <p className="text-sm text-foreground">{unlimitedLabel}</p>
-        ) : (
-          <div className="flex justify-between gap-2 text-sm">
-            <span className="font-medium text-primary tabular-nums">{formatBytes(used)}</span>
-            <span className="text-muted-foreground tabular-nums">{formatBytes(limit)}</span>
-          </div>
-        ))}
-      <div className="h-2.5 overflow-hidden rounded-full bg-muted/80">
-        <div
-          className={cn(
-            'h-full rounded-full transition-all',
-            isUnlimited
-              ? 'w-full bg-gradient-to-r from-primary/35 via-primary/55 to-sky-400/45'
-              : 'bg-gradient-to-r from-primary to-sky-400',
-          )}
-          style={{ width: isUnlimited ? '100%' : `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
 function DesktopStatCard({
   icon: Icon,
   label,
   value,
+  onClick,
+  clickTitle,
 }: {
   icon: typeof Star
   label: string
   value: string
+  onClick?: () => void
+  clickTitle?: string
 }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-muted/15 px-4 py-3">
+  const inner = (
+    <>
       <div className="mb-2 flex items-center gap-2 text-muted-foreground">
         <Icon className="size-4 shrink-0" aria-hidden />
         <span className="text-xs font-medium">{label}</span>
       </div>
       <p className="text-base font-semibold leading-snug text-foreground">{value}</p>
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <ClickableOverviewControl variant="card" onClick={onClick} title={clickTitle}>
+        {inner}
+      </ClickableOverviewControl>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-muted/15 px-4 py-3">
+      {inner}
     </div>
   )
 }
@@ -136,22 +110,18 @@ function StatusBadge({ children, tone }: { children: ReactNode; tone: 'success' 
   )
 }
 
-function TariffBadge({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-      {children}
-    </span>
-  )
-}
-
 interface Props {
   user: AdminCustomerDTO
   userId: number
   panel?: AdminUserPanelDTO | null
   panelLoading?: boolean
   tariffName?: string | null
+  canEditTariff?: boolean
   onExpireSuccess?: (message: string) => void
   onExpireError?: (message: string) => void
+  onOpenModal?: (key: UserEditModalKey) => void
+  onOpenActions?: () => void
+  actionsFooter?: ReactNode
 }
 
 export function AdminUserOverview({
@@ -160,11 +130,16 @@ export function AdminUserOverview({
   panel,
   panelLoading,
   tariffName,
+  canEditTariff,
   onExpireSuccess,
   onExpireError,
+  onOpenModal,
+  onOpenActions,
+  actionsFooter,
 }: Props) {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
+  const clickTitle = t('admin.users.overview.clickToEdit')
 
   const [expireModalOpen, setExpireModalOpen] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -189,11 +164,6 @@ export function AdminUserOverview({
   const iconStyles = rwIconToneClassNames(accountStatus.tone)
   const displayName = user.telegram_username ? `@${user.telegram_username}` : `#${user.id}`
 
-  const strategyLabel = (s: string) => {
-    const key = STRATEGY_KEYS[s]
-    return key ? t(key) : s
-  }
-
   const handleCopyLink = async () => {
     if (!subscriptionLink) return
     setLinkCopyError(false)
@@ -208,31 +178,23 @@ export function AdminUserOverview({
 
   const activeSquads = rw?.active_squads ?? []
   const primarySquad = activeSquads[0]?.name ?? null
-  const expireFormatted = expireDisplay ? formatAdminDateTime(expireDisplay, dateLocale) : null
-  const registeredFormatted = formatAdminDateTime(user.created_at, dateLocale)
-  const lastResetFormatted = rw?.last_traffic_reset_at
-    ? formatAdminDateTime(rw.last_traffic_reset_at, dateLocale)
-    : null
+  const squadDisplay =
+    activeSquads.length > 1
+      ? `${primarySquad} +${activeSquads.length - 1}`
+      : primarySquad ?? t('admin.users.overview.statSquadEmpty')
 
-  const hwidLimit = rw?.hwid_device_limit ?? 0
+  const registeredFormatted = formatAdminDateTime(user.created_at, dateLocale)
+
   const hwidUsed = devicesData?.items?.length ?? 0
-  const hwidValue =
-    hwidLimit > 0
-      ? t('admin.users.overview.statHwidValue', { used: hwidUsed, limit: hwidLimit })
-      : hwidUsed > 0
-        ? String(hwidUsed)
-        : '0'
+  const devicesLimit = rw?.hwid_device_limit ?? 1
+  const devicesValue = t('admin.users.overview.statDevicesValue', {
+    used: hwidUsed,
+    limit: devicesLimit,
+  })
+
+  const descriptionText = rw?.description?.trim() || t('admin.users.overview.descriptionEmpty')
 
   const tariffBadge = tariffName ?? null
-
-  const resetStrategy = rw ? strategyLabel(rw.traffic_limit_strategy) : null
-
-  const expireMeta =
-    resetStrategy && lastResetFormatted
-      ? t('admin.users.overview.resetInfo', { strategy: resetStrategy, date: lastResetFormatted })
-      : resetStrategy
-        ? t('admin.users.overview.resetStrategyOnly', { strategy: resetStrategy })
-        : null
 
   const copyIconButton = subscriptionLink ? (
     <button
@@ -243,6 +205,18 @@ export function AdminUserOverview({
       aria-label={t('admin.users.copySubscriptionLink')}
     >
       {linkCopied ? <Check className="size-4 text-emerald-600" /> : <Share2 className="size-4" />}
+    </button>
+  ) : null
+
+  const actionsIconButton = onOpenActions ? (
+    <button
+      type="button"
+      onClick={onOpenActions}
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-600 transition-colors hover:bg-violet-500/15 dark:text-violet-400 sm:hidden"
+      title={t('admin.actions')}
+      aria-label={t('admin.actions')}
+    >
+      <Shield className="size-4" />
     </button>
   ) : null
 
@@ -257,12 +231,93 @@ export function AdminUserOverview({
     </button>
   ) : null
 
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'ru'
+  const subscriptionDays = expireDisplay ? daysUntil(expireDisplay) : null
+  const isSubscriptionActive =
+    accountStatus.key === 'active' || accountStatus.key === 'trial'
+
+  const openModal = (key: UserEditModalKey) => onOpenModal?.(key)
+
+  const renderTariffBadge = () => {
+    if (canEditTariff && onOpenModal) {
+      const label = tariffBadge ?? t('admin.users.subscription.assignTariff')
+      return (
+        <ClickableOverviewControl
+          variant="badge"
+          onClick={() => openModal('tariff')}
+          title={clickTitle}
+          className={
+            tariffBadge
+              ? undefined
+              : 'border-dashed border-muted-foreground/40 bg-muted/20 text-muted-foreground'
+          }
+        >
+          {label}
+        </ClickableOverviewControl>
+      )
+    }
+    if (tariffBadge) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+          {tariffBadge}
+        </span>
+      )
+    }
+    return null
+  }
+
+  const subscriptionMetricsRowClass =
+    'rounded-lg px-1 py-1 -mx-1 transition-colors hover:bg-muted/30 active:bg-muted/40'
+
+  const renderTrafficMetric = (trafficUsedGb: number, trafficLimitGb: number) =>
+    onOpenModal ? (
+      <ClickableOverviewControl
+        variant="row"
+        onClick={() => openModal('traffic')}
+        title={clickTitle}
+        className={cn('items-center', subscriptionMetricsRowClass)}
+      >
+        <TrafficUsageBar
+          usedGb={trafficUsedGb}
+          limitGb={trafficLimitGb}
+          usageTitle={t('dashboard.trafficUsage')}
+          gigabytesLabel={t('dashboard.gigabytes')}
+          unlimitedLabel={t('subscriptionPage.unlimited')}
+          className="w-full"
+        />
+      </ClickableOverviewControl>
+    ) : (
+      <TrafficUsageBar
+        usedGb={trafficUsedGb}
+        limitGb={trafficLimitGb}
+        usageTitle={t('dashboard.trafficUsage')}
+        gigabytesLabel={t('dashboard.gigabytes')}
+        unlimitedLabel={t('subscriptionPage.unlimited')}
+      />
+    )
+
+  const renderExpireMetric = () => (
+    <ClickableOverviewControl
+      variant="row"
+      onClick={() => setExpireModalOpen(true)}
+      title={clickTitle}
+      className={cn('mt-3 items-center', subscriptionMetricsRowClass)}
+    >
+      <SubscriptionExpireAtBlock
+        expireAt={expireDisplay}
+        lang={lang}
+        days={subscriptionDays}
+        isActive={isSubscriptionActive}
+        className="min-w-0 flex-1"
+      />
+    </ClickableOverviewControl>
+  )
+
   return (
     <>
       <Card className="cabinet-elevated-card overflow-hidden">
-        {/* ── Шапка ── */}
         <OverviewSection first>
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3 sm:items-start">
             <div
               className={cn(
                 'flex size-11 shrink-0 items-center justify-center rounded-full',
@@ -273,15 +328,16 @@ export function AdminUserOverview({
             </div>
 
             <div className="min-w-0 flex-1">
-              {/* Desktop header row */}
-              <div className="hidden flex-wrap items-center gap-2 sm:flex">
-                <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
-                <StatusBadge tone={accountStatus.tone}>{t(accountStatus.labelKey)}</StatusBadge>
-                {tariffBadge && <TariffBadge>{tariffBadge}</TariffBadge>}
+              <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
+                  <StatusBadge tone={accountStatus.tone}>{t(accountStatus.labelKey)}</StatusBadge>
+                  {renderTariffBadge()}
+                </div>
+                {copyTextButton}
               </div>
 
-              {/* Mobile header row */}
-              <div className="flex items-start justify-between gap-2 sm:hidden">
+              <div className="flex items-center justify-between gap-2 sm:hidden">
                 <div className="min-w-0">
                   <h1 className="text-lg font-semibold leading-tight">{displayName}</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -291,7 +347,10 @@ export function AdminUserOverview({
                     })}
                   </p>
                 </div>
-                {copyIconButton}
+                <div className="flex shrink-0 gap-1.5">
+                  {actionsIconButton}
+                  {copyIconButton}
+                </div>
               </div>
 
               <p className="mt-1 hidden text-sm text-muted-foreground sm:block">
@@ -301,10 +360,9 @@ export function AdminUserOverview({
                 })}
               </p>
 
-              {/* Mobile status + tariff */}
               <div className="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
                 <StatusBadge tone={accountStatus.tone}>{t(accountStatus.labelKey)}</StatusBadge>
-                {tariffBadge && <TariffBadge>{tariffBadge}</TariffBadge>}
+                {renderTariffBadge()}
               </div>
 
               {panelExpire && dbExpire && panelExpire !== dbExpire && (
@@ -313,8 +371,6 @@ export function AdminUserOverview({
                 </p>
               )}
             </div>
-
-            {copyTextButton}
           </div>
           {linkCopyError && (
             <p className="mt-2 text-xs text-destructive">{t('admin.users.copyLinkError')}</p>
@@ -327,84 +383,54 @@ export function AdminUserOverview({
           </div>
         ) : hasRwUser && rw ? (
           <>
-            {/* ── Desktop: трафик и подписка ── */}
-            <OverviewSection title={t('admin.users.overview.sectionTraffic')} className="hidden sm:block">
-              <TrafficBar
-                used={rw.traffic_used_bytes}
-                limit={rw.traffic_limit_bytes}
-                unlimitedLabel={t('admin.users.overview.unlimitedTraffic')}
-              />
-              <button
-                type="button"
-                onClick={() => setExpireModalOpen(true)}
-                className="mt-3 w-full text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <span className="text-foreground">
-                  {expireFormatted
-                    ? t('admin.users.overview.expireLine', { date: expireFormatted })
-                    : t('admin.users.pickExpireDate')}
-                </span>
-                {expireMeta && <span className="text-muted-foreground"> ({expireMeta})</span>}
-              </button>
-            </OverviewSection>
-
-            {/* ── Mobile: подписка ── */}
-            <OverviewSection title={t('admin.users.overview.sectionSubscription')} className="sm:hidden">
-              <button
-                type="button"
-                onClick={() => setExpireModalOpen(true)}
-                className="mb-3 text-left text-sm text-foreground tabular-nums"
-              >
-                {expireFormatted
-                  ? t('admin.users.overview.expireLine', { date: expireFormatted })
-                  : t('admin.users.pickExpireDate')}
-              </button>
-              <p className="mb-2 text-sm text-muted-foreground">
-                {rw.traffic_limit_bytes <= 0
-                  ? t('admin.users.overview.trafficLabelUnlimited')
-                  : t('admin.users.overview.trafficLabel', {
-                      used: formatBytes(rw.traffic_used_bytes),
-                      limit: formatBytes(rw.traffic_limit_bytes),
-                    })}
-              </p>
-              <TrafficBar
-                used={rw.traffic_used_bytes}
-                limit={rw.traffic_limit_bytes}
-                unlimitedLabel={t('admin.users.overview.unlimitedTraffic')}
-                hideCaption
-              />
-              {resetStrategy && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {lastResetFormatted
-                    ? t('admin.users.overview.resetInfoMobile', {
-                        strategy: resetStrategy,
-                        date: lastResetFormatted,
-                      })
-                    : t('admin.users.overview.resetStrategyOnly', { strategy: resetStrategy })}
-                </p>
+            <OverviewSection title={t('admin.users.overview.sectionTraffic')}>
+              {renderTrafficMetric(
+                bytesToGb(rw.traffic_used_bytes),
+                rw.traffic_limit_bytes > 0 ? bytesToGb(rw.traffic_limit_bytes) : 0,
               )}
+              {renderExpireMetric()}
             </OverviewSection>
 
-            {/* ── Desktop: дополнительно ── */}
             <OverviewSection title={t('admin.users.overview.sectionAdditional')} className="hidden sm:block">
               <div className="grid gap-3 sm:grid-cols-3">
                 <DesktopStatCard
-                  icon={Star}
-                  label={t('admin.users.overview.statXp')}
-                  value={t('admin.users.overview.statXpValue', { n: user.loyalty_xp })}
-                />
-                <DesktopStatCard
-                  icon={Cpu}
-                  label={t('admin.users.overview.statHwid')}
-                  value={hwidValue}
+                  icon={Smartphone}
+                  label={t('admin.users.overview.statDevices')}
+                  value={devicesValue}
+                  onClick={onOpenModal ? () => openModal('devices') : undefined}
+                  clickTitle={clickTitle}
                 />
                 <DesktopStatCard
                   icon={Users}
                   label={t('admin.users.overview.statSquad')}
-                  value={primarySquad ?? t('admin.users.overview.statSquadEmpty')}
+                  value={squadDisplay}
+                  onClick={onOpenModal ? () => openModal('squads') : undefined}
+                  clickTitle={clickTitle}
+                />
+                <DesktopStatCard
+                  icon={Star}
+                  label={t('admin.users.overview.statXp')}
+                  value={String(user.loyalty_xp)}
                 />
               </div>
-              <p className="mt-4 text-sm text-muted-foreground">
+              {onOpenModal ? (
+                <ClickableOverviewControl
+                  variant="row"
+                  onClick={() => openModal('description')}
+                  title={clickTitle}
+                  className="mt-4 items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <span className="flex min-w-0 items-start gap-2">
+                    <FileText className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    <span>{t('admin.users.overview.descriptionLine', { text: descriptionText })}</span>
+                  </span>
+                </ClickableOverviewControl>
+              ) : (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  {t('admin.users.overview.descriptionLine', { text: descriptionText })}
+                </p>
+              )}
+              <p className="mt-3 text-sm text-muted-foreground">
                 {t('admin.users.overview.registeredLine', { date: registeredFormatted })}
                 {rw.tag && (
                   <>
@@ -415,33 +441,78 @@ export function AdminUserOverview({
               </p>
             </OverviewSection>
 
-            {/* ── Mobile: параметры ── */}
             <OverviewSection title={t('admin.users.overview.sectionParams')} className="sm:hidden">
               <ul className="space-y-2.5 text-sm">
+                {onOpenModal ? (
+                  <li>
+                    <ClickableOverviewControl
+                      variant="inline"
+                      onClick={() => openModal('devices')}
+                      title={clickTitle}
+                      className="flex w-full items-center gap-2"
+                    >
+                      <Smartphone className="size-4 shrink-0 text-primary" aria-hidden />
+                      <span className="min-w-0 flex-1 text-left">
+                        {t('admin.users.overview.statDevicesMobile', {
+                          used: hwidUsed,
+                          limit: devicesLimit,
+                        })}
+                      </span>
+                    </ClickableOverviewControl>
+                  </li>
+                ) : (
+                  <li className="flex items-center gap-2">
+                    <Smartphone className="size-4 shrink-0 text-primary" aria-hidden />
+                    <span>
+                      {t('admin.users.overview.statDevicesMobile', {
+                        used: hwidUsed,
+                        limit: devicesLimit,
+                      })}
+                    </span>
+                  </li>
+                )}
+                {onOpenModal ? (
+                  <li>
+                    <ClickableOverviewControl
+                      variant="inline"
+                      onClick={() => openModal('squads')}
+                      title={clickTitle}
+                      className="flex w-full items-center gap-2"
+                    >
+                      <Users className="size-4 shrink-0 text-primary" aria-hidden />
+                      <span className="min-w-0 flex-1 text-left">
+                        {t('admin.users.overview.squadMobile', { name: squadDisplay })}
+                      </span>
+                    </ClickableOverviewControl>
+                  </li>
+                ) : (
+                  <li className="flex items-center gap-2">
+                    <Users className="size-4 shrink-0 text-primary" aria-hidden />
+                    <span>{t('admin.users.overview.squadMobile', { name: squadDisplay })}</span>
+                  </li>
+                )}
                 <li className="flex items-center gap-2">
                   <Star className="size-4 shrink-0 text-amber-500" aria-hidden />
-                  <span>{t('admin.users.overview.experienceMobile', { n: user.loyalty_xp })}</span>
+                  <span className="tabular-nums">{user.loyalty_xp}</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <Cpu className="size-4 shrink-0 text-primary" aria-hidden />
-                  <span>
-                    {hwidLimit > 0
-                      ? t('admin.users.overview.statHwidMobile', { used: hwidUsed, limit: hwidLimit })
-                      : t('admin.users.overview.statHwidMobileShort', { used: hwidUsed })}
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Users className="size-4 shrink-0 text-primary" aria-hidden />
-                  <span>
-                    {t('admin.users.overview.squadMobile', {
-                      name: primarySquad ?? t('admin.users.overview.statSquadEmpty'),
-                    })}
-                  </span>
-                </li>
+                {onOpenModal && (
+                  <li>
+                    <ClickableOverviewControl
+                      variant="inline"
+                      onClick={() => openModal('description')}
+                      title={clickTitle}
+                      className="flex w-full items-center gap-2"
+                    >
+                      <FileText className="size-4 shrink-0 text-primary" aria-hidden />
+                      <span className="min-w-0 flex-1 text-left">
+                        {t('admin.users.overview.descriptionLine', { text: descriptionText })}
+                      </span>
+                    </ClickableOverviewControl>
+                  </li>
+                )}
               </ul>
             </OverviewSection>
 
-            {/* ── Mobile: системное ── */}
             <OverviewSection title={t('admin.users.overview.sectionSystem')} className="sm:hidden">
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>{t('admin.users.overview.registeredLine', { date: registeredFormatted })}</li>
@@ -453,18 +524,31 @@ export function AdminUserOverview({
           !panelLoading && (
             <OverviewSection title={t('admin.users.overview.sectionTraffic')}>
               <p className="text-sm text-muted-foreground">{t('admin.users.subscription.noRwUser')}</p>
-              {expireFormatted && (
-                <button
-                  type="button"
+              {expireDisplay && (
+                <ClickableOverviewControl
+                  variant="row"
                   onClick={() => setExpireModalOpen(true)}
-                  className="mt-2 text-sm text-foreground tabular-nums hover:text-primary"
+                  title={clickTitle}
+                  className={cn('mt-3 items-center', subscriptionMetricsRowClass)}
                 >
-                  {t('admin.users.overview.expireLine', { date: expireFormatted })}
-                </button>
+                  <SubscriptionExpireAtBlock
+                    expireAt={expireDisplay}
+                    lang={lang}
+                    days={subscriptionDays}
+                    isActive={isSubscriptionActive}
+                    className="min-w-0 flex-1"
+                  />
+                </ClickableOverviewControl>
               )}
             </OverviewSection>
           )
         )}
+
+        {actionsFooter ? (
+          <OverviewSection title={t('admin.actions')} className="hidden lg:block">
+            {actionsFooter}
+          </OverviewSection>
+        ) : null}
       </Card>
 
       <AdminSetExpireModal
@@ -473,6 +557,7 @@ export function AdminUserOverview({
         title={t('admin.users.subscription.expire')}
         icon={Calendar}
         iconAccent="amber"
+        currentExpireAt={expireDisplay}
         isPending={setExpire.isPending}
         onApply={(iso) => {
           setExpire.mutate(iso, {

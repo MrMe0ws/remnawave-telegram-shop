@@ -1122,6 +1122,16 @@ func registerAPIRoutes(
 			),
 		}),
 	)
+	api.Handle("/cabinet/api/admin/stats/timeseries",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminStats.TimeSeries),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_stats_timeseries")),
+			),
+		}),
+	)
 	api.Handle("/cabinet/api/admin/stats/fortune",
 		methodRouter(map[string]http.Handler{
 			http.MethodGet: middleware.Chain(

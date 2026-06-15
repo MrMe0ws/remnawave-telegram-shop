@@ -23,6 +23,8 @@ import { AdminChrome } from './AdminChrome'
 import { AdminBreadcrumbs } from './AdminBreadcrumbs'
 import { AdminPageMetaContext, type AdminPageMeta } from './useAdminPageMeta'
 import { AdminShellProvider, useAdminShell } from './AdminShellContext'
+import { useAdminLeftEdgeSwipe } from '../hooks/useAdminLeftEdgeSwipe'
+import { useAdminMobileNavWidth } from '../hooks/useAdminMobileNavWidth'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -52,8 +54,19 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const { data: bootstrap } = useAdminBootstrap()
-  const { mobileNavOpen, setMobileNavOpen } = useAdminShell()
+  const {
+    mobileNavOpen,
+    mobileNavOffsetPx,
+    mobileNavDragging,
+    closeMobileNav,
+    mobileHeaderVisible,
+  } = useAdminShell()
+  const panelWidth = useAdminMobileNavWidth()
+  const navProgress = panelWidth > 0 ? Math.min(1, mobileNavOffsetPx / panelWidth) : 0
+  const navLayerVisible = mobileNavOpen || mobileNavOffsetPx > 0
   const [pageMeta, setPageMeta] = useState<AdminPageMeta>({})
+
+  useAdminLeftEdgeSwipe(true)
 
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
   const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false
@@ -124,7 +137,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
                     <li key={item.to}>
                       <Link
                         to={item.to}
-                        onClick={() => setMobileNavOpen(false)}
+                        onClick={closeMobileNav}
                         className={cn(
                           'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                           active
@@ -147,7 +160,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
       <div className="mt-auto border-t border-border/50 pt-4">
         <Link
           to="/dashboard"
-          onClick={() => setMobileNavOpen(false)}
+          onClick={closeMobileNav}
           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
@@ -161,22 +174,40 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
     <AdminPageMetaContext.Provider value={{ setMeta: setPageMeta }}>
       <AdminChrome>
         <div className="admin-shell relative z-[1] mx-auto w-full max-w-7xl px-3 pb-8 pt-2 sm:px-4 sm:pt-4">
-          {mobileNavOpen && (
-            <div className="fixed inset-0 z-40 lg:hidden">
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
-              <aside className="absolute bottom-0 left-0 top-14 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-border bg-background p-4 shadow-xl">
-                <button
-                  type="button"
-                  onClick={() => setMobileNavOpen(false)}
-                  className="mb-4 self-end rounded-lg p-2 hover:bg-accent"
-                  aria-label={t('common.close')}
-                >
-                  <X className="size-5" />
-                </button>
-                {sidebarContent}
-              </aside>
-            </div>
-          )}
+          <div
+            className={cn(
+              'fixed inset-0 z-[210] lg:hidden',
+              !navLayerVisible && 'pointer-events-none',
+            )}
+            aria-hidden={!navLayerVisible}
+          >
+            <div
+              className={cn(
+                'absolute inset-0 bg-black/50 backdrop-blur-sm',
+                !mobileNavDragging && 'transition-opacity duration-300 ease-out',
+              )}
+              style={{ opacity: navProgress }}
+              onClick={closeMobileNav}
+            />
+            <aside
+              className={cn(
+                'absolute bottom-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-border bg-background p-4 shadow-xl will-change-transform',
+                !mobileNavDragging && 'transition-[transform,top] duration-300 ease-out',
+                mobileHeaderVisible ? 'top-14' : 'top-0',
+              )}
+              style={{ transform: `translateX(${mobileNavOffsetPx - panelWidth}px)` }}
+            >
+              <button
+                type="button"
+                onClick={closeMobileNav}
+                className="mb-4 self-end rounded-lg p-2 hover:bg-accent"
+                aria-label={t('common.close')}
+              >
+                <X className="size-5" />
+              </button>
+              {sidebarContent}
+            </aside>
+          </div>
 
           <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-4">
             <AdminBreadcrumbs pathname={location.pathname} pageMeta={pageMeta} className="lg:col-start-2 lg:row-start-1" />
