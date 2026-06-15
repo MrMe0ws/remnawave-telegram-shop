@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ImagePlus, Megaphone, Send, Users, Eye, AlertCircle, X } from 'lucide-react'
+import { ImagePlus, Megaphone, Send, Users, Eye, AlertCircle, X, MessageSquare, PanelBottom } from 'lucide-react'
 import { api } from '@/lib/api'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
@@ -259,7 +259,10 @@ export default function AdminBroadcastPage() {
 
         {/* Compose */}
         <div className="rounded-lg border border-border/50 bg-card p-4">
-          <h3 className="mb-3 text-sm font-medium">{t('admin.broadcast.compose')}</h3>
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <MessageSquare className="size-4" />
+            {t('admin.broadcast.compose')}
+          </h3>
           <textarea
             className="w-full resize-y rounded-md border border-border bg-background p-3 text-sm focus:border-primary focus:outline-none"
             rows={5}
@@ -328,7 +331,10 @@ export default function AdminBroadcastPage() {
 
         {/* Inline buttons */}
         <div className="rounded-lg border border-border/50 bg-card p-4">
-          <h3 className="mb-1 text-sm font-medium">{t('admin.broadcast.buttonsTitle')}</h3>
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-medium">
+            <PanelBottom className="size-4" />
+            {t('admin.broadcast.buttonsTitle')}
+          </h3>
           <p className="mb-3 text-xs text-muted-foreground">{t('admin.broadcast.buttonsHint')}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             <AdminCheckboxField

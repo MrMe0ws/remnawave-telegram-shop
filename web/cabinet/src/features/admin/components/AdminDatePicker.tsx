@@ -307,12 +307,6 @@ export function parseIsoToLocalDate(iso?: string | null): Date | null {
   return d ? startOfDay(d) : null
 }
 
-export function defaultExpireDate(iso?: string | null, fallbackDays = 30): Date {
-  const current = parseIsoToLocalDateTime(iso)
-  const now = new Date()
-  if (current && current >= now) return current
-  const fallback = new Date()
-  fallback.setDate(fallback.getDate() + fallbackDays)
-  fallback.setHours(23, 59, 0, 0)
-  return fallback
+export function defaultExpireDate(): Date {
+  return new Date()
 }

@@ -33,12 +33,17 @@ type AdminTopReferrer struct {
 type AdminTariffStat struct {
 	TariffID          int64
 	DisplayName       string
-	SalesToday        int64
-	SalesWeek         int64
-	SalesMonth        int64
-	SubsRevenueMonth  float64
-	RevenueToday      float64
-	RevenueAll        float64
+	SalesToday       int64
+	SalesWeek        int64
+	SalesMonth       int64
+	SalesHalfYear    int64
+	SalesYear        int64
+	SubsRevenueMonth float64
+	RevenueToday     float64
+	RevenueWeek      float64
+	RevenueHalfYear  float64
+	RevenueYear      float64
+	RevenueAll       float64
 	ActivePaidUsers   int64
 }
 
@@ -52,6 +57,8 @@ type AdminStatsSnapshot struct {
 	NewWeek             int64
 	NewMonth            int64
 	NewPrevMonth        int64
+	NewHalfYear         int64
+	NewYear             int64
 
 	TrialActive int64
 	PaidActive  int64
@@ -61,22 +68,36 @@ type AdminStatsSnapshot struct {
 	SalesSubWeek      int64
 	SalesSubMonth     int64
 	SalesSubPrevMonth int64
+	SalesSubHalfYear  int64
+	SalesSubYear      int64
 
 	RevenueMonthRub       float64
 	RevenueTodayRub       float64
+	RevenueWeekRub        float64
+	RevenueHalfYearRub    float64
+	RevenueYearRub        float64
 	RevenueAllTimeRub     float64
 	RevenueSubsMonthRub   float64
 	TransactionsToday     int64
+	TransactionsWeek      int64
 	TransactionsMonth     int64
+	TransactionsHalfYear  int64
+	TransactionsYear      int64
+	UniquePayersDay       int64
+	UniquePayersWeek      int64
 	UniquePayersMonth     int64
+	UniquePayersHalfYear  int64
+	UniquePayersYear      int64
 	PaymentRubByInvoice   map[string]float64
 
 	DistinctReferrers int64
 	ActiveReferrers   int64
-	RefBonusDaysAll   int64
-	RefBonusDaysToday int64
-	RefBonusDaysWeek  int64
-	RefBonusDaysMonth int64
+	RefBonusDaysAll       int64
+	RefBonusDaysToday     int64
+	RefBonusDaysWeek      int64
+	RefBonusDaysMonth     int64
+	RefBonusDaysHalfYear  int64
+	RefBonusDaysYear      int64
 	TopReferrers      []AdminTopReferrer
 
 	TariffBreakdown []AdminTariffStat
@@ -129,6 +150,8 @@ func (s *StatsRepository) FetchAdminStatsSnapshot(ctx context.Context) (*AdminSt
 	now := time.Now().UTC()
 	today0 := utcDayStart(now)
 	weekAgo := today0.AddDate(0, 0, -7)
+	halfYearAgo := today0.AddDate(0, -6, 0)
+	yearAgo := today0.AddDate(-1, 0, 0)
 	monthStart, monthEnd := monthRangeUTC(now)
 	prevStart, prevEnd := prevMonthRangeUTC(now)
 
@@ -156,6 +179,12 @@ func (s *StatsRepository) FetchAdminStatsSnapshot(ctx context.Context) (*AdminSt
 	}
 	if err := s.pool.QueryRow(ctx, q, monthStart).Scan(&out.NewMonth); err != nil {
 		return nil, fmt.Errorf("stats new month: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, halfYearAgo).Scan(&out.NewHalfYear); err != nil {
+		return nil, fmt.Errorf("stats new half year: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, yearAgo).Scan(&out.NewYear); err != nil {
+		return nil, fmt.Errorf("stats new year: %w", err)
 	}
 
 	q = `SELECT COUNT(*) FROM customer WHERE created_at >= $1 AND created_at < $2`
@@ -187,6 +216,12 @@ FROM customer c`
 	if err := s.pool.QueryRow(ctx, q, monthStart, monthEnd).Scan(&out.SalesSubMonth); err != nil {
 		return nil, fmt.Errorf("stats sales month: %w", err)
 	}
+	if err := s.pool.QueryRow(ctx, q, halfYearAgo, now).Scan(&out.SalesSubHalfYear); err != nil {
+		return nil, fmt.Errorf("stats sales half year: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, yearAgo, now).Scan(&out.SalesSubYear); err != nil {
+		return nil, fmt.Errorf("stats sales year: %w", err)
+	}
 	if err := s.pool.QueryRow(ctx, q, prevStart, prevEnd).Scan(&out.SalesSubPrevMonth); err != nil {
 		return nil, fmt.Errorf("stats sales prev month: %w", err)
 	}
@@ -196,6 +231,15 @@ SELECT COALESCE(SUM(p.amount), 0)::float8 FROM purchase p
 WHERE p.status = 'paid' AND p.paid_at IS NOT NULL AND p.paid_at >= $1 AND p.paid_at < $2 AND %s`, sqlRubCurrency)
 	if err := s.pool.QueryRow(ctx, q, monthStart, monthEnd).Scan(&out.RevenueMonthRub); err != nil {
 		return nil, fmt.Errorf("stats revenue month: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, weekAgo, now).Scan(&out.RevenueWeekRub); err != nil {
+		return nil, fmt.Errorf("stats revenue week: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, halfYearAgo, now).Scan(&out.RevenueHalfYearRub); err != nil {
+		return nil, fmt.Errorf("stats revenue half year: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, yearAgo, now).Scan(&out.RevenueYearRub); err != nil {
+		return nil, fmt.Errorf("stats revenue year: %w", err)
 	}
 	if err := s.pool.QueryRow(ctx, q, today0, now).Scan(&out.RevenueTodayRub); err != nil {
 		return nil, fmt.Errorf("stats revenue today: %w", err)
@@ -215,15 +259,36 @@ WHERE p.status = 'paid' AND p.paid_at IS NOT NULL AND p.paid_at >= $1 AND p.paid
 	if err := s.pool.QueryRow(ctx, q, today0, now).Scan(&out.TransactionsToday); err != nil {
 		return nil, fmt.Errorf("stats tx today: %w", err)
 	}
+	if err := s.pool.QueryRow(ctx, q, weekAgo, now).Scan(&out.TransactionsWeek); err != nil {
+		return nil, fmt.Errorf("stats tx week: %w", err)
+	}
 	if err := s.pool.QueryRow(ctx, q, monthStart, monthEnd).Scan(&out.TransactionsMonth); err != nil {
 		return nil, fmt.Errorf("stats tx month: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, halfYearAgo, now).Scan(&out.TransactionsHalfYear); err != nil {
+		return nil, fmt.Errorf("stats tx half year: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, yearAgo, now).Scan(&out.TransactionsYear); err != nil {
+		return nil, fmt.Errorf("stats tx year: %w", err)
 	}
 
 	q = fmt.Sprintf(`
 SELECT COUNT(DISTINCT p.customer_id) FROM purchase p
 WHERE p.status = 'paid' AND p.paid_at IS NOT NULL AND p.paid_at >= $1 AND p.paid_at < $2 AND %s`, sqlRubCurrency)
+	if err := s.pool.QueryRow(ctx, q, today0, now).Scan(&out.UniquePayersDay); err != nil {
+		return nil, fmt.Errorf("stats unique payers day: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, weekAgo, now).Scan(&out.UniquePayersWeek); err != nil {
+		return nil, fmt.Errorf("stats unique payers week: %w", err)
+	}
 	if err := s.pool.QueryRow(ctx, q, monthStart, monthEnd).Scan(&out.UniquePayersMonth); err != nil {
 		return nil, fmt.Errorf("stats unique payers month: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, halfYearAgo, now).Scan(&out.UniquePayersHalfYear); err != nil {
+		return nil, fmt.Errorf("stats unique payers half year: %w", err)
+	}
+	if err := s.pool.QueryRow(ctx, q, yearAgo, now).Scan(&out.UniquePayersYear); err != nil {
+		return nil, fmt.Errorf("stats unique payers year: %w", err)
 	}
 
 	rows, err := s.pool.Query(ctx, fmt.Sprintf(`
@@ -269,6 +334,12 @@ WHERE EXISTS (
 	out.RefBonusDaysWeek = refWeek
 	out.RefBonusDaysMonth = refMonth
 	out.RefBonusDaysAll = refAll
+	if out.RefBonusDaysHalfYear, err = s.referralBonusDaysRange(ctx, halfYearAgo, now); err != nil {
+		return nil, err
+	}
+	if out.RefBonusDaysYear, err = s.referralBonusDaysRange(ctx, yearAgo, now); err != nil {
+		return nil, err
+	}
 
 	top, err := s.topReferrers(ctx, 10)
 	if err != nil {
@@ -277,7 +348,7 @@ WHERE EXISTS (
 	out.TopReferrers = top
 
 	if config.SalesMode() == "tariffs" {
-		tb, err := s.loadTariffBreakdown(ctx, now, today0, weekAgo, monthStart, monthEnd)
+		tb, err := s.loadTariffBreakdown(ctx, now, today0, weekAgo, halfYearAgo, yearAgo, monthStart, monthEnd)
 		if err != nil {
 			return nil, err
 		}
@@ -287,7 +358,33 @@ WHERE EXISTS (
 	return out, nil
 }
 
-func (s *StatsRepository) loadTariffBreakdown(ctx context.Context, now, today0, weekAgo, monthStart, monthEnd time.Time) ([]AdminTariffStat, error) {
+func (s *StatsRepository) referralBonusDaysRange(ctx context.Context, from, to time.Time) (int64, error) {
+	if config.ReferralMode() == "progressive" {
+		return s.sumProgressiveReferrerDays(ctx, from, to)
+	}
+	days := int64(config.GetReferralDays())
+	if days <= 0 {
+		return 0, nil
+	}
+	var n int64
+	q := `
+WITH fp AS (
+  SELECT c.telegram_id AS tid, MIN(p.paid_at) AS first_paid
+  FROM purchase p
+  JOIN customer c ON c.id = p.customer_id
+  WHERE p.status = 'paid' AND p.month > 0
+  GROUP BY c.telegram_id
+)
+SELECT COUNT(*) FROM referral r
+JOIN fp ON fp.tid = r.referee_id
+WHERE fp.first_paid >= $1 AND fp.first_paid < $2`
+	if err := s.pool.QueryRow(ctx, q, from, to).Scan(&n); err != nil {
+		return 0, fmt.Errorf("stats ref bonus range: %w", err)
+	}
+	return n * days, nil
+}
+
+func (s *StatsRepository) loadTariffBreakdown(ctx context.Context, now, today0, weekAgo, halfYearAgo, yearAgo, monthStart, monthEnd time.Time) ([]AdminTariffStat, error) {
 	qTariffs := `
 SELECT id, COALESCE(NULLIF(TRIM(name), ''), slug) AS disp, sort_order
 FROM tariff
@@ -325,21 +422,23 @@ ORDER BY sort_order ASC, id ASC`
 SELECT p.tariff_id,
   COUNT(*) FILTER (WHERE p.paid_at >= $1 AND p.paid_at < $2) AS d,
   COUNT(*) FILTER (WHERE p.paid_at >= $3 AND p.paid_at < $2) AS w,
-  COUNT(*) FILTER (WHERE p.paid_at >= $4 AND p.paid_at < $5) AS m
+  COUNT(*) FILTER (WHERE p.paid_at >= $4 AND p.paid_at < $5) AS m,
+  COUNT(*) FILTER (WHERE p.paid_at >= $6 AND p.paid_at < $2) AS hy,
+  COUNT(*) FILTER (WHERE p.paid_at >= $7 AND p.paid_at < $2) AS y
 FROM purchase p
 WHERE %s
 GROUP BY p.tariff_id`, salesWhere)
 
-	type saleAgg struct{ d, w, m int64 }
+	type saleAgg struct{ d, w, m, hy, y int64 }
 	salesMap := make(map[int64]saleAgg)
-	srows, err := s.pool.Query(ctx, salesQ, today0, now, weekAgo, monthStart, monthEnd)
+	srows, err := s.pool.Query(ctx, salesQ, today0, now, weekAgo, monthStart, monthEnd, halfYearAgo, yearAgo)
 	if err != nil {
 		return nil, fmt.Errorf("stats tariff sales: %w", err)
 	}
 	for srows.Next() {
 		var tid int64
 		var a saleAgg
-		if err := srows.Scan(&tid, &a.d, &a.w, &a.m); err != nil {
+		if err := srows.Scan(&tid, &a.d, &a.w, &a.m, &a.hy, &a.y); err != nil {
 			srows.Close()
 			return nil, err
 		}
@@ -372,6 +471,42 @@ GROUP BY p.tariff_id`, revCond)
 	rtRows.Close()
 	if err := rtRows.Err(); err != nil {
 		return nil, err
+	}
+
+	revRange := func(from, to time.Time) (map[int64]float64, error) {
+		q := fmt.Sprintf(`
+SELECT p.tariff_id, COALESCE(SUM(p.amount), 0)::float8
+FROM purchase p
+WHERE p.paid_at >= $1 AND p.paid_at < $2 AND %s
+GROUP BY p.tariff_id`, revCond)
+		rows, err := s.pool.Query(ctx, q, from, to)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		out := map[int64]float64{}
+		for rows.Next() {
+			var tid int64
+			var sum float64
+			if err := rows.Scan(&tid, &sum); err != nil {
+				return nil, err
+			}
+			out[tid] = sum
+		}
+		return out, rows.Err()
+	}
+
+	revWeek, err := revRange(weekAgo, now)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff rev week: %w", err)
+	}
+	revHalfYear, err := revRange(halfYearAgo, now)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff rev half year: %w", err)
+	}
+	revYear, err := revRange(yearAgo, now)
+	if err != nil {
+		return nil, fmt.Errorf("stats tariff rev year: %w", err)
 	}
 
 	revAllQ := fmt.Sprintf(`
@@ -462,8 +597,13 @@ GROUP BY c.current_tariff_id`
 			SalesToday:       sa.d,
 			SalesWeek:        sa.w,
 			SalesMonth:       sa.m,
+			SalesHalfYear:    sa.hy,
+			SalesYear:        sa.y,
 			SubsRevenueMonth: subsMonth[tr.id],
 			RevenueToday:     revToday[tr.id],
+			RevenueWeek:      revWeek[tr.id],
+			RevenueHalfYear:  revHalfYear[tr.id],
+			RevenueYear:      revYear[tr.id],
 			RevenueAll:       revAll[tr.id],
 			ActivePaidUsers:  activeMap[tr.id],
 		})

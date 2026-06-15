@@ -35,6 +35,7 @@ import { AdminModal } from '../components/AdminModal'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
+import { truncatePreview } from '../utils/truncatePreview'
 
 const PROMO_CODE_PREVIEW_LEN = 6
 
@@ -45,11 +46,6 @@ const PROMO_TYPE_KEYS: Record<string, string> = {
   trial: 'admin.promos.typeTrial',
   extra_hwid: 'admin.promos.typeExtraHwid',
   discount: 'admin.promos.typeDiscount',
-}
-
-function truncatePromoCode(code: string, maxLen = PROMO_CODE_PREVIEW_LEN): string {
-  if (code.length <= maxLen) return code
-  return `${code.slice(0, maxLen)}…`
 }
 
 function promoTypeLabel(type: string, t: TFunction) {
@@ -177,12 +173,94 @@ function CreatePromoModal({ onClose, onCreate }: { onClose: () => void; onCreate
   )
 }
 
-function PromoRow({
+function PromoExpandedDetails({
+  promo,
+  detail,
+  t,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  promo: AdminPromoCode
+  detail?: { redemptions: number; redemptions_today: number }
+  t: TFunction
+  onEdit: () => void
+  onToggle: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="space-y-3 border-t border-border/50 bg-accent/20 px-4 py-4">
+      {detail && (
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <span>{t('admin.promos.redemptions')}: <strong>{detail.redemptions}</strong></span>
+          <span>{t('admin.promos.redemptionsToday')}: <strong>{detail.redemptions_today}</strong></span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <span className="text-muted-foreground">{t('admin.promos.code')}: </span>
+          <span className="font-mono font-medium">{promo.code}</span>
+        </div>
+        {promo.subscription_days != null && <div>{t('admin.promos.detailSubDays')}: {promo.subscription_days}</div>}
+        {promo.trial_days != null && <div>{t('admin.promos.detailTrialDays')}: {promo.trial_days}</div>}
+        {promo.extra_hwid_delta != null && <div>{t('admin.promos.detailHwidDelta')}: {promo.extra_hwid_delta}</div>}
+        {promo.discount_percent != null && <div>{t('admin.promos.detailDiscount')}: {promo.discount_percent}%</div>}
+        {promo.discount_ttl_hours != null && <div>{t('admin.promos.detailTTL')}: {promo.discount_ttl_hours}h</div>}
+        {promo.tariff_id != null && <div>{t('admin.promos.detailTariffId')}: {promo.tariff_id}</div>}
+        <div>{t('admin.promos.detailFirstPurchase')}: {promo.first_purchase_only ? t('admin.yes') : t('admin.no')}</div>
+        <div>{t('admin.promos.detailCreated')}: {new Date(promo.created_at).toLocaleDateString()}</div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit()
+          }}
+        >
+          <Pencil className="size-3.5" /> {t('admin.edit')}
+        </button>
+        <button
+          type="button"
+          className={cn(
+            'inline-flex min-h-10 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium',
+            promo.active
+              ? 'border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400'
+              : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400',
+          )}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle()
+          }}
+        >
+          {promo.active ? <ToggleRight className="size-3.5" /> : <ToggleLeft className="size-3.5" />}
+          {promo.active ? t('admin.promos.deactivate') : t('admin.promos.activate')}
+        </button>
+        <button
+          type="button"
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+        >
+          <Trash2 className="size-3.5" /> {t('admin.delete')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function PromoListItem({
   promo,
   mutationHandlers,
+  variant,
 }: {
   promo: AdminPromoCode
   mutationHandlers: (successMessage?: string) => { onSuccess: () => void; onError: (err: unknown) => void }
+  variant: 'table' | 'card'
 }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
@@ -199,105 +277,18 @@ function PromoRow({
     )
   }, [promo.id, promo.active, update, mutationHandlers, t])
 
-  const codePreview = truncatePromoCode(promo.code)
+  const codePreview = truncatePreview(promo.code, PROMO_CODE_PREVIEW_LEN)
+  const usesLabel = `${promo.uses_count}${promo.max_uses != null ? `/${promo.max_uses}` : ''}`
+  const validUntilLabel = promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : '—'
 
-  return (
+  const modals = (
     <>
-      <tr
-        className="cursor-pointer border-b border-border/50 transition-colors hover:bg-accent/50"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <td className="whitespace-nowrap px-4 py-3">
-          <span
-            className="font-mono text-sm font-medium"
-            title={promo.code.length > PROMO_CODE_PREVIEW_LEN ? promo.code : undefined}
-          >
-            {codePreview}
-          </span>
-        </td>
-        <td className="px-4 py-3">{typeBadge(promo.type, t)}</td>
-        <td className="px-4 py-3">{statusBadge(promo.active, t)}</td>
-        <td className="px-4 py-3 text-sm tabular-nums">
-          {promo.uses_count}{promo.max_uses != null ? `/${promo.max_uses}` : ''}
-        </td>
-        <td className="px-4 py-3 text-sm text-muted-foreground">
-          {promo.valid_until ? new Date(promo.valid_until).toLocaleDateString() : '—'}
-        </td>
-        <td className="px-4 py-3">
-          {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-        </td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={6} className="bg-accent/20 px-4 py-4">
-            <div className="space-y-3">
-              {detail && (
-                <div className="flex gap-6 text-sm">
-                  <span>{t('admin.promos.redemptions')}: <strong>{detail.redemptions}</strong></span>
-                  <span>{t('admin.promos.redemptionsToday')}: <strong>{detail.redemptions_today}</strong></span>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                <div className="col-span-2 sm:col-span-3">
-                  <span className="text-muted-foreground">{t('admin.promos.code')}: </span>
-                  <span className="font-mono font-medium">{promo.code}</span>
-                </div>
-                {promo.subscription_days != null && <div>{t('admin.promos.detailSubDays')}: {promo.subscription_days}</div>}
-                {promo.trial_days != null && <div>{t('admin.promos.detailTrialDays')}: {promo.trial_days}</div>}
-                {promo.extra_hwid_delta != null && <div>{t('admin.promos.detailHwidDelta')}: {promo.extra_hwid_delta}</div>}
-                {promo.discount_percent != null && <div>{t('admin.promos.detailDiscount')}: {promo.discount_percent}%</div>}
-                {promo.discount_ttl_hours != null && <div>{t('admin.promos.detailTTL')}: {promo.discount_ttl_hours}h</div>}
-                {promo.tariff_id != null && <div>{t('admin.promos.detailTariffId')}: {promo.tariff_id}</div>}
-                <div>{t('admin.promos.detailFirstPurchase')}: {promo.first_purchase_only ? t('admin.yes') : t('admin.no')}</div>
-                <div>{t('admin.promos.detailCreated')}: {new Date(promo.created_at).toLocaleDateString()}</div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setEditOpen(true)
-                  }}
-                >
-                  <Pencil className="size-3.5" /> {t('admin.edit')}
-                </button>
-                <button
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium',
-                    promo.active
-                      ? 'border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400'
-                      : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400',
-                  )}
-                  onClick={(e) => { e.stopPropagation(); toggle() }}
-                >
-                  {promo.active ? <ToggleRight className="size-3.5" /> : <ToggleLeft className="size-3.5" />}
-                  {promo.active ? t('admin.promos.deactivate') : t('admin.promos.activate')}
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setDeleteOpen(true)
-                  }}
-                >
-                  <Trash2 className="size-3.5" /> {t('admin.delete')}
-                </button>
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-
       <EditPromoModal
         open={editOpen}
         promo={promo}
         onClose={() => setEditOpen(false)}
         mutationHandlers={mutationHandlers}
       />
-
       <AdminConfirmModal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
@@ -319,6 +310,96 @@ function PromoRow({
         icon={Trash2}
         iconAccent="rose"
       />
+    </>
+  )
+
+  const expandedDetails = expanded ? (
+    <PromoExpandedDetails
+      promo={promo}
+      detail={detail}
+      t={t}
+      onEdit={() => setEditOpen(true)}
+      onToggle={toggle}
+      onDelete={() => setDeleteOpen(true)}
+    />
+  ) : null
+
+  if (variant === 'card') {
+    return (
+      <>
+        <div
+          className={cn(
+            'overflow-hidden rounded-lg border border-border/60 bg-card transition-colors',
+            expanded && 'ring-1 ring-primary/20',
+          )}
+        >
+          <button
+            type="button"
+            className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/40 active:bg-accent/60"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+          >
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="font-mono text-sm font-semibold"
+                  title={promo.code.length > PROMO_CODE_PREVIEW_LEN ? promo.code : undefined}
+                >
+                  {codePreview}
+                </span>
+                {typeBadge(promo.type, t)}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {statusBadge(promo.active, t)}
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {t('admin.promos.uses')}: {usesLabel}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('admin.promos.validUntil')}: {validUntilLabel}
+              </p>
+            </div>
+            <span className="mt-0.5 shrink-0 text-muted-foreground">
+              {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            </span>
+          </button>
+          {expandedDetails}
+        </div>
+        {modals}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <tr
+        className="cursor-pointer border-b border-border/50 transition-colors hover:bg-accent/50"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <td className="whitespace-nowrap px-4 py-3">
+          <span
+            className="font-mono text-sm font-medium"
+            title={promo.code.length > PROMO_CODE_PREVIEW_LEN ? promo.code : undefined}
+          >
+            {codePreview}
+          </span>
+        </td>
+        <td className="px-4 py-3">{typeBadge(promo.type, t)}</td>
+        <td className="px-4 py-3">{statusBadge(promo.active, t)}</td>
+        <td className="px-4 py-3 text-sm tabular-nums">{usesLabel}</td>
+        <td className="px-4 py-3 text-sm text-muted-foreground">{validUntilLabel}</td>
+        <td className="px-4 py-3">
+          {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={6} className="p-0">
+            {expandedDetails}
+          </td>
+        </tr>
+      )}
+      {modals}
     </>
   )
 }
@@ -569,25 +650,32 @@ export default function AdminPromosPage() {
           ) : !data || data.items.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">{t('admin.promos.empty')}</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="whitespace-nowrap px-4 py-3">{t('admin.promos.code')}</th>
-                    <th className="px-4 py-3">{t('admin.promos.type')}</th>
-                    <th className="px-4 py-3">{t('admin.promos.active')}</th>
-                    <th className="px-4 py-3">{t('admin.promos.uses')}</th>
-                    <th className="px-4 py-3">{t('admin.promos.validUntil')}</th>
-                    <th className="px-4 py-3 w-8" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.map((promo) => (
-                    <PromoRow key={promo.id} promo={promo} mutationHandlers={handlers} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="space-y-2 p-3 md:hidden">
+                {data.items.map((promo) => (
+                  <PromoListItem key={promo.id} promo={promo} mutationHandlers={handlers} variant="card" />
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <th className="whitespace-nowrap px-4 py-3">{t('admin.promos.code')}</th>
+                      <th className="px-4 py-3">{t('admin.promos.type')}</th>
+                      <th className="px-4 py-3">{t('admin.promos.active')}</th>
+                      <th className="px-4 py-3">{t('admin.promos.uses')}</th>
+                      <th className="px-4 py-3">{t('admin.promos.validUntil')}</th>
+                      <th className="w-8 px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.items.map((promo) => (
+                      <PromoListItem key={promo.id} promo={promo} mutationHandlers={handlers} variant="table" />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Card>
 

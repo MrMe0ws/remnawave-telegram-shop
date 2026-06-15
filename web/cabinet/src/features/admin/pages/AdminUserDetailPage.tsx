@@ -356,7 +356,6 @@ export default function AdminUserDetailPage() {
         title={t('admin.users.extend')}
         icon={CalendarPlus}
         iconAccent="amber"
-        initialIso={panel?.rw?.expire_at ?? user.expire_at}
         minDate={new Date()}
         isPending={setExpireMut.isPending}
         error={extendError}

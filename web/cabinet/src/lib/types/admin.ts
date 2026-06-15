@@ -17,6 +17,8 @@ export interface AdminStatsDTO {
   new_week: number
   new_month: number
   new_prev_month: number
+  new_half_year: number
+  new_year: number
   trial_active: number
   paid_active: number
   inactive: number
@@ -24,13 +26,25 @@ export interface AdminStatsDTO {
   sales_sub_week: number
   sales_sub_month: number
   sales_sub_prev_month: number
+  sales_sub_half_year: number
+  sales_sub_year: number
   revenue_month_rub: number
   revenue_today_rub: number
+  revenue_week_rub: number
+  revenue_half_year_rub: number
+  revenue_year_rub: number
   revenue_all_time_rub: number
   revenue_subs_month_rub: number
   transactions_today: number
+  transactions_week: number
   transactions_month: number
+  transactions_half_year: number
+  transactions_year: number
+  unique_payers_day: number
+  unique_payers_week: number
   unique_payers_month: number
+  unique_payers_half_year: number
+  unique_payers_year: number
   payment_rub_by_invoice: Record<string, number>
   distinct_referrers: number
   active_referrers: number
@@ -38,6 +52,8 @@ export interface AdminStatsDTO {
   ref_bonus_days_today: number
   ref_bonus_days_week: number
   ref_bonus_days_month: number
+  ref_bonus_days_half_year: number
+  ref_bonus_days_year: number
   top_referrers: { referrer_id: number; paid_referees: number }[]
   tariff_breakdown: {
     tariff_id: number
@@ -45,8 +61,13 @@ export interface AdminStatsDTO {
     sales_today: number
     sales_week: number
     sales_month: number
+    sales_half_year: number
+    sales_year: number
     subs_revenue_month: number
     revenue_today: number
+    revenue_week: number
+    revenue_half_year: number
+    revenue_year: number
     revenue_all: number
     active_paid_users: number
   }[]

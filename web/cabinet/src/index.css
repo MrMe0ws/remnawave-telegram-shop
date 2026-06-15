@@ -1020,3 +1020,13 @@
     );
   }
 }
+
+/* Recharts tooltips — readable in dark theme */
+.recharts-default-tooltip {
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.recharts-tooltip-label,
+.recharts-tooltip-item {
+  color: hsl(var(--card-foreground)) !important;
+}

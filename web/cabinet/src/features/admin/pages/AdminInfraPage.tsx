@@ -129,7 +129,8 @@ function NodesTab() {
 
       <div className="rounded-lg border border-border/50 bg-card">
         <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-          <h3 className="text-sm font-medium">
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <Server className="size-4" />
             {t('admin.infra.billingNodes')} ({data?.totalBillingNodes ?? 0})
           </h3>
           <button
@@ -327,7 +328,8 @@ function ProvidersTab() {
   return (
     <div className="rounded-lg border border-border/50 bg-card">
       <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-        <h3 className="text-sm font-medium">
+        <h3 className="flex items-center gap-2 text-sm font-medium">
+          <Globe className="size-4" />
           {t('admin.infra.providers')} ({data?.total ?? 0})
         </h3>
         <button
@@ -532,7 +534,10 @@ function HistoryTab() {
     <div className="space-y-4">
       <div className="rounded-lg border border-border/50 bg-card">
         <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-          <h3 className="text-sm font-medium">{t('admin.infra.billingHistory')} ({total})</h3>
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <History className="size-4" />
+            {t('admin.infra.billingHistory')} ({total})
+          </h3>
           <button
             type="button"
             onClick={() => {

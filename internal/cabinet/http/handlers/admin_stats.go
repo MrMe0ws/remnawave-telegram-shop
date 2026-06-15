@@ -29,8 +29,13 @@ type adminTariffStatDTO struct {
 	SalesToday       int64   `json:"sales_today"`
 	SalesWeek        int64   `json:"sales_week"`
 	SalesMonth       int64   `json:"sales_month"`
+	SalesHalfYear    int64   `json:"sales_half_year"`
+	SalesYear        int64   `json:"sales_year"`
 	SubsRevenueMonth float64 `json:"subs_revenue_month"`
 	RevenueToday     float64 `json:"revenue_today"`
+	RevenueWeek      float64 `json:"revenue_week"`
+	RevenueHalfYear  float64 `json:"revenue_half_year"`
+	RevenueYear      float64 `json:"revenue_year"`
 	RevenueAll       float64 `json:"revenue_all"`
 	ActivePaidUsers  int64   `json:"active_paid_users"`
 }
@@ -43,6 +48,8 @@ type adminStatsResp struct {
 	NewWeek             int64              `json:"new_week"`
 	NewMonth            int64              `json:"new_month"`
 	NewPrevMonth        int64              `json:"new_prev_month"`
+	NewHalfYear         int64              `json:"new_half_year"`
+	NewYear             int64              `json:"new_year"`
 	TrialActive         int64              `json:"trial_active"`
 	PaidActive          int64              `json:"paid_active"`
 	Inactive            int64              `json:"inactive"`
@@ -50,13 +57,25 @@ type adminStatsResp struct {
 	SalesSubWeek        int64              `json:"sales_sub_week"`
 	SalesSubMonth       int64              `json:"sales_sub_month"`
 	SalesSubPrevMonth   int64              `json:"sales_sub_prev_month"`
+	SalesSubHalfYear    int64              `json:"sales_sub_half_year"`
+	SalesSubYear        int64              `json:"sales_sub_year"`
 	RevenueMonthRub     float64            `json:"revenue_month_rub"`
 	RevenueTodayRub     float64            `json:"revenue_today_rub"`
+	RevenueWeekRub      float64            `json:"revenue_week_rub"`
+	RevenueHalfYearRub  float64            `json:"revenue_half_year_rub"`
+	RevenueYearRub      float64            `json:"revenue_year_rub"`
 	RevenueAllTimeRub   float64            `json:"revenue_all_time_rub"`
 	RevenueSubsMonthRub float64            `json:"revenue_subs_month_rub"`
 	TransactionsToday   int64              `json:"transactions_today"`
+	TransactionsWeek    int64              `json:"transactions_week"`
 	TransactionsMonth   int64              `json:"transactions_month"`
+	TransactionsHalfYear int64             `json:"transactions_half_year"`
+	TransactionsYear    int64              `json:"transactions_year"`
+	UniquePayersDay     int64              `json:"unique_payers_day"`
+	UniquePayersWeek    int64              `json:"unique_payers_week"`
 	UniquePayersMonth   int64              `json:"unique_payers_month"`
+	UniquePayersHalfYear int64             `json:"unique_payers_half_year"`
+	UniquePayersYear    int64              `json:"unique_payers_year"`
 	PaymentRubByInvoice map[string]float64 `json:"payment_rub_by_invoice"`
 	DistinctReferrers   int64              `json:"distinct_referrers"`
 	ActiveReferrers     int64              `json:"active_referrers"`
@@ -64,6 +83,8 @@ type adminStatsResp struct {
 	RefBonusDaysToday   int64              `json:"ref_bonus_days_today"`
 	RefBonusDaysWeek    int64              `json:"ref_bonus_days_week"`
 	RefBonusDaysMonth   int64              `json:"ref_bonus_days_month"`
+	RefBonusDaysHalfYear int64             `json:"ref_bonus_days_half_year"`
+	RefBonusDaysYear    int64              `json:"ref_bonus_days_year"`
 	TopReferrers        []adminTopReferrerDTO `json:"top_referrers"`
 	TariffBreakdown     []adminTariffStatDTO  `json:"tariff_breakdown"`
 }
@@ -117,44 +138,65 @@ func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			SalesToday:       ts.SalesToday,
 			SalesWeek:        ts.SalesWeek,
 			SalesMonth:       ts.SalesMonth,
+			SalesHalfYear:    ts.SalesHalfYear,
+			SalesYear:        ts.SalesYear,
 			SubsRevenueMonth: ts.SubsRevenueMonth,
 			RevenueToday:     ts.RevenueToday,
+			RevenueWeek:      ts.RevenueWeek,
+			RevenueHalfYear:  ts.RevenueHalfYear,
+			RevenueYear:      ts.RevenueYear,
 			RevenueAll:       ts.RevenueAll,
 			ActivePaidUsers:  ts.ActivePaidUsers,
 		})
 	}
 
 	resp := adminStatsResp{
-		CapturedAt:          snap.CapturedAt.Format(time.RFC3339),
-		TotalCustomers:      snap.TotalCustomers,
-		ActiveSubscriptions: snap.ActiveSubscriptions,
-		NewToday:            snap.NewToday,
-		NewWeek:             snap.NewWeek,
-		NewMonth:            snap.NewMonth,
-		NewPrevMonth:        snap.NewPrevMonth,
-		TrialActive:         snap.TrialActive,
-		PaidActive:          snap.PaidActive,
-		Inactive:            snap.Inactive,
-		SalesSubToday:       snap.SalesSubToday,
-		SalesSubWeek:        snap.SalesSubWeek,
-		SalesSubMonth:       snap.SalesSubMonth,
-		SalesSubPrevMonth:   snap.SalesSubPrevMonth,
-		RevenueMonthRub:     snap.RevenueMonthRub,
-		RevenueTodayRub:     snap.RevenueTodayRub,
-		RevenueAllTimeRub:   snap.RevenueAllTimeRub,
-		RevenueSubsMonthRub: snap.RevenueSubsMonthRub,
-		TransactionsToday:   snap.TransactionsToday,
-		TransactionsMonth:   snap.TransactionsMonth,
-		UniquePayersMonth:   snap.UniquePayersMonth,
-		PaymentRubByInvoice: snap.PaymentRubByInvoice,
-		DistinctReferrers:   snap.DistinctReferrers,
-		ActiveReferrers:     snap.ActiveReferrers,
-		RefBonusDaysAll:     snap.RefBonusDaysAll,
-		RefBonusDaysToday:   snap.RefBonusDaysToday,
-		RefBonusDaysWeek:    snap.RefBonusDaysWeek,
-		RefBonusDaysMonth:   snap.RefBonusDaysMonth,
-		TopReferrers:        topRef,
-		TariffBreakdown:     tariffs,
+		CapturedAt:           snap.CapturedAt.Format(time.RFC3339),
+		TotalCustomers:       snap.TotalCustomers,
+		ActiveSubscriptions:  snap.ActiveSubscriptions,
+		NewToday:             snap.NewToday,
+		NewWeek:              snap.NewWeek,
+		NewMonth:             snap.NewMonth,
+		NewPrevMonth:         snap.NewPrevMonth,
+		NewHalfYear:          snap.NewHalfYear,
+		NewYear:              snap.NewYear,
+		TrialActive:          snap.TrialActive,
+		PaidActive:           snap.PaidActive,
+		Inactive:             snap.Inactive,
+		SalesSubToday:        snap.SalesSubToday,
+		SalesSubWeek:         snap.SalesSubWeek,
+		SalesSubMonth:        snap.SalesSubMonth,
+		SalesSubPrevMonth:    snap.SalesSubPrevMonth,
+		SalesSubHalfYear:     snap.SalesSubHalfYear,
+		SalesSubYear:         snap.SalesSubYear,
+		RevenueMonthRub:      snap.RevenueMonthRub,
+		RevenueTodayRub:      snap.RevenueTodayRub,
+		RevenueWeekRub:       snap.RevenueWeekRub,
+		RevenueHalfYearRub:   snap.RevenueHalfYearRub,
+		RevenueYearRub:       snap.RevenueYearRub,
+		RevenueAllTimeRub:    snap.RevenueAllTimeRub,
+		RevenueSubsMonthRub:  snap.RevenueSubsMonthRub,
+		TransactionsToday:    snap.TransactionsToday,
+		TransactionsWeek:     snap.TransactionsWeek,
+		TransactionsMonth:    snap.TransactionsMonth,
+		TransactionsHalfYear: snap.TransactionsHalfYear,
+		TransactionsYear:     snap.TransactionsYear,
+		UniquePayersDay:      snap.UniquePayersDay,
+		UniquePayersWeek:     snap.UniquePayersWeek,
+		UniquePayersMonth:    snap.UniquePayersMonth,
+		UniquePayersHalfYear: snap.UniquePayersHalfYear,
+		UniquePayersYear:     snap.UniquePayersYear,
+		PaymentRubByInvoice:  snap.PaymentRubByInvoice,
+		DistinctReferrers:    snap.DistinctReferrers,
+		ActiveReferrers:      snap.ActiveReferrers,
+		RefBonusDaysAll:      snap.RefBonusDaysAll,
+		RefBonusDaysToday:    snap.RefBonusDaysToday,
+		RefBonusDaysWeek:     snap.RefBonusDaysWeek,
+		RefBonusDaysMonth:    snap.RefBonusDaysMonth,
+		RefBonusDaysHalfYear: snap.RefBonusDaysHalfYear,
+		RefBonusDaysYear:     snap.RefBonusDaysYear,
+		TopReferrers:         topRef,
+		TariffBreakdown:      tariffs,
 	}
 
 	writeJSON(w, http.StatusOK, resp)

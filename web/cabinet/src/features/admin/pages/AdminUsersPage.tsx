@@ -85,6 +85,32 @@ function UserRow({
   )
 }
 
+function UserMobileCard({
+  user,
+  onClick,
+  t,
+}: {
+  user: AdminCustomerDTO
+  onClick: () => void
+  t: (k: string) => string
+}) {
+  const displayName = user.telegram_username ? `@${user.telegram_username}` : '—'
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-4 py-3 text-left transition-colors hover:bg-accent/40 active:bg-accent/60"
+    >
+      <p className="min-w-0 truncate text-sm font-semibold">{displayName}</p>
+      <div className="flex shrink-0 items-center gap-2">
+        {statusBadge(user.status, t)}
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </div>
+    </button>
+  )
+}
+
 const SCOPE_LABEL_KEYS: Record<Scope, string> = {
   all: 'admin.users.scopeAll',
   active: 'admin.users.scopeActive',
@@ -185,31 +211,43 @@ export default function AdminUsersPage() {
               {isSearching ? t('admin.users.searchEmpty') : t('admin.users.listEmpty')}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    <th className="w-[1%] whitespace-nowrap px-3 py-2">{t('admin.users.id')}</th>
-                    <th className="w-[7rem] max-w-[7rem] px-3 py-2">{t('admin.users.telegramId')}</th>
-                    <th className="px-3 py-2">{t('admin.users.username')}</th>
-                    <th className="hidden px-3 py-2 sm:table-cell">{t('admin.users.expireAt')}</th>
-                    <th className="px-3 py-2">{t('admin.users.status')}</th>
-                    <th className="hidden px-3 py-2 md:table-cell">{t('admin.users.tariff')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((u) => (
-                    <UserRow
-                      key={u.id}
-                      user={u}
-                      t={t}
-                      tariffs={tariffs}
-                      onClick={() => navigate(`/admin/users/${u.id}`)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="space-y-2 p-3 md:hidden">
+                {items.map((u) => (
+                  <UserMobileCard
+                    key={u.id}
+                    user={u}
+                    t={t}
+                    onClick={() => navigate(`/admin/users/${u.id}`)}
+                  />
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <th className="w-[1%] whitespace-nowrap px-3 py-2">{t('admin.users.id')}</th>
+                      <th className="w-[7rem] max-w-[7rem] px-3 py-2">{t('admin.users.telegramId')}</th>
+                      <th className="px-3 py-2">{t('admin.users.username')}</th>
+                      <th className="hidden px-3 py-2 sm:table-cell">{t('admin.users.expireAt')}</th>
+                      <th className="px-3 py-2">{t('admin.users.status')}</th>
+                      <th className="hidden px-3 py-2 md:table-cell">{t('admin.users.tariff')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((u) => (
+                      <UserRow
+                        key={u.id}
+                        user={u}
+                        t={t}
+                        tariffs={tariffs}
+                        onClick={() => navigate(`/admin/users/${u.id}`)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Pagination */}

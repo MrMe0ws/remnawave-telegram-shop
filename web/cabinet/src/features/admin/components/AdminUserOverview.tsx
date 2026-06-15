@@ -223,13 +223,7 @@ export function AdminUserOverview({
         ? String(hwidUsed)
         : '0'
 
-  const tariffBadge =
-    tariffName && user.subscription_period_months != null && user.subscription_period_months > 0
-      ? t('admin.users.overview.tariffWithPeriod', {
-          name: tariffName,
-          period: t('admin.users.monthsShort', { count: user.subscription_period_months }),
-        })
-      : tariffName ?? null
+  const tariffBadge = tariffName ?? null
 
   const resetStrategy = rw ? strategyLabel(rw.traffic_limit_strategy) : null
 
@@ -370,6 +364,7 @@ export function AdminUserOverview({
                   ? t('admin.users.overview.trafficLabelUnlimited')
                   : t('admin.users.overview.trafficLabel', {
                       used: formatBytes(rw.traffic_used_bytes),
+                      limit: formatBytes(rw.traffic_limit_bytes),
                     })}
               </p>
               <TrafficBar
@@ -478,7 +473,6 @@ export function AdminUserOverview({
         title={t('admin.users.subscription.expire')}
         icon={Calendar}
         iconAccent="amber"
-        initialIso={panelExpire ?? dbExpire ?? undefined}
         isPending={setExpire.isPending}
         onApply={(iso) => {
           setExpire.mutate(iso, {

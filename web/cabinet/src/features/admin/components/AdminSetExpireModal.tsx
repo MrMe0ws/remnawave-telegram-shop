@@ -16,7 +16,6 @@ interface AdminSetExpireModalProps {
   open: boolean
   onClose: () => void
   title: string
-  initialIso?: string | null
   minDate?: Date
   isPending?: boolean
   onApply: (iso: string) => void
@@ -30,7 +29,6 @@ export function AdminSetExpireModal({
   open,
   onClose,
   title,
-  initialIso,
   minDate,
   isPending,
   onApply,
@@ -45,9 +43,9 @@ export function AdminSetExpireModal({
 
   useEffect(() => {
     if (open) {
-      setDate(defaultExpireDate(initialIso))
+      setDate(defaultExpireDate())
     }
-  }, [open, initialIso])
+  }, [open])
 
   const handleClose = () => {
     onClearError?.()
