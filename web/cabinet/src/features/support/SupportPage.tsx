@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { MessageCircle } from 'lucide-react'
+import { DecorSupportIcon } from '@/features/decor/decorNavIcons'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Button } from '@/components/ui/button'
@@ -76,7 +76,7 @@ export default function SupportPage() {
           <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-muted/40 text-card-foreground">
             <CardContent className="space-y-6 px-[10px] py-[15px] text-center sm:px-6 sm:py-8">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
-                <MessageCircle className="size-7 text-primary" />
+                <DecorSupportIcon className="size-7 text-primary" />
               </div>
               <div>
                 <h1 className="text-3xl font-semibold">

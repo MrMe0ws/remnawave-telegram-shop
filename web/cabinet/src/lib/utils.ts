@@ -59,7 +59,7 @@ export function trafficBarFillClass(percent: number | null): string {
   if (percent != null && percent > 70) {
     return 'bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-500'
   }
-  return 'bg-gradient-to-r from-primary via-primary/90 to-primary/70 dark:from-cyan-400 dark:via-blue-400 dark:to-indigo-500'
+  return 'bg-gradient-to-r from-primary via-primary/90 to-primary/70'
 }
 
 /** Форматирует дату по локали. */

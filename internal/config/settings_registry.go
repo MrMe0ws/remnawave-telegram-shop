@@ -7,7 +7,29 @@ import (
 	"strings"
 )
 
-// SettingType — тип поля для admin settings API / UI.
+// cabinetDecorThemeIDs — порядок опций в админке (синхрон с internal/cabinet/config.ValidDecorThemeIDs).
+var cabinetDecorThemeIDs = []string{
+	"off",
+	"green",
+	"pink",
+	"orange",
+	"yellow",
+	"neon",
+	"new_year",
+	"summer",
+	"halloween",
+	"valentine",
+	"spring",
+	"black_friday",
+}
+
+func cabinetDecorThemeSet() map[string]struct{} {
+	m := make(map[string]struct{}, len(cabinetDecorThemeIDs))
+	for _, id := range cabinetDecorThemeIDs {
+		m[id] = struct{}{}
+	}
+	return m
+}
 type SettingType string
 
 const (
@@ -248,10 +270,18 @@ func RuntimeSettingsRegistry() []SettingField {
 			},
 			Current: func() string { return formatTelegramIDList(conf.whitelistedTelegramIds) },
 		},
+
+		// --- cabinet (оформление SPA) ---
 		{
-			Key: "CABINET_LIGHT_THEME_ENABLED", Group: "access", Type: SettingBool, Instant: true,
+			Key: "CABINET_LIGHT_THEME_ENABLED", Group: "cabinet", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("CABINET_LIGHT_THEME_ENABLED"),
 			Current: cabinetLightThemeCurrent(),
+		},
+		{
+			Key: "CABINET_DECOR_THEME", Group: "cabinet", Type: SettingEnum, Instant: true,
+			EnumValues: cabinetDecorThemeIDs,
+			Apply:      applyCabinetDecorTheme(),
+			Current:    cabinetDecorThemeCurrent(),
 		},
 
 		// --- lifecycle (без cron / master toggle) ---
@@ -568,5 +598,31 @@ func cabinetLightThemeCurrent() func() string {
 			return "true"
 		}
 		return v
+	}
+}
+
+func applyCabinetDecorTheme() func(string) error {
+	allowed := cabinetDecorThemeSet()
+	return func(value string) error {
+		v := strings.TrimSpace(strings.ToLower(value))
+		if _, ok := allowed[v]; !ok {
+			return fmt.Errorf("invalid decor theme %q", value)
+		}
+		setRuntimeOverride("CABINET_DECOR_THEME", v)
+		return nil
+	}
+}
+
+func cabinetDecorThemeCurrent() func() string {
+	allowed := cabinetDecorThemeSet()
+	return func() string {
+		v := strings.TrimSpace(strings.ToLower(effectiveEnvUnderRLock("CABINET_DECOR_THEME")))
+		if v == "" {
+			return "off"
+		}
+		if _, ok := allowed[v]; ok {
+			return v
+		}
+		return "off"
 	}
 }

@@ -51,15 +51,15 @@ function plategaMethodLabel(t: (k: string) => string, id: PlategaMethodId): stri
 function plategaMethodIcon(id: PlategaMethodId) {
   switch (id) {
     case 'platega_sbp':
-      return <Wallet size={18} className="text-sky-500" />
+      return <Wallet size={18} className="text-primary" />
     case 'platega_cards':
-      return <CreditCard size={18} className="text-sky-600" />
+      return <CreditCard size={18} className="text-primary" />
     case 'platega_acquiring':
       return <CreditCard size={18} className="text-violet-500" />
     case 'platega_worldwide':
       return <CreditCard size={18} className="text-indigo-500" />
     case 'platega_crypto':
-      return <Bitcoin size={18} className="text-cyan-500" />
+      return <Bitcoin size={18} className="text-primary" />
   }
 }
 
@@ -240,7 +240,7 @@ export function PlategaPaymentExpand({ enabled, selected, onSelect, variant = 'c
       <ProviderMethodButton
         selected={selectedPlatega}
         onClick={() => setOpen((v) => !v)}
-        icon={<Wallet size={18} className="text-sky-500" />}
+        icon={<Wallet size={18} className="text-primary" />}
         label={parentTitle}
         description="Platega"
         trailing={chevronCheckout}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, ChevronRight, CreditCard, Gem, Gift, User } from 'lucide-react'
+import { ArrowRight, ChevronRight, CreditCard, Gem, Gift, Link2, User } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -125,7 +125,7 @@ export default function ProfilePage() {
               className={cn(
                 'flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1.5 py-1.5 text-[11px] font-medium transition-colors sm:text-xs',
                 tab === id
-                  ? 'bg-secondary text-[rgb(2,132,199)] shadow-sm dark:text-[rgb(81,193,245)]'
+                  ? 'bg-secondary text-primary shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
               )}
               onClick={() => goTab(id)}
@@ -167,6 +167,9 @@ export default function ProfilePage() {
             {pulseLinkedAccounts ? (
               <Link to="/accounts" className="connect-device-cta group block">
                 <div className="connect-device-cta-inner profile-linked-accounts-inner flex items-center gap-3 px-4 py-3.5 text-card-foreground">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <Link2 size={16} aria-hidden />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[16px] font-medium leading-snug sm:text-[18px]">{t('profile.linkedAccountsTitle')}</p>
                     <p className="mt-0.5 text-sm text-muted-foreground">{t('profile.linkedAccountsHint')}</p>
@@ -178,6 +181,9 @@ export default function ProfilePage() {
               <Link to="/accounts" className="block">
                 <Card className="profile-tariff-hover transition-[border-color,box-shadow,filter]">
                   <CardContent className="flex items-center gap-3 py-3.5">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                      <Link2 size={16} aria-hidden />
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[16px] font-medium leading-snug sm:text-[18px]">{t('profile.linkedAccountsTitle')}</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">{t('profile.linkedAccountsHint')}</p>

@@ -413,7 +413,7 @@ export default function ConnectionsPage() {
                           type="button"
                           className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
                             platform === selectedPlatform
-                              ? 'bg-primary/15 text-primary dark:bg-primary/30 dark:text-cyan-200'
+                              ? 'bg-primary/15 text-primary dark:bg-primary/30 dark:text-primary'
                               : 'text-popover-foreground hover:bg-muted dark:text-slate-100 dark:hover:bg-white/10'
                           }`}
                           onClick={() => {
@@ -439,7 +439,7 @@ export default function ConnectionsPage() {
                   onClick={() => setSelectedAppId(app.id)}
                   className={`relative min-w-0 flex-[1_1_160px] sm:flex-[1_1_220px] rounded-xl border px-3 py-2 pr-12 text-left transition-all ${
                     app.id === selectedApp?.id
-                      ? 'border-cyan-400/45 bg-cyan-500/15 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-cyan-400/45 dark:bg-cyan-500/15'
+                      ? 'border-primary/45 bg-primary/15 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/45 dark:bg-primary/15'
                       : 'border-border bg-muted/30 hover:border-border/80 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20'
                   }`}
                 >
@@ -538,7 +538,7 @@ function GuideSection({
   const toneClasses: Record<NonNullable<typeof tone>, { iconWrap: string; icon: string }> = {
     neutral: {
       iconWrap: 'border-border bg-muted/40 dark:border-white/15 dark:bg-white/5',
-      icon: 'text-primary dark:text-cyan-200',
+      icon: 'text-primary',
     },
     purple: {
       iconWrap: 'border-violet-300/80 bg-violet-100 dark:border-violet-400/35 dark:bg-violet-500/15',

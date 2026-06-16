@@ -8,6 +8,8 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { LangToggle } from '@/components/LangToggle'
 import { cn } from '@/lib/utils'
 import { useAdminShell } from './AdminShellContext'
+import { CabinetDecorLayer } from '@/features/decor/CabinetDecorLayer'
+import { CabinetDecorHeader } from '@/features/decor/CabinetDecorHeader'
 
 interface AdminChromeProps {
   children: ReactNode
@@ -23,13 +25,15 @@ export function AdminChrome({ children }: AdminChromeProps) {
   return (
     <div className="relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
+      <CabinetDecorLayer />
       <header
         className={cn(
-          'sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm transition-transform duration-200 ease-out will-change-transform',
+          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm transition-transform duration-200 ease-out will-change-transform cabinet-app-header',
           'dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]',
           !mobileHeaderVisible && 'max-md:-translate-y-full',
         )}
       >
+        <CabinetDecorHeader />
         <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
           <button
             type="button"
@@ -72,7 +76,7 @@ export function AdminChrome({ children }: AdminChromeProps) {
         </div>
       </header>
 
-      <div className="relative z-[1] min-h-0 flex-1">
+      <div className="relative z-10 min-h-0 flex-1">
         {children}
       </div>
     </div>

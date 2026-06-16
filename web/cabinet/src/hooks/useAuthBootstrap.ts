@@ -36,5 +36,6 @@ export function useAuthBootstrap() {
       }
     },
     staleTime: 120_000,
+    refetchOnWindowFocus: true,
   })
 }

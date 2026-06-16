@@ -1424,7 +1424,6 @@
             "delivery": "Куда и что слать"
           },
           "access": {
-            "cabinet_ui": "Кабинет",
             "moderation": "Модерация",
             "lists": "Списки доступа"
           },
@@ -1436,6 +1435,9 @@
             "no_connect": "Не подключился к VPN",
             "winback": "Подписка закончилась",
             "content": "Ссылки и поддержка"
+          },
+          "cabinet": {
+            "decor": "Оформление"
           }
         },
         "groups": {
@@ -1449,7 +1451,8 @@
           "access": "Поведение и доступ",
           "lifecycle": "Автонапоминания",
           "links": "Ссылки в боте",
-          "fortune": "Колесо фортуны"
+          "fortune": "Колесо фортуны",
+          "cabinet": "Оформление кабинета"
         },
         "fortune": {
           "basic": "Правила и лимиты",
@@ -1464,7 +1467,19 @@
           "month_rolling": "Скользящий месяц",
           "never": "Никогда",
           "default": "Классический",
-          "progressive": "Прогрессивный"
+          "progressive": "Прогрессивный",
+          "off": "Без оформления",
+          "green": "Зелёная",
+          "pink": "Розовая",
+          "orange": "Оранжевая",
+          "yellow": "Жёлтая",
+          "new_year": "Новый год",
+          "summer": "Лето",
+          "neon": "Неон",
+          "halloween": "Хэллоуин",
+          "valentine": "День святого Валентина",
+          "spring": "Весна",
+          "black_friday": "Чёрная пятница"
         },
         "fields": {
           "LOYALTY_ENABLED": { "label": "Программа лояльности", "hint": "Уровни — в разделе «Лояльность»" },
@@ -1499,6 +1514,7 @@
           "BLOCKED_TELEGRAM_IDS": { "label": "Заблокированные Telegram ID", "hint": "Через запятую" },
           "WHITELISTED_TELEGRAM_IDS": { "label": "Белый список Telegram ID", "hint": "Пропускают фильтр имён" },
           "CABINET_LIGHT_THEME_ENABLED": { "label": "Светлая тема", "hint": "Выключите, чтобы оставить только тёмную тему для всех пользователей" },
+          "CABINET_DECOR_THEME": { "label": "Тема оформления", "hint": "Применяется ко всем пользователям кабинета без перезапуска" },
           "LIFECYCLE_NO_CONNECT_PAID_ENABLED": { "label": "Напоминание после оплаты", "hint": "" },
           "LIFECYCLE_NO_CONNECT_TRIAL_ENABLED": { "label": "Напоминание после триала", "hint": "" },
           "LIFECYCLE_NO_CONNECT_DELAY_HOURS": { "label": "Отправить через, ч", "hint": "" },

@@ -94,6 +94,20 @@ export interface AuthBootstrapResponse {
   support_chat_enabled?: boolean
   /** false — только тёмная тема, переключатель в шапке скрыт (CABINET_LIGHT_THEME_ENABLED). */
   light_theme_enabled?: boolean
+  /** Декоративная тема кабинета (CABINET_DECOR_THEME) */
+  decor_theme?:
+    | 'off'
+    | 'green'
+    | 'pink'
+    | 'orange'
+    | 'yellow'
+    | 'new_year'
+    | 'summer'
+    | 'neon'
+    | 'halloween'
+    | 'valentine'
+    | 'spring'
+    | 'black_friday'
   /** Доступные провайдеры оплаты по backend-конфигурации env. */
   payment_providers?: {
     yookassa?: boolean

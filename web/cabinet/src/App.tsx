@@ -8,6 +8,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AdminRoute } from '@/components/AdminRoute'
 import { BrandFavicon } from '@/components/BrandFavicon'
 import { ThemePolicyProvider } from '@/components/ThemePolicyProvider'
+import { CabinetDecorThemeSync } from '@/features/decor/CabinetDecorThemeSync'
 
 // Auth pages (9a)
 import LoginPage from '@/features/auth/LoginPage'
@@ -382,6 +383,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ThemePolicyProvider>
           <BrandFavicon />
+          <CabinetDecorThemeSync />
           <BrowserRouter basename="/cabinet">
             <AppRoutes />
           </BrowserRouter>

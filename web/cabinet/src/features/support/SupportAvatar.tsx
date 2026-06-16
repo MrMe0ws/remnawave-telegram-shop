@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react'
+import { DecorSupportIcon } from '@/features/decor/decorNavIcons'
 
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 
@@ -12,7 +12,7 @@ export function SupportAvatar() {
       {logoUrl ? (
         <img src={logoUrl} alt="" className="size-full object-contain" decoding="async" />
       ) : (
-        <MessageCircle className="size-4 text-primary" aria-hidden />
+        <DecorSupportIcon className="size-4 text-primary" />
       )}
     </div>
   )

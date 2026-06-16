@@ -316,6 +316,7 @@ function TariffPlanCard({
     <Card
       role="button"
       tabIndex={0}
+      data-tariff-card
       onClick={() => onChoosePlan(head.slug)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -517,7 +518,7 @@ function TariffPeriodStep({
                     {pluralizeMonths(p.months)}
                   </span>
                   <span
-                    className="text-[0.95rem] leading-5 font-semibold tabular-nums text-primary dark:text-[rgb(81,193,245)]"
+                    className="text-[0.95rem] leading-5 font-semibold tabular-nums text-primary"
                   >
                     {formatRub2(p.price_rub)} ₽
                   </span>
@@ -647,6 +648,7 @@ function PeriodCard({
 
   return (
     <Card
+      data-tariff-card
       className={cn(
         'relative flex flex-col transition-[border-color,box-shadow] duration-200',
         isCurrent
@@ -737,9 +739,9 @@ function isSubscriptionActive(expireAt: string | null | undefined): boolean {
   return t > Date.now()
 }
 
-/** Бейдж «Текущий»: бордер primary, фон в тёмной теме #1E2A4A, в светлой — светлый аналог. */
+/** Бейдж «Текущий»: бордер и фон от --primary пресета. */
 const tariffCurrentBadgeClassName =
-  'border border-primary bg-[#EDF2FA] text-primary dark:bg-[#1E2A4A] dark:text-primary shadow-none'
+  'border border-primary bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary shadow-none'
 
 /**
  * Текущий тариф: inset primary + те же «плавающие» тени, что у Card (иначе в dark побеждает dark:shadow карточки).
@@ -759,9 +761,9 @@ const tariffCardShadowClassName =
 const tariffRenewButtonClassName =
   'bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 hover:shadow-[0_6px_20px_-6px_hsl(var(--primary)/0.55)] active:scale-[0.98]'
 
-/** Кнопки «Сменить тариф» / «Выбрать»: светлая — #10b981fa; тёмная — #5E9CFF, текст белый как у «Продлить». */
+/** Кнопки «Сменить тариф» / «Выбрать»: тот же акцент, что и «Продлить» (--primary пресета). */
 const tariffChangeCtaButtonClassName =
-  'border-transparent bg-[#10b981fa] text-white hover:bg-[#0d9668fa] hover:shadow-[0_6px_18px_-6px_rgb(16_185_129_/_0.4)] dark:bg-[#5E9CFF] dark:text-white dark:hover:bg-[#7CADFF] dark:hover:shadow-[0_6px_22px_-6px_rgb(94_156_255_/_0.4)] active:scale-[0.98]'
+  'bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 hover:shadow-[0_6px_20px_-6px_hsl(var(--primary)/0.55)] active:scale-[0.98]'
 
 function TariffsSkeleton() {
   return (

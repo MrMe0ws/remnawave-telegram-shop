@@ -337,7 +337,7 @@ export default function CheckoutPage() {
               <ProviderMethodButton
                 selected={selectedProvider === 'yookassa'}
                 onClick={() => setProvider('yookassa')}
-                icon={<CreditCard size={18} className="text-blue-500" />}
+                icon={<CreditCard size={18} className="text-primary" />}
                 label={t('checkout.card')}
                 description="YooKassa"
               />

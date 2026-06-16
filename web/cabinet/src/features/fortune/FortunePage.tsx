@@ -323,7 +323,7 @@ export default function FortunePage() {
         className="pointer-events-none absolute -top-1 left-1/2 z-20 -translate-x-1/2 drop-shadow-md"
         aria-hidden
       >
-        <div className="size-0 border-x-[14px] border-x-transparent border-t-[20px] border-t-[rgb(2,132,199)] dark:border-t-[rgb(81,193,245)]" />
+        <div className="size-0 border-x-[14px] border-x-transparent border-t-[20px] border-t-primary" />
       </div>
       <motion.div className="relative aspect-square w-full overflow-hidden rounded-full" animate={wheelFxControls}>
         <FortuneWheelFace
@@ -347,7 +347,7 @@ export default function FortunePage() {
       </motion.div>
 
       {status?.daily_free_enabled && status?.daily_free_available && (
-        <p className="text-center text-xs font-medium text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]">
+        <p className="text-center text-xs font-medium text-primary">
           {t('fortune.dailyFreeHint')}
         </p>
       )}
@@ -406,7 +406,7 @@ export default function FortunePage() {
                         aria-controls="fortune-stats-hint"
                         onClick={() => setStatsHint((h) => (h === 'paid' ? null : 'paid'))}
                       >
-                        <Ticket className="size-4 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+                        <Ticket className="size-4 shrink-0 text-primary" aria-hidden />
                         <span className="font-semibold">{paidSpinsLeft}</span>
                       </button>
                       <span className="h-4 w-px shrink-0 bg-border" aria-hidden />

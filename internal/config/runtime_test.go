@@ -72,3 +72,29 @@ func TestEffectiveEnv_override(t *testing.T) {
 		t.Fatalf("got %q", EffectiveEnv("FORTUNE_ENABLED"))
 	}
 }
+
+func TestApplyRuntimePatch_cabinetDecorTheme(t *testing.T) {
+	changed, err := ApplyRuntimePatch(map[string]string{"CABINET_DECOR_THEME": "neon"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(changed) != 1 || changed[0] != "CABINET_DECOR_THEME" {
+		t.Fatalf("changed=%v", changed)
+	}
+	if EffectiveEnv("CABINET_DECOR_THEME") != "neon" {
+		t.Fatalf("got %q", EffectiveEnv("CABINET_DECOR_THEME"))
+	}
+	t.Cleanup(func() {
+		confMu.Lock()
+		delete(runtimeOverrides, "CABINET_DECOR_THEME")
+		delete(runtimeOverrideSet, "CABINET_DECOR_THEME")
+		confMu.Unlock()
+	})
+}
+
+func TestApplyRuntimePatch_cabinetDecorThemeInvalid(t *testing.T) {
+	_, err := ApplyRuntimePatch(map[string]string{"CABINET_DECOR_THEME": "easter"})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+}

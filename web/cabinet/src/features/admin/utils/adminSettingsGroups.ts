@@ -17,8 +17,8 @@ import {
   Settings2,
   Shield,
   Smartphone,
+  Sparkles,
   Star,
-  Sun,
   Tag,
   Trophy,
   Undo2,
@@ -29,6 +29,7 @@ import {
 
 /** Порядок и иконки секций (синхрон с backend buildAdminSettingsResponse). */
 export const ADMIN_SETTINGS_GROUP_ORDER = [
+  'cabinet',
   'trial',
   'hwid',
   'referral',
@@ -56,6 +57,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   tags: Tag,
   lifecycle: RefreshCw,
   fortune: CircleDot,
+  cabinet: Settings2,
 }
 
 export interface AdminSettingsGroupIconStyle {
@@ -75,6 +77,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   tags: { box: 'bg-orange-500/10 dark:bg-orange-500/20', icon: 'text-orange-500' },
   lifecycle: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
   fortune: { box: 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20', icon: 'text-fuchsia-500' },
+  cabinet: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
 }
 
 export function adminSettingsGroupIconStyle(id: string): AdminSettingsGroupIconStyle {
@@ -148,12 +151,6 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
     },
   ],
   access: [
-    {
-      id: 'cabinet_ui',
-      titleKey: 'admin.settings.subsections.access.cabinet_ui',
-      icon: Sun,
-      keys: ['CABINET_LIGHT_THEME_ENABLED'],
-    },
     {
       id: 'moderation',
       titleKey: 'admin.settings.subsections.access.moderation',
@@ -264,6 +261,14 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
         'FORTUNE_REWARD_DAYS_30',
         'FORTUNE_REWARD_DAYS_180',
       ],
+    },
+  ],
+  cabinet: [
+    {
+      id: 'decor',
+      titleKey: 'admin.settings.subsections.cabinet.decor',
+      icon: Sparkles,
+      keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME'],
     },
   ],
 }

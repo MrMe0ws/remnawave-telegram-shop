@@ -61,17 +61,17 @@
     --tariffs-shine-color: 214 214 214;
     --tariffs-shine-shadow: 255 255 255;
     --radius: 1.25rem;
-    /* Многослойный фон кабинета: свечение сверху + угол + вертикальный blue-depth */
+    /* Многослойный фон кабинета: свечение сверху + угол + вертикальный depth (от --primary) */
     --cabinet-dark-bg-image:
       radial-gradient(
         ellipse 150% 92% at 50% -16%,
-        rgba(55, 78, 112, 0.3) 0%,
-        rgba(14, 169, 241, 0.075) 40%,
+        hsl(var(--primary) / 0.16) 0%,
+        hsl(var(--primary) / 0.04) 40%,
         transparent 68%
       ),
       radial-gradient(
         ellipse 70% 55% at 100% 100%,
-        rgba(36, 64, 108, 0.28) 0%,
+        hsl(var(--primary) / 0.14) 0%,
         transparent 58%
       ),
       linear-gradient(
@@ -446,15 +446,15 @@
     padding: 2px;
     background: conic-gradient(
       from var(--connect-border-angle),
-      rgba(14, 169, 241, 0.95),
-      rgba(14, 169, 241, 0.2) 16%,
+      hsl(var(--accent) / 0.95),
+      hsl(var(--accent) / 0.2) 16%,
       transparent 28%,
       transparent 72%,
-      rgba(14, 169, 241, 0.2) 84%,
-      rgba(14, 169, 241, 0.95)
+      hsl(var(--accent) / 0.2) 84%,
+      hsl(var(--accent) / 0.95)
     );
     animation: connect-border-spin 4s linear infinite;
-    box-shadow: 0 0 20px rgba(14, 169, 241, 0.12);
+    box-shadow: 0 0 20px hsl(var(--accent) / 0.12);
     transition: box-shadow 0.2s ease;
   }
 
@@ -477,15 +477,31 @@
     background-color: hsl(var(--connect-device-inner-bg-hover));
   }
 
-  /* Светлая тема: только блок «Привязанные аккаунты» с анимацией — белый фон (не трогаем «Подключить устройство»). */
-  html:not(.dark) .connect-device-cta-inner.profile-linked-accounts-inner {
-    background-color: hsl(0 0% 100%);
+  /* Тёмная тема: непрозрачная заливка (conic только в 2px padding-рамке). */
+  .dark .connect-device-cta-inner {
+    background-color: hsl(var(--card));
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--connect-device-inner-bg)) 100%
+    );
   }
 
+  .dark .connect-device-cta:hover .connect-device-cta-inner {
+    background-color: hsl(var(--secondary));
+    background-image: linear-gradient(
+      165deg,
+      hsl(var(--secondary)) 0%,
+      hsl(var(--connect-device-inner-bg-hover)) 100%
+    );
+  }
+
+  /* Светлая тема: только блок «Привязанные аккаунты» с анимацией — белый фон (не трогаем «Подключить устройство»). */
+  html:not(.dark) .connect-device-cta-inner.profile-linked-accounts-inner,
   html:not(.dark)
     .connect-device-cta:hover
     .connect-device-cta-inner.profile-linked-accounts-inner {
-    background-color: hsl(0 0% 100%);
+    background: hsl(0 0% 100%);
   }
 
   /* Светлая тема: кнопка «Активировать бесплатно» с белой заливкой. */
@@ -1035,8 +1051,8 @@
     animation: none;
     background: linear-gradient(
       135deg,
-      rgba(14, 169, 241, 0.35),
-      rgba(14, 169, 241, 0.08)
+      hsl(var(--accent) / 0.35),
+      hsl(var(--accent) / 0.08)
     );
     box-shadow: none;
   }
@@ -1058,4 +1074,1177 @@
 .recharts-tooltip-label,
 .recharts-tooltip-item {
   color: hsl(var(--card-foreground)) !important;
+}
+
+/* ── Cabinet decor themes (CABINET_DECOR_THEME) ─────────────────────────── */
+
+/*
+ * Активная декор-тема: поверхности и shine подстраиваются под --primary пресета.
+ * (off — дефолтные токены :root / .dark.)
+ */
+html[data-cabinet-decor]:not([data-cabinet-decor="off"]) {
+  --accent: var(--primary);
+  --ring: var(--primary);
+}
+
+/*
+ * CTA inner: не класть color-mix в --connect-device-inner-bg — базовый стиль
+ * использует hsl(var(--connect-device-inner-bg)), ожидая «H S% L%», иначе фон
+ * становится прозрачным и conic «просвечивает» клином (эффект сирены).
+ */
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .connect-device-cta-inner {
+  background-color: hsl(var(--card));
+  background-image: linear-gradient(
+    165deg,
+    hsl(var(--card)) 0%,
+    color-mix(in srgb, hsl(var(--card)) 88%, hsl(var(--accent)) 12%) 100%
+  );
+}
+
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"])
+  .connect-device-cta:hover
+  .connect-device-cta-inner {
+  background-color: hsl(var(--secondary));
+  background-image: linear-gradient(
+    165deg,
+    hsl(var(--secondary)) 0%,
+    color-mix(in srgb, hsl(var(--secondary)) 84%, hsl(var(--accent)) 16%) 100%
+  );
+}
+
+html:not(.dark)[data-cabinet-decor]:not([data-cabinet-decor="off"]) .connect-device-cta-inner {
+  background-color: hsl(var(--card));
+  background-image: linear-gradient(
+    165deg,
+    hsl(var(--card)) 0%,
+    color-mix(in srgb, hsl(var(--card)) 94%, hsl(var(--accent)) 6%) 100%
+  );
+}
+
+html:not(.dark)[data-cabinet-decor]:not([data-cabinet-decor="off"])
+  .connect-device-cta:hover
+  .connect-device-cta-inner {
+  background-color: hsl(var(--card));
+  background-image: linear-gradient(
+    165deg,
+    hsl(var(--card)) 0%,
+    color-mix(in srgb, hsl(var(--card)) 90%, hsl(var(--accent)) 10%) 100%
+  );
+}
+
+/* «Привязанные аккаунты»: та же непрозрачная заливка, в светлой теме — белая. */
+html:not(.dark)[data-cabinet-decor]:not([data-cabinet-decor="off"])
+  .connect-device-cta-inner.profile-linked-accounts-inner,
+html:not(.dark)[data-cabinet-decor]:not([data-cabinet-decor="off"])
+  .connect-device-cta:hover
+  .connect-device-cta-inner.profile-linked-accounts-inner {
+  background: hsl(0 0% 100%);
+}
+
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"])
+  .connect-device-cta-inner.profile-linked-accounts-inner,
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"])
+  .connect-device-cta:hover
+  .connect-device-cta-inner.profile-linked-accounts-inner {
+  background-color: hsl(var(--card));
+  background-image: linear-gradient(
+    165deg,
+    hsl(var(--card)) 0%,
+    color-mix(in srgb, hsl(var(--card)) 88%, hsl(var(--accent)) 12%) 100%
+  );
+}
+
+html:not(.dark)[data-cabinet-decor]:not([data-cabinet-decor="off"]) .trial-activate-btn:hover {
+  background: color-mix(in srgb, hsl(var(--card)) 97%, hsl(var(--primary)) 3%);
+}
+
+html[data-cabinet-decor]:not([data-cabinet-decor="off"]) .tariffs-shine-icon {
+  animation-name: tariffs-shine-accent;
+}
+
+@keyframes tariffs-shine-accent {
+  0%,
+  90% {
+    color: hsl(var(--muted-foreground));
+    filter: brightness(1);
+  }
+  50% {
+    color: hsl(var(--primary));
+    filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.4));
+  }
+  58%,
+  100% {
+    color: hsl(var(--muted-foreground));
+    filter: brightness(1);
+  }
+}
+
+/* neon: вторичный акцент (magenta) не затираем общим правилом */
+html[data-cabinet-decor="neon"] {
+  --accent: 300 85% 52%;
+  --ring: 186 100% 42%;
+}
+
+html.dark[data-cabinet-decor="neon"] {
+  --accent: 300 85% 58%;
+  --ring: 186 100% 50%;
+}
+
+/* Слой частиц: между фоном (z-0) и контентом (z-10+). */
+.cabinet-decor-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cabinet-decor-fx {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cabinet-decor-particle {
+  position: absolute;
+  top: -2rem;
+  user-select: none;
+  animation: cabinet-decor-fall linear infinite;
+}
+
+.cabinet-decor-particle--snow {
+  color: hsl(210 40% 96% / 0.9);
+  text-shadow: 0 0 6px hsl(198 89% 50% / 0.35);
+}
+
+html:not(.dark) .cabinet-decor-particle--snow {
+  color: hsl(210 55% 42% / 0.7);
+  text-shadow: 0 0 5px hsl(198 89% 50% / 0.3);
+}
+
+.cabinet-decor-particle--sunray {
+  top: -10%;
+  color: hsl(45 100% 70% / 0.55);
+  animation-name: cabinet-decor-drift;
+}
+
+html:not(.dark) .cabinet-decor-particle--sunray {
+  color: hsl(38 95% 48% / 0.45);
+}
+
+/* summer: листья вверх от ветра снизу */
+.cabinet-decor-particle--summer-leaf {
+  top: auto;
+  bottom: -6%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(118 48% 42% / 0.78);
+  filter: drop-shadow(0 1px 4px hsl(100 45% 35% / 0.22));
+  animation: cabinet-decor-summer-upwind ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.cabinet-decor-particle--summer-leaf-wide {
+  color: hsl(92 42% 38% / 0.72);
+}
+
+html:not(.dark) .cabinet-decor-particle--summer-leaf {
+  color: hsl(112 46% 34% / 0.72);
+}
+
+html:not(.dark) .cabinet-decor-particle--summer-leaf-wide {
+  color: hsl(88 40% 32% / 0.68);
+}
+
+.cabinet-decor-particle--pumpkin-pop {
+  top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(28 95% 52% / 0.88);
+  filter: drop-shadow(0 0 12px hsl(28 95% 45% / 0.35));
+  animation: cabinet-decor-pumpkin-pop ease-in-out infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+html:not(.dark) .cabinet-decor-particle--pumpkin-pop {
+  color: hsl(26 92% 44% / 0.88);
+  filter: drop-shadow(0 0 8px hsl(28 95% 48% / 0.35));
+}
+
+.cabinet-decor-particle--pumpkin {
+  color: hsl(28 95% 52% / 0.9);
+  filter: drop-shadow(0 0 6px hsl(28 95% 45% / 0.5));
+}
+
+html:not(.dark) .cabinet-decor-particle--pumpkin {
+  color: hsl(26 92% 44% / 0.82);
+  filter: drop-shadow(0 0 5px hsl(28 95% 48% / 0.38));
+}
+
+.cabinet-decor-particle--heart {
+  color: hsl(340 85% 62% / 0.9);
+  animation-name: cabinet-decor-rise;
+}
+
+html:not(.dark) .cabinet-decor-particle--heart {
+  color: hsl(338 80% 48% / 0.8);
+  text-shadow: 0 0 6px hsl(340 90% 60% / 0.35);
+}
+
+.cabinet-decor-particle--petal {
+  color: hsl(138 52% 58% / 0.8);
+  animation-name: cabinet-decor-sway-fall;
+}
+
+html:not(.dark) .cabinet-decor-particle--petal {
+  color: hsl(142 48% 42% / 0.72);
+  text-shadow: 0 0 5px hsl(140 55% 50% / 0.25);
+}
+
+.cabinet-decor-particle--leaf {
+  color: hsl(135 50% 48% / 0.75);
+  animation-name: cabinet-decor-sway-fall;
+}
+
+html:not(.dark) .cabinet-decor-particle--leaf {
+  color: hsl(140 45% 36% / 0.68);
+}
+
+/* spring: SVG-листья и лепестки, хаотичное движение «ветром» */
+.cabinet-decor-particle--spring {
+  top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: cabinet-decor-wind ease-in-out infinite;
+  will-change: transform;
+}
+
+.cabinet-decor-particle--spring-bloom {
+  color: hsl(330 65% 68% / 0.85);
+  filter: drop-shadow(0 1px 4px hsl(330 70% 60% / 0.2));
+}
+
+.cabinet-decor-particle--spring-leaf {
+  color: hsl(132 48% 46% / 0.82);
+  filter: drop-shadow(0 1px 3px hsl(130 50% 40% / 0.18));
+}
+
+html:not(.dark) .cabinet-decor-particle--spring-bloom {
+  color: hsl(328 58% 52% / 0.78);
+}
+
+html:not(.dark) .cabinet-decor-particle--spring-leaf {
+  color: hsl(138 42% 38% / 0.75);
+}
+
+html[data-cabinet-decor="new_year"] .cabinet-decor-particle--snow {
+  text-shadow: 0 0 6px hsl(var(--primary) / 0.4);
+}
+
+html:not(.dark)[data-cabinet-decor="new_year"] .cabinet-decor-particle--snow {
+  text-shadow: 0 0 5px hsl(var(--primary) / 0.35);
+}
+
+.cabinet-decor-particle--spark {
+  color: hsl(45 100% 62% / 0.85);
+  text-shadow: 0 0 8px hsl(45 100% 50% / 0.6);
+  animation-name: cabinet-decor-drift;
+}
+
+html:not(.dark) .cabinet-decor-particle--spark {
+  color: hsl(42 95% 42% / 0.75);
+  text-shadow: 0 0 6px hsl(45 100% 45% / 0.45);
+}
+
+/* black_friday: диагональные метки, деньги, золотые вспышки */
+.cabinet-decor-particle--bf {
+  top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: cabinet-decor-sale-diagonal ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.cabinet-decor-particle--bf-tag {
+  color: hsl(45 100% 58% / 0.95);
+  filter: drop-shadow(0 0 8px hsl(45 100% 50% / 0.55));
+}
+
+.cabinet-decor-particle--bf-money {
+  color: hsl(45 100% 62% / 0.9);
+  text-shadow: 0 0 10px hsl(45 100% 50% / 0.65);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cabinet-decor-particle--bf-flash {
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(45 100% 68% / 0.55) 0%, hsl(45 100% 50% / 0.15) 55%, transparent 72%);
+  box-shadow: 0 0 18px hsl(45 100% 55% / 0.45);
+  animation: cabinet-decor-gold-flash ease-in-out infinite;
+}
+
+html:not(.dark) .cabinet-decor-particle--bf-tag {
+  color: hsl(42 95% 44% / 0.92);
+}
+
+html:not(.dark) .cabinet-decor-particle--bf-money {
+  color: hsl(40 92% 38% / 0.88);
+  text-shadow: 0 0 8px hsl(45 100% 45% / 0.5);
+}
+
+@keyframes cabinet-decor-fall {
+  0% {
+    transform: translateY(-5vh) rotate(0deg);
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+  }
+}
+
+@keyframes cabinet-decor-drift {
+  0% {
+    transform: translateY(-5vh) scale(0.9);
+  }
+  100% {
+    transform: translateY(105vh) scale(1.1);
+  }
+}
+
+@keyframes cabinet-decor-rise {
+  0% {
+    transform: translateY(105vh) scale(0.85);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-10vh) scale(1.05) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes cabinet-decor-sway-fall {
+  0% {
+    transform: translateY(-5vh) translateX(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(50vh) translateX(12px) rotate(180deg);
+  }
+  100% {
+    transform: translateY(110vh) translateX(-8px) rotate(360deg);
+  }
+}
+
+@keyframes cabinet-decor-wind {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scaleX(var(--spring-flip, 1));
+    opacity: 0.15;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  22% {
+    transform: translate(14vw, -6vh) rotate(48deg) scaleX(var(--spring-flip, 1));
+  }
+  45% {
+    transform: translate(-10vw, 5vh) rotate(130deg) scaleX(var(--spring-flip, 1));
+  }
+  68% {
+    transform: translate(18vw, 10vh) rotate(210deg) scaleX(var(--spring-flip, 1));
+  }
+  88% {
+    transform: translate(-6vw, 16vh) rotate(290deg) scaleX(var(--spring-flip, 1));
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(12vw, 22vh) rotate(340deg) scaleX(var(--spring-flip, 1));
+    opacity: 0.12;
+  }
+}
+
+@keyframes cabinet-decor-summer-upwind {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg) scaleX(var(--summer-flip, 1));
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.88;
+  }
+  22% {
+    transform: translateY(-24vh) translateX(16px) rotate(72deg) scaleX(var(--summer-flip, 1));
+  }
+  44% {
+    transform: translateY(-48vh) translateX(-14px) rotate(145deg) scaleX(var(--summer-flip, 1));
+  }
+  66% {
+    transform: translateY(-72vh) translateX(20px) rotate(220deg) scaleX(var(--summer-flip, 1));
+    opacity: 0.65;
+  }
+  88% {
+    transform: translateY(-96vh) translateX(-8px) rotate(300deg) scaleX(var(--summer-flip, 1));
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(-118vh) translateX(10px) rotate(360deg) scaleX(var(--summer-flip, 1));
+    opacity: 0;
+  }
+}
+
+@keyframes cabinet-decor-heat-rise {
+  0% {
+    transform: translateY(0) translateX(0) scaleX(0.92);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  35% {
+    transform: translateY(-35vh) translateX(6px) scaleX(1);
+  }
+  70% {
+    transform: translateY(-72vh) translateX(-4px) scaleX(1.04);
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(-115vh) translateX(3px) scaleX(0.96);
+    opacity: 0;
+  }
+}
+
+@keyframes cabinet-decor-pumpkin-pop {
+  0% {
+    transform: scale(0.25) rotate(-10deg);
+    opacity: 0;
+  }
+  10% {
+    transform: scale(1.06) rotate(3deg);
+    opacity: 0.62;
+  }
+  18% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.68;
+  }
+  55% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(0.7) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+@keyframes cabinet-decor-sale-diagonal {
+  0% {
+    transform: translate(-18vw, 16vh) rotate(var(--bf-angle, -28deg)) scale(0.82);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 0.82;
+  }
+  100% {
+    transform: translate(22vw, -22vh) rotate(var(--bf-angle, -28deg)) scale(1.06);
+    opacity: 0;
+  }
+}
+
+@keyframes cabinet-decor-gold-flash {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(1.15);
+    opacity: 0.75;
+  }
+  35% {
+    transform: scale(0.95);
+    opacity: 0.45;
+  }
+  55% {
+    transform: scale(1.05);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes cabinet-decor-moon-flicker {
+  0%,
+  84%,
+  100% {
+    opacity: 0.62;
+    filter: drop-shadow(0 0 18px hsl(45 80% 65% / 0.4));
+  }
+  86% {
+    opacity: 0.88;
+    filter: drop-shadow(0 0 32px hsl(48 90% 75% / 0.65));
+  }
+  88% {
+    opacity: 0.52;
+    filter: drop-shadow(0 0 12px hsl(45 70% 55% / 0.3));
+  }
+  90% {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 26px hsl(46 85% 70% / 0.55));
+  }
+  92% {
+    opacity: 0.58;
+    filter: drop-shadow(0 0 16px hsl(45 75% 60% / 0.38));
+  }
+}
+
+/* --- new_year --- */
+html[data-cabinet-decor="new_year"] {
+  --primary: 195 72% 46%;
+  --accent: 195 72% 46%;
+  --ring: 195 72% 46%;
+}
+
+html.dark[data-cabinet-decor="new_year"] {
+  --primary: 198 85% 52%;
+  --accent: 198 85% 52%;
+  --ring: 198 85% 52%;
+}
+
+html[data-cabinet-decor="new_year"] body {
+  background-image:
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(198 70% 45% / 0.12), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, hsl(150 40% 35% / 0.08), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 0% 0%, hsl(350 50% 40% / 0.06), transparent 50%);
+}
+
+html[data-cabinet-decor="new_year"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(198 70% 45% / 0.12), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, hsl(150 40% 35% / 0.08), transparent 50%);
+}
+
+/* --- color accents (только палитра, без декора) --- */
+html[data-cabinet-decor="green"] {
+  --primary: 142 52% 38%;
+  --accent: 142 52% 38%;
+  --ring: 142 52% 38%;
+}
+
+html.dark[data-cabinet-decor="green"] {
+  --primary: 142 55% 46%;
+  --accent: 142 55% 46%;
+  --ring: 142 55% 46%;
+}
+
+html[data-cabinet-decor="pink"] {
+  --primary: 338 78% 52%;
+  --accent: 338 78% 52%;
+  --ring: 338 78% 52%;
+}
+
+html[data-cabinet-decor="orange"] {
+  --primary: 28 95% 48%;
+  --accent: 28 95% 48%;
+  --ring: 28 95% 48%;
+}
+
+html[data-cabinet-decor="yellow"] {
+  --primary: 38 92% 46%;
+  --accent: 38 92% 46%;
+  --ring: 38 92% 46%;
+}
+
+/* --- summer --- */
+html[data-cabinet-decor="summer"] {
+  --primary: 38 92% 46%;
+  --accent: 38 92% 46%;
+  --ring: 38 92% 46%;
+}
+
+html[data-cabinet-decor="summer"] body {
+  background-image:
+    radial-gradient(ellipse 100% 70% at 50% -20%, hsl(45 95% 55% / 0.22), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 80% 100%, hsl(200 80% 55% / 0.14), transparent 50%),
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.1), transparent 55%);
+}
+
+html[data-cabinet-decor="summer"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 100% 70% at 50% -20%, hsl(45 95% 55% / 0.22), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 80% 100%, hsl(200 80% 55% / 0.14), transparent 50%);
+}
+
+html:not(.dark)[data-cabinet-decor="summer"] body,
+html:not(.dark)[data-cabinet-decor="summer"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 110% 75% at 50% -18%, hsl(42 100% 58% / 0.28), transparent 58%),
+    radial-gradient(ellipse 85% 55% at 95% 100%, hsl(200 85% 62% / 0.16), transparent 52%),
+    radial-gradient(ellipse 70% 50% at 0% 90%, hsl(38 90% 55% / 0.12), transparent 50%);
+}
+
+/* --- neon --- */
+html[data-cabinet-decor="neon"] {
+  --primary: 186 100% 42%;
+  --accent: 300 85% 52%;
+  --ring: 186 100% 42%;
+}
+
+html.dark[data-cabinet-decor="neon"] {
+  --primary: 186 100% 50%;
+  --accent: 300 85% 58%;
+  --ring: 186 100% 50%;
+}
+
+html.dark[data-cabinet-decor="neon"] body {
+  background-image:
+    radial-gradient(ellipse 130% 92% at 50% -18%, rgba(0, 240, 255, 0.28), transparent 58%),
+    radial-gradient(ellipse 70% 55% at 100% 40%, rgba(255, 0, 200, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 0% 90%, rgba(0, 180, 255, 0.18), transparent 55%),
+    linear-gradient(168deg, hsl(260 45% 10%) 0%, hsl(var(--background)) 42%, hsl(235 55% 7%) 100%);
+}
+
+html.dark[data-cabinet-decor="neon"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 130% 92% at 50% -18%, rgba(0, 240, 255, 0.28), transparent 58%),
+    radial-gradient(ellipse 70% 55% at 100% 40%, rgba(255, 0, 200, 0.14), transparent 55%),
+    linear-gradient(168deg, hsl(260 45% 10%) 0%, hsl(var(--background)) 42%, hsl(235 55% 7%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="neon"] body,
+html:not(.dark)[data-cabinet-decor="neon"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(186 100% 42% / 0.2), transparent 55%),
+    radial-gradient(ellipse 75% 55% at 100% 50%, hsl(300 85% 52% / 0.12), transparent 55%),
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.08), transparent 55%);
+}
+
+html[data-cabinet-decor="neon"] .cabinet-elevated-card,
+html[data-cabinet-decor="neon"] .subscription-feature-card,
+html[data-cabinet-decor="neon"] .admin-modal-panel {
+  border-color: hsl(var(--primary) / 0.38) !important;
+  box-shadow:
+    0 0 24px hsl(var(--primary) / 0.12),
+    0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+}
+
+html.dark[data-cabinet-decor="neon"] .cabinet-elevated-card,
+html.dark[data-cabinet-decor="neon"] .subscription-feature-card {
+  border-color: hsl(var(--primary) / 0.45) !important;
+  box-shadow:
+    0 0 28px hsl(var(--primary) / 0.18),
+    0 12px 30px rgba(3, 10, 24, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+/* --- halloween (оранжевый акцент) --- */
+html[data-cabinet-decor="halloween"] {
+  --primary: 28 95% 48%;
+  --accent: 28 95% 48%;
+  --ring: 28 95% 48%;
+}
+
+html.dark[data-cabinet-decor="halloween"] body {
+  background-image:
+    radial-gradient(ellipse 110% 75% at 50% -12%, hsl(28 95% 50% / 0.28), transparent 55%),
+    radial-gradient(ellipse 85% 60% at 100% 100%, hsl(280 45% 22% / 0.22), transparent 55%),
+    linear-gradient(175deg, hsl(25 35% 8%) 0%, hsl(var(--background)) 48%, hsl(20 50% 7%) 100%);
+}
+
+html.dark[data-cabinet-decor="halloween"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 110% 75% at 50% -12%, hsl(28 95% 50% / 0.28), transparent 55%),
+    radial-gradient(ellipse 85% 60% at 100% 100%, hsl(280 45% 22% / 0.22), transparent 55%);
+}
+
+html:not(.dark)[data-cabinet-decor="halloween"] body,
+html:not(.dark)[data-cabinet-decor="halloween"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 80% at 50% -15%, hsl(28 95% 52% / 0.32), transparent 58%),
+    radial-gradient(ellipse 80% 55% at 100% 100%, hsl(25 80% 45% / 0.14), transparent 52%),
+    radial-gradient(ellipse 70% 50% at 0% 0%, hsl(280 40% 55% / 0.08), transparent 50%);
+}
+
+/* --- valentine (розовый акцент) --- */
+html[data-cabinet-decor="valentine"] {
+  --primary: 338 78% 52%;
+  --accent: 338 78% 52%;
+  --ring: 338 78% 52%;
+}
+
+html[data-cabinet-decor="valentine"] body {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 50% -18%, hsl(340 80% 68% / 0.22), transparent 55%),
+    radial-gradient(ellipse 85% 58% at 0% 100%, hsl(330 65% 58% / 0.14), transparent 50%),
+    radial-gradient(ellipse 90% 60% at 100% 20%, hsl(350 70% 75% / 0.1), transparent 50%);
+}
+
+html[data-cabinet-decor="valentine"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 50% -18%, hsl(340 80% 68% / 0.22), transparent 55%),
+    radial-gradient(ellipse 85% 58% at 0% 100%, hsl(330 65% 58% / 0.14), transparent 50%);
+}
+
+html:not(.dark)[data-cabinet-decor="valentine"] body,
+html:not(.dark)[data-cabinet-decor="valentine"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 82% at 50% -16%, hsl(340 85% 62% / 0.35), transparent 58%),
+    radial-gradient(ellipse 80% 55% at 5% 100%, hsl(330 70% 55% / 0.2), transparent 52%),
+    radial-gradient(ellipse 75% 50% at 100% 10%, hsl(350 75% 70% / 0.15), transparent 48%);
+}
+
+/* --- spring (зелёный акцент, всё цветёт) --- */
+html[data-cabinet-decor="spring"] {
+  --primary: 142 52% 38%;
+  --accent: 142 52% 38%;
+  --ring: 142 52% 38%;
+}
+
+html.dark[data-cabinet-decor="spring"] {
+  --primary: 142 55% 46%;
+  --accent: 142 55% 46%;
+  --ring: 142 55% 46%;
+}
+
+html[data-cabinet-decor="spring"] body {
+  background-image:
+    radial-gradient(ellipse 110% 78% at 50% -18%, hsl(138 55% 52% / 0.22), transparent 56%),
+    radial-gradient(ellipse 85% 58% at 0% 100%, hsl(125 48% 38% / 0.16), transparent 52%),
+    radial-gradient(ellipse 75% 50% at 100% 20%, hsl(155 42% 45% / 0.12), transparent 50%),
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.1), transparent 55%);
+}
+
+html[data-cabinet-decor="spring"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 110% 78% at 50% -18%, hsl(138 55% 52% / 0.22), transparent 56%),
+    radial-gradient(ellipse 85% 58% at 0% 100%, hsl(125 48% 38% / 0.16), transparent 52%),
+    radial-gradient(ellipse 75% 50% at 100% 20%, hsl(155 42% 45% / 0.12), transparent 50%);
+}
+
+html:not(.dark)[data-cabinet-decor="spring"] body,
+html:not(.dark)[data-cabinet-decor="spring"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 80% at 50% -16%, hsl(140 60% 58% / 0.32), transparent 58%),
+    radial-gradient(ellipse 88% 55% at 5% 100%, hsl(132 52% 42% / 0.2), transparent 52%),
+    radial-gradient(ellipse 72% 48% at 100% 15%, hsl(158 48% 48% / 0.14), transparent 48%),
+    radial-gradient(ellipse 65% 42% at 50% 100%, hsl(330 55% 72% / 0.06), transparent 50%);
+}
+
+/* --- black_friday --- */
+html[data-cabinet-decor="black_friday"] {
+  --primary: 45 95% 46%;
+  --accent: 45 95% 46%;
+  --ring: 45 95% 46%;
+}
+
+html.dark[data-cabinet-decor="black_friday"] body {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -20%, hsl(45 90% 50% / 0.14), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 50% 100%, hsl(0 0% 0% / 0.35), transparent 60%),
+    linear-gradient(168deg, hsl(0 0% 6%) 0%, hsl(var(--background)) 45%, hsl(0 0% 4%) 100%);
+}
+
+html.dark[data-cabinet-decor="black_friday"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -20%, hsl(45 90% 50% / 0.14), transparent 55%),
+    linear-gradient(168deg, hsl(0 0% 6%) 0%, hsl(var(--background)) 45%, hsl(0 0% 4%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="black_friday"] body,
+html:not(.dark)[data-cabinet-decor="black_friday"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 50% -18%, hsl(45 95% 48% / 0.22), transparent 56%),
+    radial-gradient(ellipse 90% 55% at 50% 100%, hsl(40 30% 25% / 0.06), transparent 55%),
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.08), transparent 55%);
+}
+
+/* Карточки и CTA: лёгкий акцентный бордер/свечение для всех декор-тем (кроме off). */
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .cabinet-elevated-card,
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .subscription-feature-card {
+  border-color: hsl(var(--primary) / 0.28) !important;
+  box-shadow:
+    0 12px 30px rgba(3, 10, 24, 0.42),
+    0 0 0 1px hsl(var(--primary) / 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]) .cabinet-elevated-card:hover,
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]) .subscription-feature-card.profile-tariff-hover:hover,
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]) .dashboard-quick-link:hover {
+  border-color: hsl(var(--primary) / 0.42) !important;
+}
+
+/* ── Декор: гирлянда (new_year), неон-хедер, фоновые сцены ───────────────── */
+
+.cabinet-decor-garland {
+  z-index: 2;
+}
+
+.cabinet-decor-garland__wire {
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  top: 50%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, hsl(var(--muted-foreground) / 0.35), transparent);
+  transform: translateY(-50%);
+}
+
+.cabinet-decor-garland__bulbs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 3%;
+}
+
+.cabinet-decor-garland__bulb {
+  width: 7px;
+  height: 10px;
+  border-radius: 50% 50% 45% 45%;
+  background: var(--bulb-color);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--bulb-color) 70%, transparent);
+  animation: cabinet-decor-bulb-twinkle 1.8s ease-in-out infinite;
+  animation-delay: var(--bulb-delay, 0s);
+}
+
+@keyframes cabinet-decor-bulb-twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+    filter: brightness(0.85);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+}
+
+.cabinet-decor-neon-header {
+  z-index: 2;
+}
+
+.cabinet-decor-neon-header__line {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--primary)) 20%,
+    hsl(var(--accent)) 50%,
+    hsl(var(--primary)) 80%,
+    transparent
+  );
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.55), 0 0 20px hsl(var(--accent) / 0.35);
+}
+
+/* Фоновые сцены (внутри cabinet-decor-layer) */
+.cabinet-decor-scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  color: hsl(var(--primary));
+}
+
+.cabinet-decor-scene--new_year .cabinet-decor-scene__christmas-tree {
+  position: absolute;
+  left: -0.5rem;
+  bottom: 0;
+  width: min(30vw, 220px);
+  height: auto;
+  opacity: 0.32;
+  color: hsl(140 45% 38%);
+}
+
+html:not(.dark) .cabinet-decor-scene--new_year .cabinet-decor-scene__christmas-tree {
+  opacity: 0.26;
+  color: hsl(145 50% 34%);
+}
+
+.cabinet-decor-scene--summer .cabinet-decor-scene__tree {
+  position: absolute;
+  right: -1rem;
+  bottom: 0;
+  width: min(28vw, 200px);
+  height: auto;
+  opacity: 0.35;
+  color: hsl(120 40% 35%);
+}
+
+html:not(.dark) .cabinet-decor-scene--summer .cabinet-decor-scene__tree {
+  opacity: 0.28;
+  color: hsl(130 45% 32%);
+}
+
+.cabinet-decor-scene--halloween .cabinet-decor-scene__moon {
+  position: absolute;
+  top: 6%;
+  right: 6%;
+  width: min(16vw, 72px);
+  height: auto;
+  opacity: 0.62;
+  filter: drop-shadow(0 0 18px hsl(45 80% 65% / 0.4));
+  animation: cabinet-decor-moon-flicker 11s ease-in-out infinite;
+}
+
+.cabinet-decor-scene--halloween .cabinet-decor-scene__cat {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: min(22vw, 120px);
+  height: auto;
+  color: hsl(25 30% 28%);
+  opacity: 0.5;
+}
+
+.cabinet-decor-scene--halloween .cabinet-decor-scene__mouse {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(18vw, 96px);
+  height: auto;
+  color: hsl(25 25% 32%);
+  opacity: 0.45;
+}
+
+.cabinet-decor-scene--spring .cabinet-decor-scene__spring-grass {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: min(22vw, 96px);
+  height: auto;
+  color: hsl(125 38% 38%);
+  opacity: 0.38;
+}
+
+.cabinet-decor-scene--spring .cabinet-decor-scene__spring-bush {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: min(20vw, 88px);
+  height: auto;
+  color: hsl(130 35% 36%);
+  opacity: 0.34;
+}
+
+html:not(.dark) .cabinet-decor-scene--spring .cabinet-decor-scene__spring-grass {
+  color: hsl(128 42% 34%);
+  opacity: 0.32;
+}
+
+html:not(.dark) .cabinet-decor-scene--spring .cabinet-decor-scene__spring-bush {
+  color: hsl(132 40% 32%);
+  opacity: 0.3;
+}
+
+.cabinet-decor-scene__heart {
+  position: absolute;
+  bottom: 6%;
+  line-height: 1;
+  color: hsl(var(--primary));
+  opacity: 0.35;
+  text-shadow: 0 0 16px hsl(var(--primary) / 0.45);
+  font-size: clamp(2.5rem, 8vw, 5rem);
+}
+
+.cabinet-decor-scene__heart--left {
+  left: 1%;
+  bottom: 5%;
+  transform: rotate(-16deg) scale(0.9);
+}
+
+.cabinet-decor-scene__heart--right {
+  right: 3%;
+  bottom: 15%;
+  transform: rotate(24deg) scale(1.1);
+  font-size: clamp(2.75rem, 9vw, 5.5rem);
+}
+
+.cabinet-decor-scene--neon .cabinet-decor-scene__neon-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image:
+    linear-gradient(hsl(var(--primary) / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.35) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 20%, transparent 75%);
+}
+
+.cabinet-decor-scene--neon .cabinet-decor-scene__neon-scanline {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(var(--primary) / 0.15) 2px,
+    hsl(var(--primary) / 0.15) 4px
+  );
+  pointer-events: none;
+}
+
+.cabinet-decor-scene__bf-corner {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  opacity: 0.35;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.5), transparent 55%);
+}
+
+.cabinet-decor-scene__bf-corner--tl {
+  top: 0;
+  left: 0;
+}
+
+.cabinet-decor-scene__bf-corner--br {
+  bottom: 0;
+  right: 0;
+  transform: rotate(180deg);
+}
+
+/* new_year: иней на карточках */
+html[data-cabinet-decor="new_year"] .subscription-feature-card,
+html[data-cabinet-decor="new_year"] .cabinet-elevated-card {
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1),
+    inset 0 1px 0 hsl(210 40% 98% / 0.12) !important;
+}
+
+html.dark[data-cabinet-decor="new_year"] .subscription-feature-card,
+html.dark[data-cabinet-decor="new_year"] .cabinet-elevated-card {
+  box-shadow:
+    0 12px 30px rgba(3, 10, 24, 0.42),
+    inset 0 1px 0 hsl(210 40% 98% / 0.1),
+    inset 0 0 0 1px hsl(200 60% 90% / 0.08) !important;
+}
+
+/* valentine: мягкий пульс CTA (не conic-сирена) */
+html[data-cabinet-decor="valentine"] .connect-device-cta {
+  animation:
+    connect-border-spin 4s linear infinite,
+    cabinet-decor-valentine-cta-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes cabinet-decor-valentine-cta-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 16px hsl(var(--accent) / 0.1);
+  }
+  50% {
+    box-shadow: 0 0 24px hsl(var(--accent) / 0.28);
+  }
+}
+
+/* neon: свечение активного пункта навигации */
+html[data-cabinet-decor="neon"] .cabinet-app-header nav a[aria-current="page"] {
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.55);
+}
+
+html[data-cabinet-decor="neon"] .cabinet-app-header nav a[aria-current="page"] svg {
+  filter: drop-shadow(0 0 6px hsl(var(--primary) / 0.65));
+}
+
+/* neon: иконки CTA «подключить» / «продлить» — фиолетовый accent как у контура */
+html[data-cabinet-decor="neon"] .connect-device-cta-inner > span.inline-flex.size-9,
+html[data-cabinet-decor="neon"] .renew-subscription-cta-danger-inner > span.inline-flex.size-9,
+html[data-cabinet-decor="neon"] .renew-subscription-cta-static span.inline-flex.size-9 {
+  background-color: hsl(var(--accent) / 0.15) !important;
+  color: hsl(var(--accent)) !important;
+}
+
+/* black_friday: золотая диагональ на карточках тарифов */
+html[data-cabinet-decor="black_friday"] [data-tariff-card] {
+  position: relative;
+  overflow: hidden;
+}
+
+html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, transparent 48%, hsl(var(--primary) / 0.55) 48%, hsl(var(--primary) / 0.35) 100%);
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .cabinet-decor-scene--new_year .cabinet-decor-scene__christmas-tree {
+    width: min(34vw, 300px);
+    opacity: 0.38;
+  }
+
+  .cabinet-decor-scene--halloween .cabinet-decor-scene__moon {
+    width: min(14vw, 96px);
+  }
+
+  .cabinet-decor-scene--spring .cabinet-decor-scene__spring-grass {
+    width: min(18vw, 120px);
+    opacity: 0.42;
+  }
+
+  .cabinet-decor-scene--spring .cabinet-decor-scene__spring-bush {
+    width: min(16vw, 110px);
+    opacity: 0.38;
+  }
+
+  .cabinet-decor-scene--halloween .cabinet-decor-scene__cat {
+    width: min(18vw, 160px);
+  }
+
+  .cabinet-decor-scene--halloween .cabinet-decor-scene__mouse {
+    width: min(14vw, 130px);
+  }
+
+  .cabinet-decor-scene--summer .cabinet-decor-scene__tree {
+    width: min(32vw, 280px);
+    opacity: 0.42;
+  }
+
+  .cabinet-decor-scene__heart {
+    font-size: clamp(3.5rem, 10vw, 6.5rem);
+    opacity: 0.4;
+  }
+
+  .cabinet-decor-garland__bulb {
+    width: 9px;
+    height: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cabinet-decor-fx {
+    display: none;
+  }
+
+  .cabinet-decor-garland__bulb {
+    animation: none;
+    opacity: 0.75;
+  }
+
+  .cabinet-decor-scene--halloween .cabinet-decor-scene__moon {
+    animation: none;
+  }
+
+  html[data-cabinet-decor="valentine"] .connect-device-cta {
+    animation: none;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--accent) / 0.35),
+      hsl(var(--accent) / 0.08)
+    );
+  }
 }

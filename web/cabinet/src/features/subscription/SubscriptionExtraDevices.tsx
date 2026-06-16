@@ -224,7 +224,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
 
   const deviceOptionIcon = (
     <div
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-cyan-500/15 dark:text-cyan-300"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary"
       aria-hidden
     >
       <Smartphone size={14} strokeWidth={2} />

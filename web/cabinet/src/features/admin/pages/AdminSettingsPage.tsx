@@ -17,6 +17,7 @@ import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminToggleRow } from '../components/AdminToggleSwitch'
+import { AdminSelect } from '../components/AdminSelect'
 import { useAdminBotSettings, useAdminBotSettingsPatch } from '../hooks/useAdminBotSettings'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import {
@@ -29,6 +30,7 @@ import {
 } from '../utils/adminSettingsGroups'
 import { groupSettingsFieldsForLayout, isTextareaSettingType } from '../utils/adminSettingsFieldLayout'
 import { SettingsSubsectionTitle } from '../components/SettingsSubsectionTitle'
+import { decorThemeOptionLabelStyle } from '@/features/decor/decorThemeAdmin'
 import type { AdminSettingFieldDTO, AdminSettingGroupDTO } from '@/lib/types/admin'
 
 function parseBool(v: string): boolean {
@@ -64,6 +66,7 @@ interface GroupEditorProps {
   onToggleExpand: () => void
   onDraftChange: (key: string, value: string) => void
   onToggle: (key: string, value: boolean) => void
+  onInstantEnum: (key: string, value: string) => void
   onSave: (keys: string[]) => void
   saving: boolean
   togglingKey: string | null
@@ -77,6 +80,7 @@ function SettingsGroupEditor({
   onToggleExpand,
   onDraftChange,
   onToggle,
+  onInstantEnum,
   onSave,
   saving,
   togglingKey,
@@ -160,18 +164,27 @@ function SettingsGroupEditor({
           {label}
         </label>
         {field.type === 'enum' && field.enum_values?.length ? (
-          <select
+          <AdminSelect
             id={inputId}
-            className="admin-input w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
             value={value}
-            onChange={(e) => onDraftChange(field.key, e.target.value)}
-          >
-            {field.enum_values.map((opt) => (
-              <option key={opt} value={opt}>
-                {t(`admin.settings.enum.${opt}`, { defaultValue: opt })}
-              </option>
-            ))}
-          </select>
+            options={field.enum_values.map((opt) => ({
+              value: opt,
+              label: t(`admin.settings.enum.${opt}`, { defaultValue: opt }),
+              labelStyle:
+                field.key === 'CABINET_DECOR_THEME' ? decorThemeOptionLabelStyle(opt) : undefined,
+            }))}
+            onChange={(next) => {
+              if (next == null) return
+              if (field.instant) {
+                onInstantEnum(field.key, next)
+              } else {
+                onDraftChange(field.key, next)
+              }
+            }}
+            placeholder={label}
+            ariaLabel={label}
+            disabled={togglingKey === field.key || saving}
+          />
         ) : isTextareaSettingType(field.type) ? (
           <textarea
             id={inputId}
@@ -426,6 +439,24 @@ export default function AdminSettingsPage() {
     [draft, patchMutation, showError, showSuccess, t],
   )
 
+  const handleInstantEnum = useCallback(
+    async (key: string, value: string) => {
+      const prev = draft[key]
+      setDraft((d) => ({ ...d, [key]: value }))
+      setTogglingKey(key)
+      try {
+        await patchMutation.mutateAsync({ [key]: value })
+        showSuccess(t('admin.settings.saved'))
+      } catch (err) {
+        setDraft((d) => ({ ...d, [key]: prev ?? '' }))
+        showError(err)
+      } finally {
+        setTogglingKey(null)
+      }
+    },
+    [draft, patchMutation, showError, showSuccess, t],
+  )
+
   const handleSaveSection = useCallback(
     async (groupId: string, keys: string[]) => {
       const payload: Record<string, string> = {}
@@ -529,6 +560,7 @@ export default function AdminSettingsPage() {
               onToggleExpand={() => toggleGroupExpanded(group.id)}
               onDraftChange={(key, value) => setDraft((d) => ({ ...d, [key]: value }))}
               onToggle={handleToggle}
+              onInstantEnum={handleInstantEnum}
               onSave={(keys) => handleSaveSection(group.id, keys)}
               saving={savingGroup === group.id || patchMutation.isPending}
               togglingKey={togglingKey}

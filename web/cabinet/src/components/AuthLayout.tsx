@@ -4,6 +4,8 @@ import { Logo } from './Logo'
 import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+import { CabinetDecorLayer } from '@/features/decor/CabinetDecorLayer'
+import { CabinetDecorHeader } from '@/features/decor/CabinetDecorHeader'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -19,8 +21,12 @@ export function AuthLayout({ children, showHeaderLogo = true }: AuthLayoutProps)
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      {/* Top bar */}
-      <header className={`flex items-center px-4 py-2 sm:px-5 sm:py-2.5 ${showHeaderLogo ? 'justify-between' : 'justify-end'}`}>
+      <div className="cabinet-shell-gradient" aria-hidden />
+      <CabinetDecorLayer />
+      <header
+        className={`relative z-10 flex items-center px-4 py-2 sm:px-5 sm:py-2.5 cabinet-app-header ${showHeaderLogo ? 'justify-between' : 'justify-end'}`}
+      >
+        <CabinetDecorHeader />
         {showHeaderLogo && (
           <Link
             to="/dashboard"
@@ -35,15 +41,13 @@ export function AuthLayout({ children, showHeaderLogo = true }: AuthLayoutProps)
         </div>
       </header>
 
-      {/* Centered card */}
-      <main className="flex-1 flex items-center justify-center p-4">
+      <main className="relative z-10 flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-sm animate-fade-in">
           {children}
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="px-6 py-4 text-center text-xs text-muted-foreground">
+      <footer className="relative z-10 px-6 py-4 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} {footerName}
       </footer>
     </div>

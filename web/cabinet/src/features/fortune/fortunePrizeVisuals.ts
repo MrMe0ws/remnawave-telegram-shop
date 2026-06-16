@@ -163,7 +163,7 @@ export function sectorIconClassWheel(rewardType: string, variant: FortuneDesignV
       days_30: 'text-rose-800 dark:text-rose-300',
       days_180: 'text-pink-800 dark:text-pink-300',
     }
-    return map[rewardType] ?? 'text-sky-800 dark:text-sky-300'
+    return map[rewardType] ?? 'text-primary'
   }
   return sectorIconClass(rewardType)
 }
@@ -182,7 +182,7 @@ export function sectorIconClass(rewardType: string): string {
     days_30: 'text-rose-300 drop-shadow-[0_0_6px_rgb(253_164_175_/_0.45)]',
     days_180: 'text-pink-300 drop-shadow-[0_0_6px_rgb(249_168_212_/_0.45)]',
   }
-  return map[rewardType] ?? 'text-cyan-300 drop-shadow-sm'
+  return map[rewardType] ?? 'text-primary drop-shadow-sm'
 }
 
 /** Акцентная полоска для карточки «можно выиграть». */
@@ -199,5 +199,5 @@ export function sectorAccentBarClass(rewardType: string): string {
     days_30: 'bg-rose-500',
     days_180: 'bg-pink-500',
   }
-  return map[rewardType] ?? 'bg-cyan-500'
+  return map[rewardType] ?? 'bg-primary'
 }

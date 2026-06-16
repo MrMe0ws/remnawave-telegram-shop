@@ -23,6 +23,10 @@ import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useAuthStore } from '@/store/auth'
+import { CabinetDecorLayer } from '@/features/decor/CabinetDecorLayer'
+import { CabinetDecorHeader } from '@/features/decor/CabinetDecorHeader'
+import { DecorNavIcon } from '@/features/decor/decorNavIcons'
+import { useCabinetDecorTheme } from '@/features/decor/useCabinetDecorTheme'
 import { CabinetOnboarding } from '@/features/onboarding/CabinetOnboarding'
 import { useSupportSummary } from '@/features/support/useSupportChat'
 
@@ -89,7 +93,7 @@ function profileNavActive(pathname: string): boolean {
 }
 
 /** Активный пункт в выпадающем меню и нижней мобильной навигации (как у текста ссылки). */
-const navAccentActiveClass = 'text-[rgb(2,132,199)] dark:text-[rgb(81,193,245)]'
+const navAccentActiveClass = 'text-primary'
 
 function NavIconWithDot({ showDot, children }: { showDot: boolean; children: ReactNode }) {
   return (
@@ -103,6 +107,7 @@ function NavIconWithDot({ showDot, children }: { showDot: boolean; children: Rea
 export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
+  const decorTheme = useCabinetDecorTheme()
   const { data: bootstrap } = useAuthBootstrap()
   const overflowMainNav = useMemo(() => {
     if (bootstrap?.fortune_nav_visible === false) {
@@ -253,12 +258,15 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
+      <CabinetDecorLayer />
       <header
         className={cn(
-          'sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 will-change-transform',
+          'relative sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 will-change-transform',
           !mobileChromeVisible && !menuOpen && 'max-sm:-translate-y-full',
+          'cabinet-app-header',
         )}
       >
+        <CabinetDecorHeader />
         <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
           <Link
             to="/dashboard"
@@ -294,7 +302,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                     className="flex items-center"
                   >
                     <NavIconWithDot showDot={to === '/support' && supportUnread > 0}>
-                      <Icon
+                      <DecorNavIcon
+                        theme={decorTheme}
+                        to={to}
+                        defaultIcon={Icon}
                         className={cn(
                           'size-[18px]',
                           active ? 'text-foreground' : 'text-muted-foreground',
@@ -353,7 +364,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                           active && cn('bg-secondary', navAccentActiveClass),
                         )}
                       >
-                        <Icon
+                        <DecorNavIcon
+                          theme={decorTheme}
+                          to={to}
+                          defaultIcon={Icon}
                           className={cn(
                             'size-4 shrink-0',
                             !active && 'text-muted-foreground',
@@ -381,7 +395,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                           active && cn('bg-secondary', navAccentActiveClass),
                         )}
                       >
-                        <Icon
+                        <DecorNavIcon
+                          theme={decorTheme}
+                          to={to}
+                          defaultIcon={Icon}
                           className={cn(
                             'size-4 shrink-0',
                             !active && 'text-muted-foreground',
@@ -450,7 +467,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                       active && cn('bg-secondary', navAccentActiveClass),
                     )}
                   >
-                    <Icon
+                    <DecorNavIcon
+                      theme={decorTheme}
+                      to={to}
+                      defaultIcon={Icon}
                       className={cn(
                         'size-5 shrink-0',
                         !active && 'text-muted-foreground',
@@ -478,7 +498,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                       active && cn('bg-secondary', navAccentActiveClass),
                     )}
                   >
-                    <Icon
+                    <DecorNavIcon
+                      theme={decorTheme}
+                      to={to}
+                      defaultIcon={Icon}
                       className={cn(
                         'size-5 shrink-0',
                         !active && 'text-muted-foreground',
@@ -549,7 +572,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-x-hidden touch-pan-y">
+      <div className="relative z-10 min-h-0 flex-1 overflow-x-hidden touch-pan-y">
         <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(1rem,calc(5.75rem+env(safe-area-inset-bottom)))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
           {children}
         </div>
@@ -579,7 +602,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                 )}
               >
                 <NavIconWithDot showDot={to === '/support' && supportUnread > 0}>
-                  <Icon
+                  <DecorNavIcon
+                    theme={decorTheme}
+                    to={to}
+                    defaultIcon={Icon}
                     className={cn(
                       'size-[20px] shrink-0',
                       !active && 'text-muted-foreground',
