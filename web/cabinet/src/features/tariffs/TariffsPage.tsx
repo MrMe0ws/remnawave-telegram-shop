@@ -12,6 +12,13 @@ import { Badge } from '@/components/ui/badge'
 import { api, type SubscriptionResponse, type TariffItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
+import {
+  formatRubInteger,
+  formatShowcasePriceRub,
+  showAnnualPriceFootnote,
+  showcaseMonthlyRub,
+  type TariffPriceDisplayMode,
+} from '@/features/tariffs/tariffShowcasePrice'
 
 export default function TariffsPage() {
   const { t } = useTranslation()
@@ -68,7 +75,12 @@ export default function TariffsPage() {
         )}
 
         {data && data.sales_mode === 'tariffs' && !planSlug && (
-          <TariffsGrid tariffs={data.tariffs} onChoosePlan={setPlan} sub={sub} />
+          <TariffsGrid
+            tariffs={data.tariffs}
+            priceDisplay={data.price_display ?? 'monthly'}
+            onChoosePlan={setPlan}
+            sub={sub}
+          />
         )}
 
         {data && data.sales_mode === 'tariffs' && planSlug && (
@@ -127,34 +139,48 @@ function orderCardPeriodsCurrentFirst(periods: TariffItem[][], sub?: Subscriptio
 
 function TariffsGrid({
   tariffs,
+  priceDisplay,
   onChoosePlan,
   sub,
 }: {
   tariffs: TariffItem[]
+  priceDisplay: TariffPriceDisplayMode
   onChoosePlan: (slug: string) => void
   sub?: SubscriptionResponse
 }) {
+  const { t } = useTranslation()
   const cardPeriods = useMemo(() => buildCardPeriodsBySlug(tariffs), [tariffs])
+  const showFootnote = showAnnualPriceFootnote(priceDisplay, cardPeriods)
 
   const carouselPeriods = useMemo(
     () => orderCardPeriodsCurrentFirst([...cardPeriods], sub),
     [cardPeriods, sub],
   )
 
-  const singleGridClass = cn('grid max-w-xs gap-4')
+  const singleGridClass = cn('grid max-w-xs gap-4 mx-auto')
+  const desktopMaxWidth = cardPeriods.length === 2 ? 'max-w-2xl' : 'max-w-4xl'
   const desktopGridClass = cn(
     'gap-4',
-    cardPeriods.length === 2
-      ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl'
-      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-4xl',
+    cardPeriods.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2',
   )
 
   if (cardPeriods.length === 1) {
     return (
-      <div className={singleGridClass}>
-        {cardPeriods.map((periods) => (
-          <TariffPlanCard key={periods[0].slug} periods={periods} onChoosePlan={onChoosePlan} sub={sub} />
-        ))}
+      <div className="space-y-3">
+        <div className={singleGridClass}>
+          {cardPeriods.map((periods) => (
+            <TariffPlanCard
+              key={periods[0].slug}
+              periods={periods}
+              priceDisplay={priceDisplay}
+              onChoosePlan={onChoosePlan}
+              sub={sub}
+            />
+          ))}
+        </div>
+        {showFootnote && (
+          <p className="text-center text-xs text-muted-foreground">{t('tariffs.annualPriceFootnote')}</p>
+        )}
       </div>
     )
   }
@@ -162,12 +188,33 @@ function TariffsGrid({
   return (
     <>
       <div className="max-[500px]:block min-[501px]:hidden">
-        <TariffsMobileCarousel cardPeriods={carouselPeriods} onChoosePlan={onChoosePlan} sub={sub} />
+        <TariffsMobileCarousel
+          cardPeriods={carouselPeriods}
+          priceDisplay={priceDisplay}
+          onChoosePlan={onChoosePlan}
+          sub={sub}
+        />
+        {showFootnote && (
+          <p className="mt-3 text-center text-xs text-muted-foreground">{t('tariffs.annualPriceFootnote')}</p>
+        )}
       </div>
-      <div className={cn('hidden min-[501px]:grid', desktopGridClass)}>
-        {cardPeriods.map((periods) => (
-          <TariffPlanCard key={periods[0].slug} periods={periods} onChoosePlan={onChoosePlan} sub={sub} />
-        ))}
+      <div className={cn('hidden min-[501px]:block mx-auto w-full', desktopMaxWidth)}>
+        <div className={cn('grid', desktopGridClass)}>
+          {cardPeriods.map((periods) => (
+            <TariffPlanCard
+              key={periods[0].slug}
+              periods={periods}
+              priceDisplay={priceDisplay}
+              onChoosePlan={onChoosePlan}
+              sub={sub}
+            />
+          ))}
+          {showFootnote && (
+            <p className="col-span-full text-center text-xs text-muted-foreground pt-1">
+              {t('tariffs.annualPriceFootnote')}
+            </p>
+          )}
+        </div>
       </div>
     </>
   )
@@ -176,10 +223,12 @@ function TariffsGrid({
 /** Карусель ≤500px: snap-start — основная карточка почти на всю ширину, сосед у правого края с узким «peek» текста. */
 function TariffsMobileCarousel({
   cardPeriods,
+  priceDisplay,
   onChoosePlan,
   sub,
 }: {
   cardPeriods: TariffItem[][]
+  priceDisplay: TariffPriceDisplayMode
   onChoosePlan: (slug: string) => void
   sub?: SubscriptionResponse
 }) {
@@ -263,6 +312,7 @@ function TariffsMobileCarousel({
             <TariffPlanCard
               layout="carousel"
               periods={periods}
+              priceDisplay={priceDisplay}
               onChoosePlan={onChoosePlan}
               sub={sub}
             />
@@ -296,17 +346,20 @@ function TariffsMobileCarousel({
 
 function TariffPlanCard({
   periods,
+  priceDisplay,
   onChoosePlan,
   sub,
   layout = 'grid',
 }: {
   periods: TariffItem[]
+  priceDisplay: TariffPriceDisplayMode
   onChoosePlan: (slug: string) => void
   sub?: SubscriptionResponse
   layout?: 'grid' | 'carousel'
 }) {
   const { t } = useTranslation()
   const head = periods[0]
+  const showcaseMonthly = showcaseMonthlyRub(periods, priceDisplay)
   const active = isSubscriptionActive(sub?.expire_at)
   const isCurrent = Boolean(active && sub?.tariff?.slug === head.slug)
   const ctaLabel = !active ? t('tariffs.select') : isCurrent ? t('tariffs.ctaRenew') : t('tariffs.ctaChange')
@@ -348,7 +401,9 @@ function TariffPlanCard({
       <CardHeader className="px-4 pb-2 pt-5">
         <CardTitle className="text-lg">{head.name}</CardTitle>
         <div className="flex items-baseline gap-1 mt-2">
-          <span className="text-3xl font-bold">{head.monthly_base_rub.toLocaleString('ru-RU')}</span>
+          <span className="text-[2.5rem] font-bold leading-none tabular-nums">
+            {formatShowcasePriceRub(showcaseMonthly, priceDisplay)}
+          </span>
           <span className="text-sm text-muted-foreground">₽{t('tariffs.perMonth')}</span>
         </div>
       </CardHeader>
@@ -468,12 +523,18 @@ function TariffPeriodStep({
   // Период изначально НЕ выбран — подсветка появляется только после клика.
   const [selectedMonths, setSelectedMonths] = useState<number | null>(null)
 
+  const detailText =
+    (head.description_detail?.trim() || head.description?.trim()) ?? ''
+
   return (
     <div className="space-y-4 max-w-lg mx-auto w-full">
       <div>
         <h2 className="text-xl font-semibold">{head.name}</h2>
-        {head.description ? (
-          <TariffDescription text={head.description} className="text-sm text-muted-foreground mt-1 leading-relaxed" />
+        {detailText ? (
+          <TariffDescription
+            text={detailText}
+            className="text-sm text-muted-foreground mt-1 leading-relaxed"
+          />
         ) : null}
         <p className="text-sm text-muted-foreground mt-3">{t('tariffs.choosePeriodHint')}</p>
       </div>
@@ -520,7 +581,7 @@ function TariffPeriodStep({
                   <span
                     className="text-[0.95rem] leading-5 font-semibold tabular-nums text-primary"
                   >
-                    {formatRub2(p.price_rub)} ₽
+                    {formatRubInteger(p.price_rub)} ₽
                   </span>
                   <span
                     className="mt-1 text-[0.7rem] leading-4 font-normal tabular-nums text-muted-foreground dark:text-[rgb(101,114,134)] tracking-[-1px]"

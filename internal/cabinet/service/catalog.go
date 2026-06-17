@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 )
@@ -64,6 +65,7 @@ type TariffView struct {
 	Slug                      string  `json:"slug"`
 	Name                      *string `json:"name,omitempty"`
 	Description               *string `json:"description,omitempty"`
+	DescriptionDetail         *string `json:"description_detail,omitempty"`
 	DeviceLimit               int     `json:"device_limit"`
 	TrafficLimitBytes         int64   `json:"traffic_limit_bytes"`
 	TrafficLimitResetStrategy string  `json:"traffic_limit_reset_strategy"`
@@ -72,19 +74,21 @@ type TariffView struct {
 
 // Response — корневой объект `GET /cabinet/api/tariffs`.
 type Response struct {
-	SalesMode   string       `json:"sales_mode"`
-	Currency    string       `json:"currency"`   // MVP: всегда "RUB" (CryptoPay конвертирует)
-	ShowSavings bool         `json:"show_savings"`
-	Tariffs     []TariffView `json:"tariffs"`
+	SalesMode    string       `json:"sales_mode"`
+	Currency     string       `json:"currency"` // MVP: всегда "RUB" (CryptoPay конвертирует)
+	ShowSavings  bool         `json:"show_savings"`
+	PriceDisplay string       `json:"price_display"` // monthly | marketing (CABINET_TARIFF_PRICE_DISPLAY)
+	Tariffs      []TariffView `json:"tariffs"`
 }
 
 // Get собирает витрину. Ошибку возвращает только при сбое чтения БД в
 // tariffs-режиме — в classic-режиме DB не трогается.
 func (c *Catalog) Get(ctx context.Context) (*Response, error) {
 	resp := &Response{
-		SalesMode:   config.SalesMode(),
-		Currency:    "RUB",
-		ShowSavings: config.ShowLongTermSavingsPercent(),
+		SalesMode:    config.SalesMode(),
+		Currency:     "RUB",
+		ShowSavings:  config.ShowLongTermSavingsPercent(),
+		PriceDisplay: cabcfg.TariffPriceDisplay(),
 	}
 
 	switch resp.SalesMode {
@@ -127,6 +131,7 @@ func buildTariffsModeView(t database.Tariff, prices []database.TariffPrice) Tari
 		Slug:                      t.Slug,
 		Name:                      t.Name,
 		Description:               t.Description,
+		DescriptionDetail:         t.DescriptionDetail,
 		DeviceLimit:               t.DeviceLimit,
 		TrafficLimitBytes:         t.TrafficLimitBytes,
 		TrafficLimitResetStrategy: t.TrafficLimitResetStrategy,

@@ -94,6 +94,7 @@ export interface TariffFormData {
   traffic_limit_reset_strategy: string
   squad_uuids: string[]
   description: string
+  description_detail: string
   rub: [number, number, number, number]
   stars: [number | null, number | null, number | null, number | null]
 }
@@ -120,6 +121,7 @@ function tariffToForm(t?: AdminTariff | null): TariffFormData {
     traffic_limit_reset_strategy: t?.traffic_limit_reset_strategy ?? 'no_reset',
     squad_uuids: parseSquadUUIDs(t?.active_internal_squad_uuids ?? ''),
     description: t?.description ?? '',
+    description_detail: t?.description_detail ?? '',
     rub,
     stars,
   }
@@ -138,6 +140,7 @@ function formToCreateInput(f: TariffFormData, tierLevel?: number | null): Create
     active_internal_squad_uuids: joinSquadUUIDs(f.squad_uuids),
     tier_level: tierLevel ?? f.sort_order,
     description: f.description.trim() || null,
+    description_detail: f.description_detail.trim() || null,
     rub: f.rub,
     stars: f.stars,
   }
@@ -155,6 +158,7 @@ function formToUpdateFields(f: TariffFormData, original?: AdminTariff | null): R
     active_internal_squad_uuids: input.active_internal_squad_uuids,
     tier_level: input.tier_level,
     description: input.description,
+    description_detail: input.description_detail,
     rub: input.rub,
     stars: input.stars,
   }
@@ -367,7 +371,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
             </div>
           </section>
 
-          {/* Description */}
+          {/* Description (short) */}
           <section>
             <TariffEditorSectionHeader icon={FileText} accent="slate">
               {t('admin.tariffs.description')}
@@ -390,6 +394,35 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                     <TariffDescription text={form.description} className="text-sm" />
                   ) : (
                     <p className="text-xs italic text-muted-foreground">{t('admin.tariffs.descriptionPreviewEmpty')}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Description detail (plan page) */}
+          <section>
+            <TariffEditorSectionHeader icon={FileText} accent="blue">
+              {t('admin.tariffs.descriptionDetail')}
+            </TariffEditorSectionHeader>
+            <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.descriptionDetailHint')}</p>
+            <div className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
+              <div className="flex min-h-[13.5rem] flex-col">
+                <TariffFieldLabel>{t('admin.tariffs.descriptionSource')}</TariffFieldLabel>
+                <textarea
+                  spellCheck={false}
+                  className="admin-input min-h-0 flex-1 w-full resize-none px-3 py-2 font-mono text-xs leading-relaxed"
+                  value={form.description_detail}
+                  onChange={(e) => set('description_detail', e.target.value)}
+                />
+              </div>
+              <div className="flex min-h-[13.5rem] flex-col">
+                <TariffFieldLabel>{t('admin.tariffs.descriptionPreview')}</TariffFieldLabel>
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
+                  {form.description_detail.trim() ? (
+                    <TariffDescription text={form.description_detail} className="text-sm" />
+                  ) : (
+                    <p className="text-xs italic text-muted-foreground">{t('admin.tariffs.descriptionDetailPreviewEmpty')}</p>
                   )}
                 </div>
               </div>

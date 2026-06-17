@@ -281,6 +281,7 @@ export interface AdminTariffDTO {
   remnawave_tag?: string | null
   tier_level?: number | null
   description?: string | null
+  description_detail?: string | null
   prices: AdminTariffPriceDTO[]
 }
 

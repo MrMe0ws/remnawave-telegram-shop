@@ -553,11 +553,13 @@
       "moAbbr": "mo.",
       "choosePeriodHint": "Choose billing period",
       "backToPlans": "Back to plans",
+      "planDetailsTitle": "What's included",
       "classicChoosePeriod": "Choose period",
       "carouselListLabel": "Plans",
       "carouselGoTo": "Go to plan {{n}} of {{total}}",
       "carouselTotal_one": "Total: {{count}} plan",
-      "carouselTotal_other": "Total: {{count}} plans"
+      "carouselTotal_other": "Total: {{count}} plans",
+      "annualPriceFootnote": "*When paying for a year"
     },
     "checkout": {
       "title": "Checkout",
@@ -1260,11 +1262,14 @@
         "confirmDelete": "Delete tariff \"{{name}}\"?",
         "toggleActive": "Toggle active",
         "unlimited": "Unlimited",
-        "description": "Description",
-        "descriptionHint": "Telegram HTML markup (same as in the bot): links, italic, blockquotes. Preview on the right shows how users see it in the cabinet.",
+        "description": "Short description",
+        "descriptionHint": "Brief text for the tariff showcase and Telegram bot. Telegram HTML: links, italic, blockquotes. Preview on the right.",
         "descriptionSource": "Source text",
         "descriptionPreview": "Preview",
         "descriptionPreviewEmpty": "Preview appears when you enter a description",
+        "descriptionDetail": "Detailed description (plan page)",
+        "descriptionDetailHint": "Expanded text for the billing period page in the cabinet (/tariffs?plan=…). If empty, the short description is shown.",
+        "descriptionDetailPreviewEmpty": "Preview appears when you enter the detailed description",
         "empty": "No tariffs yet",
         "createFirst": "Create first tariff",
         "sectionBasic": "Basic",
@@ -1399,7 +1404,15 @@
         "searchPlaceholder": "Search by name or key (RUB_PER_STAR, trial…)",
         "searchClear": "Clear search",
         "searchEmpty": "No matches",
-        "sectionNav": "Settings sections",
+        "categoryEmpty": "No settings in this category",
+        "categoryNav": "Settings categories",
+        "categories": {
+          "design": "Appearance",
+          "product": "Product",
+          "marketing": "Marketing",
+          "operations": "Operations",
+          "access": "Access"
+        },
         "subsections": {
           "trial": {
             "period": "Trial period",
@@ -1431,6 +1444,9 @@
           },
           "cabinet": {
             "decor": "Appearance"
+          },
+          "tariffs": {
+            "showcase": "Tariff showcase"
           }
         },
         "groups": {
@@ -1445,7 +1461,8 @@
           "lifecycle": "Auto reminders",
           "links": "Bot links",
           "fortune": "Fortune wheel",
-          "cabinet": "Cabinet appearance"
+          "cabinet": "Cabinet appearance",
+          "tariffs": "Tariffs"
         },
         "fortune": {
           "basic": "Rules & limits",
@@ -1472,7 +1489,9 @@
           "halloween": "Halloween",
           "valentine": "Valentine's Day",
           "spring": "Spring",
-          "black_friday": "Black Friday"
+          "black_friday": "Black Friday",
+          "monthly": "Monthly price",
+          "marketing": "Marketing (annual)"
         },
         "fields": {
           "LOYALTY_ENABLED": { "label": "Loyalty program", "hint": "Tiers — in Loyalty section" },
@@ -1508,6 +1527,10 @@
           "WHITELISTED_TELEGRAM_IDS": { "label": "Whitelisted Telegram IDs", "hint": "Skip name filter" },
           "CABINET_LIGHT_THEME_ENABLED": { "label": "Light theme", "hint": "Turn off to force dark theme for all users" },
           "CABINET_DECOR_THEME": { "label": "Decor theme", "hint": "Applied to all cabinet users without bot restart" },
+          "CABINET_TARIFF_PRICE_DISPLAY": {
+            "label": "Showcase price display",
+            "hint": "Cabinet Tariffs page (tariffs mode): monthly price or effective ₽/month when paying for 12 months"
+          },
           "LIFECYCLE_NO_CONNECT_PAID_ENABLED": { "label": "Reminder after payment", "hint": "" },
           "LIFECYCLE_NO_CONNECT_TRIAL_ENABLED": { "label": "Reminder after trial", "hint": "" },
           "LIFECYCLE_NO_CONNECT_DELAY_HOURS": { "label": "Send after, hours", "hint": "" },

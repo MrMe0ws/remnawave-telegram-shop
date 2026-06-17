@@ -15,8 +15,10 @@ import {
 import { AdminLayout } from '../layout/AdminLayout'
 import { useAdminPageMeta } from '../layout/useAdminPageMeta'
 import { AdminPageHeader } from '../components/AdminPageHeader'
+import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminTariffEditor } from '../components/AdminTariffEditor'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
+import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import { TariffDescription } from '@/components/TariffDescription'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -190,6 +192,7 @@ export default function AdminTariffsPage() {
   const { data: tariffs, isLoading } = useAdminTariffList()
   const create = useAdminTariffCreate()
   const update = useAdminTariffUpdate()
+  const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingTariff, setEditingTariff] = useState<AdminTariff | null>(null)
@@ -207,15 +210,32 @@ export default function AdminTariffsPage() {
   const closeEditor = () => { setEditorOpen(false); setEditingTariff(null) }
 
   const handleSave = (data: CreateTariffInput | Record<string, unknown>, isEdit: boolean) => {
+    const savedMsg = t('admin.feedback.saved')
     if (isEdit && editingTariff) {
-      update.mutate({ id: editingTariff.id, fields: data as Record<string, unknown> }, { onSuccess: closeEditor })
+      update.mutate(
+        { id: editingTariff.id, fields: data as Record<string, unknown> },
+        {
+          onSuccess: () => {
+            showSuccess(savedMsg)
+            closeEditor()
+          },
+          onError: showError,
+        },
+      )
     } else {
-      create.mutate(data as CreateTariffInput, { onSuccess: closeEditor })
+      create.mutate(data as CreateTariffInput, {
+        onSuccess: () => {
+          showSuccess(savedMsg)
+          closeEditor()
+        },
+        onError: showError,
+      })
     }
   }
 
   return (
     <AdminLayout>
+      <AdminFeedback feedback={feedback} onDismiss={clear} />
       <div className="space-y-6">
         <AdminPageHeader
           icon={Zap}

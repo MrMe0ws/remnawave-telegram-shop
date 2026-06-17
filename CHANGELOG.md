@@ -1,5 +1,51 @@
 # Changelog
 
+## [Unreleased]
+
+## [4.11.3] - 2026-06-17
+
+### Added
+
+- **Marketing-режим витрины тарифов** (`CABINET_TARIFF_PRICE_DISPLAY`): `monthly` | `marketing` — эффективная ₽/мес при оплате за 12 месяцев на карточках планов + сноска «*При оплате за год».
+- Админка: **Настройки бота → Тарифы** (группа `tariffs`, hot-reload).
+- API: `price_display` в `GET /cabinet/api/tariffs`.
+- **Подробное описание тарифа** (`tariff.description_detail`, миграция **`000039`**): краткий `description` — витрина и бот; подробный текст — шаг `/cabinet/tariffs?plan=<slug>`. Редактор в web-админке → Тарифы. Toast при сохранении тарифа.
+
+### Changed
+
+- **Web-админка → Настройки бота** (`/admin/settings`): вместо сетки из 13 секций — **5 категорий-вкладок** (Оформление, Продукт, Маркетинг, Операции, Доступ); в категории показываются только её группы-аккордеоны; поиск по всем группам с бейджем категории. Документация для ассистентов: `.cursor/docs/frontend/admin-settings-ui.md`.
+- Страница тарифов: цена на карточках — `2.5rem`; синяя сумма на шаге выбора периода — целые рубли без копеек.
+- **`TariffDescription`**: `whitespace-pre-wrap` и `remark-breaks` — сохранение ручных пробелов, табов и переносов строк в кратком и подробном описании (превью админки и страница плана).
+
+### Technical
+
+- `internal/cabinet/config/tariffs_display.go`, `web/cabinet/src/features/tariffs/tariffShowcasePrice.ts`.
+- Док: `.cursor/docs/frontend/cabinet-tariff-showcase.md`.
+- `description_detail`: `tariff.go`, `catalog.go`, `admin_tariffs.go`, `TariffsPage.tsx`, `AdminTariffEditor.tsx`, `TariffDescription.tsx`. Док: `.cursor/docs/frontend/cabinet-tariff-descriptions.md`.
+- Зависимость `remark-breaks` в `web/cabinet`.
+
+## [4.11.2] - 2026-06-16
+
+### Added
+
+- **Декор-темы кабинета** (`CABINET_DECOR_THEME`): color-only (`green`, `pink`, `orange`, `yellow`) и сезонные пресеты (`neon`, `new_year`, `summer`, `halloween`, `valentine`, `spring`, `black_friday`).
+- Переключение в web-админке: **Настройки → Оформление кабинета** (группа `cabinet`, hot-reload без рестарта).
+- Bootstrap: поле `decor_theme` в `GET /cabinet/api/auth/bootstrap`.
+
+### Changed
+
+- Акценты UI кабинета подстраиваются под выбранную декор-тему вместо фиксированного cyan.
+- **Профиль:** иконка на кнопке «Привязанные аккаунты».
+
+### Fixed
+
+- CTA «Подключить устройство»: артеfact conic-gradient в decor-темах.
+- Spring / Black Friday: старт анимации частиц без задержки при открытии страницы.
+
+### Technical
+
+- `internal/cabinet/config/decor.go`, whitelist в `settings_registry.go`, модуль `web/cabinet/src/features/decor/`.
+
 ## [4.11.0] - 2026-06-15
 
 ### Added

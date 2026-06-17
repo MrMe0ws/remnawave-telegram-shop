@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  BadgeRussianRuble,
   Bell,
   CalendarDays,
   CircleDot,
@@ -8,7 +9,9 @@ import {
   Gift,
   Link2,
   ListFilter,
+  Megaphone,
   MessageSquare,
+  Package,
   Percent,
   RefreshCw,
   Scale,
@@ -30,6 +33,7 @@ import {
 /** Порядок и иконки секций (синхрон с backend buildAdminSettingsResponse). */
 export const ADMIN_SETTINGS_GROUP_ORDER = [
   'cabinet',
+  'tariffs',
   'trial',
   'hwid',
   'referral',
@@ -47,6 +51,7 @@ export type AdminSettingsGroupId = (typeof ADMIN_SETTINGS_GROUP_ORDER)[number]
 
 export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon> = {
   trial: Gift,
+  tariffs: BadgeRussianRuble,
   hwid: Smartphone,
   referral: Users,
   stars: Star,
@@ -67,6 +72,7 @@ export interface AdminSettingsGroupIconStyle {
 
 export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, AdminSettingsGroupIconStyle> = {
   trial: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
+  tariffs: { box: 'bg-lime-500/10 dark:bg-lime-500/20', icon: 'text-lime-600 dark:text-lime-400' },
   hwid: { box: 'bg-cyan-500/10 dark:bg-cyan-500/20', icon: 'text-cyan-500' },
   referral: { box: 'bg-violet-500/10 dark:bg-violet-500/20', icon: 'text-violet-500' },
   stars: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
@@ -85,6 +91,114 @@ export function adminSettingsGroupIconStyle(id: string): AdminSettingsGroupIconS
     box: 'bg-primary/10 dark:bg-primary/20',
     icon: 'text-primary',
   }
+}
+
+/** Крупные категории на странице «Настройки бота». */
+export const ADMIN_SETTINGS_CATEGORY_ORDER = [
+  'design',
+  'product',
+  'marketing',
+  'operations',
+  'access',
+] as const
+
+export type AdminSettingsCategoryId = (typeof ADMIN_SETTINGS_CATEGORY_ORDER)[number]
+
+export const ADMIN_SETTINGS_DEFAULT_CATEGORY: AdminSettingsCategoryId = 'design'
+
+export interface AdminSettingsCategoryDef {
+  id: AdminSettingsCategoryId
+  titleKey: string
+  icon: LucideIcon
+  groups: readonly AdminSettingsGroupId[]
+  iconStyle: AdminSettingsGroupIconStyle
+}
+
+export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
+  {
+    id: 'design',
+    titleKey: 'admin.settings.categories.design',
+    icon: Sparkles,
+    groups: ['cabinet'],
+    iconStyle: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
+  },
+  {
+    id: 'product',
+    titleKey: 'admin.settings.categories.product',
+    icon: Package,
+    groups: ['tariffs', 'trial', 'hwid', 'stars'],
+    iconStyle: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
+  },
+  {
+    id: 'marketing',
+    titleKey: 'admin.settings.categories.marketing',
+    icon: Megaphone,
+    groups: ['referral', 'loyalty', 'lifecycle', 'fortune'],
+    iconStyle: { box: 'bg-violet-500/10 dark:bg-violet-500/20', icon: 'text-violet-500' },
+  },
+  {
+    id: 'operations',
+    titleKey: 'admin.settings.categories.operations',
+    icon: Bell,
+    groups: ['payments_notify', 'links', 'tags'],
+    iconStyle: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
+  },
+  {
+    id: 'access',
+    titleKey: 'admin.settings.categories.access',
+    icon: Shield,
+    groups: ['access'],
+    iconStyle: { box: 'bg-blue-500/10 dark:bg-blue-500/20', icon: 'text-blue-500' },
+  },
+]
+
+const GROUP_TO_CATEGORY = new Map<AdminSettingsGroupId, AdminSettingsCategoryId>(
+  ADMIN_SETTINGS_CATEGORIES.flatMap((category) =>
+    category.groups.map((groupId) => [groupId, category.id] as const),
+  ),
+)
+
+if (import.meta.env.DEV) {
+  const categorized = new Set(GROUP_TO_CATEGORY.keys())
+  for (const groupId of ADMIN_SETTINGS_GROUP_ORDER) {
+    if (!categorized.has(groupId)) {
+      console.error(`[adminSettingsGroups] group "${groupId}" is not assigned to any category`)
+    }
+  }
+}
+
+export function adminSettingsCategoryForGroup(groupId: string): AdminSettingsCategoryId | undefined {
+  return GROUP_TO_CATEGORY.get(groupId as AdminSettingsGroupId)
+}
+
+export function adminSettingsCategoryDef(
+  categoryId: AdminSettingsCategoryId,
+): AdminSettingsCategoryDef | undefined {
+  return ADMIN_SETTINGS_CATEGORIES.find((c) => c.id === categoryId)
+}
+
+export function sortSettingsGroupsByOrder<T extends { id: string }>(groups: T[]): T[] {
+  return [...groups].sort(
+    (a, b) =>
+      ADMIN_SETTINGS_GROUP_ORDER.indexOf(a.id as AdminSettingsGroupId) -
+      ADMIN_SETTINGS_GROUP_ORDER.indexOf(b.id as AdminSettingsGroupId),
+  )
+}
+
+export const ADMIN_SETTINGS_GROUPS_LIST_ANCHOR = 'settings-groups-list'
+
+export function scrollToSettingsGroupsList(): void {
+  const el = document.getElementById(ADMIN_SETTINGS_GROUPS_LIST_ANCHOR)
+  if (!el) return
+
+  const scroll = () => {
+    const headerOffset = 96
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+  }
+
+  scroll()
+  window.setTimeout(scroll, 80)
 }
 
 export interface AdminSettingsSubsectionDef {
@@ -269,6 +383,14 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       titleKey: 'admin.settings.subsections.cabinet.decor',
       icon: Sparkles,
       keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME'],
+    },
+  ],
+  tariffs: [
+    {
+      id: 'showcase',
+      titleKey: 'admin.settings.subsections.tariffs.showcase',
+      icon: BadgeRussianRuble,
+      keys: ['CABINET_TARIFF_PRICE_DISPLAY'],
     },
   ],
 }

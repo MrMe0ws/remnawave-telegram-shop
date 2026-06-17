@@ -191,6 +191,8 @@ export interface TariffItem {
   name: string
   /** Текст из админки (tariff.description), если задан. */
   description?: string | null
+  /** Подробное описание для страницы выбора срока (?plan=). */
+  description_detail?: string | null
   price_rub: number
   monthly_base_rub: number
   months: number
@@ -204,6 +206,7 @@ export interface TariffsResponse {
   sales_mode: string
   currency?: string
   show_savings?: boolean
+  price_display?: 'monthly' | 'marketing'
 }
 
 /** Как отдаёт GET /tariffs (internal/cabinet/service/catalog.go): тариф + вложенные prices. */
@@ -218,6 +221,7 @@ interface TariffViewDTO {
   slug: string
   name?: string | null
   description?: string | null
+  description_detail?: string | null
   device_limit: number
   traffic_limit_bytes: number
   traffic_limit_reset_strategy?: string
@@ -228,6 +232,7 @@ interface TariffsRawResponse {
   sales_mode: string
   currency?: string
   show_savings?: boolean
+  price_display?: 'monthly' | 'marketing'
   tariffs: unknown[]
 }
 
@@ -256,6 +261,10 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
       const devLim = typeof t.device_limit === 'number' ? t.device_limit : 0
       const desc =
         t.description != null && String(t.description).trim() !== '' ? String(t.description).trim() : null
+      const descDetail =
+        t.description_detail != null && String(t.description_detail).trim() !== ''
+          ? String(t.description_detail).trim()
+          : null
       for (const p of t.prices) {
         if (!p || typeof p.months !== 'number') continue
         const months = p.months
@@ -268,6 +277,7 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
           slug: slugStr,
           name: nameStr,
           description: desc,
+          description_detail: descDetail,
           price_rub: amount,
           monthly_base_rub: perMonth,
           months,
@@ -292,6 +302,7 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
     tariffs: rows,
     currency: raw.currency,
     show_savings: raw.show_savings,
+    price_display: raw.price_display === 'marketing' ? 'marketing' : 'monthly',
   }
 }
 

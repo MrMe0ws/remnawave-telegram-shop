@@ -28,6 +28,7 @@ type Tariff struct {
 	RemnawaveTag               *string    `db:"remnawave_tag"`
 	TierLevel                  *int       `db:"tier_level"`
 	Description                *string    `db:"description"`
+	DescriptionDetail          *string    `db:"description_detail"`
 }
 
 // TariffPrice цена тарифа за период (месяцы).
@@ -56,7 +57,7 @@ func scanTariff(row rowScanner) (*Tariff, error) {
 		&t.ID, &t.Slug, &t.Name, &t.SortOrder, &t.IsActive,
 		&t.DeviceLimit, &t.TrafficLimitBytes, &t.TrafficLimitResetStrategy,
 		&t.ActiveInternalSquadUUIDs, &t.ExternalSquadUUID, &t.RemnawaveTag, &t.TierLevel,
-		&t.Description,
+		&t.Description, &t.DescriptionDetail,
 	)
 	if err != nil {
 		return nil, err
@@ -70,7 +71,7 @@ func (r *TariffRepository) ListActive(ctx context.Context) ([]Tariff, error) {
 		"id", "slug", "name", "sort_order", "is_active",
 		"device_limit", "traffic_limit_bytes", "traffic_limit_reset_strategy",
 		"active_internal_squad_uuids", "external_squad_uuid", "remnawave_tag", "tier_level",
-		"description",
+		"description", "description_detail",
 	).From("tariff").Where(sq.Eq{"is_active": true}).OrderBy("sort_order ASC", "id ASC").PlaceholderFormat(sq.Dollar)
 	sqlStr, args, err := q.ToSql()
 	if err != nil {
@@ -101,7 +102,7 @@ func (r *TariffRepository) GetByID(ctx context.Context, id int64) (*Tariff, erro
 		"id", "slug", "name", "sort_order", "is_active",
 		"device_limit", "traffic_limit_bytes", "traffic_limit_reset_strategy",
 		"active_internal_squad_uuids", "external_squad_uuid", "remnawave_tag", "tier_level",
-		"description",
+		"description", "description_detail",
 	).From("tariff").Where(sq.Eq{"id": id}).PlaceholderFormat(sq.Dollar)
 	sqlStr, args, err := q.ToSql()
 	if err != nil {
@@ -193,7 +194,7 @@ func (r *TariffRepository) ListAll(ctx context.Context) ([]Tariff, error) {
 		"id", "slug", "name", "sort_order", "is_active",
 		"device_limit", "traffic_limit_bytes", "traffic_limit_reset_strategy",
 		"active_internal_squad_uuids", "external_squad_uuid", "remnawave_tag", "tier_level",
-		"description",
+		"description", "description_detail",
 	).From("tariff").OrderBy("sort_order ASC", "id ASC").PlaceholderFormat(sq.Dollar)
 	sqlStr, args, err := q.ToSql()
 	if err != nil {
@@ -287,13 +288,13 @@ func (r *TariffRepository) CreateWithPrices(ctx context.Context, t *Tariff, rub 
 	defer tx.Rollback(ctx)
 
 	q := `INSERT INTO tariff (slug, name, sort_order, is_active, device_limit, traffic_limit_bytes,
-		traffic_limit_reset_strategy, active_internal_squad_uuids, external_squad_uuid, remnawave_tag, tier_level, description)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`
+		traffic_limit_reset_strategy, active_internal_squad_uuids, external_squad_uuid, remnawave_tag, tier_level, description, description_detail)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`
 	var id int64
 	err = tx.QueryRow(ctx, q,
 		t.Slug, t.Name, t.SortOrder, t.IsActive, t.DeviceLimit, t.TrafficLimitBytes,
 		t.TrafficLimitResetStrategy, t.ActiveInternalSquadUUIDs, t.ExternalSquadUUID, t.RemnawaveTag, t.TierLevel,
-		t.Description,
+		t.Description, t.DescriptionDetail,
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("insert tariff: %w", err)

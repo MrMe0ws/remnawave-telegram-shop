@@ -50,6 +50,7 @@ type tariffDTO struct {
 	RemnawaveTag              *string         `json:"remnawave_tag"`
 	TierLevel                 *int            `json:"tier_level"`
 	Description               *string         `json:"description"`
+	DescriptionDetail         *string         `json:"description_detail"`
 	Prices                    []tariffPriceDTO `json:"prices"`
 }
 
@@ -73,7 +74,7 @@ func tariffToDTO(t *database.Tariff, prices []database.TariffPrice) tariffDTO {
 		TrafficLimitResetStrategy: t.TrafficLimitResetStrategy,
 		ActiveInternalSquadUUIDs:  t.ActiveInternalSquadUUIDs,
 		ExternalSquadUUID: extUUID, RemnawaveTag: t.RemnawaveTag,
-		TierLevel: t.TierLevel, Description: t.Description,
+		TierLevel: t.TierLevel, Description: t.Description, DescriptionDetail: t.DescriptionDetail,
 		Prices: priceDTOs,
 	}
 }
@@ -119,6 +120,7 @@ type createTariffReq struct {
 	RemnawaveTag              *string `json:"remnawave_tag"`
 	TierLevel                 *int    `json:"tier_level"`
 	Description               *string `json:"description"`
+	DescriptionDetail         *string `json:"description_detail"`
 	Rub                       [4]int  `json:"rub"`
 	Stars                     [4]*int `json:"stars"`
 }
@@ -150,6 +152,7 @@ func (h *AdminTariffsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ActiveInternalSquadUUIDs:  req.ActiveInternalSquadUUIDs,
 		TierLevel:                 req.TierLevel,
 		Description:               req.Description,
+		DescriptionDetail:         req.DescriptionDetail,
 	}
 	if tag := config.RemnawaveTag(); tag != "" {
 		t.RemnawaveTag = &tag
@@ -223,7 +226,7 @@ func (h *AdminTariffsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		"slug": true, "name": true, "sort_order": true, "is_active": true,
 		"device_limit": true, "traffic_limit_bytes": true,
 		"traffic_limit_reset_strategy": true, "active_internal_squad_uuids": true,
-		"tier_level": true, "description": true,
+		"tier_level": true, "description": true, "description_detail": true,
 	}
 
 	fields := make(map[string]interface{})

@@ -284,6 +284,14 @@ func RuntimeSettingsRegistry() []SettingField {
 			Current:    cabinetDecorThemeCurrent(),
 		},
 
+		// --- tariffs (витрина кабинета, режим sales tariffs) ---
+		{
+			Key: "CABINET_TARIFF_PRICE_DISPLAY", Group: "tariffs", Type: SettingEnum, Instant: true,
+			EnumValues: []string{"monthly", "marketing"},
+			Apply:      applyCabinetTariffPriceDisplay(),
+			Current:    cabinetTariffPriceDisplayCurrent(),
+		},
+
 		// --- lifecycle (без cron / master toggle) ---
 		{
 			Key: "LIFECYCLE_NO_CONNECT_PAID_ENABLED", Group: "lifecycle", Type: SettingBool, Instant: true,
@@ -624,5 +632,26 @@ func cabinetDecorThemeCurrent() func() string {
 			return v
 		}
 		return "off"
+	}
+}
+
+func applyCabinetTariffPriceDisplay() func(string) error {
+	return func(value string) error {
+		v := strings.TrimSpace(strings.ToLower(value))
+		if v != "monthly" && v != "marketing" {
+			return fmt.Errorf("invalid tariff price display %q", value)
+		}
+		setRuntimeOverride("CABINET_TARIFF_PRICE_DISPLAY", v)
+		return nil
+	}
+}
+
+func cabinetTariffPriceDisplayCurrent() func() string {
+	return func() string {
+		v := strings.TrimSpace(strings.ToLower(effectiveEnvUnderRLock("CABINET_TARIFF_PRICE_DISPLAY")))
+		if v == "marketing" {
+			return "marketing"
+		}
+		return "monthly"
 	}
 }

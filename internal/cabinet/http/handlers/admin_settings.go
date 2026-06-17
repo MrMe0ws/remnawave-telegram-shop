@@ -145,7 +145,7 @@ func (h *AdminSettingsHandler) Patch(w http.ResponseWriter, r *http.Request) {
 func buildAdminSettingsResponse() adminSettingsGetResp {
 	// Порядок групп: сверху важнее для ежедневной работы.
 	order := []string{
-		"cabinet",
+		"cabinet", "tariffs",
 		"trial", "hwid", "referral", "stars", "loyalty",
 		"payments_notify", "access", "links", "tags",
 		"lifecycle", "fortune",

@@ -23,6 +23,7 @@ export interface AdminTariff {
   remnawave_tag?: string | null
   tier_level?: number | null
   description?: string | null
+  description_detail?: string | null
   prices: AdminTariffPrice[]
 }
 
@@ -38,6 +39,7 @@ export interface CreateTariffInput {
   remnawave_tag?: string | null
   tier_level?: number | null
   description?: string | null
+  description_detail?: string | null
   rub: [number, number, number, number]
   stars: [number | null, number | null, number | null, number | null]
 }

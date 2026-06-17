@@ -215,12 +215,14 @@
       "moAbbr": "мес.",
       "choosePeriodHint": "Выберите срок оплаты",
       "backToPlans": "К тарифам",
+      "planDetailsTitle": "Что входит в тариф",
       "classicChoosePeriod": "Выбрать срок",
       "carouselListLabel": "Тарифы",
       "carouselGoTo": "Перейти к тарифу {{n}} из {{total}}",
       "carouselTotal_one": "Всего {{count}} тариф",
       "carouselTotal_few": "Всего {{count}} тарифа",
-      "carouselTotal_many": "Всего {{count}} тарифов"
+      "carouselTotal_many": "Всего {{count}} тарифов",
+      "annualPriceFootnote": "*При оплате за год"
     },
     "checkout": {
       "title": "Оформление",
@@ -1267,11 +1269,14 @@
         "confirmDelete": "Удалить тариф «{{name}}»?",
         "toggleActive": "Вкл/Выкл",
         "unlimited": "Безлимит",
-        "description": "Описание",
-        "descriptionHint": "HTML-разметка Telegram (как в боте): ссылки, курсив, цитаты. Справа — превью, как увидят пользователи в кабинете.",
+        "description": "Краткое описание",
+        "descriptionHint": "Короткий текст для витрины тарифов и Telegram-бота. HTML-разметка Telegram: ссылки, курсив, цитаты. Справа — превью.",
         "descriptionSource": "Исходный текст",
         "descriptionPreview": "Превью",
         "descriptionPreviewEmpty": "Превью появится при вводе описания",
+        "descriptionDetail": "Подробное описание (страница плана)",
+        "descriptionDetailHint": "Развёрнутый текст для страницы выбора срока в кабинете (/tariffs?plan=…). Если пусто — показывается краткое описание.",
+        "descriptionDetailPreviewEmpty": "Превью появится при вводе подробного описания",
         "empty": "Тарифов пока нет",
         "createFirst": "Создать первый тариф",
         "sectionBasic": "Основное",
@@ -1406,7 +1411,15 @@
         "searchPlaceholder": "Поиск по названию или ключу (RUB_PER_STAR, trial…)",
         "searchClear": "Очистить поиск",
         "searchEmpty": "Ничего не найдено",
-        "sectionNav": "Разделы настроек",
+        "categoryEmpty": "В этой категории нет настроек",
+        "categoryNav": "Категории настроек",
+        "categories": {
+          "design": "Оформление",
+          "product": "Продукт",
+          "marketing": "Маркетинг",
+          "operations": "Операции",
+          "access": "Доступ"
+        },
         "subsections": {
           "trial": {
             "period": "Период триала",
@@ -1438,6 +1451,9 @@
           },
           "cabinet": {
             "decor": "Оформление"
+          },
+          "tariffs": {
+            "showcase": "Витрина тарифов"
           }
         },
         "groups": {
@@ -1452,7 +1468,8 @@
           "lifecycle": "Автонапоминания",
           "links": "Ссылки в боте",
           "fortune": "Колесо фортуны",
-          "cabinet": "Оформление кабинета"
+          "cabinet": "Оформление кабинета",
+          "tariffs": "Тарифы"
         },
         "fortune": {
           "basic": "Правила и лимиты",
@@ -1479,7 +1496,9 @@
           "halloween": "Хэллоуин",
           "valentine": "День святого Валентина",
           "spring": "Весна",
-          "black_friday": "Чёрная пятница"
+          "black_friday": "Чёрная пятница",
+          "monthly": "Помесячная цена",
+          "marketing": "Маркетинговая (за год)"
         },
         "fields": {
           "LOYALTY_ENABLED": { "label": "Программа лояльности", "hint": "Уровни — в разделе «Лояльность»" },
@@ -1515,6 +1534,10 @@
           "WHITELISTED_TELEGRAM_IDS": { "label": "Белый список Telegram ID", "hint": "Пропускают фильтр имён" },
           "CABINET_LIGHT_THEME_ENABLED": { "label": "Светлая тема", "hint": "Выключите, чтобы оставить только тёмную тему для всех пользователей" },
           "CABINET_DECOR_THEME": { "label": "Тема оформления", "hint": "Применяется ко всем пользователям кабинета без перезапуска" },
+          "CABINET_TARIFF_PRICE_DISPLAY": {
+            "label": "Отображение цены на витрине",
+            "hint": "Страница «Тарифы» в кабинете (режим tariffs): помесячная цена или ₽/мес при оплате за 12 месяцев"
+          },
           "LIFECYCLE_NO_CONNECT_PAID_ENABLED": { "label": "Напоминание после оплаты", "hint": "" },
           "LIFECYCLE_NO_CONNECT_TRIAL_ENABLED": { "label": "Напоминание после триала", "hint": "" },
           "LIFECYCLE_NO_CONNECT_DELAY_HOURS": { "label": "Отправить через, ч", "hint": "" },

@@ -21,11 +21,18 @@ import { AdminSelect } from '../components/AdminSelect'
 import { useAdminBotSettings, useAdminBotSettingsPatch } from '../hooks/useAdminBotSettings'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import {
+  ADMIN_SETTINGS_CATEGORIES,
+  ADMIN_SETTINGS_DEFAULT_CATEGORY,
+  ADMIN_SETTINGS_GROUPS_LIST_ANCHOR,
   ADMIN_SETTINGS_GROUP_ICONS,
+  adminSettingsCategoryDef,
+  adminSettingsCategoryForGroup,
   adminSettingsGroupAnchor,
   adminSettingsGroupIconStyle,
-  scrollToSettingsGroup,
+  scrollToSettingsGroupsList,
+  sortSettingsGroupsByOrder,
   splitGroupIntoSubsections,
+  type AdminSettingsCategoryId,
   type AdminSettingsGroupId,
 } from '../utils/adminSettingsGroups'
 import { groupSettingsFieldsForLayout, isTextareaSettingType } from '../utils/adminSettingsFieldLayout'
@@ -63,6 +70,7 @@ interface GroupEditorProps {
   draft: Record<string, string>
   searchQuery: string
   expanded: boolean
+  categoryBadge?: string
   onToggleExpand: () => void
   onDraftChange: (key: string, value: string) => void
   onToggle: (key: string, value: boolean) => void
@@ -77,6 +85,7 @@ function SettingsGroupEditor({
   draft,
   searchQuery,
   expanded,
+  categoryBadge,
   onToggleExpand,
   onDraftChange,
   onToggle,
@@ -263,9 +272,16 @@ function SettingsGroupEditor({
           <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', iconStyle.box)}>
             <Icon className={cn('size-4', iconStyle.icon)} aria-hidden />
           </div>
-          <p className="truncate text-sm font-semibold uppercase tracking-wide text-foreground sm:text-base sm:normal-case sm:tracking-normal">
-            {groupTitle}
-          </p>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            {categoryBadge && (
+              <span className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {categoryBadge}
+              </span>
+            )}
+            <p className="truncate text-sm font-semibold uppercase tracking-wide text-foreground sm:text-base sm:normal-case sm:tracking-normal">
+              {groupTitle}
+            </p>
+          </div>
         </div>
         <ChevronDown
           className={cn(
@@ -321,42 +337,50 @@ function SettingsGroupEditor({
   )
 }
 
-interface SectionNavProps {
-  groups: AdminSettingGroupDTO[]
-  activeId: string | null
-  onSelect: (id: string) => void
+interface CategoryNavProps {
+  activeId: AdminSettingsCategoryId
+  onSelect: (id: AdminSettingsCategoryId) => void
 }
 
-function SettingsSectionNav({ groups, activeId, onSelect }: SectionNavProps) {
+function settingsCategoryTabId(categoryId: AdminSettingsCategoryId): string {
+  return `settings-category-tab-${categoryId}`
+}
+
+function SettingsCategoryNav({ activeId, onSelect }: CategoryNavProps) {
   const { t } = useTranslation()
 
   return (
     <div
       role="tablist"
-      aria-label={t('admin.settings.sectionNav')}
+      aria-label={t('admin.settings.categoryNav')}
       className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5 lg:overflow-visible"
     >
-      <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full lg:flex-wrap">
-        {groups.map((group) => {
-          const Icon = groupIcon(group.id)
-          const iconStyle = adminSettingsGroupIconStyle(group.id)
-          const isActive = activeId === group.id
+      <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
+        {ADMIN_SETTINGS_CATEGORIES.map((category) => {
+          const Icon = category.icon
+          const isActive = activeId === category.id
           return (
             <button
-              key={group.id}
+              key={category.id}
               type="button"
               role="tab"
+              id={settingsCategoryTabId(category.id)}
               aria-selected={isActive}
-              onClick={() => onSelect(group.id)}
+              aria-controls={ADMIN_SETTINGS_GROUPS_LIST_ANCHOR}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => onSelect(category.id)}
               className={cn(
-                'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 py-2 text-center text-xs font-medium transition-colors sm:flex-1 lg:min-w-[calc(20%-0.25rem)] lg:max-w-[calc(25%-0.25rem)] lg:flex-[1_1_auto]',
+                'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-center text-xs font-medium transition-colors sm:flex-1',
                 isActive
-                  ? cn(iconStyle.box, iconStyle.icon)
+                  ? cn(category.iconStyle.box, category.iconStyle.icon)
                   : 'text-foreground/80 hover:bg-accent hover:text-foreground',
               )}
             >
-              <Icon className={cn('hidden size-3.5 shrink-0 sm:block', isActive ? iconStyle.icon : undefined)} aria-hidden />
-              <span className="truncate leading-tight">{t(`admin.settings.groups.${group.id}`)}</span>
+              <Icon
+                className={cn('size-3.5 shrink-0', isActive ? category.iconStyle.icon : undefined)}
+                aria-hidden
+              />
+              <span className="truncate leading-tight">{t(category.titleKey)}</span>
             </button>
           )
         })}
@@ -374,7 +398,7 @@ export default function AdminSettingsPage() {
   const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
   const [savingGroup, setSavingGroup] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeSection, setActiveSection] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState<AdminSettingsCategoryId>(ADMIN_SETTINGS_DEFAULT_CATEGORY)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
@@ -390,12 +414,9 @@ export default function AdminSettingsPage() {
       }
       return next
     })
-    if (!activeSection && data.groups.length > 0) {
-      setActiveSection(data.groups[0].id)
-    }
-  }, [data, activeSection])
+  }, [data])
 
-  const filteredGroups = useMemo(() => {
+  const searchFilteredGroups = useMemo(() => {
     if (!data?.groups) return []
     const q = searchQuery.trim().toLowerCase()
     if (!q) return data.groups
@@ -416,10 +437,36 @@ export default function AdminSettingsPage() {
 
   const isSearching = searchQuery.trim().length > 0
 
+  const visibleGroups = useMemo(() => {
+    if (isSearching) return sortSettingsGroupsByOrder(searchFilteredGroups)
+
+    const category = adminSettingsCategoryDef(activeCategory)
+    if (!category) return []
+
+    const allowed = new Set(category.groups)
+    return sortSettingsGroupsByOrder(
+      searchFilteredGroups.filter((group) => allowed.has(group.id as AdminSettingsGroupId)),
+    )
+  }, [activeCategory, isSearching, searchFilteredGroups])
+
+  const categoryBadgeForGroup = useCallback(
+    (groupId: string) => {
+      if (!isSearching) return undefined
+      const categoryId = adminSettingsCategoryForGroup(groupId)
+      if (!categoryId) return undefined
+      const category = adminSettingsCategoryDef(categoryId)
+      return category ? t(category.titleKey) : undefined
+    },
+    [isSearching, t],
+  )
+
   useEffect(() => {
-    if (!isSearching) return
-    setExpandedGroups(new Set(filteredGroups.map((g) => g.id)))
-  }, [isSearching, filteredGroups])
+    if (isSearching) {
+      setExpandedGroups(new Set(visibleGroups.map((g) => g.id)))
+      return
+    }
+    setExpandedGroups(new Set())
+  }, [isSearching, visibleGroups])
 
   const handleToggle = useCallback(
     async (key: string, checked: boolean) => {
@@ -485,11 +532,11 @@ export default function AdminSettingsPage() {
     })
   }, [])
 
-  const handleSectionNav = useCallback((id: string) => {
-    setActiveSection(id)
-    setExpandedGroups((prev) => new Set(prev).add(id))
+  const handleCategoryNav = useCallback((categoryId: AdminSettingsCategoryId) => {
+    setActiveCategory(categoryId)
+    setExpandedGroups(new Set())
     window.requestAnimationFrame(() => {
-      scrollToSettingsGroup(id)
+      scrollToSettingsGroupsList()
     })
   }, [])
 
@@ -503,14 +550,6 @@ export default function AdminSettingsPage() {
           subtitle={t('admin.settings.subtitle')}
           accent="violet"
         />
-
-        {!isLoading && !isError && filteredGroups.length > 0 && (
-          <SettingsSectionNav
-            groups={filteredGroups}
-            activeId={activeSection}
-            onSelect={handleSectionNav}
-          />
-        )}
 
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -533,6 +572,10 @@ export default function AdminSettingsPage() {
           )}
         </div>
 
+        {!isLoading && !isError && !isSearching && (
+          <SettingsCategoryNav activeId={activeCategory} onSelect={handleCategoryNav} />
+        )}
+
         {isLoading && (
           <div className="flex items-center justify-center py-16 text-muted-foreground">
             <Loader2 className="size-6 animate-spin" />
@@ -545,17 +588,27 @@ export default function AdminSettingsPage() {
           </div>
         )}
 
-        {!isLoading && !isError && searchQuery && filteredGroups.length === 0 && (
+        {!isLoading && !isError && searchQuery && visibleGroups.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">{t('admin.settings.searchEmpty')}</p>
         )}
 
-        <div className="space-y-3">
-          {filteredGroups.map((group) => (
+        {!isLoading && !isError && !isSearching && visibleGroups.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">{t('admin.settings.categoryEmpty')}</p>
+        )}
+
+        <div
+          id={ADMIN_SETTINGS_GROUPS_LIST_ANCHOR}
+          role="tabpanel"
+          aria-labelledby={settingsCategoryTabId(activeCategory)}
+          className="scroll-mt-24 space-y-3"
+        >
+          {visibleGroups.map((group) => (
             <SettingsGroupEditor
               key={group.id}
               group={group}
               draft={draft}
               searchQuery={searchQuery}
+              categoryBadge={categoryBadgeForGroup(group.id)}
               expanded={isSearching || expandedGroups.has(group.id)}
               onToggleExpand={() => toggleGroupExpanded(group.id)}
               onDraftChange={(key, value) => setDraft((d) => ({ ...d, [key]: value }))}
