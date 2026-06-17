@@ -13,17 +13,42 @@ function decodeHtmlEntities(input: string): string {
   return el.value
 }
 
-/** Убирает tg-emoji и прочие нестандартные теги, оставляя содержимое. Табы → 4 пробела. */
-export function preprocessTelegramMarkup(input: string): string {
-  return decodeHtmlEntities(String(input))
+/** Типичная HTML-разметка Telegram в описаниях тарифов. */
+const TELEGRAM_HTML_TAG =
+  /<(a|b|strong|i|em|u|s|code|pre|blockquote|span)\b/i
+
+function hasTelegramHtml(text: string): boolean {
+  return TELEGRAM_HTML_TAG.test(text)
+}
+
+export type TariffDescriptionMode = 'html' | 'markdown'
+
+/**
+ * Подготовка текста из админки / бота.
+ * HTML (как в TG): каждый \n → <br> (1 Enter = новая строка, несколько Enter = больше зазор).
+ * Чистый markdown: переносы оставляем remark-breaks + абзацы.
+ */
+export function preprocessTelegramMarkup(input: string): {
+  text: string
+  mode: TariffDescriptionMode
+} {
+  const normalized = decodeHtmlEntities(String(input))
     .replace(/\r\n/g, '\n')
     .replace(/<tg-emoji[^>]*>([\s\S]*?)<\/tg-emoji>/gi, '$1')
     .replace(/\t/g, '    ')
+
+  if (hasTelegramHtml(normalized)) {
+    return {
+      text: normalized.replace(/\n/g, '<br>'),
+      mode: 'html',
+    }
+  }
+
+  return { text: normalized, mode: 'markdown' }
 }
 
-/** pre-wrap — пробелы/табы; remark-breaks — одиночный Enter; mb-3 между абзацами. */
 const descriptionClassName =
-  '[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:whitespace-pre-wrap [&_blockquote]:break-words [&_i]:italic [&_li]:ml-4 [&_li]:mb-2 [&_li]:list-disc [&_li]:whitespace-pre-wrap [&_li:last-child]:mb-0 [&_p]:mb-3 [&_p]:whitespace-pre-wrap [&_p:last-child]:mb-0'
+  '[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:whitespace-pre-wrap [&_blockquote]:break-words [&_i]:italic [&_li]:ml-4 [&_li]:mb-1 [&_li]:list-disc [&_li]:whitespace-pre-wrap [&_li:last-child]:mb-0 [&_p]:mb-0 [&_p]:whitespace-pre-wrap [&_p]:leading-relaxed [&_p+p]:mt-2'
 
 export function TariffDescription({
   text,
@@ -32,15 +57,14 @@ export function TariffDescription({
   text: string
   className?: string
 }) {
-  const processed = preprocessTelegramMarkup(text)
+  const { text: processed, mode } = preprocessTelegramMarkup(text)
   if (!processed.trim()) return null
+
+  const remarkPlugins = mode === 'html' ? [remarkGfm] : [remarkGfm, remarkBreaks]
 
   return (
     <div className={cn(descriptionClassName, className)}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
-      >
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
         {processed}
       </ReactMarkdown>
     </div>
