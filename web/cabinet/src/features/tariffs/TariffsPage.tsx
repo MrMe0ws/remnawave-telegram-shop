@@ -220,7 +220,7 @@ function TariffsGrid({
   )
 }
 
-/** Карусель ≤500px: peek-слайды до края экрана; на 1-м/последнем — scroll-padding с одной стороны (как px-4 layout). */
+/** Карусель ≤500px: средние слайды по центру; у 1-го pl-4, у последнего pr-4 (как layout px-4). */
 function TariffsMobileCarousel({
   cardPeriods,
   priceDisplay,
@@ -293,16 +293,6 @@ function TariffsMobileCarousel({
     slide.scrollIntoView({ behavior: 'smooth', inline, block: 'nearest' })
   }
 
-  /** Первый/последний — inset как px-4 layout; средние — snap-center на всю ширину экрана. */
-  const edgeScrollPaddingClass =
-    n <= 1
-      ? 'scroll-pl-4 scroll-pr-4'
-      : active === 0
-        ? 'scroll-pl-4 scroll-pr-0'
-        : active === n - 1
-          ? 'scroll-pl-0 scroll-pr-4'
-          : 'scroll-pl-0 scroll-pr-0'
-
   return (
     <div className="w-full">
       <div className="-mx-4">
@@ -312,7 +302,6 @@ function TariffsMobileCarousel({
             'flex min-w-0 w-full items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x',
             'snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]',
             '[&::-webkit-scrollbar]:hidden',
-            edgeScrollPaddingClass,
           )}
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
@@ -321,17 +310,22 @@ function TariffsMobileCarousel({
               key={periods[0].slug}
               data-tariff-slide
               className={cn(
-                'flex min-h-0 w-[min(22rem,calc(100%-2rem))] shrink-0 flex-col self-stretch',
-                i === 0 ? 'snap-start' : i === n - 1 ? 'snap-end' : 'snap-center',
+                'flex shrink-0 flex-col self-stretch',
+                n <= 1 && 'snap-center pl-4 pr-4',
+                n > 1 && i === 0 && 'snap-start pl-4',
+                n > 1 && i === n - 1 && 'snap-end pr-4',
+                n > 1 && i > 0 && i < n - 1 && 'snap-center',
               )}
             >
-              <TariffPlanCard
-                layout="carousel"
-                periods={periods}
-                priceDisplay={priceDisplay}
-                onChoosePlan={onChoosePlan}
-                sub={sub}
-              />
+              <div className="flex min-h-0 w-[min(22rem,calc(100%-2rem))] flex-1 flex-col">
+                <TariffPlanCard
+                  layout="carousel"
+                  periods={periods}
+                  priceDisplay={priceDisplay}
+                  onChoosePlan={onChoosePlan}
+                  sub={sub}
+                />
+              </div>
             </div>
           ))}
         </div>
