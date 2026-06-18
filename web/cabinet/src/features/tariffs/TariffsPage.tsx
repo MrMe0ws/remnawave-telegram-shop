@@ -220,7 +220,7 @@ function TariffsGrid({
   )
 }
 
-/** Карусель ≤500px: snap-start — основная карточка почти на всю ширину, сосед у правого края с узким «peek» текста. */
+/** Карусель ≤500px: peek-слайды до края экрана; на 1-м/последнем — scroll-padding с одной стороны (как px-4 layout). */
 function TariffsMobileCarousel({
   cardPeriods,
   priceDisplay,
@@ -292,32 +292,44 @@ function TariffsMobileCarousel({
 
   const n = cardPeriods.length
 
+  const edgeScrollPaddingClass =
+    n <= 1
+      ? 'scroll-pl-4 scroll-pr-4'
+      : active === 0
+        ? 'scroll-pl-4 scroll-pr-0'
+        : active === n - 1
+          ? 'scroll-pl-0 scroll-pr-4'
+          : 'scroll-pl-0 scroll-pr-0'
+
   return (
     <div className="w-full">
-      <div
-        ref={scrollRef}
-        className={cn(
-          'flex min-w-0 w-full items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x',
-          'scroll-pl-3 scroll-pr-3 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]',
-          '[&::-webkit-scrollbar]:hidden',
-        )}
-        style={{ WebkitOverflowScrolling: 'touch' }}
-      >
-        {cardPeriods.map((periods) => (
-          <div
-            key={periods[0].slug}
-            data-tariff-slide
-            className="flex min-h-0 w-[min(22rem,calc(100%-1.9rem))] shrink-0 snap-start flex-col self-stretch"
-          >
-            <TariffPlanCard
-              layout="carousel"
-              periods={periods}
-              priceDisplay={priceDisplay}
-              onChoosePlan={onChoosePlan}
-              sub={sub}
-            />
-          </div>
-        ))}
+      <div className="-mx-4">
+        <div
+          ref={scrollRef}
+          className={cn(
+            'flex min-w-0 w-full items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x',
+            'snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]',
+            '[&::-webkit-scrollbar]:hidden',
+            edgeScrollPaddingClass,
+          )}
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {cardPeriods.map((periods) => (
+            <div
+              key={periods[0].slug}
+              data-tariff-slide
+              className="flex min-h-0 w-[min(22rem,calc(100%-1.5rem))] shrink-0 snap-start flex-col self-stretch"
+            >
+              <TariffPlanCard
+                layout="carousel"
+                periods={periods}
+                priceDisplay={priceDisplay}
+                onChoosePlan={onChoosePlan}
+                sub={sub}
+              />
+            </div>
+          ))}
+        </div>
       </div>
       <nav
         className="mt-4 flex justify-center gap-2"
