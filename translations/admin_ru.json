@@ -470,8 +470,8 @@
   "admin_user_cal_btn_subscription_back": "⬅️ Подписка",
   "admin_user_cal_open_btn": "📅 Дата",
   "admin_user_cal_btn_manual": "✏️ Ввести дату",
-  "admin_user_cal_manual_prompt": "<b>Дата окончания подписки</b>\n\nОтправьте дату одним сообщением, например:\n<code>21.10.2050</code>, <code>21/10/2050</code> или <code>2050-10-21</code>",
-  "admin_user_cal_manual_invalid": "Некорректная дата. Пример: <code>21.10.2050</code> или <code>2050-10-21</code>.",
+  "admin_user_cal_manual_prompt": "<b>Дата окончания подписки</b>\n\nОтправьте дату одним сообщением (UTC), например:\n<code>21.10.2050</code>, <code>2050-10-21</code>\nС точным временем: <code>18.06.2026 13:21</code> или <code>2026-06-18 13:21</code>\nБез времени — конец дня <b>23:59 UTC</b>.",
+  "admin_user_cal_manual_invalid": "Некорректная дата или время. Пример: <code>18.06.2026 13:21</code> или <code>2050-10-21</code>.",
 
   "admin_user_panel_adv_btn": "⚙️ Панель",
   "admin_user_panel_adv_title": "<b>Настройки Remnawave</b>",

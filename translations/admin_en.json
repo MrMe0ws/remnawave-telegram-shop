@@ -470,8 +470,8 @@
   "admin_user_cal_btn_subscription_back": "⬅️ Subscription",
   "admin_user_cal_open_btn": "📅 Pick date",
   "admin_user_cal_btn_manual": "✏️ Enter date",
-  "admin_user_cal_manual_prompt": "<b>Subscription end date</b>\n\nSend one message with a date, e.g. <code>21.10.2050</code>, <code>21/10/2050</code> or <code>2050-10-21</code>",
-  "admin_user_cal_manual_invalid": "Invalid date. Example: <code>21.10.2050</code> or <code>2050-10-21</code>.",
+  "admin_user_cal_manual_prompt": "<b>Subscription end date</b>\n\nSend one message (UTC), e.g. <code>21.10.2050</code>, <code>2050-10-21</code>\nWith time: <code>18.06.2026 13:21</code> or <code>2026-06-18 13:21</code>\nWithout time — end of day <b>23:59 UTC</b>.",
+  "admin_user_cal_manual_invalid": "Invalid date or time. Example: <code>18.06.2026 13:21</code> or <code>2050-10-21</code>.",
 
   "admin_user_panel_adv_btn": "⚙️ Panel",
   "admin_user_panel_adv_title": "<b>Remnawave settings</b>",

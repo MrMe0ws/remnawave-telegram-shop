@@ -130,11 +130,60 @@ func parseAdminExpireDateInput(raw string) (time.Time, bool) {
 	if raw == "" {
 		return time.Time{}, false
 	}
-	if t, err := time.Parse("2006-01-02", raw); err == nil {
-		return expireAtEndOfDayUTC(t), true
+	for _, layout := range []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+	} {
+		if t, err := time.ParseInLocation(layout, raw, time.UTC); err == nil {
+			return t.UTC(), true
+		}
+	}
+	datePart, timePart, hasTime := splitAdminExpireDateTimeInput(raw)
+	if datePart == "" {
+		return time.Time{}, false
+	}
+	day, ok := parseAdminExpireDateOnly(datePart)
+	if !ok {
+		return time.Time{}, false
+	}
+	if !hasTime {
+		return expireAtEndOfDayUTC(day), true
+	}
+	h, m, s, ok := parseAdminExpireTime(timePart)
+	if !ok {
+		return time.Time{}, false
+	}
+	return time.Date(day.Year(), day.Month(), day.Day(), h, m, s, 0, time.UTC), true
+}
+
+func splitAdminExpireDateTimeInput(raw string) (datePart, timePart string, hasTime bool) {
+	raw = strings.TrimSpace(raw)
+	idx := strings.LastIndex(raw, " ")
+	if idx <= 0 {
+		return raw, "", false
+	}
+	candidate := strings.TrimSpace(raw[idx+1:])
+	if !strings.Contains(candidate, ":") {
+		return raw, "", false
+	}
+	if _, _, _, ok := parseAdminExpireTime(candidate); !ok {
+		return raw, "", false
+	}
+	return strings.TrimSpace(raw[:idx]), candidate, true
+}
+
+func parseAdminExpireDateOnly(raw string) (time.Time, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, false
+	}
+	if t, err := time.ParseInLocation("2006-01-02", raw, time.UTC); err == nil {
+		return t.UTC(), true
 	}
 	normalized := raw
-	for _, sep := range []string{"/", "-", " "} {
+	for _, sep := range []string{"/", "-"} {
 		normalized = strings.ReplaceAll(normalized, sep, ".")
 	}
 	parts := strings.Split(normalized, ".")
@@ -157,12 +206,40 @@ func parseAdminExpireDateInput(raw string) (time.Time, bool) {
 	if t.Day() != d || int(t.Month()) != m || t.Year() != y {
 		return time.Time{}, false
 	}
-	return expireAtEndOfDayUTC(t), true
+	return t, true
 }
 
+func parseAdminExpireTime(raw string) (hour, min, sec int, ok bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, 0, 0, false
+	}
+	parts := strings.Split(raw, ":")
+	if len(parts) < 2 || len(parts) > 3 {
+		return 0, 0, 0, false
+	}
+	h, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+	m, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+	s := 0
+	if len(parts) == 3 {
+		var err3 error
+		s, err3 = strconv.Atoi(strings.TrimSpace(parts[2]))
+		if err3 != nil {
+			return 0, 0, 0, false
+		}
+	}
+	if err1 != nil || err2 != nil {
+		return 0, 0, 0, false
+	}
+	if h < 0 || h > 23 || m < 0 || m > 59 || s < 0 || s > 59 {
+		return 0, 0, 0, false
+	}
+	return h, m, s, true
+}
+
+// expireAtEndOfDayUTC — дата без времени: конец выбранного дня UTC 23:59:59.
 func expireAtEndOfDayUTC(t time.Time) time.Time {
-	now := time.Now().UTC()
-	return time.Date(t.Year(), t.Month(), t.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
+	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, time.UTC)
 }
 
 func (h Handler) adminApplyPanelExpireAt(ctx context.Context, cust *database.Customer, exp time.Time) (*remnawave.User, error) {
