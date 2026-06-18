@@ -220,7 +220,7 @@ function TariffsGrid({
   )
 }
 
-/** Карусель ≤500px: средние слайды по центру; у 1-го pl-4, у последнего pr-4 (как layout px-4). */
+/** Карусель ≤500px: snap-start — основная карточка почти на всю ширину, сосед у правого края с узким «peek» текста. */
 function TariffsMobileCarousel({
   cardPeriods,
   priceDisplay,
@@ -282,53 +282,42 @@ function TariffsMobileCarousel({
     }
   }, [updateActiveFromScroll])
 
-  const n = cardPeriods.length
-
   const scrollToIndex = (i: number) => {
     const root = scrollRef.current
     if (!root) return
     const slide = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')[i]
     if (!slide) return
-    const inline: ScrollLogicalPosition = i === 0 ? 'start' : i === n - 1 ? 'end' : 'center'
-    slide.scrollIntoView({ behavior: 'smooth', inline, block: 'nearest' })
+    slide.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
   }
+
+  const n = cardPeriods.length
 
   return (
     <div className="w-full">
-      <div className="-mx-4">
-        <div
-          ref={scrollRef}
-          className={cn(
-            'flex min-w-0 w-full items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x',
-            'snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]',
-            '[&::-webkit-scrollbar]:hidden',
-          )}
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {cardPeriods.map((periods, i) => (
-            <div
-              key={periods[0].slug}
-              data-tariff-slide
-              className={cn(
-                'flex shrink-0 flex-col self-stretch',
-                n <= 1 && 'snap-center pl-4 pr-4',
-                n > 1 && i === 0 && 'snap-start pl-4',
-                n > 1 && i === n - 1 && 'snap-end pr-4',
-                n > 1 && i > 0 && i < n - 1 && 'snap-center',
-              )}
-            >
-              <div className="flex min-h-0 w-[min(22rem,calc(100%-2rem))] flex-1 flex-col">
-                <TariffPlanCard
-                  layout="carousel"
-                  periods={periods}
-                  priceDisplay={priceDisplay}
-                  onChoosePlan={onChoosePlan}
-                  sub={sub}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+      <div
+        ref={scrollRef}
+        className={cn(
+          'flex min-w-0 w-full items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x',
+          'scroll-pl-3 scroll-pr-3 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]',
+          '[&::-webkit-scrollbar]:hidden',
+        )}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {cardPeriods.map((periods) => (
+          <div
+            key={periods[0].slug}
+            data-tariff-slide
+            className="flex min-h-0 w-[min(22rem,calc(100%-1.9rem))] shrink-0 snap-start flex-col self-stretch"
+          >
+            <TariffPlanCard
+              layout="carousel"
+              periods={periods}
+              priceDisplay={priceDisplay}
+              onChoosePlan={onChoosePlan}
+              sub={sub}
+            />
+          </div>
+        ))}
       </div>
       <nav
         className="mt-4 flex justify-center gap-2"
