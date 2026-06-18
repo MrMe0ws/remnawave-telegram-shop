@@ -282,16 +282,18 @@ function TariffsMobileCarousel({
     }
   }, [updateActiveFromScroll])
 
+  const n = cardPeriods.length
+
   const scrollToIndex = (i: number) => {
     const root = scrollRef.current
     if (!root) return
     const slide = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')[i]
     if (!slide) return
-    slide.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+    const inline: ScrollLogicalPosition = i === 0 ? 'start' : i === n - 1 ? 'end' : 'center'
+    slide.scrollIntoView({ behavior: 'smooth', inline, block: 'nearest' })
   }
 
-  const n = cardPeriods.length
-
+  /** Первый/последний — inset как px-4 layout; средние — snap-center на всю ширину экрана. */
   const edgeScrollPaddingClass =
     n <= 1
       ? 'scroll-pl-4 scroll-pr-4'
@@ -314,11 +316,14 @@ function TariffsMobileCarousel({
           )}
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          {cardPeriods.map((periods) => (
+          {cardPeriods.map((periods, i) => (
             <div
               key={periods[0].slug}
               data-tariff-slide
-              className="flex min-h-0 w-[min(22rem,calc(100%-1.5rem))] shrink-0 snap-start flex-col self-stretch"
+              className={cn(
+                'flex min-h-0 w-[min(22rem,calc(100%-2rem))] shrink-0 flex-col self-stretch',
+                i === 0 ? 'snap-start' : i === n - 1 ? 'snap-end' : 'snap-center',
+              )}
             >
               <TariffPlanCard
                 layout="carousel"
