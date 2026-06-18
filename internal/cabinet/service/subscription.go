@@ -26,9 +26,10 @@ const bytesPerGB = 1024 * 1024 * 1024
 // Subscription — /cabinet/api/me/subscription service.
 //
 // При каждом Get (если передан клиент Remnawave) подтягиваем expire_at /
-// subscription_link из панели и пишем в customer, чтобы кабинет не «застревал»
-// после удаления пользователя в панели или ручных правок. При ошибке API
-// (сеть) — оставляем данные из БД; при «user not found» — очищаем подписку в БД.
+// subscription_link из панели и пишем в customer. Обычные TG-клиенты — по
+// telegram_id; web-only/synthetic — через FindUserForAdminCustomer (как админка),
+// без очистки подписки при not found. При ошибке API (сеть) — данные из БД;
+// для TG при «user not found» — очищаем подписку в БД.
 type Subscription struct {
 	customers *database.CustomerRepository
 	tariffs   *database.TariffRepository
@@ -507,6 +508,15 @@ func (s *Subscription) resolveLoyaltyTierName(ctx context.Context, xp int64) *st
 	return progress.CurrentTier.DisplayName
 }
 
+// needsWebOnlyRemnawaveSync — web-only / synthetic telegram_id: нельзя искать только
+// через GetUserTrafficInfo (даёт not found → раньше стиралась подписка в БД).
+func needsWebOnlyRemnawaveSync(c *database.Customer) bool {
+	if c == nil {
+		return false
+	}
+	return c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID)
+}
+
 // syncSubscriptionFromRemnawave подтягивает подписку из панели в строку customer.
 // Возвращает (nil, nil) если обновление не требуется или панель временно недоступна;
 // (c, err) при ошибке записи в БД; свежего customer при успешном изменении.
@@ -514,11 +524,8 @@ func (s *Subscription) syncSubscriptionFromRemnawave(ctx context.Context, c *dat
 	if s.rw == nil || c == nil {
 		return nil, nil
 	}
-	// Web-only в панели часто без telegram_id (username cabinet_*); запрос по
-	// synthetic id даёт «not found» и clearRWSubscriptionInDB стирал подписку в БД.
-	// См. docs/cabinet/audit-telegram-id.md §1.6 и §1.3.
-	if c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID) {
-		return nil, nil
+	if needsWebOnlyRemnawaveSync(c) {
+		return s.syncWebOnlySubscriptionFromRemnawave(ctx, c)
 	}
 	user, err := s.rw.GetUserTrafficInfo(ctx, c.TelegramID)
 	if err != nil {
@@ -527,6 +534,27 @@ func (s *Subscription) syncSubscriptionFromRemnawave(ctx context.Context, c *dat
 		}
 		slog.Warn("subscription: remnawave get user failed",
 			"telegram_id", utils.MaskHalfInt64(c.TelegramID), "error", err)
+		return nil, nil
+	}
+	return s.applyRWSubscriptionToDB(ctx, c, user)
+}
+
+// syncWebOnlySubscriptionFromRemnawave — подписка web-only клиента кабинета.
+// Ищем RW-профиль так же, как админка (subscription_link, префикс "<customer_id>_"),
+// обновляем только expire_at и subscription_link. При not found подписку в БД не
+// очищаем — иначе ломается кабинет до merge/link с Telegram.
+func (s *Subscription) syncWebOnlySubscriptionFromRemnawave(ctx context.Context, c *database.Customer) (*database.Customer, error) {
+	linkSet := c.SubscriptionLink != nil && strings.TrimSpace(*c.SubscriptionLink) != ""
+	if !linkSet && c.ExpireAt == nil {
+		return nil, nil
+	}
+	user, err := s.rw.FindUserForAdminCustomer(ctx, c.ID, c.TelegramID, c.SubscriptionLink, c.IsWebOnly)
+	if err != nil {
+		if errors.Is(err, remnawave.ErrUserNotFound) {
+			return nil, nil
+		}
+		slog.Warn("subscription: remnawave web-only lookup failed",
+			"customer_id", c.ID, "error", err)
 		return nil, nil
 	}
 	return s.applyRWSubscriptionToDB(ctx, c, user)
@@ -572,12 +600,30 @@ func (s *Subscription) applyRWSubscriptionToDB(ctx context.Context, c *database.
 	if v := strings.TrimSpace(user.SubscriptionUrl); v != "" {
 		sub = &v
 	}
-	if subscriptionTimesAndLinksEqual(c.ExpireAt, exp, c.SubscriptionLink, sub) {
+	if exp == nil && sub == nil {
 		return nil, nil
 	}
-	updates := map[string]interface{}{
-		"expire_at":         exp,
-		"subscription_link": sub,
+	expEqual := exp == nil || subscriptionTimePtrEqual(c.ExpireAt, exp)
+	linkEqual := true
+	if sub != nil {
+		dbLink := ""
+		if c.SubscriptionLink != nil {
+			dbLink = strings.TrimSpace(*c.SubscriptionLink)
+		}
+		linkEqual = dbLink == *sub
+	}
+	if expEqual && linkEqual {
+		return nil, nil
+	}
+	updates := map[string]interface{}{}
+	if exp != nil && !expEqual {
+		updates["expire_at"] = exp
+	}
+	if sub != nil && !linkEqual {
+		updates["subscription_link"] = sub
+	}
+	if len(updates) == 0 {
+		return nil, nil
 	}
 	if err := s.customers.UpdateFields(ctx, c.ID, updates); err != nil {
 		return c, err
