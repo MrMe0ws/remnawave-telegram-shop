@@ -220,7 +220,45 @@ function TariffsGrid({
   )
 }
 
-/** Карусель ≤500px: snap-start — основная карточка почти на всю ширину, сосед у правого края с узким «peek» текста. */
+type TariffCarouselGesture = {
+  anchor: number
+  startX: number
+  minScrollLeft: number
+  maxScrollLeft: number
+  intendedIndex: number | null
+}
+
+const TARIFF_CAROUSEL_SWIPE_THRESHOLD_PX = 40
+
+function getTariffCarouselActiveIndex(root: HTMLElement): number {
+  const slides = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')
+  if (!slides.length) return 0
+  const rootRect = root.getBoundingClientRect()
+  let best = 0
+  let bestOverlap = -1
+  slides.forEach((el, i) => {
+    const r = el.getBoundingClientRect()
+    const overlap = Math.min(r.right, rootRect.right) - Math.max(r.left, rootRect.left)
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap
+      best = i
+    }
+  })
+  return best
+}
+
+function getTariffCarouselScrollBounds(root: HTMLElement, startIndex: number) {
+  const slides = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')
+  const startSlide = slides[startIndex]
+  if (!startSlide) return null
+  return {
+    minScrollLeft: startIndex > 0 ? slides[startIndex - 1].offsetLeft : startSlide.offsetLeft,
+    maxScrollLeft:
+      startIndex < slides.length - 1 ? slides[startIndex + 1].offsetLeft : startSlide.offsetLeft,
+  }
+}
+
+/** Карусель ≤500px: один тариф за свайп; точки навигации — прямой переход. */
 function TariffsMobileCarousel({
   cardPeriods,
   priceDisplay,
@@ -235,23 +273,13 @@ function TariffsMobileCarousel({
   const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
+  const skipOneStepClampRef = useRef(false)
+  const gestureRef = useRef<TariffCarouselGesture | null>(null)
 
   const updateActiveFromScroll = useCallback(() => {
     const root = scrollRef.current
     if (!root) return
-    const slides = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')
-    if (!slides.length) return
-    const rootRect = root.getBoundingClientRect()
-    let best = 0
-    let bestOverlap = -1
-    slides.forEach((el, i) => {
-      const r = el.getBoundingClientRect()
-      const overlap = Math.min(r.right, rootRect.right) - Math.max(r.left, rootRect.left)
-      if (overlap > bestOverlap) {
-        bestOverlap = overlap
-        best = i
-      }
-    })
+    const best = getTariffCarouselActiveIndex(root)
     setActive((prev) => (prev === best ? prev : best))
   }, [])
 
@@ -282,12 +310,106 @@ function TariffsMobileCarousel({
     }
   }, [updateActiveFromScroll])
 
-  const scrollToIndex = (i: number) => {
+  const scrollToIndex = useCallback(
+    (i: number, behavior: ScrollBehavior = 'smooth', fromNav = false) => {
+      const root = scrollRef.current
+      if (!root) return
+      const slide = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')[i]
+      if (!slide) return
+      if (fromNav) skipOneStepClampRef.current = true
+      slide.scrollIntoView({ behavior, inline: 'start', block: 'nearest' })
+    },
+    [],
+  )
+
+  const clampScrollToAdjacentSlide = useCallback(() => {
+    if (skipOneStepClampRef.current) {
+      skipOneStepClampRef.current = false
+      return
+    }
+    const root = scrollRef.current
+    const gesture = gestureRef.current
+    if (!root || !gesture || gesture.intendedIndex === null) return
+
+    const current = getTariffCarouselActiveIndex(root)
+    if (gesture.intendedIndex !== current) scrollToIndex(gesture.intendedIndex, 'auto')
+    gestureRef.current = null
+  }, [scrollToIndex])
+
+  useEffect(() => {
     const root = scrollRef.current
     if (!root) return
-    const slide = root.querySelectorAll<HTMLElement>('[data-tariff-slide]')[i]
-    if (!slide) return
-    slide.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+
+    let scrollEndFallbackTimer = 0
+    const scheduleScrollEndFallback = () => {
+      window.clearTimeout(scrollEndFallbackTimer)
+      scrollEndFallbackTimer = window.setTimeout(() => clampScrollToAdjacentSlide(), 320)
+    }
+
+    const onTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      if (!touch) return
+      const anchor = getTariffCarouselActiveIndex(root)
+      const bounds = getTariffCarouselScrollBounds(root, anchor)
+      if (!bounds) return
+      skipOneStepClampRef.current = false
+      gestureRef.current = {
+        anchor,
+        startX: touch.clientX,
+        minScrollLeft: bounds.minScrollLeft,
+        maxScrollLeft: bounds.maxScrollLeft,
+        intendedIndex: null,
+      }
+    }
+
+    const onTouchMove = () => {
+      const gesture = gestureRef.current
+      if (!gesture) return
+      if (root.scrollLeft < gesture.minScrollLeft) root.scrollLeft = gesture.minScrollLeft
+      if (root.scrollLeft > gesture.maxScrollLeft) root.scrollLeft = gesture.maxScrollLeft
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const touch = e.changedTouches[0]
+      const gesture = gestureRef.current
+      if (!touch || !gesture) return
+
+      const n = root.querySelectorAll('[data-tariff-slide]').length
+      const dx = gesture.startX - touch.clientX
+      let target = gesture.anchor
+      if (Math.abs(dx) >= TARIFF_CAROUSEL_SWIPE_THRESHOLD_PX) {
+        target = dx > 0 ? gesture.anchor + 1 : gesture.anchor - 1
+      }
+      target = Math.max(0, Math.min(n - 1, target))
+      gestureRef.current = { ...gesture, intendedIndex: target }
+      scrollToIndex(target, 'auto')
+      scheduleScrollEndFallback()
+    }
+
+    const onScrollEnd = () => {
+      window.clearTimeout(scrollEndFallbackTimer)
+      clampScrollToAdjacentSlide()
+    }
+
+    root.addEventListener('touchstart', onTouchStart, { passive: true })
+    root.addEventListener('touchmove', onTouchMove, { passive: true })
+    root.addEventListener('touchend', onTouchEnd, { passive: true })
+    root.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    root.addEventListener('scrollend', onScrollEnd, { passive: true })
+
+    return () => {
+      window.clearTimeout(scrollEndFallbackTimer)
+      root.removeEventListener('touchstart', onTouchStart)
+      root.removeEventListener('touchmove', onTouchMove)
+      root.removeEventListener('touchend', onTouchEnd)
+      root.removeEventListener('touchcancel', onTouchEnd)
+      root.removeEventListener('scrollend', onScrollEnd)
+    }
+  }, [clampScrollToAdjacentSlide, scrollToIndex])
+
+  const scrollToIndexFromNav = (i: number) => {
+    gestureRef.current = null
+    scrollToIndex(i, 'smooth', true)
   }
 
   const n = cardPeriods.length
@@ -307,7 +429,7 @@ function TariffsMobileCarousel({
           <div
             key={periods[0].slug}
             data-tariff-slide
-            className="flex min-h-0 w-[min(22rem,calc(100%-1.9rem))] shrink-0 snap-start flex-col self-stretch"
+            className="flex min-h-0 w-[min(22rem,calc(100%-1.9rem))] shrink-0 snap-always snap-start flex-col self-stretch"
           >
             <TariffPlanCard
               layout="carousel"
@@ -333,7 +455,7 @@ function TariffsMobileCarousel({
               'h-2 rounded-full transition-[width,background-color] duration-200',
               i === active ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/35 hover:bg-muted-foreground/55',
             )}
-            onClick={() => scrollToIndex(i)}
+            onClick={() => scrollToIndexFromNav(i)}
           />
         ))}
       </nav>
