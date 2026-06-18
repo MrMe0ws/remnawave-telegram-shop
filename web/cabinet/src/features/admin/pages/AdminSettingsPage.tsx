@@ -460,13 +460,19 @@ export default function AdminSettingsPage() {
     [isSearching, t],
   )
 
+  // Expand all matching groups while searching; collapse only when search ends.
+  // Do not reset on visibleGroups/data refetch — that would close sections after saving.
   useEffect(() => {
     if (isSearching) {
       setExpandedGroups(new Set(visibleGroups.map((g) => g.id)))
-      return
     }
-    setExpandedGroups(new Set())
   }, [isSearching, visibleGroups])
+
+  useEffect(() => {
+    if (!isSearching) {
+      setExpandedGroups(new Set())
+    }
+  }, [isSearching])
 
   const handleToggle = useCallback(
     async (key: string, checked: boolean) => {
