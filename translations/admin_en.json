@@ -1,5 +1,7 @@
 {
   "admin_panel_button": "⚙️ Admin",
+  "admin_panel_button_tg": "⚙️ Admin TG",
+  "admin_panel_button_cab": "⚙️ Admin Web",
   "admin_panel_title": "<b>Admin panel</b>\nChoose an action:",
   "admin_broadcast": "📢 Broadcast",
   "admin_sync": "🔄 Sync",

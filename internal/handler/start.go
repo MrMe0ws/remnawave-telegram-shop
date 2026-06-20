@@ -312,9 +312,7 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 	if cabinetTelegramMinimalismActive() {
 		kb := h.buildCabinetMinimalismCoreRows(langCode, existingCustomer)
 		if existingCustomer != nil && existingCustomer.TelegramID == config.GetAdminTelegramId() {
-			kb = append(kb, []models.InlineKeyboardButton{
-				h.translation.WithButton(langCode, "admin_panel_button", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel}),
-			})
+			kb = append(kb, h.adminStartKeyboardRow(langCode))
 		}
 		return kb
 	}
@@ -359,10 +357,23 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 	})
 
 	if existingCustomer.TelegramID == config.GetAdminTelegramId() {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "admin_panel_button", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel}),
-		})
+		inlineKeyboard = append(inlineKeyboard, h.adminStartKeyboardRow(langCode))
 	}
 
 	return inlineKeyboard
+}
+
+// adminStartKeyboardRow — одна строка кнопок админа: TG-админка и/или WebApp кабинета (/cabinet/admin).
+func (h Handler) adminStartKeyboardRow(langCode string) []models.InlineKeyboardButton {
+	if u := cabinetWebAppURL("/cabinet/admin"); u != "" {
+		return []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "admin_panel_button_tg", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel}),
+			h.translation.WithButton(langCode, "admin_panel_button_cab", models.InlineKeyboardButton{
+				WebApp: &models.WebAppInfo{URL: u},
+			}),
+		}
+	}
+	return []models.InlineKeyboardButton{
+		h.translation.WithButton(langCode, "admin_panel_button", models.InlineKeyboardButton{CallbackData: CallbackAdminPanel}),
+	}
 }

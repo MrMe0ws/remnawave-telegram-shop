@@ -1,5 +1,7 @@
 {
   "admin_panel_button": "⚙️ Админ",
+  "admin_panel_button_tg": "⚙️ Админ TG",
+  "admin_panel_button_cab": "⚙️ Админ каб.",
   "admin_panel_title": "<b>Админ-панель</b>\nВыберите действие:",
   "admin_broadcast": "📢 Рассылка",
   "admin_sync": "🔄 Синхронизация",
