@@ -160,7 +160,7 @@
       "connectDevice": "Connect device",
       "unavailableWhileInactive": "Unavailable while subscription is inactive",
       "myDevices": "My devices",
-      "devicesUnavailable": "Device management is unavailable for this subscription type.",
+      "devicesUnavailable": "Device management is temporarily unavailable. Refresh the page or contact support.",
       "devicesLimitLine": "Connected: {{used}} / {{limit}}",
       "noDevices": "No HWID devices connected yet.",
       "deleteDevice": "Delete",

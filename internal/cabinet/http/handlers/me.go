@@ -724,16 +724,13 @@ func (h *MeHandler) GetDevices(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: false, Devices: []meDeviceItem{}})
 		return
 	}
-	if c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID) {
-		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: false, Devices: []meDeviceItem{}})
-		return
-	}
-	userUUID, limit, err := h.rw.GetUserInfo(r.Context(), c.TelegramID)
+	rwUser, err := cabsvc.ResolveRemnawaveCustomerUser(r.Context(), h.rw, c)
+	limit := cabsvc.HwidDeviceLimitFromUser(rwUser)
 	if err != nil {
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: true, DeviceLimit: limit, Devices: []meDeviceItem{}})
 		return
 	}
-	devs, err := h.rw.GetUserDevicesByUuid(r.Context(), userUUID)
+	devs, err := h.rw.GetUserDevicesByUuid(r.Context(), rwUser.UUID.String())
 	if err != nil {
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: true, DeviceLimit: limit, Devices: []meDeviceItem{}})
 		return
@@ -797,16 +794,16 @@ func (h *MeHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c, err := h.customers.FindById(r.Context(), link.CustomerID)
-	if err != nil || c == nil || c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID) {
+	if err != nil || c == nil {
 		http.Error(w, "subscription not found", http.StatusNotFound)
 		return
 	}
-	userUUID, _, err := h.rw.GetUserInfo(r.Context(), c.TelegramID)
+	rwUser, err := cabsvc.ResolveRemnawaveCustomerUser(r.Context(), h.rw, c)
 	if err != nil {
 		http.Error(w, "subscription not found", http.StatusNotFound)
 		return
 	}
-	if err := h.rw.DeleteUserDevice(r.Context(), userUUID, hwid); err != nil {
+	if err := h.rw.DeleteUserDevice(r.Context(), rwUser.UUID.String(), hwid); err != nil {
 		slog.Warn("me: delete device failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "delete device failed", http.StatusBadRequest)
 		return
