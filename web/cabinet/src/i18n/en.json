@@ -1443,7 +1443,8 @@
             "content": "Links & support"
           },
           "cabinet": {
-            "decor": "Appearance"
+            "decor": "Appearance",
+            "deeplink": "Connection deep links"
           },
           "tariffs": {
             "showcase": "Tariff showcase"
@@ -1527,6 +1528,8 @@
           "WHITELISTED_TELEGRAM_IDS": { "label": "Whitelisted Telegram IDs", "hint": "Skip name filter" },
           "CABINET_LIGHT_THEME_ENABLED": { "label": "Light theme", "hint": "Turn off to force dark theme for all users" },
           "CABINET_DECOR_THEME": { "label": "Decor theme", "hint": "Applied to all cabinet users without bot restart" },
+          "CABINET_DEEPLINK_HAPP_ENCRYPT": { "label": "Encrypt Happ deep link", "hint": "When connecting Happ, return an encrypted link (happ://crypt5/) so the subscription can't be viewed/edited in the app. The subscription URL is sent to the third-party service crypto.happ.su" },
+          "CABINET_DEEPLINK_INCY_ENCRYPT": { "label": "Encrypt INCY deep link", "hint": "When connecting INCY, return an obfuscated link (incy://crypt1/) that hides the subscription URL from chat scanners and screenshots. This is obfuscation, not full protection" },
           "CABINET_TARIFF_PRICE_DISPLAY": {
             "label": "Showcase price display",
             "hint": "Cabinet Tariffs page (tariffs mode): monthly price or effective ₽/month when paying for 12 months"

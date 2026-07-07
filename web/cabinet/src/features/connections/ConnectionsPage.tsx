@@ -20,6 +20,7 @@ import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { cn } from '@/lib/utils'
 import {
   buildCabinetDeepLinkRedirectUrl,
@@ -60,6 +61,8 @@ const uiText = {
     addSubscription: 'Добавить подписку',
     configError: 'Не удалось загрузить конфиг приложений',
     noSubscription: 'Подписка не найдена. Сначала оформите тариф.',
+    encryptedLoading: 'Готовим защищённую ссылку…',
+    encryptedError: 'Не удалось подготовить защищённую ссылку. Попробуйте ещё раз.',
   },
   en: {
     pageTitle: 'Setup',
@@ -70,6 +73,8 @@ const uiText = {
     addSubscription: 'Add subscription',
     configError: 'Could not load app config',
     noSubscription: 'Subscription not found. Purchase a plan first.',
+    encryptedLoading: 'Preparing secure link…',
+    encryptedError: 'Could not prepare the secure link. Please try again.',
   },
 } as const
 
@@ -320,6 +325,8 @@ export default function ConnectionsPage() {
     retry: 1,
   })
 
+  const { data: bootstrap } = useAuthBootstrap()
+
   const subscriptionLink = (subscription?.subscription_link || '').trim()
   const text = uiText[currentLanguage]
 
@@ -361,12 +368,49 @@ export default function ConnectionsPage() {
     [apps, selectedAppId],
   )
 
+  // Для Happ/INCY при включённом админом шифровании deep link формируется на
+  // бэкенде (happ://crypt5/ или incy://crypt1/), чтобы ссылку подписки нельзя было
+  // подсмотреть/отредактировать в приложении и она не читалась сканерами чатов.
+  const encryptApp = useMemo<'happ' | 'incy' | ''>(() => {
+    const s = (selectedApp?.urlScheme || '').trim().toLowerCase()
+    if (s.startsWith('happ://') && bootstrap?.deeplink_happ_encrypt) return 'happ'
+    if (s.startsWith('incy://') && bootstrap?.deeplink_incy_encrypt) return 'incy'
+    return ''
+  }, [selectedApp, bootstrap])
+
+  // Предзагружаем зашифрованную ссылку заранее, чтобы клик по кнопке оставался
+  // синхронным (иначе await ломает открытие deep link на iOS/Safari).
+  const {
+    data: encryptedDeeplink,
+    isFetching: encryptedDeeplinkLoading,
+    isError: encryptedDeeplinkError,
+    refetch: refetchEncryptedDeeplink,
+  } = useQuery({
+    queryKey: ['deeplink', encryptApp, subscriptionLink],
+    queryFn: () => api.deeplink(encryptApp as 'happ' | 'incy'),
+    enabled: !!encryptApp && !!subscriptionLink,
+    staleTime: 0,
+    retry: 1,
+  })
+
+  const encryptedHref = (encryptedDeeplink?.deeplink || '').trim()
+
   function openAddSubscription() {
     if (!selectedApp || !subscriptionLink) return
     const scheme = (selectedApp.urlScheme || '').trim()
     if (!scheme) return
-    const payload = subscriptionPayloadForScheme(scheme, subscriptionLink, selectedApp.isNeedBase64Encoding)
-    const href = `${scheme}${payload}`
+    let href: string
+    if (encryptApp) {
+      if (!encryptedHref) {
+        // Ещё не готово или прошлая попытка упала — пробуем получить ссылку снова.
+        void refetchEncryptedDeeplink()
+        return
+      }
+      href = encryptedHref
+    } else {
+      const payload = subscriptionPayloadForScheme(scheme, subscriptionLink, selectedApp.isNeedBase64Encoding)
+      href = `${scheme}${payload}`
+    }
     if (needsTelegramDeepLinkWorkaround()) {
       openCabinetDeepLinkRedirectExternally(href)
       return
@@ -479,13 +523,25 @@ export default function ConnectionsPage() {
                       type="button"
                       size="sm"
                       onClick={openAddSubscription}
-                      disabled={!subscriptionLink || !(selectedApp.urlScheme || '').trim()}
+                      disabled={
+                        !subscriptionLink ||
+                        !(selectedApp.urlScheme || '').trim() ||
+                        (!!encryptApp && encryptedDeeplinkLoading)
+                      }
                     >
                       <Plus size={14} />
                       {text.addSubscription}
                     </Button>
                   }
-                  footerHint={!subscriptionLink ? text.noSubscription : ''}
+                  footerHint={
+                    !subscriptionLink
+                      ? text.noSubscription
+                      : encryptedDeeplinkError
+                        ? text.encryptedError
+                        : encryptApp && encryptedDeeplinkLoading
+                          ? text.encryptedLoading
+                          : ''
+                  }
                 />
 
                 {selectedApp.additionalAfterAddSubscriptionStep && (

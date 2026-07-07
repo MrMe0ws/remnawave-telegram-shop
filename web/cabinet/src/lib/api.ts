@@ -94,6 +94,10 @@ export interface AuthBootstrapResponse {
   support_chat_enabled?: boolean
   /** false — только тёмная тема, переключатель в шапке скрыт (CABINET_LIGHT_THEME_ENABLED). */
   light_theme_enabled?: boolean
+  /** true — при подключении Happ отдавать зашифрованный deep link (happ://crypt5/…) вместо happ://add/ (CABINET_DEEPLINK_HAPP_ENCRYPT). */
+  deeplink_happ_encrypt?: boolean
+  /** true — при подключении INCY отдавать обфусцированный deep link (incy://crypt1/…) вместо incy://add/ (CABINET_DEEPLINK_INCY_ENCRYPT). */
+  deeplink_incy_encrypt?: boolean
   /** Декоративная тема кабинета (CABINET_DECOR_THEME) */
   decor_theme?:
     | 'off'
@@ -828,6 +832,10 @@ export const api = {
   // Subscription
   subscription: () =>
     request<SubscriptionResponse>('GET', '/me/subscription'),
+
+  /** Зашифрованный deep link подключения (happ://crypt5/… или incy://crypt1/…). */
+  deeplink: (app: 'happ' | 'incy') =>
+    request<{ deeplink: string }>('GET', `/me/deeplink?app=${encodeURIComponent(app)}`),
 
   loyalty: () => request<LoyaltyDashboardResponse>('GET', '/me/loyalty'),
 

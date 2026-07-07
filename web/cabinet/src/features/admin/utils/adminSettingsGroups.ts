@@ -384,6 +384,12 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       icon: Sparkles,
       keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME'],
     },
+    {
+      id: 'deeplink',
+      titleKey: 'admin.settings.subsections.cabinet.deeplink',
+      icon: Shield,
+      keys: ['CABINET_DEEPLINK_HAPP_ENCRYPT', 'CABINET_DEEPLINK_INCY_ENCRYPT'],
+    },
   ],
   tariffs: [
     {

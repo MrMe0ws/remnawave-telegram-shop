@@ -853,6 +853,18 @@ func registerAPIRoutes(
 			),
 		}),
 	)
+	// GET /me/deeplink?app=happ|incy — зашифрованный deep link подключения.
+	// Те же барьеры, что и /me/subscription: по сути отдаёт ссылку подписки.
+	api.Handle("/cabinet/api/me/deeplink",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(subscription.Deeplink),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("deeplink")),
+			),
+		}),
+	)
 	api.Handle("/cabinet/api/me/loyalty",
 		methodRouter(map[string]http.Handler{
 			http.MethodGet: middleware.Chain(

@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Шифрование deep link подключения** (`CABINET_DEEPLINK_HAPP_ENCRYPT`, `CABINET_DEEPLINK_INCY_ENCRYPT`): на странице «Установка» (`/cabinet/connections`) кнопка «Добавить подписку» открывает зашифрованный deep link вместо обычного — `happ://crypt5/` (через официальный API `crypto.happ.su`) и `incy://crypt1/` (обфускация AES-256-GCM, порт `@incy/link-encoder`). Два независимых тумблера, default `false`.
+- Админка: **Настройки бота → Оформление кабинета → подсекция «Deep link подключения»** (группа `cabinet`, hot-reload без рестарта).
+- API: `GET /cabinet/api/me/deeplink?app=happ|incy` (за `RequireAuth` + `RequireVerifiedEmail`, rate-limit 60 req/min/аккаунт; ответ `{"deeplink":"…"}`, ссылка подписки не логируется). Bootstrap: поля `deeplink_happ_encrypt`, `deeplink_incy_encrypt`.
+
+### Technical
+
+- Пакет `internal/cabinet/deeplink/` (`happ.go`, `incy.go`, `incy_keymat.go`, `util.go`) + known-answer тест совместимости с клиентом INCY (`incy_test.go`); config-getters `internal/cabinet/config/deeplink.go`; whitelist в `settings_registry.go`.
+- Док: `.cursor/docs/frontend/cabinet-connection-deeplink.md`.
+- **Trade-off Happ:** при `CABINET_DEEPLINK_HAPP_ENCRYPT=true` ссылка подписки уходит на сторонний сервис `crypto.happ.su`. INCY-ключ публичный (зашит в клиенты) — это обфускация от сканеров чатов, не защита секретности.
+
 ## [4.11.3] - 2026-06-17
 
 ### Added

@@ -20,7 +20,9 @@ export function useAdminBotSettingsPatch() {
       void queryClient.invalidateQueries({ queryKey: ['admin-bootstrap'] })
       if (
         'CABINET_LIGHT_THEME_ENABLED' in variables ||
-        'CABINET_DECOR_THEME' in variables
+        'CABINET_DECOR_THEME' in variables ||
+        'CABINET_DEEPLINK_HAPP_ENCRYPT' in variables ||
+        'CABINET_DEEPLINK_INCY_ENCRYPT' in variables
       ) {
         void queryClient.invalidateQueries({ queryKey: ['auth-bootstrap'] })
       }

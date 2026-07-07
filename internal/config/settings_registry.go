@@ -283,6 +283,16 @@ func RuntimeSettingsRegistry() []SettingField {
 			Apply:      applyCabinetDecorTheme(),
 			Current:    cabinetDecorThemeCurrent(),
 		},
+		{
+			Key: "CABINET_DEEPLINK_HAPP_ENCRYPT", Group: "cabinet", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_DEEPLINK_HAPP_ENCRYPT"),
+			Current: cabinetBoolCurrent("CABINET_DEEPLINK_HAPP_ENCRYPT", false),
+		},
+		{
+			Key: "CABINET_DEEPLINK_INCY_ENCRYPT", Group: "cabinet", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_DEEPLINK_INCY_ENCRYPT"),
+			Current: cabinetBoolCurrent("CABINET_DEEPLINK_INCY_ENCRYPT", false),
+		},
 
 		// --- tariffs (витрина кабинета, режим sales tariffs) ---
 		{
@@ -606,6 +616,17 @@ func cabinetLightThemeCurrent() func() string {
 			return "true"
 		}
 		return v
+	}
+}
+
+// cabinetBoolCurrent — Current для bool-настройки с явным дефолтом при пустом env.
+func cabinetBoolCurrent(key string, def bool) func() string {
+	return func() string {
+		v := strings.TrimSpace(effectiveEnvUnderRLock(key))
+		if v == "" {
+			return boolStr(def)
+		}
+		return strings.ToLower(v)
 	}
 }
 

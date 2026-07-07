@@ -139,6 +139,10 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"pwa_short_name":         cabcfg.PWAShortName(),
 		"light_theme_enabled":    cabcfg.LightThemeEnabled(),
 		"decor_theme":            cabcfg.DecorTheme(),
+		// Шифрование deep link'ов подключения (см. /me/deeplink): фронт узнаёт,
+		// что для Happ/INCY надо запросить зашифрованную ссылку вместо .../add/.
+		"deeplink_happ_encrypt": cabcfg.DeeplinkHappEncryptEnabled(),
+		"deeplink_incy_encrypt": cabcfg.DeeplinkIncyEncryptEnabled(),
 		"payment_providers": map[string]bool{
 			"yookassa":          botcfg.IsYookasaEnabled(),
 			"cryptopay":         botcfg.IsCryptoPayEnabled(),
