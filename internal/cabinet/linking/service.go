@@ -1118,7 +1118,7 @@ func (s *MergeService) syncRemnawaveWinnerAfterMerge(ctx context.Context, winner
 	}
 
 	req := &remnawave.UpdateUserRequest{UUID: &target.UUID}
-	tid := int(realTelegramID)
+	tid := realTelegramID
 	req.TelegramID = &tid
 	if name := strings.TrimSpace(telegramUsername); name != "" {
 		req.Description = &name

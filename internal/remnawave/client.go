@@ -3,6 +3,8 @@ package remnawave
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -595,7 +597,7 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 		TrafficLimitBytes:    &tl,
 	}
 	if !utils.IsSyntheticTelegramID(telegramId) {
-		tid := int(telegramId)
+		tid := telegramId
 		createReq.TelegramID = &tid
 	}
 	if isTrialUser {
@@ -778,8 +780,14 @@ func (r *Client) UpdateUserDeviceLimitByCustomer(ctx context.Context, customerID
 // Utility functions
 // ---------------------------------------------------------------------------
 
+// Spec CreateUserRequestDto.username: pattern ^[a-zA-Z0-9_-]+$, 3..36 chars.
 func generateUsername(customerId int64, telegramId int64) string {
-	return fmt.Sprintf("%d_%d", customerId, telegramId)
+	u := fmt.Sprintf("%d_%d", customerId, telegramId)
+	if len(u) <= 36 {
+		return u
+	}
+	h := sha256.Sum256([]byte(u))
+	return "u_" + hex.EncodeToString(h[:16])
 }
 
 // isValidTag проверяет, соответствует ли тег формату ^[A-Z0-9_]+$

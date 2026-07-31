@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Remnawave 2.8.x**: `telegramId` в create/update — `int64` (без усечения); `generateUsername` укладывается в лимит API 3–36 символов (fallback `u_`+sha256 при длинных id).
+
 ### Added
 
 - **Шифрование deep link подключения** (`CABINET_DEEPLINK_HAPP_ENCRYPT`, `CABINET_DEEPLINK_INCY_ENCRYPT`): на странице «Установка» (`/cabinet/connections`) кнопка «Добавить подписку» открывает зашифрованный deep link вместо обычного — `happ://crypt5/` (через официальный API `crypto.happ.su`) и `incy://crypt1/` (обфускация AES-256-GCM, порт `@incy/link-encoder`). Два независимых тумблера, default `false`.

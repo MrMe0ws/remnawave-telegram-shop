@@ -164,7 +164,7 @@ func (r *Client) createUserWithTariffProfile(ctx context.Context, customerID int
 		TrafficLimitBytes:    &tl,
 	}
 	if !utils.IsSyntheticTelegramID(telegramID) {
-		tid := int(telegramID)
+		tid := telegramID
 		createReq.TelegramID = &tid
 	}
 	if profile.BaseDeviceLimit > 0 {

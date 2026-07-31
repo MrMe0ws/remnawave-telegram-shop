@@ -102,7 +102,7 @@ type CreateUserRequest struct {
 	ActiveInternalSquads *[]uuid.UUID `json:"activeInternalSquads,omitempty"`
 	ExternalSquadUuid    *uuid.UUID   `json:"externalSquadUuid,omitempty"`
 	Tag                  *string      `json:"tag,omitempty"`
-	TelegramID           *int         `json:"telegramId,omitempty"`
+	TelegramID           *int64       `json:"telegramId,omitempty"`
 	Description          *string      `json:"description,omitempty"`
 }
 
@@ -110,7 +110,7 @@ type CreateUserRequest struct {
 type UpdateUserRequest struct {
 	UUID                 *uuid.UUID  `json:"uuid,omitempty"`
 	Username             *string     `json:"username,omitempty"`
-	TelegramID           *int        `json:"telegramId,omitempty"`
+	TelegramID           *int64      `json:"telegramId,omitempty"`
 	Status               string      `json:"status,omitempty"`
 	ExpireAt             *time.Time  `json:"expireAt,omitempty"`
 	TrafficLimitBytes    *int64      `json:"trafficLimitBytes,omitempty"`
