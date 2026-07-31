@@ -102,6 +102,11 @@ go.work.sum
 
 # env file
 .env
+.env.release
+RELEASE_NOTES.md
+
+# Dev-only release announcer (not part of shop runtime image)
+tools/
 
 # Frontend: локальные зависимости и артефакты сборки не должны попадать в образ
 # (иначе Windows node_modules перезапишет npm ci в Alpine и tsc упадёт)
