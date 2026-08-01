@@ -4,6 +4,7 @@ import App from './App'
 import './index.css'
 import { initCabinetI18n } from './i18n'
 import { loadTelegramWebAppScriptIfNeeded } from '@/lib/telegram-web-app-loader'
+import { requestDesktopFullscreenIfNeeded } from '@/lib/telegram-web-app'
 import { useAuthStore } from '@/store/auth'
 
 // Применяем тему до первого рендера (избегаем мигания).
@@ -15,8 +16,13 @@ if (savedTheme === 'light') {
   document.documentElement.classList.add('dark')
 }
 
-window.Telegram?.WebApp?.ready?.()
-window.Telegram?.WebApp?.expand?.()
+function bootTelegramWebAppShell(): void {
+  window.Telegram?.WebApp?.ready?.()
+  window.Telegram?.WebApp?.expand?.()
+  requestDesktopFullscreenIfNeeded()
+}
+
+bootTelegramWebAppShell()
 
 void initCabinetI18n().then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -27,8 +33,7 @@ void initCabinetI18n().then(() => {
 
   // Mini App: SDK в фоне; после загрузки — ready/expand и повтор автологина (первый initialize мог быть без initData).
   void loadTelegramWebAppScriptIfNeeded().then(() => {
-    window.Telegram?.WebApp?.ready?.()
-    window.Telegram?.WebApp?.expand?.()
+    bootTelegramWebAppShell()
     void useAuthStore.getState().tryTelegramMiniAppAfterSdk()
   })
 })

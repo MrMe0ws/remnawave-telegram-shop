@@ -21,6 +21,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
+import { hapticImpactLight } from '@/lib/telegram-web-app'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useAuthStore } from '@/store/auth'
 import { CabinetDecorLayer } from '@/features/decor/CabinetDecorLayer'
@@ -341,7 +342,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                 aria-label={t('nav.moreMenu')}
                 title={t('nav.moreMenu')}
                 className="size-10"
-                onClick={() => setMenuOpen((o) => !o)}
+                onClick={() => {
+                  hapticImpactLight()
+                  setMenuOpen((o) => !o)
+                }}
               >
                 {menuOpen ? <X className="size-[18px]" strokeWidth={1.75} /> : <Menu className="size-[18px]" strokeWidth={1.75} />}
               </Button>
@@ -596,6 +600,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 id={to === '/profile' ? 'cabinet-onboarding-profile-nav-mobile' : undefined}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
+                onClick={() => hapticImpactLight()}
                 className={cn(
                   'flex min-w-0 flex-1 max-w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-muted-foreground transition-colors',
                   active && cn('bg-secondary', navAccentActiveClass),
