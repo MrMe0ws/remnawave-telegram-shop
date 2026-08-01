@@ -263,6 +263,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header
         className={cn(
           'relative sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 will-change-transform',
+          // Fullscreen Mini App: контент под статус-баром — отступ сверху от Telegram / iOS safe area.
+          'pt-[max(env(safe-area-inset-top,0px),var(--tg-content-safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px))]',
           !mobileChromeVisible && !menuOpen && 'max-sm:-translate-y-full',
           'cabinet-app-header',
         )}

@@ -1,15 +1,5 @@
-/** Нативные десктоп-клиенты Telegram. */
-const NATIVE_DESKTOP_PLATFORMS = new Set(['tdesktop', 'macos'])
-/** Telegram Web — platform одинаковый на PC и телефоне, нужен доп. фильтр по UA. */
-const WEB_PLATFORMS = new Set(['weba', 'webk', 'web'])
-
 function webApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp
-}
-
-function isMobileUserAgent(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
 }
 
 /** Лёгкая вибрация (Bot API 6.1+). На десктопе/без поддержки — no-op. */
@@ -21,24 +11,29 @@ export function hapticImpactLight(): void {
   }
 }
 
-/** ПК-клиент Mini App (не мобильный Telegram Web). */
-export function isTelegramDesktopPlatform(): boolean {
-  const p = webApp()?.platform
-  if (typeof p !== 'string') return false
-  if (NATIVE_DESKTOP_PLATFORMS.has(p)) return true
-  if (WEB_PLATFORMS.has(p) && !isMobileUserAgent()) return true
-  return false
+/** Цвет статус-бара Telegram в fullscreen (рекомендация Bot API 8.0). */
+function syncTelegramChromeColors(tg: TelegramWebApp): void {
+  const isDark = document.documentElement.classList.contains('dark')
+  // Близко к --background светлой/тёмной темы кабинета
+  const color = isDark ? '#0b1426' : '#f8fafc'
+  try {
+    tg.setHeaderColor?.(color)
+    tg.setBackgroundColor?.(color)
+  } catch {
+    // старые клиенты / без поддержки
+  }
 }
 
 /**
- * На ПК Telegram открывает Mini App в компактном окне «как телефон».
- * Единственный способ сделать окно заметно больше — fullscreen (Bot API 8.0+).
+ * Полноэкранный Mini App (Bot API 8.0+): убирает верхний хедер Telegram
+ * и на мобилке, и на ПК. Без поддержки API — no-op (остаётся обычный expand).
  */
-export function requestDesktopFullscreenIfNeeded(): void {
+export function requestFullscreenIfNeeded(): void {
   const tg = webApp()
-  if (!tg || !isTelegramDesktopPlatform()) return
+  if (!tg) return
   if (tg.isFullscreen) return
   if (typeof tg.isVersionAtLeast === 'function' && !tg.isVersionAtLeast('8.0')) return
+  syncTelegramChromeColors(tg)
   try {
     tg.requestFullscreen?.()
   } catch {

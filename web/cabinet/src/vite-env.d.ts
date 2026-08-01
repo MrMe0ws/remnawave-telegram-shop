@@ -20,7 +20,9 @@ declare global {
     expand?: () => void
     close?: () => void
     isVersionAtLeast?: (version: string) => boolean
-    /** Bot API 8.0+ — полноэкранный режим (на Desktop это единственный способ увеличить окно). */
+    setHeaderColor?: (color: string) => void
+    setBackgroundColor?: (color: string) => void
+    /** Bot API 8.0+ — убирает хедер Telegram (мобилка + desktop). */
     requestFullscreen?: () => void
     exitFullscreen?: () => void
     /** Открыть https-ссылку во внешнем браузере (нужно для обхода webview Desktop). */
