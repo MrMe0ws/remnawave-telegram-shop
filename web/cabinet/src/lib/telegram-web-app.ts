@@ -24,19 +24,74 @@ function syncTelegramChromeColors(tg: TelegramWebApp): void {
   }
 }
 
+function insetTop(inset: { top?: number } | undefined): number {
+  const n = inset?.top
+  return typeof n === 'number' && Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
 /**
- * Полноэкранный Mini App (Bot API 8.0+): убирает верхний хедер Telegram
- * и на мобилке, и на ПК. Без поддержки API — no-op (остаётся обычный expand).
+ * Пишет safe-area в CSS-переменные.
+ * В fullscreen Telegram UI (✕ Закрыть / ⋯) рисуется поверх webview — без contentSafeAreaInset контент залезает под кнопки.
+ */
+export function syncTelegramSafeAreaCssVars(): void {
+  const tg = webApp()
+  if (!tg) return
+  const root = document.documentElement
+  const safeTop = insetTop(tg.safeAreaInset)
+  const contentTop = insetTop(tg.contentSafeAreaInset)
+  let top = Math.max(safeTop, contentTop)
+
+  // Пока API ещё не прислал insets после requestFullscreen — резерв под status bar + ряд кнопок TG.
+  if (tg.isFullscreen && top < 56) {
+    top = 96
+  }
+
+  root.style.setProperty('--cabinet-tg-safe-top', `${top}px`)
+  if (tg.safeAreaInset) {
+    root.style.setProperty('--tg-safe-area-inset-top', `${safeTop}px`)
+  }
+  if (tg.contentSafeAreaInset) {
+    root.style.setProperty('--tg-content-safe-area-inset-top', `${contentTop}px`)
+  }
+}
+
+let safeAreaListenersBound = false
+
+/** Подписка на смену safe area / fullscreen (идемпотентно). */
+export function bindTelegramSafeAreaListeners(): void {
+  const tg = webApp()
+  if (!tg || safeAreaListenersBound) return
+  const refresh = () => syncTelegramSafeAreaCssVars()
+  if (typeof tg.onEvent !== 'function') {
+    refresh()
+    return
+  }
+  tg.onEvent('safeAreaChanged', refresh)
+  tg.onEvent('contentSafeAreaChanged', refresh)
+  tg.onEvent('fullscreenChanged', refresh)
+  safeAreaListenersBound = true
+  refresh()
+}
+
+/**
+ * Полноэкранный Mini App (Bot API 8.0+): убирает непрозрачный хедер Telegram.
+ * Кнопки ✕/⋯ остаются оверлеем — под них нужен contentSafeAreaInset.
  */
 export function requestFullscreenIfNeeded(): void {
   const tg = webApp()
   if (!tg) return
-  if (tg.isFullscreen) return
   if (typeof tg.isVersionAtLeast === 'function' && !tg.isVersionAtLeast('8.0')) return
   syncTelegramChromeColors(tg)
-  try {
-    tg.requestFullscreen?.()
-  } catch {
-    // UNSUPPORTED / клиент без fullscreen
+  bindTelegramSafeAreaListeners()
+  if (!tg.isFullscreen) {
+    try {
+      tg.requestFullscreen?.()
+    } catch {
+      // UNSUPPORTED / клиент без fullscreen
+    }
   }
+  syncTelegramSafeAreaCssVars()
+  // Insets часто приходят кадром позже после входа в fullscreen.
+  window.setTimeout(() => syncTelegramSafeAreaCssVars(), 50)
+  window.setTimeout(() => syncTelegramSafeAreaCssVars(), 300)
 }

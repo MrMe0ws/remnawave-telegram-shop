@@ -8,6 +8,13 @@ declare global {
     selectionChanged?: () => TelegramWebAppHapticFeedback
   }
 
+  interface TelegramSafeAreaInset {
+    top: number
+    bottom: number
+    left: number
+    right: number
+  }
+
   interface TelegramWebApp {
     initData: string
     initDataUnsafe: Record<string, unknown>
@@ -15,6 +22,8 @@ declare global {
     platform?: string
     version?: string
     isFullscreen?: boolean
+    safeAreaInset?: TelegramSafeAreaInset
+    contentSafeAreaInset?: TelegramSafeAreaInset
     HapticFeedback?: TelegramWebAppHapticFeedback
     ready: () => void
     expand?: () => void
@@ -22,9 +31,11 @@ declare global {
     isVersionAtLeast?: (version: string) => boolean
     setHeaderColor?: (color: string) => void
     setBackgroundColor?: (color: string) => void
-    /** Bot API 8.0+ — убирает хедер Telegram (мобилка + desktop). */
+    /** Bot API 8.0+ — убирает непрозрачный хедер Telegram (кнопки ✕/⋯ остаются оверлеем). */
     requestFullscreen?: () => void
     exitFullscreen?: () => void
+    onEvent?: (eventType: string, callback: () => void) => void
+    offEvent?: (eventType: string, callback: () => void) => void
     /** Открыть https-ссылку во внешнем браузере (нужно для обхода webview Desktop). */
     openLink?: (url: string, options?: { try_instant_view?: boolean }) => void
   }

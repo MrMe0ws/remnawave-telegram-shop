@@ -128,6 +128,20 @@
     background-image: var(--cabinet-dark-bg-image);
   }
 
+  /*
+   * Fullscreen Mini App: ✕/⋯ Telegram рисуются поверх webview.
+   * Отступ задаём в CSS (не через Tailwind arbitrary max() — запятые там часто ломают класс).
+   * --cabinet-tg-safe-top пишет syncTelegramSafeAreaCssVars().
+   */
+  .cabinet-app-header {
+    padding-top: max(
+      env(safe-area-inset-top, 0px),
+      var(--tg-content-safe-area-inset-top, 0px),
+      var(--tg-safe-area-inset-top, 0px),
+      var(--cabinet-tg-safe-top, 0px)
+    );
+  }
+
   /* Слой под контентом кабинета (поверх сплошного bg у layout не кладём — иначе градиент не виден). */
   .cabinet-shell-gradient {
     position: absolute;

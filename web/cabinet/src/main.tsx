@@ -4,7 +4,7 @@ import App from './App'
 import './index.css'
 import { initCabinetI18n } from './i18n'
 import { loadTelegramWebAppScriptIfNeeded } from '@/lib/telegram-web-app-loader'
-import { requestFullscreenIfNeeded } from '@/lib/telegram-web-app'
+import { bindTelegramSafeAreaListeners, requestFullscreenIfNeeded } from '@/lib/telegram-web-app'
 import { useAuthStore } from '@/store/auth'
 
 // Применяем тему до первого рендера (избегаем мигания).
@@ -19,8 +19,9 @@ if (savedTheme === 'light') {
 function bootTelegramWebAppShell(): void {
   window.Telegram?.WebApp?.ready?.()
   window.Telegram?.WebApp?.expand?.()
-  // Fullscreen убирает системный хедер Telegram (нужен Bot API 8.0+ / свежий клиент).
+  // Fullscreen убирает непрозрачный хедер TG; safe-area двигает наш хедер ниже ✕/⋯.
   requestFullscreenIfNeeded()
+  bindTelegramSafeAreaListeners()
 }
 
 bootTelegramWebAppShell()
