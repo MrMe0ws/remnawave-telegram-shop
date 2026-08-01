@@ -8,18 +8,11 @@ import (
 )
 
 func createGitHubRelease(version, notes, repo string) error {
-	version = strings.TrimSpace(version)
-	if version == "" {
+	tag := normalizeReleaseVersion(version)
+	if tag == "" {
 		return fmt.Errorf("version is empty")
 	}
-	tag := version
-	if !strings.HasPrefix(tag, "v") {
-		tag = "v" + version
-	}
-	title := version
-	if strings.HasPrefix(title, "v") {
-		title = strings.TrimPrefix(title, "v")
-	}
+	title := tag
 
 	args := []string{
 		"release", "create", tag,

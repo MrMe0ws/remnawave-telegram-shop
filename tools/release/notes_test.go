@@ -72,6 +72,27 @@ func TestParseVersionLineParen(t *testing.T) {
 	}
 }
 
+func TestNormalizeReleaseVersionStripsV(t *testing.T) {
+	cases := map[string]string{
+		"4.12.2":  "4.12.2",
+		"v4.12.2": "4.12.2",
+		" v4.12 ": "4.12",
+		"":        "",
+	}
+	for in, want := range cases {
+		if got := normalizeReleaseVersion(in); got != want {
+			t.Fatalf("normalizeReleaseVersion(%q)=%q, want %q", in, got, want)
+		}
+	}
+	v, _, err := parseVersionLine("v4.12.2 https://github.com/MrMe0ws/remnawave-telegram-shop/releases/tag/4.12.2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "4.12.2" {
+		t.Fatalf("parseVersionLine should strip v, got %q", v)
+	}
+}
+
 func TestFormatTelegramHTML(t *testing.T) {
 	n, err := ParseReleaseNotes(sampleNotes)
 	if err != nil {

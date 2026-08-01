@@ -117,7 +117,10 @@ func parseVersionLine(line string) (version, releaseURL string, err error) {
 	if len(fields) == 0 {
 		return "", "", fmt.Errorf("telegram block: empty version line")
 	}
-	version = strings.Trim(fields[0], "()")
+	version = normalizeReleaseVersion(strings.Trim(fields[0], "()"))
+	if version == "" {
+		return "", "", fmt.Errorf("telegram block: empty version")
+	}
 	if len(fields) == 1 {
 		return "", "", fmt.Errorf("telegram block: version line must include release URL")
 	}
@@ -130,6 +133,13 @@ func parseVersionLine(line string) (version, releaseURL string, err error) {
 		return "", "", fmt.Errorf("telegram block: release URL must start with https:// (got %q)", urlPart)
 	}
 	return version, urlPart, nil
+}
+
+// normalizeReleaseVersion strips an optional leading "v" so tags stay 4.12.2
+// (repo convention — never v4.12.2).
+func normalizeReleaseVersion(version string) string {
+	version = strings.TrimSpace(version)
+	return strings.TrimPrefix(version, "v")
 }
 
 // TelegramFooter is the optional signature block at the end of a TG post.

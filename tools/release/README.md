@@ -18,7 +18,8 @@ cp .env.release.sample .env.release
 ## Prerequisites before `github` / `publish`
 
 - Нужные коммиты уже на целевой ветке (`main`), с которой `gh` возьмёт HEAD для нового тега.
-- Если тег `vX.Y.Z` ещё не существует, `gh release create` создаст его на текущем HEAD remote default branch — убедись, что это нужный коммит.
+- Теги **без** префикса `v`: `4.12.2`, не `v4.12.2` (как остальные релизы репо). CLI сам срежет ведущий `v`, если он попал в `RELEASE_NOTES.md`.
+- Если тег `X.Y.Z` ещё не существует, `gh release create` создаст его на текущем HEAD remote default branch — убедись, что это нужный коммит.
 - Повторный `github`/`publish` для того же тега упадёт (релиз уже есть); повторный `telegram` отправит дубликат поста.
 
 ## Commands
