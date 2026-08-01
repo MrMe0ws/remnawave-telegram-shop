@@ -4,7 +4,7 @@ import App from './App'
 import './index.css'
 import { initCabinetI18n } from './i18n'
 import { loadTelegramWebAppScriptIfNeeded } from '@/lib/telegram-web-app-loader'
-import { bindTelegramSafeAreaListeners, requestFullscreenIfNeeded } from '@/lib/telegram-web-app'
+import { configureTelegramViewport } from '@/lib/telegram-web-app'
 import { useAuthStore } from '@/store/auth'
 
 // Применяем тему до первого рендера (избегаем мигания).
@@ -19,9 +19,8 @@ if (savedTheme === 'light') {
 function bootTelegramWebAppShell(): void {
   window.Telegram?.WebApp?.ready?.()
   window.Telegram?.WebApp?.expand?.()
-  // Fullscreen убирает непрозрачный хедер TG; safe-area двигает наш хедер ниже ✕/⋯.
-  requestFullscreenIfNeeded()
-  bindTelegramSafeAreaListeners()
+  // Мобилка: классический хедер TG; desktop: fullscreen для большего окна.
+  configureTelegramViewport()
 }
 
 bootTelegramWebAppShell()
