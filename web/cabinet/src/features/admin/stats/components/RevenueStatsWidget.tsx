@@ -5,7 +5,13 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 
 import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
-import { formatPeriodRub, getStatsPeriodSlice, statsPeriodLabel, type StatsPeriod } from '../utils/statsPeriod'
+import {
+  formatPeriodRub,
+  resolveStatsPeriodSlice,
+  statsPeriodLabel,
+  type StatsCustomRange,
+  type StatsPeriod,
+} from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { buildRevenueTrend } from '../utils/statsChartData'
 import { formatTimeseriesLabel } from '../utils/timeseriesFormat'
@@ -23,14 +29,22 @@ interface RevenueStatsWidgetProps {
   data: AdminStatsResponse
   period: StatsPeriod
   timeseries?: AdminStatsTimeSeriesDTO | null
+  customRange?: StatsCustomRange | null
   className?: string
 }
 
-export function RevenueStatsWidget({ data, period, timeseries, className }: RevenueStatsWidgetProps) {
+export function RevenueStatsWidget({
+  data,
+  period,
+  timeseries,
+  customRange,
+  className,
+}: RevenueStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
-  const slice = getStatsPeriodSlice(data, period)
-  const periodLabel = statsPeriodLabel(t, period)
+  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
+  const slice = resolveStatsPeriodSlice(data, period, timeseries)
+  const periodLabel = statsPeriodLabel(t, period, { customRange, locale })
 
   const trend = useMemo(() => {
     if (timeseries?.points.length) {
@@ -39,6 +53,7 @@ export function RevenueStatsWidget({ data, period, timeseries, className }: Reve
         value: pt.revenue_rub,
       }))
     }
+    if (period === 'custom') return []
     return buildRevenueTrend(data, t, period).map((pt) => ({
       name: pt.label,
       value: pt.value,
@@ -103,24 +118,39 @@ export function RevenueStatsWidget({ data, period, timeseries, className }: Reve
         </div>
 
         <div className="mt-auto grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              {t('admin.stats.uniquePayersPeriod', { period: periodLabel })}
-            </p>
-            <p className="font-semibold tabular-nums">{slice.uniquePayers.toLocaleString(numberLocale)}</p>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              {slice.uniquePayers > 0 && period !== 'all_time'
-                ? t('admin.stats.arpuPeriod', { period: periodLabel })
-                : t('admin.stats.transactionsPeriod', { period: periodLabel })}
-            </p>
-            <p className="font-semibold tabular-nums">
-              {slice.uniquePayers > 0 && period !== 'all_time'
-                ? formatPeriodRub(slice.revenue / slice.uniquePayers, numberLocale)
-                : slice.transactions.toLocaleString(numberLocale)}
-            </p>
-          </div>
+          {period === 'custom' ? (
+            <div className="col-span-2 rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
+              <p className="text-xs text-muted-foreground">
+                {t('admin.stats.transactionsPeriod', { period: periodLabel })}
+              </p>
+              <p className="font-semibold tabular-nums">
+                {slice.transactions.toLocaleString(numberLocale)}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.stats.uniquePayersPeriod', { period: periodLabel })}
+                </p>
+                <p className="font-semibold tabular-nums">
+                  {slice.uniquePayers.toLocaleString(numberLocale)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {slice.uniquePayers > 0 && period !== 'all_time'
+                    ? t('admin.stats.arpuPeriod', { period: periodLabel })
+                    : t('admin.stats.transactionsPeriod', { period: periodLabel })}
+                </p>
+                <p className="font-semibold tabular-nums">
+                  {slice.uniquePayers > 0 && period !== 'all_time'
+                    ? formatPeriodRub(slice.revenue / slice.uniquePayers, numberLocale)
+                    : slice.transactions.toLocaleString(numberLocale)}
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </StatsWidgetCard>

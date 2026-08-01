@@ -68,7 +68,50 @@ func (h Handler) buildCabinetMinimalismCoreRows(langCode string, customer *datab
 			WebApp: &models.WebAppInfo{URL: w},
 		}))
 	}
+	if row := h.cabinetMinimalismExternalLinkRow(langCode); len(row) > 0 {
+		kb = append(kb, row)
+	}
 	return kb
+}
+
+// cabinetMinimalismExternalLinkRow — опциональные URL-кнопки «Отзывы» / «Канал» внизу меню.
+// 1 кнопка в ряд, если включена одна; 2 в ряд, если включены обе (и заданы URL).
+func (h Handler) cabinetMinimalismExternalLinkRow(langCode string) []models.InlineKeyboardButton {
+	urls := selectCabinetMinimalismExternalURLs(
+		cabcfg.TelegramShowFeedbackButton(),
+		cabcfg.TelegramShowChannelButton(),
+		config.FeedbackURL(),
+		config.ChannelURL(),
+	)
+	if len(urls) == 0 {
+		return nil
+	}
+	row := make([]models.InlineKeyboardButton, 0, len(urls))
+	for _, item := range urls {
+		row = append(row, h.translation.WithButton(langCode, item.key, models.InlineKeyboardButton{URL: item.url}))
+	}
+	return row
+}
+
+type cabinetMinimalismExternalURL struct {
+	key string
+	url string
+}
+
+// selectCabinetMinimalismExternalURLs — чистая сборка ссылок для ряда (порядок: отзывы → канал).
+func selectCabinetMinimalismExternalURLs(showFeedback, showChannel bool, feedbackURL, channelURL string) []cabinetMinimalismExternalURL {
+	var out []cabinetMinimalismExternalURL
+	if showFeedback {
+		if u := strings.TrimSpace(feedbackURL); u != "" {
+			out = append(out, cabinetMinimalismExternalURL{key: "cabinet_minimal_btn_feedback", url: u})
+		}
+	}
+	if showChannel {
+		if u := strings.TrimSpace(channelURL); u != "" {
+			out = append(out, cabinetMinimalismExternalURL{key: "cabinet_minimal_btn_channel", url: u})
+		}
+	}
+	return out
 }
 
 func (h Handler) buildCabinetMinimalismGreetingHTML(_ context.Context, customer *database.Customer, langCode, displayName string) string {

@@ -22,6 +22,8 @@ export interface AdminStatsDTO {
   trial_active: number
   paid_active: number
   inactive: number
+  inactive_paid: number
+  inactive_unpaid: number
   sales_sub_today: number
   sales_sub_week: number
   sales_sub_month: number

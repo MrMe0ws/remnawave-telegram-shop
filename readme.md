@@ -300,8 +300,8 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `SUPPORT_BOT_API`                    | Встроенный чат поддержки в web-кабинете через bridge к telegram-support-bot (`true`/`false`, по умолчанию `false`). Миграция **`000036_cabinet_support`** |
 | `SUPPORT_BOT_API_URL`                | Базовый URL HTTP API support-bot (например `http://support-bot:8080` в одной docker-сети). Обязателен при `SUPPORT_BOT_API=true` |
 | `SUPPORT_BRIDGE_SECRET`              | Общий секрет для shop ↔ support-bot (Bearer в webhook и при вызове `POST /internal/cabinet/message`). Обязателен при `SUPPORT_BOT_API=true` |
-| `FEEDBACK_URL`                       | URL страницы отзывов/обратной связи (опционально) - если не установлен, кнопка не отображается                                                                |
-| `CHANNEL_URL`                        | URL Telegram канала (опционально) - если не установлен, кнопка не отображается                                                                                |
+| `FEEDBACK_URL`                       | URL страницы отзывов/обратной связи (опционально) — если не установлен, кнопка не отображается. В `classic` показывается при непустом URL; в `minimalism` — только при `CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON=true`. Можно менять в админке (Ссылки в боте) |
+| `CHANNEL_URL`                        | URL Telegram канала (опционально) — если не установлен, кнопка не отображается. В `classic` показывается при непустом URL; в `minimalism` — только при `CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON=true`. Можно менять в админке (Ссылки в боте) |
 | `TOS_URL`                            | URL условий использования (опционально) - если не установлен, кнопка не отображается                                                                          |
 | `VIDEO_GUIDE_URL`                    | URL видеоинструкции (опционально) - если установлен, кнопка "📺 Видеоинструкция" отображается в разделе "Помощь"                                              |
 | `SERVER_SELECTION_URL`               | URL страницы с информацией о выборе сервера (опционально) - если установлен, кнопка "🌏 Какой сервер выбрать" отображается в разделе "Помощь"                 |
@@ -345,6 +345,8 @@ curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
 | `CABINET_MINI_APP_URL`               | URL Mini App для web↔telegram flow (опционально) |
 | `CABINET_MINI_APP_PATH`              | Path Mini App (опционально, обычно `/cabinet/`) |
 | `CABINET_TELEGRAM_UI_MODE`           | При включённом кабинете: `classic` (меню как раньше) или `minimalism` (кнопки в кабинет: тарифы, подписка, поддержка, инфо + короткий greeting; подписи в `translations/*`) |
+| `CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON` | В режиме `minimalism`: показать кнопку «Канал» внизу меню бота (`false` по умолчанию). Нужен `CHANNEL_URL`. Текст/эмодзи/цвет — `cabinet_minimal_btn_channel` в `translations/*`. Можно менять в админке (Оформление кабинета → Кнопки в Telegram) без перезапуска |
+| `CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON` | В режиме `minimalism`: показать кнопку «Отзывы» внизу меню бота (`false` по умолчанию). Нужен `FEEDBACK_URL`. Текст/эмодзи/цвет — `cabinet_minimal_btn_feedback` в `translations/*`. Одна кнопка — 1 в ряд; обе включены — 2 в ряд. Можно менять в админке без перезапуска |
 | `CABINET_SMTP_HOST` / `CABINET_SMTP_PORT` / `CABINET_SMTP_USER` / `CABINET_SMTP_PASSWORD` / `CABINET_SMTP_TLS` / `CABINET_MAIL_FROM` | SMTP для писем кабинета (verify/reset) |
 | `CABINET_GOOGLE_CLIENT_ID` / `CABINET_GOOGLE_CLIENT_SECRET` / `CABINET_GOOGLE_REDIRECT_URL` | Google OAuth для кабинета |
 | `CABINET_YANDEX_CLIENT_ID` / `CABINET_YANDEX_CLIENT_SECRET` / `CABINET_YANDEX_REDIRECT_URL` | Yandex OAuth для кабинета |

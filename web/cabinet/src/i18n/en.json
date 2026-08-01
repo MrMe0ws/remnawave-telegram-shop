@@ -873,7 +873,18 @@
           "month": "Month",
           "half_year": "6 months",
           "year": "Year",
-          "all_time": "All time"
+          "all_time": "All time",
+          "custom": "Custom range"
+        },
+        "customRange": {
+          "open": "Choose custom range",
+          "title": "Custom date range",
+          "from": "From",
+          "to": "To",
+          "apply": "Apply",
+          "invalidOrder": "Start date cannot be after end date",
+          "futureNotAllowed": "Future dates are not allowed",
+          "tooLong": "Maximum range is 36 months"
         },
         "regGrowthPrevMonth": "Registration growth vs prev. month",
         "paidShareActiveVpn": "Paid share among active VPN",
@@ -897,6 +908,8 @@
         "trialActive": "Trial",
         "paidActive": "Paid",
         "inactive": "Inactive",
+        "inactivePaid": "Inactive paid",
+        "inactiveUnpaid": "Inactive unpaid",
         "revenue": "Revenue",
         "revenueToday": "Today",
         "revenueMonth": "This month",
@@ -1444,7 +1457,8 @@
           },
           "cabinet": {
             "decor": "Appearance",
-            "deeplink": "Connection deep links"
+            "deeplink": "Connection deep links",
+            "telegram": "Telegram buttons (minimalism)"
           },
           "tariffs": {
             "showcase": "Tariff showcase"
@@ -1530,6 +1544,14 @@
           "CABINET_DECOR_THEME": { "label": "Decor theme", "hint": "Applied to all cabinet users without bot restart" },
           "CABINET_DEEPLINK_HAPP_ENCRYPT": { "label": "Encrypt Happ deep link", "hint": "When connecting Happ, return an encrypted link (happ://crypt5/) so the subscription can't be viewed/edited in the app. The subscription URL is sent to the third-party service crypto.happ.su" },
           "CABINET_DEEPLINK_INCY_ENCRYPT": { "label": "Encrypt INCY deep link", "hint": "When connecting INCY, return an obfuscated link (incy://crypt1/) that hides the subscription URL from chat scanners and screenshots. This is obfuscation, not full protection" },
+          "CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON": {
+            "label": "“Channel” button in bot",
+            "hint": "Only when CABINET_TELEGRAM_UI_MODE=minimalism. Requires CHANNEL_URL. Label/emoji/color — translations → cabinet_minimal_btn_channel"
+          },
+          "CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON": {
+            "label": "“Reviews” button in bot",
+            "hint": "Only when CABINET_TELEGRAM_UI_MODE=minimalism. Requires FEEDBACK_URL. Label/emoji/color — translations → cabinet_minimal_btn_feedback"
+          },
           "CABINET_TARIFF_PRICE_DISPLAY": {
             "label": "Showcase price display",
             "hint": "Cabinet Tariffs page (tariffs mode): monthly price or effective ₽/month when paying for 12 months"
@@ -1544,7 +1566,8 @@
           "LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS": { "label": "Discount valid for, hours", "hint": "" },
           "LIFECYCLE_VIDEO_GUIDE_URL": { "label": "Video tutorial link", "hint": "" },
           "LIFECYCLE_SUPPORT_CONTACT": { "label": "Support contact", "hint": "" },
-          "CHANNEL_URL": { "label": "Channel", "hint": "" },
+          "CHANNEL_URL": { "label": "Channel", "hint": "URL for the Channel button in the bot" },
+          "FEEDBACK_URL": { "label": "Reviews", "hint": "URL for the Reviews button in the bot" },
           "TOS_URL": { "label": "Terms of use", "hint": "" },
           "SERVER_SELECTION_URL": { "label": "Server selection", "hint": "" },
           "PUBLIC_OFFER_URL": { "label": "Public offer", "hint": "" },

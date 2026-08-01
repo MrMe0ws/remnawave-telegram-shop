@@ -881,7 +881,18 @@
           "month": "Месяц",
           "half_year": "Полгода",
           "year": "Год",
-          "all_time": "Всё время"
+          "all_time": "Всё время",
+          "custom": "Свой период"
+        },
+        "customRange": {
+          "open": "Выбрать свой период",
+          "title": "Произвольный период",
+          "from": "С",
+          "to": "По",
+          "apply": "Показать",
+          "invalidOrder": "Дата «с» не может быть позже «по»",
+          "futureNotAllowed": "Нельзя выбрать будущие даты",
+          "tooLong": "Максимум 36 месяцев"
         },
         "regGrowthPrevMonth": "Рост регистраций к пред. месяцу",
         "paidShareActiveVpn": "Доля платных среди активного VPN",
@@ -905,6 +916,8 @@
         "trialActive": "Триал",
         "paidActive": "Оплаченные",
         "inactive": "Неактивные",
+        "inactivePaid": "Неактивные оплатившие",
+        "inactiveUnpaid": "Неактивные без оплаты",
         "revenue": "Доход",
         "revenueToday": "Сегодня",
         "revenueMonth": "За месяц",
@@ -1451,7 +1464,8 @@
           },
           "cabinet": {
             "decor": "Оформление",
-            "deeplink": "Deep link подключения"
+            "deeplink": "Deep link подключения",
+            "telegram": "Кнопки в Telegram (minimalism)"
           },
           "tariffs": {
             "showcase": "Витрина тарифов"
@@ -1537,6 +1551,14 @@
           "CABINET_DECOR_THEME": { "label": "Тема оформления", "hint": "Применяется ко всем пользователям кабинета без перезапуска" },
           "CABINET_DEEPLINK_HAPP_ENCRYPT": { "label": "Шифровать deep link Happ", "hint": "При подключении Happ отдавать зашифрованную ссылку (happ://crypt5/) — подписку нельзя смотреть/редактировать в приложении. Ссылка подписки отправляется на сторонний сервис crypto.happ.su" },
           "CABINET_DEEPLINK_INCY_ENCRYPT": { "label": "Шифровать deep link INCY", "hint": "При подключении INCY отдавать обфусцированную ссылку (incy://crypt1/) — скрывает адрес подписки от сканеров чатов и скриншотов. Это обфускация, а не полная защита" },
+          "CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON": {
+            "label": "Кнопка «Канал» в боте",
+            "hint": "Только при CABINET_TELEGRAM_UI_MODE=minimalism. Нужен CHANNEL_URL. Текст/эмодзи/цвет — translations → cabinet_minimal_btn_channel"
+          },
+          "CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON": {
+            "label": "Кнопка «Отзывы» в боте",
+            "hint": "Только при CABINET_TELEGRAM_UI_MODE=minimalism. Нужен FEEDBACK_URL. Текст/эмодзи/цвет — translations → cabinet_minimal_btn_feedback"
+          },
           "CABINET_TARIFF_PRICE_DISPLAY": {
             "label": "Отображение цены на витрине",
             "hint": "Страница «Тарифы» в кабинете (режим tariffs): помесячная цена или ₽/мес при оплате за 12 месяцев"
@@ -1551,7 +1573,8 @@
           "LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS": { "label": "Скидка действует, ч", "hint": "" },
           "LIFECYCLE_VIDEO_GUIDE_URL": { "label": "Ссылка на видеоинструкцию", "hint": "" },
           "LIFECYCLE_SUPPORT_CONTACT": { "label": "Контакт поддержки", "hint": "" },
-          "CHANNEL_URL": { "label": "Канал", "hint": "" },
+          "CHANNEL_URL": { "label": "Канал", "hint": "URL кнопки «Канал» в боте" },
+          "FEEDBACK_URL": { "label": "Отзывы", "hint": "URL кнопки «Отзывы» в боте" },
           "TOS_URL": { "label": "Пользовательское соглашение", "hint": "" },
           "SERVER_SELECTION_URL": { "label": "Выбор сервера", "hint": "" },
           "PUBLIC_OFFER_URL": { "label": "Публичная оферта", "hint": "" },

@@ -283,7 +283,7 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'bot',
       titleKey: 'admin.settings.subsections.links.bot',
       icon: Link2,
-      keys: ['CHANNEL_URL', 'SERVER_SELECTION_URL', 'VIDEO_GUIDE_URL', 'TOS_URL'],
+      keys: ['CHANNEL_URL', 'FEEDBACK_URL', 'SERVER_SELECTION_URL', 'VIDEO_GUIDE_URL', 'TOS_URL'],
     },
     {
       id: 'legal',
@@ -389,6 +389,12 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       titleKey: 'admin.settings.subsections.cabinet.deeplink',
       icon: Shield,
       keys: ['CABINET_DEEPLINK_HAPP_ENCRYPT', 'CABINET_DEEPLINK_INCY_ENCRYPT'],
+    },
+    {
+      id: 'telegram',
+      titleKey: 'admin.settings.subsections.cabinet.telegram',
+      icon: Megaphone,
+      keys: ['CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON', 'CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON'],
     },
   ],
   tariffs: [

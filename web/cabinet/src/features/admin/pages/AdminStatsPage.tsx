@@ -18,11 +18,12 @@ import { PromoStatsAccordion } from '../stats/components/PromoStatsAccordion'
 import { ReferralsStatsWidget } from '../stats/components/ReferralsStatsWidget'
 import { RevenueStatsWidget } from '../stats/components/RevenueStatsWidget'
 import { SalesStatsWidget } from '../stats/components/SalesStatsWidget'
+import { StatsCustomRangePicker } from '../stats/components/StatsCustomRangePicker'
 import { StatsPeriodSelector } from '../stats/components/StatsPeriodSelector'
 import { TariffsOverviewChart } from '../stats/components/TariffsOverviewChart'
 import { TariffsStatsTable } from '../stats/components/TariffsStatsTable'
 import { UsersStatsWidget } from '../stats/components/UsersStatsWidget'
-import { formatPeriodRub, type StatsPeriod } from '../stats/utils/statsPeriod'
+import { formatPeriodRub, type StatsCustomRange, type StatsPeriod } from '../stats/utils/statsPeriod'
 import { statsNumberLocale } from '../stats/utils/statsFormat'
 import { useAdminMobileHeaderAutoHide } from '../hooks/useAdminMobileHeaderAutoHide'
 
@@ -39,12 +40,13 @@ function AdminStatsPageContent() {
   const { mobileHeaderVisible } = useAdminShell()
   useAdminMobileHeaderAutoHide(true)
   const [period, setPeriod] = useState<StatsPeriod>('month')
+  const [customRange, setCustomRange] = useState<StatsCustomRange | null>(null)
   const { data, isLoading, error, refetch, isFetching } = useAdminStats()
   const {
     data: timeseries,
     refetch: refetchTimeseries,
     isFetching: timeseriesFetching,
-  } = useAdminStatsTimeSeries(period)
+  } = useAdminStatsTimeSeries(period, customRange)
   const {
     data: fortuneData,
     isLoading: fortuneLoading,
@@ -67,6 +69,16 @@ function AdminStatsPageContent() {
   const refreshing = isFetching || fortuneFetching || timeseriesFetching || loyaltyFetching || promoFetching
   const numberLocale = statsNumberLocale(i18n.language)
   const tariffRows = data?.tariff_breakdown ?? []
+
+  const handlePeriodChange = (next: StatsPeriod) => {
+    setCustomRange(null)
+    setPeriod(next)
+  }
+
+  const handleCustomRange = (range: StatsCustomRange) => {
+    setCustomRange(range)
+    setPeriod('custom')
+  }
 
   const handleRefresh = () => {
     void refetch()
@@ -107,6 +119,22 @@ function AdminStatsPageContent() {
     </button>
   )
 
+  const periodControls = (compact: boolean) => (
+    <div className={cn('flex items-center gap-2', compact && 'min-w-0 flex-1')}>
+      <StatsPeriodSelector
+        value={period}
+        onChange={handlePeriodChange}
+        customRange={customRange}
+        className={compact ? 'min-w-0 flex-1' : undefined}
+      />
+      <StatsCustomRangePicker
+        active={period === 'custom'}
+        value={customRange}
+        onApply={handleCustomRange}
+      />
+    </div>
+  )
+
   const paymentEntries = useMemo(
     () => Object.entries(data?.payment_rub_by_invoice ?? {}),
     [data?.payment_rub_by_invoice],
@@ -121,7 +149,7 @@ function AdminStatsPageContent() {
         )}
       >
         <div className="flex items-center gap-2">
-          <StatsPeriodSelector value={period} onChange={setPeriod} className="min-w-0 flex-1" />
+          {periodControls(true)}
           {refreshButton(true)}
         </div>
       </div>
@@ -133,7 +161,7 @@ function AdminStatsPageContent() {
         accent="blue"
         actions={
           <div className="hidden flex-wrap items-center gap-2 md:flex">
-            <StatsPeriodSelector value={period} onChange={setPeriod} />
+            {periodControls(false)}
             {refreshButton(false)}
           </div>
         }
@@ -164,16 +192,41 @@ function AdminStatsPageContent() {
       {data && (
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <UsersStatsWidget data={data} period={period} timeseries={timeseries} />
-            <RevenueStatsWidget data={data} period={period} timeseries={timeseries} />
+            <UsersStatsWidget
+              data={data}
+              period={period}
+              timeseries={timeseries}
+              customRange={customRange}
+            />
+            <RevenueStatsWidget
+              data={data}
+              period={period}
+              timeseries={timeseries}
+              customRange={customRange}
+            />
             <ReferralsStatsWidget data={data} period={period} />
-            <SalesStatsWidget data={data} period={period} timeseries={timeseries} />
+            <SalesStatsWidget
+              data={data}
+              period={period}
+              timeseries={timeseries}
+              customRange={customRange}
+            />
           </div>
 
           {tariffRows.length > 0 && (
             <>
-              <TariffsOverviewChart rows={tariffRows} period={period} timeseries={timeseries} />
-              <TariffsStatsTable rows={tariffRows} period={period} timeseries={timeseries} />
+              <TariffsOverviewChart
+                rows={tariffRows}
+                period={period}
+                timeseries={timeseries}
+                customRange={customRange}
+              />
+              <TariffsStatsTable
+                rows={tariffRows}
+                period={period}
+                timeseries={timeseries}
+                customRange={customRange}
+              />
             </>
           )}
 
@@ -215,9 +268,7 @@ function AdminStatsPageContent() {
             <LoyaltyStatsAccordion data={loyaltyData} />
           )}
 
-          {!promoLoading && promoData && (
-            <PromoStatsAccordion data={promoData} />
-          )}
+          {!promoLoading && promoData && <PromoStatsAccordion data={promoData} />}
         </div>
       )}
     </div>

@@ -18,7 +18,9 @@ import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 import {
   activeSubsPct,
   buildGrowth,
-  getStatsPeriodSlice,
+  resolveStatsPeriodSlice,
+  statsPeriodLabel,
+  type StatsCustomRange,
   type StatsPeriod,
 } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
@@ -35,27 +37,42 @@ import {
 import { StatsChartLegend } from './StatsChartLegend'
 import { StatsWidgetCard } from './StatsWidgetCard'
 
-const VPN_COLORS = [STATS_CHART_COLORS.blue, STATS_CHART_COLORS.purple, STATS_CHART_COLORS.pink]
+const VPN_COLORS = [
+  STATS_CHART_COLORS.blue,
+  STATS_CHART_COLORS.purple,
+  STATS_CHART_COLORS.amber,
+  STATS_CHART_COLORS.pink,
+]
 
 interface UsersStatsWidgetProps {
   data: AdminStatsResponse
   period: StatsPeriod
   timeseries?: AdminStatsTimeSeriesDTO | null
+  customRange?: StatsCustomRange | null
   className?: string
 }
 
-export function UsersStatsWidget({ data, period, timeseries, className }: UsersStatsWidgetProps) {
+export function UsersStatsWidget({
+  data,
+  period,
+  timeseries,
+  customRange,
+  className,
+}: UsersStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
-  const slice = getStatsPeriodSlice(data, period)
+  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
+  const slice = resolveStatsPeriodSlice(data, period, timeseries)
+  const periodLabel = statsPeriodLabel(t, period, { customRange, locale })
 
   const vpnDonut = useMemo(
     () => [
       { name: t('admin.stats.paidActive'), value: data.paid_active, color: VPN_COLORS[0] },
       { name: t('admin.stats.trialActive'), value: data.trial_active, color: VPN_COLORS[1] },
-      { name: t('admin.stats.inactive'), value: data.inactive, color: VPN_COLORS[2] },
+      { name: t('admin.stats.inactivePaid'), value: data.inactive_paid ?? 0, color: VPN_COLORS[2] },
+      { name: t('admin.stats.inactiveUnpaid'), value: data.inactive_unpaid ?? 0, color: VPN_COLORS[3] },
     ],
-    [data.paid_active, data.trial_active, data.inactive, t],
+    [data.paid_active, data.trial_active, data.inactive_paid, data.inactive_unpaid, t],
   )
 
   const regTrend = useMemo(() => {
@@ -65,6 +82,7 @@ export function UsersStatsWidget({ data, period, timeseries, className }: UsersS
         value: pt.new_users,
       }))
     }
+    if (period === 'custom') return []
     return buildNewUsersTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value }))
   }, [timeseries, data, period, t, numberLocale])
 
@@ -142,7 +160,7 @@ export function UsersStatsWidget({ data, period, timeseries, className }: UsersS
               <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2 text-sm">
                 <p className="text-xs text-muted-foreground">
                   {t('admin.stats.newRegistrationsPeriod', {
-                    period: t(`admin.stats.period.${period}`),
+                    period: periodLabel,
                   })}
                 </p>
                 <p className="font-semibold tabular-nums">

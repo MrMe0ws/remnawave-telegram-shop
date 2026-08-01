@@ -940,8 +940,16 @@ export const api = {
     request<AdminBootstrapResponse>('GET', '/admin/bootstrap'),
 
   adminStats: () => request<AdminStatsDTO>('GET', '/admin/stats'),
-  adminStatsTimeSeries: (period: string) =>
-    request<AdminStatsTimeSeriesDTO>('GET', `/admin/stats/timeseries?period=${encodeURIComponent(period)}`),
+  adminStatsTimeSeries: (params: { period: string } | { from: string; to: string }) => {
+    const q = new URLSearchParams()
+    if ('from' in params && 'to' in params) {
+      q.set('from', params.from)
+      q.set('to', params.to)
+    } else {
+      q.set('period', params.period)
+    }
+    return request<AdminStatsTimeSeriesDTO>('GET', `/admin/stats/timeseries?${q.toString()}`)
+  },
   adminFortuneStats: () => request<AdminFortuneStatsDTO>('GET', '/admin/stats/fortune'),
   adminLoyaltyStats: () => request<AdminLoyaltyStatsDTO>('GET', '/admin/stats/loyalty'),
   adminPromoStats: () => request<AdminPromoStatsDTO>('GET', '/admin/stats/promos'),

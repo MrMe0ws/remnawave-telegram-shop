@@ -48,7 +48,13 @@ const (
 	statsGranularityMonth = "month"
 
 	statsTimeSeriesMaxMonthlyBuckets = 36
+
+	statsCustomGranularityDayDays  = 45
+	statsCustomGranularityWeekDays = 180
 )
+
+// ErrInvalidStatsTimeSeriesRange — некорректный произвольный диапазон from/to.
+var ErrInvalidStatsTimeSeriesRange = fmt.Errorf("invalid stats timeseries range")
 
 func utcWeekStart(t time.Time) time.Time {
 	t = utcDayStart(t)
@@ -95,6 +101,45 @@ func ResolveStatsTimeSeriesWindow(period string, now time.Time) (from, to time.T
 	}
 }
 
+// ResolveStatsTimeSeriesCustomWindow — half-open [fromDay, toDay+1day) и гранулярность для произвольного диапазона.
+// fromDate/toDate — календарные дни (включительно). now используется для проверки «не из будущего».
+func ResolveStatsTimeSeriesCustomWindow(fromDate, toDate, now time.Time) (from, to time.Time, granularity string, err error) {
+	now = now.UTC()
+	from = utcDayStart(fromDate)
+	toInclusive := utcDayStart(toDate)
+	if toInclusive.Before(from) {
+		return time.Time{}, time.Time{}, "", fmt.Errorf("%w: from after to", ErrInvalidStatsTimeSeriesRange)
+	}
+
+	maxTo := utcDayStart(now).AddDate(0, 0, 1) // +1 день: календарное «сегодня» в TZ впереди UTC
+	if toInclusive.After(maxTo) {
+		toInclusive = maxTo
+	}
+	if from.After(maxTo) {
+		return time.Time{}, time.Time{}, "", fmt.Errorf("%w: from in the future", ErrInvalidStatsTimeSeriesRange)
+	}
+	if toInclusive.Before(from) {
+		return time.Time{}, time.Time{}, "", fmt.Errorf("%w: from after to", ErrInvalidStatsTimeSeriesRange)
+	}
+
+	minFrom := utcMonthStart(utcDayStart(now).AddDate(0, -int(statsTimeSeriesMaxMonthlyBuckets-1), 0))
+	if from.Before(minFrom) {
+		return time.Time{}, time.Time{}, "", fmt.Errorf("%w: range exceeds %d months", ErrInvalidStatsTimeSeriesRange, statsTimeSeriesMaxMonthlyBuckets)
+	}
+
+	to = toInclusive.Add(24 * time.Hour)
+	days := int(toInclusive.Sub(from).Hours()/24) + 1
+	switch {
+	case days <= statsCustomGranularityDayDays:
+		granularity = statsGranularityDay
+	case days <= statsCustomGranularityWeekDays:
+		granularity = statsGranularityWeek
+	default:
+		granularity = statsGranularityMonth
+	}
+	return from, to, granularity, nil
+}
+
 func statsDateTruncExpr(granularity string) (string, error) {
 	switch granularity {
 	case statsGranularityDay:
@@ -131,7 +176,7 @@ func generateStatsBuckets(from, to time.Time, granularity string) []time.Time {
 	return buckets
 }
 
-// FetchAdminStatsTimeSeries — дневные/недельные/месячные ряды для графиков админки.
+// FetchAdminStatsTimeSeries — дневные/недельные/месячные ряды для графиков админки (пресет периода).
 func (s *StatsRepository) FetchAdminStatsTimeSeries(ctx context.Context, period string) (*AdminStatsTimeSeries, error) {
 	now := time.Now().UTC()
 	from, to, granularity := ResolveStatsTimeSeriesWindow(period, now)
@@ -149,6 +194,26 @@ func (s *StatsRepository) FetchAdminStatsTimeSeries(ctx context.Context, period 
 		}
 	}
 
+	return s.fetchAdminStatsTimeSeriesWindow(ctx, period, from, to, granularity, now)
+}
+
+// FetchAdminStatsTimeSeriesRange — ряды за произвольный inclusive-диапазон дат (period=custom).
+func (s *StatsRepository) FetchAdminStatsTimeSeriesRange(ctx context.Context, fromDate, toDate time.Time) (*AdminStatsTimeSeries, error) {
+	now := time.Now().UTC()
+	from, to, granularity, err := ResolveStatsTimeSeriesCustomWindow(fromDate, toDate, now)
+	if err != nil {
+		return nil, err
+	}
+	return s.fetchAdminStatsTimeSeriesWindow(ctx, "custom", from, to, granularity, now)
+}
+
+func (s *StatsRepository) fetchAdminStatsTimeSeriesWindow(
+	ctx context.Context,
+	period string,
+	from, to time.Time,
+	granularity string,
+	now time.Time,
+) (*AdminStatsTimeSeries, error) {
 	trunc, err := statsDateTruncExpr(granularity)
 	if err != nil {
 		return nil, err

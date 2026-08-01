@@ -12,9 +12,60 @@
   "platforms": {
     "ios": [
       {
+        "id": "incy",
+        "name": "INCY",
+        "isFeatured": true,
+        "urlScheme": "incy://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://apps.apple.com/ru/app/incy/id6756943388",
+              "buttonText": {
+                "ru": "App Store (RU)"
+              }
+            },
+            {
+              "buttonLink": "https://apps.apple.com/us/app/incy/id6756943388",
+              "buttonText": {
+                "ru": "App Store (Global)"
+              }
+            }
+          ],
+          "description": {
+            "ru": "Откройте страницу в App Store и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "ru": "В главном разделе нажмите большую кнопку включения в центре для подключения к VPN. Не забудьте выбрать сервер в списке серверов. При необходимости выберите другой сервер из списка серверов."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "ru": "Если после нажатия на кнопку ничего не произошло, добавьте подписку вручную. Также можно посмотреть видео инструкцию по кнопке ниже."
+          }
+        }
+      },
+      {
         "id": "happ",
         "name": "Happ",
-        "isFeatured": true,
+        "isFeatured": false,
         "urlScheme": "happ://add/",
         "installationStep": {
           "buttons": [
@@ -77,7 +128,9 @@
             "ru": "Выберите сервер и нажмите большую кнопку включения в центре для подключения к VPN.\n\nПри необходимости выберите другой сервер из списка серверов."
           }
         }
-      },
+      }
+    ],
+    "android": [
       {
         "id": "incy",
         "name": "INCY",
@@ -86,20 +139,14 @@
         "installationStep": {
           "buttons": [
             {
-              "buttonLink": "https://apps.apple.com/ru/app/incy/id6756943388",
+              "buttonLink": "https://play.google.com/store/apps/details?id=llc.itdev.incy&hl=ru",
               "buttonText": {
-                "ru": "App Store (RU)"
-              }
-            },
-            {
-              "buttonLink": "https://apps.apple.com/us/app/incy/id6756943388",
-              "buttonText": {
-                "ru": "App Store (Global)"
+                "ru": "Play Market"
               }
             }
           ],
           "description": {
-            "ru": "Откройте страницу в App Store и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль."
+            "ru": "Откройте страницу в Play Market и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Разрешить"
           }
         },
         "addSubscriptionStep": {
@@ -128,13 +175,11 @@
             "ru": "Если после нажатия на кнопку ничего не произошло, добавьте подписку вручную. Также можно посмотреть видео инструкцию по кнопке ниже."
           }
         }
-      }
-    ],
-    "android": [
+      },      
       {
         "id": "happ",
         "name": "Happ",
-        "isFeatured": true,
+        "isFeatured": false,
         "urlScheme": "happ://add/",
         "installationStep": {
           "buttons": [
@@ -199,51 +244,6 @@
         }
       },
       {
-        "id": "incy",
-        "name": "INCY",
-        "isFeatured": true,
-        "urlScheme": "incy://add/",
-        "installationStep": {
-          "buttons": [
-            {
-              "buttonLink": "https://play.google.com/store/apps/details?id=llc.itdev.incy&hl=ru",
-              "buttonText": {
-                "ru": "Play Market"
-              }
-            }
-          ],
-          "description": {
-            "ru": "Откройте страницу в Play Market и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Разрешить"
-          }
-        },
-        "addSubscriptionStep": {
-          "description": {
-            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
-          }
-        },
-        "connectAndUseStep": {
-          "description": {
-            "ru": "В главном разделе нажмите большую кнопку включения в центре для подключения к VPN. Не забудьте выбрать сервер в списке серверов. При необходимости выберите другой сервер из списка серверов."
-          }
-        },
-        "additionalAfterAddSubscriptionStep": {
-          "buttons": [
-            {
-              "buttonLink": "https://t.me/VPN_meows_news/44",
-              "buttonText": {
-                "ru": "ВИДЕО ИНСТРУКЦИЯ"
-              }
-            }
-          ],
-          "title": {
-            "ru": "Если подписка не добавилась"
-          },
-          "description": {
-            "ru": "Если после нажатия на кнопку ничего не произошло, добавьте подписку вручную. Также можно посмотреть видео инструкцию по кнопке ниже."
-          }
-        }
-      },
-      {
         "id": "flclashx",
         "name": "FlClashX",
         "isFeatured": false,
@@ -304,10 +304,61 @@
       }
     ],
     "macos": [
+      {
+        "id": "incy",
+        "name": "INCY",
+        "isFeatured": true,
+        "urlScheme": "incy://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://apps.apple.com/ru/app/incy/id6756943388",
+              "buttonText": {
+                "ru": "App Store (RU)"
+              }
+            },
+            {
+              "buttonLink": "https://apps.apple.com/us/app/incy/id6756943388",
+              "buttonText": {
+                "ru": "App Store (Global)"
+              }
+            }
+          ],
+          "description": {
+            "ru": "Откройте страницу в App Store и установите приложение. Запустите его, в окне разрешения VPN-конфигурации нажмите Allow и введите свой пароль."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "ru": "В главном разделе нажмите большую кнопку включения в центре для подключения к VPN. Не забудьте выбрать сервер в списке серверов. При необходимости выберите другой сервер из списка серверов."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "ru": "Если после нажатия на кнопку ничего не произошло, добавьте подписку вручную. Также можно посмотреть видео инструкцию по кнопке ниже."
+          }
+        }
+      },      
     {
       "id": "happ",
       "name": "Happ",
-      "isFeatured": true,
+      "isFeatured": false,
       "urlScheme": "happ://add/",
       "installationStep": {
         "buttons": [
@@ -486,9 +537,54 @@
     ],
     "windows": [
       {
+        "id": "incy",
+        "name": "INCY",
+        "isFeatured": true,
+        "urlScheme": "incy://add/",
+        "installationStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://github.com/INCY-DEV/incy-platforms/releases/latest/download/incy-windows-setup.exe",
+              "buttonText": {
+                "ru": "Скачать с GitHub"
+              }
+            }
+          ],
+          "description": {
+            "ru": "Скачайте и установите приложение. Запустите его."
+          }
+        },
+        "addSubscriptionStep": {
+          "description": {
+            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
+          }
+        },
+        "connectAndUseStep": {
+          "description": {
+            "ru": "В главном разделе нажмите большую кнопку включения в центре для подключения к VPN. Не забудьте выбрать сервер в списке серверов. При необходимости выберите другой сервер из списка серверов."
+          }
+        },
+        "additionalAfterAddSubscriptionStep": {
+          "buttons": [
+            {
+              "buttonLink": "https://t.me/VPN_meows_news/44",
+              "buttonText": {
+                "ru": "ВИДЕО ИНСТРУКЦИЯ"
+              }
+            }
+          ],
+          "title": {
+            "ru": "Если подписка не добавилась"
+          },
+          "description": {
+            "ru": "Если после нажатия на кнопку ничего не произошло, добавьте подписку вручную. Также можно посмотреть видео инструкцию по кнопке ниже."
+          }
+        }
+      },            
+      {
         "id": "happ",
         "name": "Happ",
-        "isFeatured": true,
+        "isFeatured": false,
         "urlScheme": "happ://add/",
         "installationStep": {
           "buttons": [
@@ -534,110 +630,6 @@
             "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
             "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
             "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Перейдите на стр [«Подписка»](https://cabinet.me0ws.ru/cabinet/subscription)\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Happ перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
-          }
-        },
-        "connectAndUseStep": {
-          "description": {
-            "en": "Once you've added your subscription, simply tap the big power button in the center of the screen.\n\nThe app will automatically select the fastest server with the lowest latency, but you can choose any other from the list below if you wish.\n",
-            "fa": "После добавления подписки просто нажмите большую кнопку включения по центру экрана. Приложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n",
-            "ru": "После добавления подписки просто нажмите большую кнопку включения по центру экрана.\n\nПриложение автоматически выберет самый быстрый сервер с минимальной задержкой, но при желании вы можете выбрать любой другой из списка ниже.\n\nПрограмма легко настраивается и подстраивается под ваши нужды — рекомендую покопаться в настройках и подробнее с ней познакомиться 🙂"
-          }
-        }
-      },
-      {
-        "id": "incy",
-        "name": "INCY",
-        "isFeatured": true,
-        "urlScheme": "incy://add/",
-        "installationStep": {
-          "buttons": [
-            {
-              "buttonLink": "https://github.com/INCY-DEV/incy-platforms/releases/latest/download/incy-windows-setup.exe",
-              "buttonText": {
-                "ru": "Скачать с GitHub"
-              }
-            }
-          ],
-          "description": {
-            "ru": "Скачайте и установите приложение. Запустите его."
-          }
-        },
-        "addSubscriptionStep": {
-          "description": {
-            "ru": "Нажмите кнопку ниже — приложение откроется, и подписка добавится автоматически."
-          }
-        },
-        "connectAndUseStep": {
-          "description": {
-            "ru": "В главном разделе нажмите большую кнопку включения в центре для подключения к VPN. Не забудьте выбрать сервер в списке серверов. При необходимости выберите другой сервер из списка серверов."
-          }
-        },
-        "additionalAfterAddSubscriptionStep": {
-          "buttons": [
-            {
-              "buttonLink": "https://t.me/VPN_meows_news/44",
-              "buttonText": {
-                "ru": "ВИДЕО ИНСТРУКЦИЯ"
-              }
-            }
-          ],
-          "title": {
-            "ru": "Если подписка не добавилась"
-          },
-          "description": {
-            "ru": "Если после нажатия на кнопку ничего не произошло, добавьте подписку вручную. Также можно посмотреть видео инструкцию по кнопке ниже."
-          }
-        }
-      },
-      {
-        "id": "koala clash",
-        "name": "Koala Clash",
-        "isFeatured": false,
-        "urlScheme": "clash://install-config?url=",
-        "installationStep": {
-          "buttons": [
-            {
-              "buttonLink": "https://github.com/coolcoala/clash-verge-rev-lite/releases/",
-              "buttonText": {
-                "en": "Windows",
-                "fa": "ویندوز",
-                "ru": "Windows"
-              }
-            }
-          ],
-          "description": {
-            "en": "Choose the version for your device, click the button below and install the app.",
-            "fa": "نسخه مناسب برای دستگاه خود را انتخاب کنید، دکمه زیر را فشار دهید و برنامه را نصب کنید",
-            "ru": "Выберите подходящую версию для вашего устройства.\n\nНажмите на кнопку ниже и установите приложение."
-          }
-        },
-        "addSubscriptionStep": {
-          "description": {
-            "en": "Click the button below to add subscription",
-            "fa": "برای افزودن اشتراک روی دکمه زیر کلیک کنید",
-            "ru": "Запустите программу.\n\nНажмите кнопку ниже, чтобы добавить подписку. После нажатия кнопки подписка автоматически добавится в программу."
-          }
-        },
-        "additionalAfterAddSubscriptionStep": {
-          "buttons": [
-            {
-              "buttonLink": "https://t.me/VPN_meows_news/44",
-              "buttonText": {
-                "en": "VIDEO INSTRUCTION",
-                "fa": "ویدیو راهنما",
-                "ru": "ВИДЕО ИНСТРУКЦИЯ"
-              }
-            }
-          ],
-          "title": {
-            "en": "If the subscription is not added",
-            "fa": "اگر اشتراک در برنامه نصب نشده است",
-            "ru": "Если подписка не добавилась"
-          },
-          "description": {
-            "en": "If the subscription is not added, you can watch the video instruction using the button below.\n\nIf nothing happens after clicking the button, add the subscription manually:\n\n1. Click the Get Link button in the top right corner of this page\n2. Copy the link\n3. In Koala Clash, go to the Profiles section\n4. Paste the link in the text field\n5. Click the Import button",
-            "fa": "اگر اشتراک اضافه نشده است، می‌توانید ویدیو راهنما را با استفاده از دکمه زیر تماشا کنید. اگر پس از کلیک روی دکمه اتفاقی نیفتاد، اشتراک را به صورت دستی اضافه کنید. در گوشه بالا سمت راست این صفحه روی دکمه دریافت لینک کلیک کنید، لینک را کپی کنید. در Koala Clash به بخش پروفایل‌ها بروید و لینک را در فیلد متنی وارد کنید، سپس روی دکمه وارد کردن کلیک کنید.",
-            "ru": "Если подписка не добавилась, вы можете посмотреть видео инструкцию по кнопке ниже.\n\nЕсли после нажатия на кнопку ничего не произошло, добавьте подписку вручную:\n\n1. Перейдите на стр [«Подписка»](https://cabinet.me0ws.ru/cabinet/subscription)\n2. Нажмите кнопку скопировать рядом с «Ссылка подписки»\n3. В Koala Clash перейдите в раздел Профили\n4. Вставьте ссылку в текстовое поле\n5. Нажмите на кнопку Импорт"
           }
         },
         "connectAndUseStep": {

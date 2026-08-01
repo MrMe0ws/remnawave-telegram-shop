@@ -4,7 +4,12 @@ import { Link2 } from 'lucide-react'
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
-import { getStatsPeriodSlice, statsPeriodLabel, type StatsPeriod } from '../utils/statsPeriod'
+import {
+  getStatsPeriodSlice,
+  snapshotFallbackPeriod,
+  statsPeriodLabel,
+  type StatsPeriod,
+} from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { buildReferralTrend } from '../utils/statsChartData'
 import {
@@ -27,12 +32,13 @@ interface ReferralsStatsWidgetProps {
 export function ReferralsStatsWidget({ data, period, className }: ReferralsStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
-  const slice = getStatsPeriodSlice(data, period)
-  const periodLabel = statsPeriodLabel(t, period)
+  const slicePeriod = snapshotFallbackPeriod(period)
+  const slice = getStatsPeriodSlice(data, slicePeriod)
+  const periodLabel = statsPeriodLabel(t, slicePeriod)
 
   const barData = useMemo(
-    () => buildReferralTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value })),
-    [data, period, t],
+    () => buildReferralTrend(data, t, slicePeriod).map((pt) => ({ name: pt.label, value: pt.value })),
+    [data, slicePeriod, t],
   )
 
   return (

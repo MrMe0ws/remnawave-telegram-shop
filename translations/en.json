@@ -33,6 +33,13 @@
     "emoji_id": "5350481781306958339",    
     "style": "blue"
   },
+  "cabinet_minimal_btn_feedback": {
+    "text": "Reviews",
+    "emoji_id": "5463289097336405244"
+  },
+  "cabinet_minimal_btn_channel": {
+    "text": "Channel"
+  },
   "buy_button": "💰 Buy",
   "connect_button": "🔌 My VPN",
   "connect_device_button": "🔌 Connect Device",
@@ -147,10 +154,15 @@
   "vpn_unlimited": "unlimited",
   "vpn_not_available": "—",
   "subscription_activated": "✅ Subscription activated",
-  "feedback_button": "⭐ Reviews",
+  "feedback_button": {
+    "text": "⭐ Reviews",
+    "emoji_id": "5463289097336405244"
+  },
   "server_status_button": "🟢 Server Status",
   "support_button": "🆘 Support",
-  "channel_button": "📢 Channel",
+  "channel_button": {
+    "text": "📢 Channel"
+  },
   "tos_button": "Terms of Service",
   "subscription_expiring": "⚠️ <b>Subscription reminder</b> ⚠️\n\nYour subscription expires on <b>%s</b>\nPlease renew to keep access",
   "renew_subscription_button": "🔄 Renew subscription",

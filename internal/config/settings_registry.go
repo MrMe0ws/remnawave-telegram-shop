@@ -293,6 +293,16 @@ func RuntimeSettingsRegistry() []SettingField {
 			Apply:   applyFortuneBool("CABINET_DEEPLINK_INCY_ENCRYPT"),
 			Current: cabinetBoolCurrent("CABINET_DEEPLINK_INCY_ENCRYPT", false),
 		},
+		{
+			Key: "CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON", Group: "cabinet", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON"),
+			Current: cabinetBoolCurrent("CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON", false),
+		},
+		{
+			Key: "CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON", Group: "cabinet", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON"),
+			Current: cabinetBoolCurrent("CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON", false),
+		},
 
 		// --- tariffs (витрина кабинета, режим sales tariffs) ---
 		{
@@ -367,6 +377,7 @@ func RuntimeSettingsRegistry() []SettingField {
 
 		// --- links ---
 		{Key: "CHANNEL_URL", Group: "links", Type: SettingURL, Apply: applyStringField(func(v string) { conf.channelURL = v }), Current: func() string { return conf.channelURL }},
+		{Key: "FEEDBACK_URL", Group: "links", Type: SettingURL, Apply: applyStringField(func(v string) { conf.feedbackURL = v }), Current: func() string { return conf.feedbackURL }},
 		{Key: "TOS_URL", Group: "links", Type: SettingURL, Apply: applyStringField(func(v string) { conf.tosURL = v }), Current: func() string { return conf.tosURL }},
 		{Key: "SERVER_SELECTION_URL", Group: "links", Type: SettingURL, Apply: applyStringField(func(v string) { conf.serverSelectionURL = v }), Current: func() string { return conf.serverSelectionURL }},
 		{Key: "PUBLIC_OFFER_URL", Group: "links", Type: SettingURL, Apply: applyStringField(func(v string) { conf.publicOfferURL = v }), Current: func() string { return conf.publicOfferURL }},

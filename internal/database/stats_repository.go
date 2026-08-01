@@ -63,9 +63,11 @@ type AdminStatsSnapshot struct {
 	NewHalfYear         int64
 	NewYear             int64
 
-	TrialActive int64
-	PaidActive  int64
-	Inactive    int64
+	TrialActive    int64
+	PaidActive     int64
+	Inactive       int64 // InactivePaid + InactiveUnpaid
+	InactivePaid   int64
+	InactiveUnpaid int64 // ≡ broadcast audience inactive_trial (нет paid purchase с month > 0)
 
 	SalesSubToday     int64
 	SalesSubWeek      int64
@@ -203,11 +205,19 @@ SELECT
   COUNT(*) FILTER (WHERE c.expire_at IS NOT NULL AND c.expire_at > NOW() AND EXISTS (
     SELECT 1 FROM purchase p WHERE p.customer_id = c.id AND p.status = 'paid' AND p.month > 0
   )) AS paid,
-  COUNT(*) FILTER (WHERE NOT (c.expire_at IS NOT NULL AND c.expire_at > NOW())) AS inactive
+  COUNT(*) FILTER (WHERE NOT (c.expire_at IS NOT NULL AND c.expire_at > NOW()) AND EXISTS (
+    SELECT 1 FROM purchase p WHERE p.customer_id = c.id AND p.status = 'paid' AND p.month > 0
+  )) AS inactive_paid,
+  COUNT(*) FILTER (WHERE NOT (c.expire_at IS NOT NULL AND c.expire_at > NOW()) AND NOT EXISTS (
+    SELECT 1 FROM purchase p WHERE p.customer_id = c.id AND p.status = 'paid' AND p.month > 0
+  )) AS inactive_unpaid
 FROM customer c`
-	if err := s.pool.QueryRow(ctx, q).Scan(&out.TrialActive, &out.PaidActive, &out.Inactive); err != nil {
+	if err := s.pool.QueryRow(ctx, q).Scan(
+		&out.TrialActive, &out.PaidActive, &out.InactivePaid, &out.InactiveUnpaid,
+	); err != nil {
 		return nil, fmt.Errorf("stats subscription buckets: %w", err)
 	}
+	out.Inactive = out.InactivePaid + out.InactiveUnpaid
 
 	q = fmt.Sprintf(`SELECT COUNT(*) FROM purchase p WHERE %s AND p.paid_at >= $1 AND p.paid_at < $2`, sqlSubPurchase)
 	if err := s.pool.QueryRow(ctx, q, today0, now).Scan(&out.SalesSubToday); err != nil {

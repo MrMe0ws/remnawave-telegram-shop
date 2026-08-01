@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -70,6 +71,8 @@ type adminStatsResp struct {
 	TrialActive         int64              `json:"trial_active"`
 	PaidActive          int64              `json:"paid_active"`
 	Inactive            int64              `json:"inactive"`
+	InactivePaid        int64              `json:"inactive_paid"`
+	InactiveUnpaid      int64              `json:"inactive_unpaid"`
 	SalesSubToday       int64              `json:"sales_sub_today"`
 	SalesSubWeek        int64              `json:"sales_sub_week"`
 	SalesSubMonth       int64              `json:"sales_sub_month"`
@@ -213,6 +216,8 @@ func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		TrialActive:          snap.TrialActive,
 		PaidActive:           snap.PaidActive,
 		Inactive:             snap.Inactive,
+		InactivePaid:         snap.InactivePaid,
+		InactiveUnpaid:       snap.InactiveUnpaid,
 		SalesSubToday:        snap.SalesSubToday,
 		SalesSubWeek:         snap.SalesSubWeek,
 		SalesSubMonth:        snap.SalesSubMonth,
@@ -252,29 +257,62 @@ func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// TimeSeries — GET /cabinet/api/admin/stats/timeseries?period=month (RequireAdmin).
+// TimeSeries — GET /cabinet/api/admin/stats/timeseries?period=month
+// или ?from=YYYY-MM-DD&to=YYYY-MM-DD (RequireAdmin).
 func (h *AdminStatsHandler) TimeSeries(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	period := r.URL.Query().Get("period")
-	if period == "" {
-		period = "month"
-	}
-	switch period {
-	case "day", "week", "month", "half_year", "year", "all_time":
-	default:
-		http.Error(w, "invalid period", http.StatusBadRequest)
-		return
-	}
+	q := r.URL.Query()
+	fromStr := q.Get("from")
+	toStr := q.Get("to")
 
-	series, err := h.stats.FetchAdminStatsTimeSeries(r.Context(), period)
-	if err != nil {
-		slog.Error("admin stats: fetch timeseries failed", "error", err.Error(), "period", period)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+	var (
+		series *database.AdminStatsTimeSeries
+		err    error
+	)
+
+	if fromStr != "" || toStr != "" {
+		if fromStr == "" || toStr == "" {
+			http.Error(w, "from and to are required together", http.StatusBadRequest)
+			return
+		}
+		fromDate, errFrom := time.Parse("2006-01-02", fromStr)
+		toDate, errTo := time.Parse("2006-01-02", toStr)
+		if errFrom != nil || errTo != nil {
+			http.Error(w, "invalid from or to date (YYYY-MM-DD)", http.StatusBadRequest)
+			return
+		}
+		series, err = h.stats.FetchAdminStatsTimeSeriesRange(r.Context(), fromDate, toDate)
+		if err != nil {
+			if errors.Is(err, database.ErrInvalidStatsTimeSeriesRange) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			slog.Error("admin stats: fetch timeseries range failed", "error", err.Error(), "from", fromStr, "to", toStr)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		period := q.Get("period")
+		if period == "" {
+			period = "month"
+		}
+		switch period {
+		case "day", "week", "month", "half_year", "year", "all_time":
+		default:
+			http.Error(w, "invalid period", http.StatusBadRequest)
+			return
+		}
+
+		series, err = h.stats.FetchAdminStatsTimeSeries(r.Context(), period)
+		if err != nil {
+			slog.Error("admin stats: fetch timeseries failed", "error", err.Error(), "period", period)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	points := make([]adminStatsTimeSeriesPointDTO, 0, len(series.Points))

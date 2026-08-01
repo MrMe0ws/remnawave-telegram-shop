@@ -58,6 +58,7 @@ export function buildReferralTrend(data: AdminStatsResponse, t: TFunction, perio
 }
 
 function sliceTrendForPeriod(points: TrendPoint[], period: StatsPeriod): TrendPoint[] {
+  const effective = period === 'custom' ? 'month' : period
   const order: (StatsPeriod | 'prev_month')[] = [
     'day',
     'week',
@@ -67,10 +68,10 @@ function sliceTrendForPeriod(points: TrendPoint[], period: StatsPeriod): TrendPo
     'year',
     'all_time',
   ]
-  const endIdx = order.indexOf(period === 'all_time' ? 'all_time' : period)
+  const endIdx = order.indexOf(effective === 'all_time' ? 'all_time' : effective)
   if (endIdx <= 0) return points.slice(0, 1)
   const allowed = new Set<string>(order.slice(0, endIdx + 1))
-  if (period === 'month') allowed.add('prev_month')
+  if (effective === 'month') allowed.add('prev_month')
   return points.filter((p) => allowed.has(p.key))
 }
 

@@ -5,7 +5,13 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recha
 
 import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
-import { buildGrowth, getStatsPeriodSlice, statsPeriodLabel, type StatsPeriod } from '../utils/statsPeriod'
+import {
+  buildGrowth,
+  resolveStatsPeriodSlice,
+  statsPeriodLabel,
+  type StatsCustomRange,
+  type StatsPeriod,
+} from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { buildSalesTrend } from '../utils/statsChartData'
 import { formatTimeseriesLabel } from '../utils/timeseriesFormat'
@@ -23,14 +29,22 @@ interface SalesStatsWidgetProps {
   data: AdminStatsResponse
   period: StatsPeriod
   timeseries?: AdminStatsTimeSeriesDTO | null
+  customRange?: StatsCustomRange | null
   className?: string
 }
 
-export function SalesStatsWidget({ data, period, timeseries, className }: SalesStatsWidgetProps) {
+export function SalesStatsWidget({
+  data,
+  period,
+  timeseries,
+  customRange,
+  className,
+}: SalesStatsWidgetProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
-  const slice = getStatsPeriodSlice(data, period)
-  const periodLabel = statsPeriodLabel(t, period)
+  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
+  const slice = resolveStatsPeriodSlice(data, period, timeseries)
+  const periodLabel = statsPeriodLabel(t, period, { customRange, locale })
   const salesGrowth = buildGrowth(slice.sales, slice.salesPrev)
 
   const trend = useMemo(() => {
@@ -40,6 +54,7 @@ export function SalesStatsWidget({ data, period, timeseries, className }: SalesS
         value: pt.sales,
       }))
     }
+    if (period === 'custom') return []
     return buildSalesTrend(data, t, period).map((pt) => ({ name: pt.label, value: pt.value }))
   }, [timeseries, data, period, t, numberLocale])
 

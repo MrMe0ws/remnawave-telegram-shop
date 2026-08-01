@@ -9,6 +9,7 @@ import {
   statsPeriodLabel,
   tariffPeriodRevenue,
   tariffPeriodSales,
+  type StatsCustomRange,
   type StatsPeriod,
 } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
@@ -21,11 +22,13 @@ interface TariffsStatsTableProps {
   rows: AdminStatsResponse['tariff_breakdown']
   period: StatsPeriod
   timeseries?: AdminStatsTimeSeriesDTO | null
+  customRange?: StatsCustomRange | null
 }
 
-export function TariffsStatsTable({ rows, period, timeseries }: TariffsStatsTableProps) {
+export function TariffsStatsTable({ rows, period, timeseries, customRange }: TariffsStatsTableProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
+  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
 
   if (rows.length === 0) return null
 
@@ -37,7 +40,7 @@ export function TariffsStatsTable({ rows, period, timeseries }: TariffsStatsTabl
           <Table2 className="size-4 text-slate-400" />
         </div>
         <CardTitle className="text-base">
-          {t('admin.stats.tariffTableTitle')} · {statsPeriodLabel(t, period)}
+          {t('admin.stats.tariffTableTitle')} · {statsPeriodLabel(t, period, { customRange, locale })}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-3 pb-4 pt-0 sm:px-4">
@@ -60,6 +63,14 @@ export function TariffsStatsTable({ rows, period, timeseries }: TariffsStatsTabl
             {rows.map((tr, idx) => {
               const tariffSeries = findTariffTimeSeries(timeseries?.tariff_series, tr.tariff_id)
               const sparkValues = tariffSeriesSparklineValues(tariffSeries, 'sales')
+              const sales =
+                period === 'custom' && tariffSeries
+                  ? tariffSeries.points.reduce((sum, p) => sum + p.sales, 0)
+                  : tariffPeriodSales(tr, period)
+              const revenue =
+                period === 'custom' && tariffSeries
+                  ? tariffSeries.points.reduce((sum, p) => sum + p.revenue_rub, 0)
+                  : tariffPeriodRevenue(tr, period)
               return (
               <tr
                 key={tr.tariff_id}
@@ -83,10 +94,10 @@ export function TariffsStatsTable({ rows, period, timeseries }: TariffsStatsTabl
                   />
                 </td>
                 <td className="py-2 pr-1 text-right tabular-nums sm:py-2.5 sm:pr-4">
-                  {tariffPeriodSales(tr, period).toLocaleString(numberLocale)}
+                  {sales.toLocaleString(numberLocale)}
                 </td>
                 <td className="py-2 text-right tabular-nums sm:py-2.5 md:pr-4">
-                  {formatPeriodRub(tariffPeriodRevenue(tr, period), numberLocale)}
+                  {formatPeriodRub(revenue, numberLocale)}
                 </td>
                 <td className="hidden py-2.5 text-right tabular-nums md:table-cell">
                   {tr.active_paid_users.toLocaleString(numberLocale)}

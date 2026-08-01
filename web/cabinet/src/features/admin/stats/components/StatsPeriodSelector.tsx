@@ -4,18 +4,20 @@ import { Check, ChevronDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-import { STATS_PERIOD_OPTIONS, statsPeriodLabel, type StatsPeriod } from '../utils/statsPeriod'
+import { STATS_PERIOD_OPTIONS, statsPeriodLabel, type StatsCustomRange, type StatsPeriod } from '../utils/statsPeriod'
 
 interface StatsPeriodSelectorProps {
   value: StatsPeriod
   onChange: (period: StatsPeriod) => void
+  customRange?: StatsCustomRange | null
   className?: string
 }
 
-export function StatsPeriodSelector({ value, onChange, className }: StatsPeriodSelectorProps) {
-  const { t } = useTranslation()
+export function StatsPeriodSelector({ value, onChange, customRange, className }: StatsPeriodSelectorProps) {
+  const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
 
   useEffect(() => {
     if (!open) return
@@ -38,6 +40,8 @@ export function StatsPeriodSelector({ value, onChange, className }: StatsPeriodS
     setOpen(false)
   }
 
+  const label = statsPeriodLabel(t, value, { customRange, locale })
+
   return (
     <div ref={rootRef} className={cn('relative', className)}>
       <button
@@ -51,7 +55,7 @@ export function StatsPeriodSelector({ value, onChange, className }: StatsPeriodS
           open && 'border-primary/40 ring-1 ring-primary/20',
         )}
       >
-        <span>{statsPeriodLabel(t, value)}</span>
+        <span className="truncate">{label}</span>
         <ChevronDown
           className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
         />

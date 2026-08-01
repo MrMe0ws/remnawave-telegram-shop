@@ -33,6 +33,13 @@
     "emoji_id": "5350481781306958339",
     "style": "blue"
   },
+  "cabinet_minimal_btn_feedback": {
+    "text": "Отзывы",
+    "emoji_id": "5463289097336405244"
+  },
+  "cabinet_minimal_btn_channel": {
+    "text": "📢 Канал"
+  },
   "buy_button": "💰 Купить",
   "connect_button": {
     "text": "🔌 Мой VPN",
@@ -168,7 +175,9 @@
     "text": "🆘 Поддержка",
     "style": "red"
   },
-  "channel_button": "📢 Канал",
+  "channel_button": {
+    "text": "📢 Канал"
+  },
   "tos_button": "Условия сервиса",
   "subscription_expiring": "⚠️ <b>Уведомление о подписке</b> ⚠️\n\nВаша подписка истекает <b>%s</b>\nПожалуйста, продлите подписку",
   "renew_subscription_button": "🔄 Продлить подписку",

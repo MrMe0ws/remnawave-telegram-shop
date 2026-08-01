@@ -19,6 +19,7 @@ import {
   statsPeriodLabel,
   tariffPeriodRevenue,
   tariffPeriodSales,
+  type StatsCustomRange,
   type StatsPeriod,
 } from '../utils/statsPeriod'
 import { statsNumberLocale } from '../utils/statsFormat'
@@ -38,25 +39,38 @@ interface TariffsOverviewChartProps {
   rows: AdminStatsResponse['tariff_breakdown']
   period: StatsPeriod
   timeseries?: AdminStatsTimeSeriesDTO | null
+  customRange?: StatsCustomRange | null
   className?: string
 }
 
 const MAX_TARIFF_SERIES = 5
 
-export function TariffsOverviewChart({ rows, period, timeseries, className }: TariffsOverviewChartProps) {
+export function TariffsOverviewChart({
+  rows,
+  period,
+  timeseries,
+  customRange,
+  className,
+}: TariffsOverviewChartProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
-  const periodLabel = statsPeriodLabel(t, period)
+  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
+  const periodLabel = statsPeriodLabel(t, period, { customRange, locale })
 
-  const snapshotData = useMemo(
-    () =>
-      rows.map((row) => ({
-        name: row.display_name,
-        sales: tariffPeriodSales(row, period),
-        revenue: tariffPeriodRevenue(row, period),
-      })),
-    [rows, period],
-  )
+  const snapshotData = useMemo(() => {
+    if (period === 'custom' && timeseries?.tariff_series.length) {
+      return timeseries.tariff_series.map((ts) => ({
+        name: ts.display_name,
+        sales: ts.points.reduce((sum, p) => sum + p.sales, 0),
+        revenue: ts.points.reduce((sum, p) => sum + p.revenue_rub, 0),
+      }))
+    }
+    return rows.map((row) => ({
+      name: row.display_name,
+      sales: tariffPeriodSales(row, period),
+      revenue: tariffPeriodRevenue(row, period),
+    }))
+  }, [rows, period, timeseries])
 
   const timeSeriesView = useMemo(() => {
     if (!timeseries?.tariff_series.length || timeseries.points.length < 2) {
