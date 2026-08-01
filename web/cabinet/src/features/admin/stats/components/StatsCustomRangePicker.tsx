@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { AdminDatePicker } from '../../components/AdminDatePicker'
+import { AdminModal } from '../../components/AdminModal'
 import type { StatsCustomRange } from '../utils/statsPeriod'
 
 function toIsoDate(d: Date): string {
@@ -24,6 +25,18 @@ function startOfDay(d: Date): Date {
   return x
 }
 
+function useIsMobileMd(): boolean | null {
+  const [isMobile, setIsMobile] = useState<boolean | null>(null)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return isMobile
+}
+
 interface StatsCustomRangePickerProps {
   active: boolean
   value: StatsCustomRange | null
@@ -40,6 +53,7 @@ export function StatsCustomRangePicker({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobileMd()
   const today = useMemo(() => startOfDay(new Date()), [])
 
   const defaultFrom = useMemo(() => {
@@ -64,7 +78,7 @@ export function StatsCustomRangePicker({
   }, [open, value])
 
   useEffect(() => {
-    if (!open) return
+    if (!open || isMobile !== false) return
     const onDocClick = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
@@ -77,7 +91,7 @@ export function StatsCustomRangePicker({
       document.removeEventListener('mousedown', onDocClick)
       document.removeEventListener('keydown', onEsc)
     }
-  }, [open])
+  }, [open, isMobile])
 
   const apply = () => {
     const from = startOfDay(fromDate)
@@ -98,6 +112,34 @@ export function StatsCustomRangePicker({
     setOpen(false)
   }
 
+  const pickers = (
+    <div
+      className={cn(
+        'gap-3',
+        isMobile ? 'flex flex-col' : 'grid grid-cols-2 items-start',
+      )}
+    >
+      <div className="min-w-0 space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground">{t('admin.stats.customRange.from')}</p>
+        <AdminDatePicker value={fromDate} onChange={setFromDate} showTime={false} />
+      </div>
+      <div className="min-w-0 space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground">{t('admin.stats.customRange.to')}</p>
+        <AdminDatePicker value={toDate} onChange={setToDate} showTime={false} minDate={fromDate} />
+      </div>
+    </div>
+  )
+
+  const applyButton = (
+    <button
+      type="button"
+      onClick={apply}
+      className="flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+    >
+      {t('admin.stats.customRange.apply')}
+    </button>
+  )
+
   return (
     <div ref={rootRef} className={cn('relative', className)}>
       <button
@@ -114,30 +156,34 @@ export function StatsCustomRangePicker({
         <Calendar className="size-4" />
       </button>
 
-      {open && (
-        <div className="cabinet-elevated-card absolute right-0 z-50 mt-1.5 w-[min(100vw-1.5rem,20rem)] space-y-3 rounded-lg border border-border/60 bg-card p-3 shadow-lg sm:w-[22rem]">
+      {open && isMobile === false && (
+        <div className="cabinet-elevated-card absolute right-0 z-50 mt-1.5 w-[min(100vw-2rem,40rem)] space-y-3 rounded-lg border border-border/60 bg-card p-4 shadow-lg">
           <p className="text-sm font-medium">{t('admin.stats.customRange.title')}</p>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">{t('admin.stats.customRange.from')}</p>
-            <AdminDatePicker value={fromDate} onChange={setFromDate} showTime={false} />
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">{t('admin.stats.customRange.to')}</p>
-            <AdminDatePicker value={toDate} onChange={setToDate} showTime={false} minDate={fromDate} />
-          </div>
-
+          {pickers}
           {error && <p className="text-xs text-destructive">{error}</p>}
-
-          <button
-            type="button"
-            onClick={apply}
-            className="flex min-h-10 w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            {t('admin.stats.customRange.apply')}
-          </button>
+          {applyButton}
         </div>
+      )}
+
+      {isMobile === true && (
+        <AdminModal
+          open={open}
+          onClose={() => setOpen(false)}
+          title={t('admin.stats.customRange.title')}
+          icon={Calendar}
+          iconAccent="blue"
+          className="items-stretch p-0 sm:items-stretch sm:p-0"
+          panelClassName="h-[100dvh] max-h-[100dvh] w-full max-w-none rounded-none sm:max-w-none sm:rounded-none"
+          bodyClassName="space-y-3 px-4 py-4"
+          footer={
+            <div className="space-y-2">
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              {applyButton}
+            </div>
+          }
+        >
+          {pickers}
+        </AdminModal>
       )}
     </div>
   )

@@ -117,34 +117,37 @@ export function UsersStatsWidget({
 
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-stretch">
           <div className="relative mx-auto h-36 w-full max-w-[160px] shrink-0 sm:mx-0 sm:h-36 sm:flex-1">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={vpnDonut}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  paddingAngle={2}
-                  strokeWidth={0}
-                >
-                  {vpnDonut.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => value.toLocaleString(numberLocale)}
-                  contentStyle={statsChartTooltipStyle}
-                  labelStyle={statsChartTooltipLabelStyle}
-                  itemStyle={statsChartTooltipItemStyle}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center">
               <span className="text-xl font-semibold tabular-nums">{vpnTotal}</span>
               <span className="text-[10px] text-muted-foreground">{t('admin.stats.totalSubsStates')}</span>
+            </div>
+            <div className="relative z-10 h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={vpnDonut}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="55%"
+                    outerRadius="80%"
+                    paddingAngle={2}
+                    strokeWidth={0}
+                  >
+                    {vpnDonut.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => value.toLocaleString(numberLocale)}
+                    contentStyle={statsChartTooltipStyle}
+                    labelStyle={statsChartTooltipLabelStyle}
+                    itemStyle={statsChartTooltipItemStyle}
+                    wrapperStyle={{ zIndex: 20, outline: 'none' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
