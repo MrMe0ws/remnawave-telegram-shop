@@ -1,24 +1,30 @@
-/** Декоративные темы кабинета — расширять при добавлении пресетов. */
+/** Декоративные темы кабинета — порядок = порядок в админ-селекте (по цветовым группам). */
 export const DECOR_THEME_IDS = [
   'off',
+  // greens
   'green',
-  'pink',
-  'orange',
-  'yellow',
-  'violet',
-  'slate',
-  'neon',
-  'new_year',
-  'summer',
-  'halloween',
-  'valentine',
   'spring',
-  'black_friday',
-  'aurora',
-  'ocean',
   'cyber',
-  'sunset',
+  // cyan / blue
+  'neon',
+  'ocean',
+  'new_year',
+  'slate',
+  // teal–violet bridge + purple
+  'aurora',
+  'violet',
   'lavender',
+  // pink / red
+  'pink',
+  'valentine',
+  // warm
+  'sunset',
+  'orange',
+  'halloween',
+  // yellow / gold
+  'yellow',
+  'summer',
+  'black_friday',
 ] as const
 
 export type DecorThemeId = (typeof DECOR_THEME_IDS)[number]
@@ -45,23 +51,23 @@ export interface DecorThemeDef {
 export const DECOR_THEMES: Record<DecorThemeId, DecorThemeDef> = {
   off: { id: 'off', effect: null },
   green: { id: 'green', effect: null },
-  pink: { id: 'pink', effect: null },
-  orange: { id: 'orange', effect: null },
-  yellow: { id: 'yellow', effect: null },
-  violet: { id: 'violet', effect: null },
-  slate: { id: 'slate', effect: null },
-  neon: { id: 'neon', effect: null },
-  new_year: { id: 'new_year', effect: 'snow' },
-  summer: { id: 'summer', effect: 'sunrays' },
-  halloween: { id: 'halloween', effect: 'pumpkins' },
-  valentine: { id: 'valentine', effect: 'hearts' },
   spring: { id: 'spring', effect: 'petals' },
-  black_friday: { id: 'black_friday', effect: 'sparks' },
-  aurora: { id: 'aurora', effect: 'aurora' },
-  ocean: { id: 'ocean', effect: 'bubbles' },
   cyber: { id: 'cyber', effect: 'matrix' },
-  sunset: { id: 'sunset', effect: 'embers' },
+  neon: { id: 'neon', effect: null },
+  ocean: { id: 'ocean', effect: 'bubbles' },
+  new_year: { id: 'new_year', effect: 'snow' },
+  slate: { id: 'slate', effect: null },
+  aurora: { id: 'aurora', effect: 'aurora' },
+  violet: { id: 'violet', effect: null },
   lavender: { id: 'lavender', effect: 'dots' },
+  pink: { id: 'pink', effect: null },
+  valentine: { id: 'valentine', effect: 'hearts' },
+  sunset: { id: 'sunset', effect: 'embers' },
+  orange: { id: 'orange', effect: null },
+  halloween: { id: 'halloween', effect: 'pumpkins' },
+  yellow: { id: 'yellow', effect: null },
+  summer: { id: 'summer', effect: 'sunrays' },
+  black_friday: { id: 'black_friday', effect: 'sparks' },
 }
 
 export function normalizeDecorTheme(value: string | undefined | null): DecorThemeId {

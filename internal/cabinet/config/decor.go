@@ -7,26 +7,27 @@ import (
 )
 
 // ValidDecorThemeIDs — whitelist CABINET_DECOR_THEME (расширять при новых пресетах).
+// Порядок = админ-селект по цветовым группам (green → blue → purple → pink → warm → gold).
 var ValidDecorThemeIDs = []string{
 	"off",
 	"green",
-	"pink",
-	"orange",
-	"yellow",
-	"violet",
-	"slate",
-	"neon",
-	"new_year",
-	"summer",
-	"halloween",
-	"valentine",
 	"spring",
-	"black_friday",
-	"aurora",
-	"ocean",
 	"cyber",
-	"sunset",
+	"neon",
+	"ocean",
+	"new_year",
+	"slate",
+	"aurora",
+	"violet",
 	"lavender",
+	"pink",
+	"valentine",
+	"sunset",
+	"orange",
+	"halloween",
+	"yellow",
+	"summer",
+	"black_friday",
 }
 
 var validDecorThemes map[string]struct{}

@@ -1423,16 +1423,57 @@ html:not(.dark) .cabinet-decor-particle--bubble {
   text-shadow: 0 0 6px hsl(210 80% 55% / 0.28);
 }
 
-.cabinet-decor-particle--matrix {
-  color: hsl(140 90% 52% / 0.72);
-  text-shadow: 0 0 8px hsl(140 100% 40% / 0.45);
+/* Cyber digital rain: колонны строго вниз, без rotate. */
+.cabinet-decor-matrix-col {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05em;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  animation-name: cabinet-decor-fall;
+  line-height: 1.15;
+  pointer-events: none;
+  will-change: transform;
+  animation: cabinet-decor-matrix-fall linear infinite;
 }
 
-html:not(.dark) .cabinet-decor-particle--matrix {
-  color: hsl(140 70% 32% / 0.65);
-  text-shadow: 0 0 6px hsl(140 80% 35% / 0.3);
+.cabinet-decor-matrix-glyph {
+  color: hsl(140 80% 42% / 0.38);
+  text-shadow: none;
+}
+
+.cabinet-decor-matrix-glyph--near {
+  color: hsl(140 90% 52% / 0.55);
+  text-shadow: 0 0 6px hsl(140 100% 40% / 0.25);
+}
+
+.cabinet-decor-matrix-glyph--head {
+  color: hsl(140 100% 88% / 0.78);
+  text-shadow: 0 0 8px hsl(140 100% 55% / 0.45);
+}
+
+html:not(.dark) .cabinet-decor-matrix-glyph {
+  color: hsl(140 55% 32% / 0.32);
+}
+
+html:not(.dark) .cabinet-decor-matrix-glyph--near {
+  color: hsl(140 60% 36% / 0.45);
+  text-shadow: none;
+}
+
+html:not(.dark) .cabinet-decor-matrix-glyph--head {
+  color: hsl(140 70% 28% / 0.62);
+  text-shadow: 0 0 4px hsl(140 70% 35% / 0.2);
+}
+
+@keyframes cabinet-decor-matrix-fall {
+  0% {
+    transform: translate3d(0, -120%, 0);
+  }
+  100% {
+    transform: translate3d(0, 115vh, 0);
+  }
 }
 
 .cabinet-decor-particle--ember {
@@ -2033,23 +2074,23 @@ html.dark[data-cabinet-decor="cyber"] {
 
 html.dark[data-cabinet-decor="cyber"] body {
   background-image:
-    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.22), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 80%, hsl(140 70% 30% / 0.12), transparent 50%),
+    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 80%, hsl(140 70% 30% / 0.08), transparent 50%),
     linear-gradient(168deg, hsl(140 25% 6%) 0%, hsl(var(--background)) 45%, hsl(150 30% 5%) 100%);
 }
 
 html.dark[data-cabinet-decor="cyber"] .cabinet-shell-gradient {
   background-image:
-    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.22), transparent 55%),
+    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.14), transparent 55%),
     linear-gradient(168deg, hsl(140 25% 6%) 0%, hsl(var(--background)) 45%, hsl(150 30% 5%) 100%);
 }
 
 html:not(.dark)[data-cabinet-decor="cyber"] body,
 html:not(.dark)[data-cabinet-decor="cyber"] .cabinet-shell-gradient {
   background-image:
-    radial-gradient(ellipse 115% 80% at 50% -18%, hsl(140 70% 38% / 0.18), transparent 55%),
-    radial-gradient(ellipse 80% 50% at 100% 100%, hsl(140 50% 35% / 0.1), transparent 50%),
-    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.08), transparent 55%);
+    radial-gradient(ellipse 115% 80% at 50% -18%, hsl(140 70% 38% / 0.12), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, hsl(140 50% 35% / 0.07), transparent 50%),
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.06), transparent 55%);
 }
 
 html[data-cabinet-decor="cyber"] .cabinet-elevated-card,
@@ -2471,24 +2512,24 @@ html:not(.dark) .cabinet-decor-scene__ocean-wave {
 .cabinet-decor-scene--cyber .cabinet-decor-scene__cyber-grid {
   position: absolute;
   inset: 0;
-  opacity: 0.14;
+  opacity: 0.07;
   background-image:
-    linear-gradient(hsl(var(--primary) / 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--primary) / 0.4) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse 90% 80% at 50% 35%, black 15%, transparent 75%);
+    linear-gradient(hsl(var(--primary) / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.35) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 30%, black 10%, transparent 72%);
 }
 
 .cabinet-decor-scene--cyber .cabinet-decor-scene__cyber-scanline {
   position: absolute;
   inset: 0;
-  opacity: 0.07;
+  opacity: 0.04;
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    hsl(var(--primary) / 0.18) 2px,
-    hsl(var(--primary) / 0.18) 4px
+    hsl(var(--primary) / 0.14) 2px,
+    hsl(var(--primary) / 0.14) 4px
   );
 }
 

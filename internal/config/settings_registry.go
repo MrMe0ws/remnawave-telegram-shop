@@ -8,26 +8,27 @@ import (
 )
 
 // cabinetDecorThemeIDs — порядок опций в админке (синхрон с internal/cabinet/config.ValidDecorThemeIDs).
+// Порядок = админ-селект по цветовым группам (синхрон с cabinet/config.ValidDecorThemeIDs).
 var cabinetDecorThemeIDs = []string{
 	"off",
 	"green",
-	"pink",
-	"orange",
-	"yellow",
-	"violet",
-	"slate",
-	"neon",
-	"new_year",
-	"summer",
-	"halloween",
-	"valentine",
 	"spring",
-	"black_friday",
-	"aurora",
-	"ocean",
 	"cyber",
-	"sunset",
+	"neon",
+	"ocean",
+	"new_year",
+	"slate",
+	"aurora",
+	"violet",
 	"lavender",
+	"pink",
+	"valentine",
+	"sunset",
+	"orange",
+	"halloween",
+	"yellow",
+	"summer",
+	"black_friday",
 }
 
 func cabinetDecorThemeSet() map[string]struct{} {

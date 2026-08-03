@@ -560,9 +560,98 @@ export function SparksEffect() {
 
 const AURORA_GLYPHS = ['✦', '✧', '·'] as const
 const OCEAN_GLYPHS = ['○', '◦', '∘'] as const
-const CYBER_GLYPHS = ['0', '1', 'ｶ', 'ﾀ', 'ﾒ', '░', '▒', '¤'] as const
+/** Halfwidth katakana + digits — как в digital rain, без латиницы для читаемости UI. */
+const CYBER_GLYPHS = [
+  '0',
+  '1',
+  '2',
+  '3',
+  '5',
+  '7',
+  '8',
+  'ｱ',
+  'ｳ',
+  'ｴ',
+  'ｵ',
+  'ｶ',
+  'ｷ',
+  'ｸ',
+  'ｹ',
+  'ｺ',
+  'ｻ',
+  'ｼ',
+  'ｽ',
+  'ｾ',
+  'ｿ',
+  'ﾀ',
+  'ﾁ',
+  'ﾂ',
+  'ﾃ',
+  'ﾄ',
+  'ﾅ',
+  'ﾆ',
+  'ﾇ',
+  'ﾈ',
+  'ﾉ',
+  'ﾊ',
+  'ﾋ',
+  'ﾌ',
+  'ﾍ',
+  'ﾎ',
+  'ﾏ',
+  'ﾐ',
+  'ﾑ',
+  'ﾒ',
+  'ﾓ',
+  'ﾔ',
+  'ﾕ',
+  'ﾖ',
+  'ﾗ',
+  'ﾘ',
+  'ﾙ',
+  'ﾚ',
+  'ﾛ',
+  'ﾜ',
+  'ﾝ',
+] as const
 const SUNSET_GLYPHS = ['·', '•', '✦'] as const
 const LAVENDER_GLYPHS = ['·', '•', '○'] as const
+
+interface MatrixColumnStyle {
+  left: string
+  fontSize: number
+  animationDuration: string
+  animationDelay: string
+  opacity: number
+  glyphs: string[]
+}
+
+function pickCyberGlyph(): string {
+  return CYBER_GLYPHS[Math.floor(Math.random() * CYBER_GLYPHS.length)]!
+}
+
+function buildMatrixColumns(
+  count: number,
+  opts?: { fontMin?: number; fontMax?: number; trailMin?: number; trailMax?: number; durationMin?: number; durationMax?: number },
+): MatrixColumnStyle[] {
+  const fontMin = opts?.fontMin ?? 11
+  const fontMax = opts?.fontMax ?? 15
+  const trailMin = opts?.trailMin ?? 5
+  const trailMax = opts?.trailMax ?? 9
+  const durationMin = opts?.durationMin ?? 9
+  const durationMax = opts?.durationMax ?? 16
+  return Array.from({ length: count }, () => {
+    const trailLen = Math.floor(randomBetween(trailMin, trailMax + 0.99))
+    const timing = staggeredTiming(durationMin, durationMax)
+    return {
+      left: `${randomBetween(2, 96)}%`,
+      fontSize: randomBetween(fontMin, fontMax),
+      ...timing,
+      opacity: randomBetween(0.22, 0.42),
+      glyphs: Array.from({ length: trailLen }, () => pickCyberGlyph()),
+    }
+  })
+}
 
 export function AuroraEffect() {
   const desktop = useIsDesktopViewport()
@@ -606,24 +695,57 @@ export function BubblesEffect() {
   )
 }
 
+/** Digital rain: колонны строго сверху вниз, без вращения; низкая плотность. */
 export function MatrixEffect() {
   const desktop = useIsDesktopViewport()
+  const columnCount = useMemo(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return 0
+    }
+    return desktop ? 7 : 4
+  }, [desktop])
   const buildOpts = useMemo(
     () =>
       desktop
-        ? { fontMin: 11, fontMax: 18, durationMin: 7, durationMax: 14, delayMax: 10 }
-        : { fontMin: 10, fontMax: 15, durationMin: 7, durationMax: 13, delayMax: 10 },
+        ? { fontMin: 11, fontMax: 14, trailMin: 5, trailMax: 8, durationMin: 10, durationMax: 17 }
+        : { fontMin: 10, fontMax: 13, trailMin: 4, trailMax: 6, durationMin: 11, durationMax: 18 },
     [desktop],
   )
+  const columns = useMemo(() => buildMatrixColumns(columnCount, buildOpts), [columnCount, buildOpts])
+  if (columns.length === 0) return null
 
   return (
-    <FloatingParticles
-      chars={CYBER_GLYPHS}
-      fxClassName="cabinet-decor-fx--cyber"
-      particleClassName="cabinet-decor-particle--matrix"
-      count={particleCount(2)}
-      buildOpts={buildOpts}
-    />
+    <div className="cabinet-decor-fx cabinet-decor-fx--cyber" aria-hidden>
+      {columns.map((col, i) => (
+        <span
+          key={i}
+          className="cabinet-decor-matrix-col"
+          style={{
+            left: col.left,
+            fontSize: col.fontSize,
+            animationDuration: col.animationDuration,
+            animationDelay: col.animationDelay,
+            opacity: col.opacity,
+          }}
+        >
+          {col.glyphs.map((g, gi) => {
+            const fromHead = col.glyphs.length - 1 - gi
+            return (
+              <span
+                key={gi}
+                className={cn(
+                  'cabinet-decor-matrix-glyph',
+                  fromHead === 0 && 'cabinet-decor-matrix-glyph--head',
+                  fromHead === 1 && 'cabinet-decor-matrix-glyph--near',
+                )}
+              >
+                {g}
+              </span>
+            )
+          })}
+        </span>
+      ))}
+    </div>
   )
 }
 
