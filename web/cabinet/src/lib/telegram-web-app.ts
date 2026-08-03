@@ -1,5 +1,24 @@
+/** Нативные десктоп-клиенты Telegram. */
+const NATIVE_DESKTOP_PLATFORMS = new Set(['tdesktop', 'macos'])
+/** Telegram Web — platform одинаковый на PC и телефоне, нужен доп. фильтр по UA. */
+const WEB_PLATFORMS = new Set(['weba', 'webk', 'web'])
+
 function webApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp
+}
+
+function isMobileUserAgent(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
+}
+
+/** Desktop Mini App (окно с ✕ в углу) — без большого top safe-area. */
+function isTelegramDesktopPlatform(): boolean {
+  const p = webApp()?.platform
+  if (typeof p !== 'string') return false
+  if (NATIVE_DESKTOP_PLATFORMS.has(p)) return true
+  if (WEB_PLATFORMS.has(p) && !isMobileUserAgent()) return true
+  return false
 }
 
 /** Лёгкая вибрация (Bot API 6.1+). На десктопе/без поддержки — no-op. */
@@ -23,15 +42,36 @@ function syncTelegramChromeColors(tg: TelegramWebApp): void {
 }
 
 /**
+ * Включает CSS top safe-area только на мобильном Mini App.
+ * На desktop TG отдаёт большой contentSafeAreaInset.top → «дыра» над логотипом.
+ */
+function syncCabinetTgSafeTopAttr(): void {
+  const root = document.documentElement
+  const tg = webApp()
+  if (!tg) {
+    root.removeAttribute('data-cabinet-tg-safe-top')
+    return
+  }
+  if (isTelegramDesktopPlatform()) {
+    root.setAttribute('data-cabinet-tg-safe-top', '0')
+    return
+  }
+  root.setAttribute('data-cabinet-tg-safe-top', '1')
+}
+
+/**
  * Fullscreen Mini App (Bot API 8.0+): mobile и desktop.
- * На мобилке ✕/⋯ — оверлей; отступы через CSS --tg-*-safe-area-inset-*
- * на `.cabinet-app-header`. Вне Telegram / на клиентах ниже 8.0 — no-op.
+ * Top insets (--cabinet-tg-safe-top) — только мобилка; desktop без лишнего padding.
  */
 export function configureTelegramViewport(): void {
   const tg = webApp()
-  if (!tg) return
+  if (!tg) {
+    syncCabinetTgSafeTopAttr()
+    return
+  }
 
   syncTelegramChromeColors(tg)
+  syncCabinetTgSafeTopAttr()
 
   if (tg.isFullscreen) return
   if (typeof tg.isVersionAtLeast === 'function' && !tg.isVersionAtLeast('8.0')) return

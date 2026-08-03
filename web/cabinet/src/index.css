@@ -14,13 +14,11 @@
   :root {
     /*
      * Telegram Mini App fullscreen (Bot API 8.0+):
-     * --tg-safe-area-inset-* — вырез/системные UI;
-     * --tg-content-safe-area-inset-* — зона под оверлеем ✕/⋯.
-     * Вне TG переменные отсутствуют → 0px (браузер без лишнего отступа).
+     * --tg-safe-area-inset-* / --tg-content-safe-area-inset-* — notch и оверлей ✕/⋯.
+     * Top: только html[data-cabinet-tg-safe-top="1"] (мобильный Mini App).
+     * На desktop TG inset большой — не применяем (иначе «дыра» над хедером).
      */
-    --cabinet-tg-safe-top: calc(
-      var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)
-    );
+    --cabinet-tg-safe-top: 0px;
     --cabinet-tg-safe-bottom: calc(
       var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
     );
@@ -159,7 +157,13 @@
     background-image: var(--cabinet-dark-bg-image);
   }
 
-  /* Sticky/chrome header: top inset under TG fullscreen controls (0 outside Mini App). */
+  /* Mobile Mini App only: top inset under notch + ✕/⋯ (set in telegram-web-app.ts). */
+  html[data-cabinet-tg-safe-top='1'] {
+    --cabinet-tg-safe-top: calc(
+      var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)
+    );
+  }
+
   .cabinet-app-header {
     padding-top: var(--cabinet-tg-safe-top);
   }
