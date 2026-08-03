@@ -14,6 +14,8 @@ var cabinetDecorThemeIDs = []string{
 	"pink",
 	"orange",
 	"yellow",
+	"violet",
+	"slate",
 	"neon",
 	"new_year",
 	"summer",
@@ -21,6 +23,11 @@ var cabinetDecorThemeIDs = []string{
 	"valentine",
 	"spring",
 	"black_friday",
+	"aurora",
+	"ocean",
+	"cyber",
+	"sunset",
+	"lavender",
 }
 
 func cabinetDecorThemeSet() map[string]struct{} {

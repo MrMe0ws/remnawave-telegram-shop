@@ -105,6 +105,8 @@ export interface AuthBootstrapResponse {
     | 'pink'
     | 'orange'
     | 'yellow'
+    | 'violet'
+    | 'slate'
     | 'new_year'
     | 'summer'
     | 'neon'
@@ -112,6 +114,11 @@ export interface AuthBootstrapResponse {
     | 'valentine'
     | 'spring'
     | 'black_friday'
+    | 'aurora'
+    | 'ocean'
+    | 'cyber'
+    | 'sunset'
+    | 'lavender'
   /** Доступные провайдеры оплаты по backend-конфигурации env. */
   payment_providers?: {
     yookassa?: boolean

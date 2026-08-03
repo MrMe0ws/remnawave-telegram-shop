@@ -8,6 +8,7 @@
 
 ### Added
 
+- **Новые декор-темы кабинета** (`CABINET_DECOR_THEME`): color-only `violet`, `slate`; атмосферные `aurora`, `ocean`, `cyber`, `sunset`, `lavender` (палитра + фон + FX/сцены).
 - **Шифрование deep link подключения** (`CABINET_DEEPLINK_HAPP_ENCRYPT`, `CABINET_DEEPLINK_INCY_ENCRYPT`): на странице «Установка» (`/cabinet/connections`) кнопка «Добавить подписку» открывает зашифрованный deep link вместо обычного — `happ://crypt5/` (через официальный API `crypto.happ.su`) и `incy://crypt1/` (обфускация AES-256-GCM, порт `@incy/link-encoder`). Два независимых тумблера, default `false`.
 - Админка: **Настройки бота → Оформление кабинета → подсекция «Deep link подключения»** (группа `cabinet`, hot-reload без рестарта).
 - API: `GET /cabinet/api/me/deeplink?app=happ|incy` (за `RequireAuth` + `RequireVerifiedEmail`, rate-limit 60 req/min/аккаунт; ответ `{"deeplink":"…"}`, ссылка подписки не логируется). Bootstrap: поля `deeplink_happ_encrypt`, `deeplink_incy_encrypt`.

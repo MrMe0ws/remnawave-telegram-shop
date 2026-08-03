@@ -3,7 +3,12 @@ import { isDecorColorOnlyTheme } from './decorThemeAdmin'
 import { useCabinetDecorTheme } from './useCabinetDecorTheme'
 import { CabinetDecorScene } from './CabinetDecorScene'
 import {
+  AuroraEffect,
+  BubblesEffect,
+  DotsEffect,
+  EmbersEffect,
   HeartsEffect,
+  MatrixEffect,
   PumpkinsEffect,
   SnowEffect,
   SparksEffect,
@@ -41,6 +46,21 @@ export function CabinetDecorLayer() {
         break
       case 'sparks':
         fx = <SparksEffect />
+        break
+      case 'aurora':
+        fx = <AuroraEffect />
+        break
+      case 'bubbles':
+        fx = <BubblesEffect />
+        break
+      case 'matrix':
+        fx = <MatrixEffect />
+        break
+      case 'embers':
+        fx = <EmbersEffect />
+        break
+      case 'dots':
+        fx = <DotsEffect />
         break
       default:
         break

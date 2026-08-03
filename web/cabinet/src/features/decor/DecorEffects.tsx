@@ -557,3 +557,114 @@ export function SparksEffect() {
     </div>
   )
 }
+
+const AURORA_GLYPHS = ['✦', '✧', '·'] as const
+const OCEAN_GLYPHS = ['○', '◦', '∘'] as const
+const CYBER_GLYPHS = ['0', '1', 'ｶ', 'ﾀ', 'ﾒ', '░', '▒', '¤'] as const
+const SUNSET_GLYPHS = ['·', '•', '✦'] as const
+const LAVENDER_GLYPHS = ['·', '•', '○'] as const
+
+export function AuroraEffect() {
+  const desktop = useIsDesktopViewport()
+  const buildOpts = useMemo(
+    () =>
+      desktop
+        ? { fontMin: 10, fontMax: 18, durationMin: 10, durationMax: 20, delayMax: 14 }
+        : { fontMin: 8, fontMax: 14, durationMin: 10, durationMax: 18, delayMax: 12 },
+    [desktop],
+  )
+
+  return (
+    <FloatingParticles
+      chars={AURORA_GLYPHS}
+      fxClassName="cabinet-decor-fx--aurora"
+      particleClassName="cabinet-decor-particle--aurora"
+      count={particleCount(3)}
+      buildOpts={buildOpts}
+    />
+  )
+}
+
+export function BubblesEffect() {
+  const desktop = useIsDesktopViewport()
+  const buildOpts = useMemo(
+    () =>
+      desktop
+        ? { fontMin: 10, fontMax: 22, durationMin: 10, durationMax: 20, delayMax: 14 }
+        : { fontMin: 8, fontMax: 16, durationMin: 9, durationMax: 18, delayMax: 12 },
+    [desktop],
+  )
+
+  return (
+    <FloatingParticles
+      chars={OCEAN_GLYPHS}
+      fxClassName="cabinet-decor-fx--ocean"
+      particleClassName="cabinet-decor-particle--bubble"
+      count={particleCount(2)}
+      buildOpts={buildOpts}
+    />
+  )
+}
+
+export function MatrixEffect() {
+  const desktop = useIsDesktopViewport()
+  const buildOpts = useMemo(
+    () =>
+      desktop
+        ? { fontMin: 11, fontMax: 18, durationMin: 7, durationMax: 14, delayMax: 10 }
+        : { fontMin: 10, fontMax: 15, durationMin: 7, durationMax: 13, delayMax: 10 },
+    [desktop],
+  )
+
+  return (
+    <FloatingParticles
+      chars={CYBER_GLYPHS}
+      fxClassName="cabinet-decor-fx--cyber"
+      particleClassName="cabinet-decor-particle--matrix"
+      count={particleCount(2)}
+      buildOpts={buildOpts}
+    />
+  )
+}
+
+export function EmbersEffect() {
+  const desktop = useIsDesktopViewport()
+  const buildOpts = useMemo(
+    () =>
+      desktop
+        ? { fontMin: 8, fontMax: 16, durationMin: 9, durationMax: 18, delayMax: 12 }
+        : { fontMin: 7, fontMax: 13, durationMin: 8, durationMax: 16, delayMax: 10 },
+    [desktop],
+  )
+
+  return (
+    <FloatingParticles
+      chars={SUNSET_GLYPHS}
+      fxClassName="cabinet-decor-fx--sunset"
+      particleClassName="cabinet-decor-particle--ember"
+      count={particleCount(3)}
+      buildOpts={buildOpts}
+    />
+  )
+}
+
+export function DotsEffect() {
+  const desktop = useIsDesktopViewport()
+  const buildOpts = useMemo(
+    () =>
+      desktop
+        ? { fontMin: 8, fontMax: 14, durationMin: 12, durationMax: 22, delayMax: 14 }
+        : { fontMin: 7, fontMax: 12, durationMin: 11, durationMax: 20, delayMax: 12 },
+    [desktop],
+  )
+
+  return (
+    <FloatingParticles
+      chars={LAVENDER_GLYPHS}
+      fxClassName="cabinet-decor-fx--lavender"
+      particleClassName="cabinet-decor-particle--dot"
+      count={particleCount(3)}
+      buildOpts={buildOpts}
+    />
+  )
+}

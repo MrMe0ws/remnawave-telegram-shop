@@ -5,7 +5,7 @@ import { normalizeDecorTheme, type DecorThemeId } from './decorThemes'
  * MVP: админ включает CABINET_DECOR_THEME вручную; авто выключено.
  */
 export const DECOR_AUTO_WINDOWS: ReadonlyArray<{
-  theme: Exclude<DecorThemeId, 'off' | 'neon'>
+  theme: Exclude<DecorThemeId, 'off' | 'neon' | 'violet' | 'slate' | 'aurora' | 'ocean' | 'cyber' | 'sunset' | 'lavender'>
   startMonth: number
   startDay: number
   endMonth: number

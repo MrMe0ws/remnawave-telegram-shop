@@ -1082,7 +1082,10 @@
  * Активная декор-тема: поверхности и shine подстраиваются под --primary пресета.
  * (off — дефолтные токены :root / .dark.)
  */
-html[data-cabinet-decor]:not([data-cabinet-decor="off"]) {
+/* Dual-tone (neon / aurora / sunset) задают --accent сами — не затирать. */
+html[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not(
+    [data-cabinet-decor="aurora"]
+  ):not([data-cabinet-decor="sunset"]) {
   --accent: var(--primary);
   --ring: var(--primary);
 }
@@ -1398,6 +1401,62 @@ html:not(.dark) .cabinet-decor-particle--bf-money {
   text-shadow: 0 0 8px hsl(45 100% 45% / 0.5);
 }
 
+.cabinet-decor-particle--aurora {
+  color: hsl(168 80% 70% / 0.75);
+  text-shadow: 0 0 10px hsl(280 70% 65% / 0.45);
+  animation-name: cabinet-decor-drift;
+}
+
+html:not(.dark) .cabinet-decor-particle--aurora {
+  color: hsl(168 55% 42% / 0.7);
+  text-shadow: 0 0 8px hsl(280 50% 55% / 0.35);
+}
+
+.cabinet-decor-particle--bubble {
+  color: hsl(200 80% 72% / 0.55);
+  text-shadow: 0 0 8px hsl(210 90% 60% / 0.35);
+  animation-name: cabinet-decor-rise;
+}
+
+html:not(.dark) .cabinet-decor-particle--bubble {
+  color: hsl(210 70% 48% / 0.5);
+  text-shadow: 0 0 6px hsl(210 80% 55% / 0.28);
+}
+
+.cabinet-decor-particle--matrix {
+  color: hsl(140 90% 52% / 0.72);
+  text-shadow: 0 0 8px hsl(140 100% 40% / 0.45);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  animation-name: cabinet-decor-fall;
+}
+
+html:not(.dark) .cabinet-decor-particle--matrix {
+  color: hsl(140 70% 32% / 0.65);
+  text-shadow: 0 0 6px hsl(140 80% 35% / 0.3);
+}
+
+.cabinet-decor-particle--ember {
+  color: hsl(18 95% 62% / 0.7);
+  text-shadow: 0 0 10px hsl(320 70% 55% / 0.35);
+  animation-name: cabinet-decor-rise;
+}
+
+html:not(.dark) .cabinet-decor-particle--ember {
+  color: hsl(18 90% 48% / 0.65);
+  text-shadow: 0 0 8px hsl(340 60% 50% / 0.28);
+}
+
+.cabinet-decor-particle--dot {
+  color: hsl(270 50% 72% / 0.55);
+  text-shadow: 0 0 10px hsl(270 45% 65% / 0.35);
+  animation-name: cabinet-decor-drift;
+}
+
+html:not(.dark) .cabinet-decor-particle--dot {
+  color: hsl(270 40% 52% / 0.5);
+  text-shadow: 0 0 8px hsl(270 40% 55% / 0.28);
+}
+
 @keyframes cabinet-decor-fall {
   0% {
     transform: translateY(-5vh) rotate(0deg);
@@ -1662,6 +1721,30 @@ html[data-cabinet-decor="yellow"] {
   --ring: 38 92% 46%;
 }
 
+html[data-cabinet-decor="violet"] {
+  --primary: 262 70% 52%;
+  --accent: 262 70% 52%;
+  --ring: 262 70% 52%;
+}
+
+html.dark[data-cabinet-decor="violet"] {
+  --primary: 262 72% 62%;
+  --accent: 262 72% 62%;
+  --ring: 262 72% 62%;
+}
+
+html[data-cabinet-decor="slate"] {
+  --primary: 215 16% 42%;
+  --accent: 215 16% 42%;
+  --ring: 215 16% 42%;
+}
+
+html.dark[data-cabinet-decor="slate"] {
+  --primary: 215 20% 62%;
+  --accent: 215 20% 62%;
+  --ring: 215 20% 62%;
+}
+
 /* --- summer --- */
 html[data-cabinet-decor="summer"] {
   --primary: 38 92% 46%;
@@ -1865,6 +1948,198 @@ html:not(.dark)[data-cabinet-decor="black_friday"] .cabinet-shell-gradient {
     radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.08), transparent 55%);
 }
 
+/* --- aurora --- */
+html[data-cabinet-decor="aurora"] {
+  --primary: 168 72% 40%;
+  --accent: 280 65% 55%;
+  --ring: 168 72% 40%;
+}
+
+html.dark[data-cabinet-decor="aurora"] {
+  --primary: 168 75% 48%;
+  --accent: 280 70% 62%;
+  --ring: 168 75% 48%;
+}
+
+html.dark[data-cabinet-decor="aurora"] body {
+  background-image:
+    radial-gradient(ellipse 130% 70% at 20% -10%, hsl(168 80% 45% / 0.28), transparent 55%),
+    radial-gradient(ellipse 110% 65% at 80% 0%, hsl(280 70% 55% / 0.22), transparent 55%),
+    radial-gradient(ellipse 90% 55% at 50% 100%, hsl(200 60% 40% / 0.14), transparent 55%),
+    linear-gradient(168deg, hsl(230 40% 9%) 0%, hsl(var(--background)) 45%, hsl(260 35% 8%) 100%);
+}
+
+html.dark[data-cabinet-decor="aurora"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 130% 70% at 20% -10%, hsl(168 80% 45% / 0.28), transparent 55%),
+    radial-gradient(ellipse 110% 65% at 80% 0%, hsl(280 70% 55% / 0.22), transparent 55%),
+    linear-gradient(168deg, hsl(230 40% 9%) 0%, hsl(var(--background)) 45%, hsl(260 35% 8%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="aurora"] body,
+html:not(.dark)[data-cabinet-decor="aurora"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 72% at 15% -12%, hsl(168 70% 42% / 0.22), transparent 56%),
+    radial-gradient(ellipse 100% 60% at 85% 0%, hsl(280 55% 58% / 0.16), transparent 52%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, hsl(200 50% 55% / 0.1), transparent 50%);
+}
+
+/* --- ocean --- */
+html[data-cabinet-decor="ocean"] {
+  --primary: 210 82% 42%;
+  --accent: 210 82% 42%;
+  --ring: 210 82% 42%;
+}
+
+html.dark[data-cabinet-decor="ocean"] {
+  --primary: 205 85% 52%;
+  --accent: 205 85% 52%;
+  --ring: 205 85% 52%;
+}
+
+html.dark[data-cabinet-decor="ocean"] body {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -18%, hsl(205 90% 50% / 0.26), transparent 55%),
+    radial-gradient(ellipse 100% 55% at 50% 100%, hsl(220 70% 28% / 0.35), transparent 58%),
+    linear-gradient(180deg, hsl(222 48% 10%) 0%, hsl(var(--background)) 42%, hsl(215 55% 7%) 100%);
+}
+
+html.dark[data-cabinet-decor="ocean"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% -18%, hsl(205 90% 50% / 0.26), transparent 55%),
+    radial-gradient(ellipse 100% 55% at 50% 100%, hsl(220 70% 28% / 0.28), transparent 58%);
+}
+
+html:not(.dark)[data-cabinet-decor="ocean"] body,
+html:not(.dark)[data-cabinet-decor="ocean"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 50% -16%, hsl(205 85% 52% / 0.28), transparent 56%),
+    radial-gradient(ellipse 95% 50% at 50% 100%, hsl(210 70% 55% / 0.16), transparent 52%),
+    radial-gradient(ellipse 70% 45% at 0% 40%, hsl(195 60% 55% / 0.1), transparent 50%);
+}
+
+/* --- cyber (matrix; не клон neon) --- */
+html[data-cabinet-decor="cyber"] {
+  --primary: 140 85% 36%;
+  --accent: 140 85% 36%;
+  --ring: 140 85% 36%;
+}
+
+html.dark[data-cabinet-decor="cyber"] {
+  --primary: 140 90% 46%;
+  --accent: 140 90% 46%;
+  --ring: 140 90% 46%;
+}
+
+html.dark[data-cabinet-decor="cyber"] body {
+  background-image:
+    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 80%, hsl(140 70% 30% / 0.12), transparent 50%),
+    linear-gradient(168deg, hsl(140 25% 6%) 0%, hsl(var(--background)) 45%, hsl(150 30% 5%) 100%);
+}
+
+html.dark[data-cabinet-decor="cyber"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.22), transparent 55%),
+    linear-gradient(168deg, hsl(140 25% 6%) 0%, hsl(var(--background)) 45%, hsl(150 30% 5%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="cyber"] body,
+html:not(.dark)[data-cabinet-decor="cyber"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 80% at 50% -18%, hsl(140 70% 38% / 0.18), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, hsl(140 50% 35% / 0.1), transparent 50%),
+    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.08), transparent 55%);
+}
+
+html[data-cabinet-decor="cyber"] .cabinet-elevated-card,
+html[data-cabinet-decor="cyber"] .subscription-feature-card,
+html[data-cabinet-decor="cyber"] .admin-modal-panel {
+  border-color: hsl(var(--primary) / 0.35) !important;
+  box-shadow:
+    0 0 20px hsl(var(--primary) / 0.1),
+    0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+}
+
+html.dark[data-cabinet-decor="cyber"] .cabinet-elevated-card,
+html.dark[data-cabinet-decor="cyber"] .subscription-feature-card {
+  border-color: hsl(var(--primary) / 0.42) !important;
+  box-shadow:
+    0 0 24px hsl(var(--primary) / 0.16),
+    0 12px 30px rgba(3, 10, 24, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* --- sunset --- */
+html[data-cabinet-decor="sunset"] {
+  --primary: 18 90% 50%;
+  --accent: 320 55% 52%;
+  --ring: 18 90% 50%;
+}
+
+html.dark[data-cabinet-decor="sunset"] {
+  --primary: 18 92% 56%;
+  --accent: 320 60% 58%;
+  --ring: 18 92% 56%;
+}
+
+html.dark[data-cabinet-decor="sunset"] body {
+  background-image:
+    radial-gradient(ellipse 110% 70% at 80% -10%, hsl(18 95% 55% / 0.32), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 10% 20%, hsl(320 60% 45% / 0.18), transparent 52%),
+    radial-gradient(ellipse 100% 50% at 50% 100%, hsl(280 40% 28% / 0.16), transparent 55%),
+    linear-gradient(168deg, hsl(20 40% 10%) 0%, hsl(var(--background)) 45%, hsl(280 35% 8%) 100%);
+}
+
+html.dark[data-cabinet-decor="sunset"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 110% 70% at 80% -10%, hsl(18 95% 55% / 0.32), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 10% 20%, hsl(320 60% 45% / 0.18), transparent 52%),
+    linear-gradient(168deg, hsl(20 40% 10%) 0%, hsl(var(--background)) 45%, hsl(280 35% 8%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="sunset"] body,
+html:not(.dark)[data-cabinet-decor="sunset"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 75% at 85% -12%, hsl(18 95% 55% / 0.3), transparent 56%),
+    radial-gradient(ellipse 85% 55% at 5% 30%, hsl(320 55% 55% / 0.14), transparent 50%),
+    radial-gradient(ellipse 80% 45% at 50% 100%, hsl(280 40% 55% / 0.1), transparent 50%);
+}
+
+/* --- lavender --- */
+html[data-cabinet-decor="lavender"] {
+  --primary: 270 42% 52%;
+  --accent: 270 42% 52%;
+  --ring: 270 42% 52%;
+}
+
+html.dark[data-cabinet-decor="lavender"] {
+  --primary: 270 48% 68%;
+  --accent: 270 48% 68%;
+  --ring: 270 48% 68%;
+}
+
+html.dark[data-cabinet-decor="lavender"] body {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 30% -15%, hsl(270 50% 62% / 0.24), transparent 55%),
+    radial-gradient(ellipse 90% 55% at 100% 80%, hsl(290 40% 50% / 0.14), transparent 52%),
+    linear-gradient(168deg, hsl(260 30% 11%) 0%, hsl(var(--background)) 45%, hsl(270 28% 9%) 100%);
+}
+
+html.dark[data-cabinet-decor="lavender"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 30% -15%, hsl(270 50% 62% / 0.24), transparent 55%),
+    radial-gradient(ellipse 90% 55% at 100% 80%, hsl(290 40% 50% / 0.14), transparent 52%);
+}
+
+html:not(.dark)[data-cabinet-decor="lavender"] body,
+html:not(.dark)[data-cabinet-decor="lavender"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 25% -14%, hsl(270 45% 62% / 0.26), transparent 56%),
+    radial-gradient(ellipse 85% 50% at 100% 90%, hsl(290 40% 65% / 0.14), transparent 50%),
+    radial-gradient(ellipse 70% 45% at 0% 60%, hsl(250 35% 70% / 0.1), transparent 48%);
+}
+
 /* Карточки и CTA: лёгкий акцентный бордер/свечение для всех декор-тем (кроме off). */
 html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .cabinet-elevated-card,
 html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .subscription-feature-card {
@@ -1875,9 +2150,12 @@ html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .subscription-feat
     inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
 }
 
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]) .cabinet-elevated-card:hover,
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]) .subscription-feature-card.profile-tariff-hover:hover,
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]) .dashboard-quick-link:hover {
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not([data-cabinet-decor="cyber"])
+  .cabinet-elevated-card:hover,
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not([data-cabinet-decor="cyber"])
+  .subscription-feature-card.profile-tariff-hover:hover,
+html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not([data-cabinet-decor="cyber"])
+  .dashboard-quick-link:hover {
   border-color: hsl(var(--primary) / 0.42) !important;
 }
 
@@ -2113,6 +2391,162 @@ html:not(.dark) .cabinet-decor-scene--spring .cabinet-decor-scene__spring-bush {
   transform: rotate(180deg);
 }
 
+.cabinet-decor-scene__aurora-band {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  height: 38%;
+  opacity: 0.28;
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  animation: cabinet-decor-aurora-shift 14s ease-in-out infinite;
+}
+
+.cabinet-decor-scene__aurora-band--a {
+  top: 4%;
+  background: linear-gradient(90deg, transparent, hsl(168 80% 55% / 0.7), hsl(200 70% 55% / 0.35), transparent);
+  animation-delay: 0s;
+}
+
+.cabinet-decor-scene__aurora-band--b {
+  top: 18%;
+  height: 32%;
+  background: linear-gradient(90deg, transparent, hsl(280 70% 60% / 0.55), hsl(168 70% 50% / 0.4), transparent);
+  animation-delay: -4s;
+  opacity: 0.22;
+}
+
+.cabinet-decor-scene__aurora-band--c {
+  top: 32%;
+  height: 28%;
+  background: linear-gradient(90deg, transparent, hsl(200 75% 55% / 0.4), hsl(300 60% 55% / 0.3), transparent);
+  animation-delay: -8s;
+  opacity: 0.18;
+}
+
+html:not(.dark) .cabinet-decor-scene__aurora-band {
+  mix-blend-mode: multiply;
+  opacity: 0.2;
+  filter: blur(32px);
+}
+
+@keyframes cabinet-decor-aurora-shift {
+  0%,
+  100% {
+    transform: translateX(-4%) skewX(-4deg);
+  }
+  50% {
+    transform: translateX(5%) skewX(3deg);
+  }
+}
+
+.cabinet-decor-scene__ocean-wave {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: -2%;
+  height: min(22vh, 180px);
+  background:
+    radial-gradient(ellipse 60% 80% at 20% 100%, hsl(var(--primary) / 0.22), transparent 70%),
+    radial-gradient(ellipse 55% 75% at 55% 100%, hsl(var(--primary) / 0.18), transparent 68%),
+    radial-gradient(ellipse 50% 70% at 85% 100%, hsl(var(--primary) / 0.2), transparent 65%);
+  opacity: 0.7;
+  animation: cabinet-decor-ocean-swell 9s ease-in-out infinite;
+}
+
+html:not(.dark) .cabinet-decor-scene__ocean-wave {
+  opacity: 0.45;
+}
+
+@keyframes cabinet-decor-ocean-swell {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(1);
+  }
+  50% {
+    transform: translateY(-6px) scaleX(1.02);
+  }
+}
+
+.cabinet-decor-scene--cyber .cabinet-decor-scene__cyber-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  background-image:
+    linear-gradient(hsl(var(--primary) / 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 35%, black 15%, transparent 75%);
+}
+
+.cabinet-decor-scene--cyber .cabinet-decor-scene__cyber-scanline {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(var(--primary) / 0.18) 2px,
+    hsl(var(--primary) / 0.18) 4px
+  );
+}
+
+.cabinet-decor-scene__sunset-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(40px);
+  opacity: 0.45;
+}
+
+.cabinet-decor-scene__sunset-orb--sun {
+  top: -4%;
+  right: 8%;
+  width: min(42vw, 280px);
+  height: min(42vw, 280px);
+  background: radial-gradient(circle, hsl(18 95% 58% / 0.75), hsl(320 60% 50% / 0.2) 55%, transparent 70%);
+}
+
+.cabinet-decor-scene__sunset-orb--haze {
+  bottom: 8%;
+  left: -5%;
+  width: min(50vw, 320px);
+  height: min(36vw, 220px);
+  background: radial-gradient(circle, hsl(320 55% 50% / 0.45), hsl(280 40% 40% / 0.15) 55%, transparent 70%);
+  opacity: 0.35;
+}
+
+html:not(.dark) .cabinet-decor-scene__sunset-orb {
+  opacity: 0.32;
+}
+
+.cabinet-decor-scene__lavender-mist {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.35;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.55), transparent 70%);
+}
+
+.cabinet-decor-scene__lavender-mist--tl {
+  top: -8%;
+  left: -6%;
+  width: min(48vw, 300px);
+  height: min(40vw, 240px);
+}
+
+.cabinet-decor-scene__lavender-mist--br {
+  bottom: -6%;
+  right: -4%;
+  width: min(42vw, 260px);
+  height: min(36vw, 220px);
+  opacity: 0.28;
+}
+
+html:not(.dark) .cabinet-decor-scene__lavender-mist {
+  opacity: 0.22;
+}
+
 /* new_year: иней на карточках */
 html[data-cabinet-decor="new_year"] .subscription-feature-card,
 html[data-cabinet-decor="new_year"] .cabinet-elevated-card {
@@ -2236,6 +2670,11 @@ html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
   }
 
   .cabinet-decor-scene--halloween .cabinet-decor-scene__moon {
+    animation: none;
+  }
+
+  .cabinet-decor-scene__aurora-band,
+  .cabinet-decor-scene__ocean-wave {
     animation: none;
   }
 

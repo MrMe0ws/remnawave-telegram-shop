@@ -130,6 +130,47 @@ function ValentineHearts() {
   )
 }
 
+function AuroraBands() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__aurora-band cabinet-decor-scene__aurora-band--a" aria-hidden />
+      <div className="cabinet-decor-scene__aurora-band cabinet-decor-scene__aurora-band--b" aria-hidden />
+      <div className="cabinet-decor-scene__aurora-band cabinet-decor-scene__aurora-band--c" aria-hidden />
+    </>
+  )
+}
+
+function OceanWave() {
+  return <div className="cabinet-decor-scene__ocean-wave" aria-hidden />
+}
+
+function CyberGrid() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__cyber-grid" aria-hidden />
+      <div className="cabinet-decor-scene__cyber-scanline" aria-hidden />
+    </>
+  )
+}
+
+function SunsetGlow() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__sunset-orb cabinet-decor-scene__sunset-orb--sun" aria-hidden />
+      <div className="cabinet-decor-scene__sunset-orb cabinet-decor-scene__sunset-orb--haze" aria-hidden />
+    </>
+  )
+}
+
+function LavenderMist() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__lavender-mist cabinet-decor-scene__lavender-mist--tl" aria-hidden />
+      <div className="cabinet-decor-scene__lavender-mist cabinet-decor-scene__lavender-mist--br" aria-hidden />
+    </>
+  )
+}
+
 function SceneContent({ theme }: { theme: DecorThemeId }) {
   switch (theme) {
     case 'new_year':
@@ -162,6 +203,16 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
           <div className="cabinet-decor-scene__bf-corner cabinet-decor-scene__bf-corner--br" aria-hidden />
         </>
       )
+    case 'aurora':
+      return <AuroraBands />
+    case 'ocean':
+      return <OceanWave />
+    case 'cyber':
+      return <CyberGrid />
+    case 'sunset':
+      return <SunsetGlow />
+    case 'lavender':
+      return <LavenderMist />
     default:
       return null
   }
