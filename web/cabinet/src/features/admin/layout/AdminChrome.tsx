@@ -28,13 +28,15 @@ export function AdminChrome({ children }: AdminChromeProps) {
       <CabinetDecorLayer />
       <header
         className={cn(
-          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm transition-transform duration-200 ease-out will-change-transform cabinet-app-header',
+          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm cabinet-app-header',
           'dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]',
-          !mobileHeaderVisible && 'max-md:-translate-y-full',
+          // Safe-area top остаётся; прячется только ряд chrome.
+          !mobileHeaderVisible && 'max-md:border-b-0 max-md:shadow-none',
         )}
       >
-        <CabinetDecorHeader />
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
+        <div className={cn(!mobileHeaderVisible && 'max-md:hidden')}>
+          <CabinetDecorHeader />
+          <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
           <button
             type="button"
             onClick={openMobileNav}
@@ -72,6 +74,7 @@ export function AdminChrome({ children }: AdminChromeProps) {
             </Link>
             <LangToggle className="h-9 px-3" />
             <ThemeToggle className="size-9 [&_svg]:size-[18px]" />
+          </div>
           </div>
         </div>
       </header>

@@ -19,7 +19,7 @@ if (savedTheme === 'light') {
 function bootTelegramWebAppShell(): void {
   window.Telegram?.WebApp?.ready?.()
   window.Telegram?.WebApp?.expand?.()
-  // Мобилка: классический хедер TG; desktop: fullscreen для большего окна.
+  // Fullscreen Mini App (8.0+): mobile + desktop; отступы — CSS --tg-*-safe-area-inset-*.
   configureTelegramViewport()
 }
 

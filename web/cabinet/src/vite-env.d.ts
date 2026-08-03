@@ -31,7 +31,10 @@ declare global {
     isVersionAtLeast?: (version: string) => boolean
     setHeaderColor?: (color: string) => void
     setBackgroundColor?: (color: string) => void
-    /** Bot API 8.0+ — убирает непрозрачный хедер Telegram (кнопки ✕/⋯ остаются оверлеем). */
+    /**
+     * Bot API 8.0+ fullscreen: контент на весь экран, ✕/⋯ оверлеем.
+     * Отступы — safeAreaInset / contentSafeAreaInset и CSS --tg-*-safe-area-inset-*.
+     */
     requestFullscreen?: () => void
     exitFullscreen?: () => void
     onEvent?: (eventType: string, callback: () => void) => void

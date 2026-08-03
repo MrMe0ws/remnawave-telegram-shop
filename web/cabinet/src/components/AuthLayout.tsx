@@ -23,21 +23,23 @@ export function AuthLayout({ children, showHeaderLogo = true }: AuthLayoutProps)
     <div className="relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
       <CabinetDecorLayer />
-      <header
-        className={`relative z-10 flex items-center px-4 py-2 sm:px-5 sm:py-2.5 cabinet-app-header ${showHeaderLogo ? 'justify-between' : 'justify-end'}`}
-      >
+      <header className="relative z-10 cabinet-app-header px-4 pb-2 sm:px-5 sm:pb-2.5">
         <CabinetDecorHeader />
-        {showHeaderLogo && (
-          <Link
-            to="/dashboard"
-            className="rounded-md outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Logo size="sm" />
-          </Link>
-        )}
-        <div className="flex items-center gap-1">
-          <LangToggle />
-          <ThemeToggle />
+        <div
+          className={`flex items-center pt-2 sm:pt-2.5 ${showHeaderLogo ? 'justify-between' : 'justify-end'}`}
+        >
+          {showHeaderLogo && (
+            <Link
+              to="/dashboard"
+              className="rounded-md outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Logo size="sm" />
+            </Link>
+          )}
+          <div className="flex items-center gap-1">
+            <LangToggle />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

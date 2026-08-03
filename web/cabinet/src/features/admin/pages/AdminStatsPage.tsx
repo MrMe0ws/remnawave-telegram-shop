@@ -145,7 +145,9 @@ function AdminStatsPageContent() {
       <div
         className={cn(
           'sticky z-40 -mx-3 border-b border-border/80 bg-card/92 px-3 py-2 backdrop-blur-xl transition-[top] duration-200 ease-out sm:-mx-4 sm:px-4 dark:border-primary/12 md:hidden',
-          mobileHeaderVisible ? 'top-14' : 'top-0',
+          mobileHeaderVisible
+            ? 'top-[calc(3.5rem+var(--cabinet-tg-safe-top))]'
+            : 'top-[var(--cabinet-tg-safe-top)]',
         )}
       >
         <div className="flex items-center gap-2">

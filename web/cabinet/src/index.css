@@ -12,6 +12,19 @@
   }
 
   :root {
+    /*
+     * Telegram Mini App fullscreen (Bot API 8.0+):
+     * --tg-safe-area-inset-* — вырез/системные UI;
+     * --tg-content-safe-area-inset-* — зона под оверлеем ✕/⋯.
+     * Вне TG переменные отсутствуют → 0px (браузер без лишнего отступа).
+     */
+    --cabinet-tg-safe-top: calc(
+      var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)
+    );
+    --cabinet-tg-safe-bottom: calc(
+      var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
+    );
+
     /* Light theme */
     --connect-device-inner-bg: 210 40% 96%;
     --connect-device-inner-bg-hover: 210 35% 91%;
@@ -144,6 +157,11 @@
 
   .dark .cabinet-shell-gradient {
     background-image: var(--cabinet-dark-bg-image);
+  }
+
+  /* Sticky/chrome header: top inset under TG fullscreen controls (0 outside Mini App). */
+  .cabinet-app-header {
+    padding-top: var(--cabinet-tg-safe-top);
   }
 
   /* Smooth scrollbar in dark mode */

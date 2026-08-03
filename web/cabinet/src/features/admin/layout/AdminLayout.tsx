@@ -195,7 +195,9 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
               className={cn(
                 'absolute bottom-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-border bg-background p-4 shadow-xl will-change-transform',
                 !mobileNavDragging && 'transition-[transform,top] duration-300 ease-out',
-                mobileHeaderVisible ? 'top-14' : 'top-0',
+                mobileHeaderVisible
+                  ? 'top-[calc(3.5rem+var(--cabinet-tg-safe-top))]'
+                  : 'top-[var(--cabinet-tg-safe-top)]',
               )}
               style={{ transform: `translateX(${mobileNavOffsetPx - panelWidth}px)` }}
             >
@@ -214,7 +216,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
           <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-4">
             <AdminBreadcrumbs pathname={location.pathname} pageMeta={pageMeta} className="lg:col-start-2 lg:row-start-1" />
 
-            <aside className="hidden w-56 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem)] lg:flex-col lg:self-start lg:overflow-y-auto lg:overscroll-y-contain lg:sticky lg:top-[3.75rem]">
+            <aside className="hidden w-56 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:overflow-y-auto lg:overscroll-y-contain lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]">
               <div className="rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur-sm">
                 {sidebarContent}
               </div>

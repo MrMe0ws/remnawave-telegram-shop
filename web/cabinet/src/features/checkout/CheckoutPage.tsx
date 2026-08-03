@@ -399,7 +399,7 @@ export default function CheckoutPage() {
       {/* Mobile: fixed to viewport above bottom navbar (via portal). */}
       {typeof document !== 'undefined' &&
         createPortal(
-          <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[73px] px-2">
+          <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[calc(73px+var(--cabinet-tg-safe-bottom))] px-2">
             <Button
               className={cn('mx-auto inline-flex w-full max-w-lg shadow-none', !loading && disabledPayButtonClass)}
               size="lg"

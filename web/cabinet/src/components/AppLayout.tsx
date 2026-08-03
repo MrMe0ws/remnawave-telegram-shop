@@ -262,13 +262,18 @@ export function AppLayout({ children }: AppLayoutProps) {
       <CabinetDecorLayer />
       <header
         className={cn(
-          'relative sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-300 will-change-transform',
-          !mobileChromeVisible && !menuOpen && 'max-sm:-translate-y-full',
-          'cabinet-app-header',
+          'relative sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] cabinet-app-header',
+          // Прячем только ряд кнопок: padding-top (--cabinet-tg-safe-top) остаётся под ✕/⋯.
+          !mobileChromeVisible && !menuOpen && 'max-sm:border-b-0 max-sm:shadow-none',
         )}
       >
-        <CabinetDecorHeader />
-        <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
+        <div
+          className={cn(
+            !mobileChromeVisible && !menuOpen && 'max-sm:hidden',
+          )}
+        >
+          <CabinetDecorHeader />
+          <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
           <Link
             to="/dashboard"
             className="flex min-w-0 shrink-0 items-center rounded-md outline-none ring-offset-background transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -450,13 +455,14 @@ export function AppLayout({ children }: AppLayoutProps) {
               )}
             </div>
           </div>
+          </div>
         </div>
       </header>
 
       {menuOpen && (
-        <div className="fixed inset-x-0 bottom-0 top-[56px] z-40 flex min-h-0 flex-col bg-background sm:hidden">
+        <div className="fixed inset-x-0 bottom-0 top-[calc(56px+var(--cabinet-tg-safe-top))] z-40 flex min-h-0 flex-col bg-background sm:hidden">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-border bg-background">
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background pt-2 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background pt-2 pb-[calc(5.75rem+max(env(safe-area-inset-bottom,0px),var(--cabinet-tg-safe-bottom)))]">
               {overflowMainNav.map(({ to, icon: Icon, labelKey }) => {
                 const label = t(labelKey)
                 const active = overflowActive(location.pathname, to)
@@ -577,7 +583,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <div className="relative z-10 min-h-0 flex-1 overflow-x-hidden touch-pan-y">
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(1rem,calc(5.75rem+env(safe-area-inset-bottom)))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(1rem,calc(5.75rem+max(env(safe-area-inset-bottom,0px),var(--cabinet-tg-safe-bottom))))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
           {children}
         </div>
       </div>
@@ -585,7 +591,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <CabinetOnboarding />
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 sm:hidden px-2 pb-2 pointer-events-none"
+        className="fixed inset-x-0 bottom-0 z-50 sm:hidden px-2 pb-[max(0.5rem,var(--cabinet-tg-safe-bottom))] pointer-events-none"
         aria-label={t('nav.mobile')}
       >
         <div className="pointer-events-auto flex items-stretch justify-around gap-0 overflow-x-auto rounded-2xl border border-border bg-card/95 px-1 py-1.5 backdrop-blur-md shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]">
