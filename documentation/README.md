@@ -1,0 +1,34 @@
+# Документация Meows Telegram Shop
+
+Публичные гайды для владельцев проекта. Корневой [`readme.md`](../readme.md) — краткий старт; подробности — здесь.
+
+**Канал проекта:** [Meows VPN Shop | Канал](https://t.me/meows_vpn_bot)
+
+## С чего начать
+
+| Документ | Когда открывать |
+|----------|-----------------|
+| [`../readme.md`](../readme.md) | Что это, установка за 5 минут |
+| [`cabinet/SETUP-GUIDE-RU.md`](./cabinet/SETUP-GUIDE-RU.md) | Запуск web-кабинета с нуля (домен, SSL, OAuth) |
+| [`env.md`](./env.md) | Все переменные `.env` с пояснениями |
+| [`sales-modes.md`](./sales-modes.md) | Режимы продаж `classic` и `tariffs` |
+
+## Разделы
+
+| Файл | Тема |
+|------|------|
+| [env.md](./env.md) | Справочник переменных окружения |
+| [sales-modes.md](./sales-modes.md) | Classic vs tariffs, цены, тексты покупки |
+| [payments.md](./payments.md) | Платёжные системы, вебхуки и поллинг |
+| [notifications.md](./notifications.md) | Уведомления об истечении и lifecycle |
+| [squads.md](./squads.md) | Squads Remnawave (платные и триал) |
+| [customization.md](./customization.md) | Тексты бота/кабинета, кнопки, emoji |
+| [moynalog-proxy.md](./moynalog-proxy.md) | «Мой налог» через прокси вне РФ |
+| [reverse-proxy.md](./reverse-proxy.md) | Обратный прокси (Traefik и др.) |
+| [updating.md](./updating.md) | Обновление Docker-образа |
+| [compatibility.md](./compatibility.md) | Совместимость версий бота и Remnawave |
+| [cabinet/](./cabinet/) | Web-кабинет: setup, upgrade, support bridge |
+
+## Для разработчиков
+
+Внутренняя база знаний (архитектура, API, техдолг): [`.cursor/docs/README.md`](../.cursor/docs/README.md).

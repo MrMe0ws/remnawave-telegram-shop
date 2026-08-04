@@ -1,613 +1,121 @@
-# Remnawave Telegram Shop - Улучшенный Форк
+# Meows Telegram Shop
+
+Продажа VPN-подписок через **Telegram-бота** и опциональный **web-кабинет**.
 
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/d18aa092-13fb-4926-ad81-a7f4f46b4445" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/9e07f17a-970c-40f3-876e-d33e47f9266a" />
 <img width="auto" height="auto" alt="image" src="https://github.com/user-attachments/assets/849f198d-3d74-4596-b736-dac9efc1f238" />
 
+Пользователи покупают и продлевают подписку в боте или в браузере; выдача идёт через панель [**Remnawave**](https://remna.st/).
 
-## 🚀 Улучшенные Возможности
+**Канал проекта:** [Meows VPN Shop | Канал](https://t.me/meows_vpn_bot)
 
-Это **улучшенный форк** оригинального бота Remnawave Telegram Shop с дополнительным функционалом:
-
-### ✨ Добавленные Новые Функции:
-
-- **🌐 Web-кабинет**: полноценный SPA-кабинет + API в том же процессе бота. Пользователь может зарегистрироваться, войти, купить/продлить подписку, привязать Telegram и управлять профилем без обязательного входа в Telegram.
-- **📱 Управление устройствами**: отдельное меню, просмотр и удаление HWID устройств
-- **➕ Доп. устройства**: покупка дополнительных слотов с пропорциональной оплатой
-- **🔁 Продление с доп. устройствами**: выбор продления подписки с доп. устройствами одним платежом
-- **👁️ Отслеживание Сообщений Админом**: Админ может видеть все сообщения и команды, отправленные пользователями боту
-- **💬 Система Ответов Админа**: Админ может отвечать на пересланные сообщения пользователей напрямую из админского интерфейса
-- **📚 Улучшенная Секция Помощи**: Реорганизованное главное меню с выделенной секцией Помощи, содержащей руководство по выбору сервера, поддержку, видеоинструкцию и условия использования
-- **🔧 Лимит Устройств HWID по Умолчанию**: Настраиваемый лимит устройств по умолчанию, когда лимит устройств пользователя не установлен в Remnawave
-- **🔄 Улучшенная Синхронизация**: Сохранение языка пользователя при синхронизации с Remnawave
-- **📊 Информация о Версии**: Отображение версии, коммита и даты сборки в логах и healthcheck endpoint
-- **⚡ Обновленный API**: Встроенный HTTP-клиент Remnawave для совместимости с 2.8.x
-- **🎨 Кнопки с Emoji/Style**: Поддержка кастомных emoji и стилей inline-кнопок через переводы
-- **🧭 Авто-ответ на Callback**: Автоматическое снятие "loading" у inline-кнопок
-- **🧩 Прокси для Telegram**: Опциональный прокси для запросов Bot API
--  **🧩 Прокси для Мой Налог**: Опциональный прокси для запросов Bot API
-- **🤝 Реферальная система (2 режима)**: Гибкая логика бонусов и расширенная статистика
-- **🧾 История транзакций**: Просмотр последних оплат с пагинацией
-- **📋 Список рефералов**: Отображение активных/неактивных рефералов
-- **🎫 Промокоды**: ввод кода пользователем (дни подписки, триал, доп. устройства, скидка %), админка создания и управления промокодами, pending-скидка на следующую оплату, подсказки в «Мой VPN» и на экране тарифов
-- **📦 Режим нескольких тарифов (`SALES_MODE=tariffs`)**: цены и лимиты (трафик, устройства, squads) из PostgreSQL; краткое и подробное описание тарифа (`description` / `description_detail` в web-кабинете); пошаговый сценарий «Купить» (выбор тарифа → период → способ оплаты → оплата); админка тарифов
-- **💳 Platega**: рублёвые способы оплаты через [Platega](https://platega.io) в боте и в web-кабинете (подписка в `classic` / `tariffs`, продление, апгрейд/даунгрейд, докупка доп. HWID). Pending-скидка по промокоду и лояльность применяются так же, как к YooKassa. Включение и выбор методов — через `PLATEGA_*` в `.env` (см. таблицу ниже). Миграция БД: **`000032_platega_purchase_and_checkout`**
-- **👥 Админ — «Пользователи»** (`ADMIN_TELEGRAM_ID`): в **Telegram** и **web-кабинете** (`/cabinet/admin/*` при `CABINET_ENABLED=true`) — списки всех / неактивных, поиск, карточка; оплаты и сводка в ₽ + Stars (оценка Stars в ₽ при `RUB_PER_STAR`); в TG — ветка **«Подписки»** (все / скоро истекают); пагинация. При **`SALES_MODE=tariffs`** — смена тарифа, доп. HWID, описание, устройства, настройки панели Remnawave (squads, трафик, strategy, срок подписки и др.).
-- **📈 Админ-статистика** (при заданном `ADMIN_TELEGRAM_ID`): раздел **«Статистика»** в админ-панели (TG и web) — пользователи, подписки, доходы в ₽ (фильтр по RUB/RUR/пустой валюте), реферальные начисления **в днях**, общая сводка, **колесо фортуны** (агрегаты по таблице `fortune_spins`: активность, выигрыши, детализация призов); данные из PostgreSQL.
-- **🎡 Колесо фортуны (web-кабинет)** (`FORTUNE_ENABLED=true`, миграции **`000033_fortune_wheel`**, **`000034_fortune_daily_free_spin`** при ежедневном фри-спине): страница `/cabinet/fortune`, API `GET/POST /cabinet/api/fortune/status|spin`, лог спинов в БД, скидки через якорный промокод `__CABINET_FORTUNE__`. При `FORTUNE_ENABLED=false` пункт меню кабинета скрывается (флаг `fortune_nav_visible` в `GET /cabinet/api/auth/bootstrap`), маршрут по прямой ссылке остаётся. Подробности env и правил — `.cursor/AGENTS.md`, `.cursor/rules/`, `.env.sample`.
-- **💎 Лояльность** (`LOYALTY_ENABLED`): … Подробнее — **`.cursor/docs/backend/loyalty.md`**, код `internal/loyalty/`.
-- **🔐 Hardening кабинета**: Turnstile (опционально), rate-limit с trusted proxy логикой IP, Prometheus-метрики (`/cabinet/api/metrics`) с опциональным Basic-auth, merge/link safeguards.
-- **💬 Чат поддержки в кабинете** (`SUPPORT_BOT_API=true`, миграция **`000036_cabinet_support`**): встроенный чат вместо внешней ссылки `SUPPORT_URL`; bridge к [telegram-support-bot](https://github.com/Jolymmiels/telegram-support-bot) — сообщения пользователя → топик в супергруппе, ответы саппорта → polling в SPA. При `SUPPORT_BOT_API=false` — прежнее поведение (кнопка «Поддержка» → `SUPPORT_URL`). Настройка env, Docker-сеть и проверка — **`documentation/cabinet/SETUP-GUIDE-RU.md`** (раздел «Чат поддержки»).
-
-### 📋 Совместимость Версий:
-
-- **Версия Бота**: 4.4.1
-- **Поддержка Remnawave**: 2.8.\*
-- **Версионирование**: Информация о версии, коммите и дате сборки доступна в логах и healthcheck endpoint
+**Совместимость:** Remnawave `2.8.*` ↔ бот `4.x`. Полная матрица — [documentation/compatibility.md](documentation/compatibility.md).
 
 ---
 
-[![Stars](https://img.shields.io/github/stars/Jolymmiels/remnawave-telegram-shop.svg?style=social)](https://github.com/Jolymmiels/remnawave-telegram-shop/stargazers)
-[![Forks](https://img.shields.io/github/forks/Jolymmiels/remnawave-telegram-shop.svg?style=social)](https://github.com/Jolymmiels/remnawave-telegram-shop/network/members)
-[![Issues](https://img.shields.io/github/issues/Jolymmiels/remnawave-telegram-shop.svg)](https://github.com/Jolymmiels/remnawave-telegram-shop/issues)
+## Что умеет этот форк
 
-## Описание
+- Web-кабинет: регистрация, покупка, привязка Telegram, профиль — без обязательного входа только через бота
+- Управление устройствами (HWID), покупка дополнительных слотов
+- Несколько тарифов, промокоды, рефералы, программа лояльности
+- Оплаты: YooKassa, Platega, CryptoPay, Telegram Stars
+- Админка в Telegram и в кабинете: пользователи, статистика, рассылка, настройки
+- Колесо фортуны, чат поддержки в кабинете, уведомления «подписка скоро закончится» и lifecycle (не подключился / вернуть клиента)
+И еще больше изменений под капотом и внутри бота
 
-Telegram бот для продажи подписок с интеграцией в Remnawave (https://remna.st/). Этот сервис позволяет пользователям
-покупать и управлять подписками через Telegram с множественными вариантами платежных систем.
+Подробнее по темам — папка [documentation/](documentation/).
 
-- [remnawave-api-go](https://github.com/Jolymmiles/remnawave-api-go)
+---
 
-## Команды Администратора
+## Установка
 
-- `/sync` - Получить пользователей из remnawave и синхронизировать их с базой данных. Удалить всех пользователей, которых нет в remnawave.
+Нужны **Linux**, **Docker** и **Docker Compose**. По умолчанию проект ставится в `/opt/remnawave-telegram-shop`.
 
-### Платежные Системы
+### Быстрый старт (рекомендуется)
 
-- [YooKassa API](https://yookassa.ru/developers/api)
-- [Platega](https://platega.io)
-- [CryptoPay API](https://help.crypt.bot/crypto-pay-api)
-- Telegram Stars
-
-## Возможности
-
-- Покупка VPN подписок с различными способами оплаты (банковские карты, криптовалюта)
-- Множественные планы подписок (1, 3, 6, 12 месяцев)
-- Автоматизированное управление подписками
-- **Web-кабинет**: пользователю не обязательно идти в Telegram для оформления/продления подписки и управления аккаунтом
-- **Уведомления о Подписках**: Бот автоматически отправляет уведомления пользователям за 3 дня до истечения их подписки,
-  помогая им избежать прерывания сервиса
-- Поддержка нескольких языков (русский и английский)
-- **Селективное Назначение squad**: Настройка конкретных squad для назначения пользователям через фильтрацию UUID
-- Все сообщения telegram поддерживают HTML форматирование https://core.telegram.org/bots/api#html-style
-- Healthcheck (`/healthcheck`) показывает состояние БД/Remnawave и метаданные сборки (версия, commit, buildDate)
-
-### 🆕 Улучшенные Возможности (специфичные для форка):
-
-- **Управление Устройствами**: Пользователи могут просматривать и управлять своими подключенными HWID устройствами
-- **Мониторинг Админа**: Полная система отслеживания сообщений и ответов для администраторов
-- **Улучшенный UI**: Реорганизованное главное меню с улучшенной секцией Помощи
-- **Поддержка HWID**: Полная совместимость с Remnawave 2.1.4+ скрытыми зашифрованными подписками
-- **Версионирование**: Информация о версии доступна в логах при старте и в healthcheck endpoint
-- **Улучшенная Синхронизация**: Сохранение языка пользователя при обновлении данных из Remnawave
-- **Обновленный API**: Использование новой структуры API с под-клиентами для лучшей организации кода
-- **Реферальная система**: Поддержка default/progressive режима и расширенная статистика
-- **История транзакций**: Удобный просмотр операций с пагинацией
-- **Промокоды**: пользовательский сценарий активации и админ-раздел (при настроенном `ADMIN_TELEGRAM_ID`), миграция БД `000007_promo_codes`
-- **Админ-статистика**: при `ADMIN_TELEGRAM_ID` в админ-панели (TG и web) — раздел со сводками по БД (пользователи, подписки, доходы в ₽, рефералы в днях, общая сводка, **статистика колеса фортуны**)
-- **Web-админка кабинета**: при `CABINET_ENABLED=true` и привязанном Telegram с `ADMIN_TELEGRAM_ID` — SPA `/cabinet/admin/*` (статистика, пользователи, промокоды, тарифы, лояльность, **рассылка**, infra billing, **настройки бота** (hot-reload), sync). API — `GET/POST/PATCH/DELETE /cabinet/api/admin/*`. Подробнее — `.cursor/docs/api/cabinet-rest.md`.
-- **Web-кабинет**: веб-кабинет для зеров
-    **Полный production-гайд по кабинету:** `documentation/cabinet/SETUP-GUIDE-RU.md`.
-
-Быстрый smoke при `CABINET_ENABLED=true`:
+Интерактивный установщик: клонирует репозиторий, помогает заполнить `.env`, поднимает контейнеры, при необходимости — кабинет, SSL и проверки.
 
 ```bash
-curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/healthz"
-curl -fsS "http://127.0.0.1:${HEALTH_CHECK_PORT}/cabinet/api/auth/bootstrap"
+bash <(curl -fsSL https://raw.githubusercontent.com/MrMe0ws/remnawave-telegram-shop/main/scripts/meows-shop-setup.sh)
 ```
 
-**Переводы UI web-кабинета (runtime, без пересборки образа):**
-
-- Файлы: **`web/cabinet/src/i18n/ru.json`** и **`en.json`** (структура i18next: корневой ключ `translation`).
-- При старте SPA (`initCabinetI18n` в `web/cabinet/src/i18n/index.ts`) для каждого языка запрашивается **`GET /cabinet/api/content/i18n/{lang}`**; бэкенд читает JSON с диска (`/translations/cabinet/i18n/` в контейнере).
-- В **docker-compose** смонтирован volume **`./web/cabinet/src/i18n:/translations/cabinet/i18n:ro`** (рядом с `./translations:/translations`) — правка JSON на хосте → `docker compose restart bot` → обновление страницы кабинета (F5), **без** `docker compose build`.
-- Runtime-контент FAQ и гайдов подключений по-прежнему в **`translations/cabinet/FAQ.json`**, **`app-config.json`** (`GET /cabinet/api/content/faq`, `app-config`).
-
-**Fallback, если API переводов недоступен** (сеть, 4xx/5xx, невалидный JSON, кабинет выключен):
-
-- Используются **встроенные в JS-бандл** копии `ru.json` / `en.json` — те, что попали в SPA при последнем **`npm run build`** и затем в бинарник через `go:embed` (`internal/cabinet/web/dist`).
-- Это **не** чтение актуальных файлов с диска в браузере: правки только в `src/i18n/*.json` на сервере **без** рабочего API **не** появятся, пока не заработает эндпоинт или не пересоберёте фронт/образ.
-- Для отсутствующих ключей внутри выбранного языка i18next откатывается на **`fallbackLng: ru`**.
-
-**Доп. устройства (HWID) в кабинете** (`/cabinet/subscription`): список подключённых HWID и удаление устройств доступны всем клиентам с профилем в Remnawave (включая **web-only** / synthetic `telegram_id` — поиск через `subscription_link` и префикс `customer_id`, как в админке). При `CABINET_ENABLED=true` и **`HWID_EXTRA_DEVICES_ENABLED=true`** после блока лояльности показывается карточка «Дополнительные опции» — докупка слотов до лимита **`HWID_MAX_DEVICE`** (если `0`, докупка в кабинете недоступна, как в боте) и бесплатное уменьшение лимита до базы тарифа. Видимость блока докупки: не **web-only**, не **synthetic** `telegram_id`, активная **оплаченная** подписка (не триал), ответ Remnawave. **API:** поле **`hwid_extra`** в `GET /cabinet/api/me/subscription`; расчёт/оплата — `GET /cabinet/api/payments/hwid/preview?target_limit=&provider=`, `POST /cabinet/api/payments/hwid/checkout` (тело `target_limit`, `provider`, заголовок **`Idempotency-Key`**, CSRF); уменьшение — `POST /cabinet/api/me/hwid-extra/apply` с `{"target_limit":N}` (CSRF, подтверждённый email). После оплаты — тот же poll `GET /cabinet/api/payments/{id}/status`, что и для тарифов. **Код:** `internal/cabinet/service/hwid_extra.go`, `internal/cabinet/service/subscription.go`, `internal/cabinet/payments/checkout.go`, `internal/cabinet/http/handlers/payments.go`, `internal/cabinet/http/handlers/me.go`, UI — `web/cabinet/src/features/subscription/SubscriptionExtraDevices.tsx`, строки в `web/cabinet/src/i18n/ru.json` / `en.json` (`subscriptionPage.extraDevices*`).
-
-**Чат поддержки** (`/cabinet/support`): при `CABINET_ENABLED=true` и **`SUPPORT_BOT_API=true`** кнопка «Поддержка» открывает модальный чат (флаг **`support_chat_enabled`** в `GET /cabinet/api/auth/bootstrap`). **API:** `GET /cabinet/api/support/summary`, `GET /cabinet/api/support/conversation`, `POST /cabinet/api/support/messages` (тело `{"text":"..."}`, CSRF), `POST /cabinet/api/support/read`; webhook от support-bot — `POST /cabinet/api/internal/support/webhook` (Bearer `SUPPORT_BRIDGE_SECRET`). Идемпотентность исходящих сообщений — `client_message_id` (UUID) в `cabinet_support_message`. **Env:** `SUPPORT_BOT_API`, `SUPPORT_BOT_API_URL`, `SUPPORT_BRIDGE_SECRET`. **Код:** `internal/cabinet/service/support.go`, `internal/cabinet/supportbot/client.go`, UI — `web/cabinet/src/features/support/`. MVP: только текст от пользователя; медиа от саппорта в кабинет не доставляются; один open-тикет на `account_id`. Подробнее — **`documentation/cabinet/SETUP-GUIDE-RU.md`**.
-
-**Колесо фортуны** (`/cabinet/fortune`): при `CABINET_ENABLED=true` и **`FORTUNE_ENABLED=true`** в навигации кабинета показывается пункт «Колесо фортуны» (синхронно с полем **`fortune_nav_visible`** в `GET /cabinet/api/auth/bootstrap`). **API:** `GET /cabinet/api/fortune/status`, `POST /cabinet/api/fortune/spin` (CSRF). Доступ: **хотя бы одна оплаченная подписка** (`month>0` в `purchase`); экономика — **`FORTUNE_*`** (остаток подписки, лимит платных спинов за UTC, опционально **ежедневный** и **разовый** бесплатные спины, списование дней за платный спин); веса и RNG только на сервере. **Админка Telegram:** раздел «Статистика» → «Колесо фортуны» — агрегаты по `fortune_spins`. **Переводы:** кабинет — `web/cabinet/src/i18n/ru.json` / `en.json` (`fortune.*`); админка — `translations/admin_ru.json` / `admin_en.json` (`admin_stats_fortune_*`). **Код:** `internal/cabinet/service/fortune.go`, `internal/cabinet/http/handlers/fortune.go`, `internal/cabinet/repository/fortune.go`, `internal/handler/admin_stats.go` (экран фортуны), `internal/database/stats_repository.go` (`FetchAdminFortuneStats`).
-
-**Web-админка** (`/cabinet/admin`): при `CABINET_ENABLED=true` и **`ADMIN_TELEGRAM_ID`** пункт «Админ» в навигации кабинета виден, если у аккаунта привязан Telegram с тем же ID (`is_admin` в `GET /cabinet/api/me`). **Маршруты SPA:** `/admin`, `/admin/stats`, `/admin/users`, `/admin/users/:id`, `/admin/promos`, `/admin/tariffs` (при `SALES_MODE=tariffs`), `/admin/loyalty` (при `LOYALTY_ENABLED`), `/admin/broadcast`, `/admin/infra`, `/admin/settings`, `/admin/sync`. **API:** префикс `/cabinet/api/admin/*` — `RequireAuth` + `RequireAdmin` + rate-limit (**120 req/min/аккаунт**); мутирующие — CSRF. Feature flags — `GET /cabinet/api/admin/bootstrap`. Карточка пользователя: подписка, панель Remnawave (squads, traffic, strategy, tariff, devices, extra HWID). **Рассылка:** audiences, preview, текст/фото, inline-кнопки; **`POST /cabinet/api/admin/broadcast/send`** — **202 Accepted**, фоновая отправка через Telegram (`internal/broadcast/`); итог — DM админу в Telegram; web-only пользователи пропускаются. **Настройки бота** (`/admin/settings`, раздел System): hot-reload whitelist env без рестарта — `GET/PATCH /cabinet/api/admin/settings`; значения в PostgreSQL **`bot_runtime_settings`** (миграция **`000038_bot_runtime_settings`**) накладываются поверх `.env` при старте и сразу после PATCH. **UI:** 5 категорий-вкладок (Оформление / Продукт / Маркетинг / Операции / Доступ), аккордеоны по группам, глобальный поиск; группа **tariffs** в settings — только `CABINET_TARIFF_PRICE_DISPLAY` (витрина), CRUD тарифов — `/admin/tariffs`. Phase 1: лояльность, уведомления об оплатах, триал, теги Remnawave, HWID, рефералы, access lists, lifecycle (без `LIFECYCLE_CRON`), ссылки бота, колесо фортуны. **Не через админку:** токены/секреты провайдеров, MOYNALOG, `LIFECYCLE_CRON`, вкл/выкл способов оплаты — только `.env`. **Код:** `internal/config/runtime.go`, `settings_registry.go`, `internal/database/runtime_settings.go`, `internal/cabinet/http/handlers/admin_settings.go`, UI — `web/cabinet/src/features/admin/pages/AdminSettingsPage.tsx`, категории — `utils/adminSettingsGroups.ts`. Документация UI — `.cursor/docs/frontend/admin-settings-ui.md`. **UI:** отдельный `AdminChrome` без user nav; тёмная тема с elevated cards — `.cursor/docs/frontend/cabinet-ui.md`. **Код (общее):** `internal/cabinet/admin/auth/`, `internal/cabinet/http/handlers/admin_*.go`, `internal/cabinet/http/middleware/admin.go`, UI — `web/cabinet/src/features/admin/`. Контракт API — `.cursor/docs/api/cabinet-rest.md`.
-
-## Промокоды
-
-### Для пользователей
-
-- В главном меню доступен сценарий ввода промокода (код из букв и цифр).
-- Поддерживаются типы: **дни подписки**, **триал**, **доп. слоты устройств**, **скидка в %** на следующую оплату (одно применение pending-скидки до успешной оплаты подписки или связанных покупок).
-- Пока скидка по промокоду активна, в меню **«Мой VPN»** и в тексте экрана **покупки подписки** показывается напоминание о скидке.
-- Оплата через **Tribute** не использует pending-скидку из промокода (остальные способы оплаты в боте и кабинете — по логике `checkout`, в т.ч. **YooKassa** и **Platega**).
-
-### Для администратора
-
-- Задайте **`ADMIN_TELEGRAM_ID`** — у этого пользователя в главном меню **Telegram** появляется кнопка **«Админ»**; в **web-кабинете** (`CABINET_ENABLED=true`) — пункт «Админ» после входа с привязанным Telegram-аккаунтом с тем же ID.
-- В админ-панели (TG и web) доступны: **рассылка** (в web — audiences, preview, отправка через Telegram Bot API), **«Пользователи»** (списки, поиск, карточка, подписки/оплаты; при `tariffs` — операции с тарифом и панелью Remnawave), **статистика**, **синхронизация с Remnawave**, **«Промокоды»**, при `SALES_MODE=tariffs` — **тарифы**; при **`LOYALTY_ENABLED=true`** — **«Лояльность»**; в web — также **infra billing**.
-
-
-## Лояльность
-
-Включение: **`LOYALTY_ENABLED=true`** (в `.env`, см. `.env.sample`). Пока выключено — интерфейс лояльности и начисление XP отключены, строки в БД не удаляются.
-
-- **Таблицы:** `loyalty_tier` (пороги `xp_min`, процент скидки, опционально `display_name`), поле **`customer.loyalty_xp`** — миграции **`000014_loyalty`**, **`000015_loyalty_display_name`**.
-- **Скидка при оплате:** суммируется с промо **аддитивно**, с потолком **`LOYALTY_MAX_TOTAL_DISCOUNT_PERCENT`** (общая логика в `internal/loyalty/pricing.go`, checkout — `internal/handler/promo_checkout.go`).
-- **После успешной оплаты:** начисление XP — `XPRubEquivalentForPurchase` (`internal/loyalty/pricing.go`): сумма в ₽ или Stars×`RUB_PER_STAR` (в сумме уже учтены доп. устройства, если они в счёте), затем при нуле — минимум (`LOYALTY_XP_MIN_PER_PURCHASE`). Для Stars задайте **`RUB_PER_STAR`**, иначе вклад в XP из суммы будет нулевым и сработает только минимум (если включён).
-- **Пользователь:** «Мой VPN» — кнопка и экран программы (`internal/handler/connect.go`, `loyalty_ui.go`); напоминания на экране покупки — как у промо, см. маркеры «Способы оплаты» в переводах.
-- **Администратор:** при **`ADMIN_TELEGRAM_ID`** и включённой лояльности в админ-панели появляется кнопка — список уровней, редактирование (в т.ч. подпись для UI), экран **«Правила XP»** (текущие значения из env), добавление уровня, **пересчёт XP из всех успешных строк `purchase`** (полная перезапись `loyalty_xp`; идемпотентно при неизменной истории).
-- Подробная спецификация: **`internal/loyalty/`**, **`.cursor/docs/backend/loyalty.md`**, кратко для ассистентов — **`.cursor/AGENTS.md`**.
-
-## Режим продаж: `classic` и `tariffs`
-
-Переключатель задаётся переменной **`SALES_MODE`** в `.env` (значения: `classic` или `tariffs`). Оба режима используют одни и те же способы оплаты (YooKassa, Platega при настройке, CryptoPay, Stars, Tribute и т.д.), но по-разному формируют **цену и параметры подписки**.
-
-### `SALES_MODE=classic` (по умолчанию)
-
-- **Цены** берутся только из окружения: `PRICE_1`, `PRICE_3`, `PRICE_6`, `PRICE_12`; для Telegram Stars — `STARS_PRICE_*` (если `TELEGRAM_STARS_ENABLED=true`, иначе Stars не используются).
-- Текст экрана покупки в основном из переводов (`pricing_info_trial` / `pricing_info_paid` / `pricing_info_paid_extra` в `translations/*.json`).
-- **Лимиты при выдаче подписки в Remnawave** задаются конфигом: `TRAFFIC_LIMIT`, `TRAFFIC_LIMIT_RESET_STRATEGY`, `PAID_HWID_LIMIT`, `HWID_FALLBACK_DEVICE_LIMIT` и связанные переменные (см. таблицу env ниже). Таблицы `tariff` в логике покупки не используются.
-
-### `SALES_MODE=tariffs`
-
-- Нужны **миграции БД**: `000008_tariffs` (таблицы `tariff`, `tariff_price`, поля `customer.current_tariff_id`, `purchase.tariff_id` и др.), **`000009_tariff_description`** (колонка `tariff.description` для краткого текста на витрине и в боте) и **`000039_tariff_description_detail`** (колонка `tariff.description_detail` — подробное описание на странице выбора срока в **web-кабинете** `/cabinet/tariffs?plan=<slug>`; редактируется в web-админке → Тарифы).
-- **Каталог и суммы**: активные тарифы и цены по периодам 1/3/6/12 месяцев хранятся в `tariff` / `tariff_price` (`amount_rub`, опционально `amount_stars`). Порядок списка — `sort_order`, активность — `is_active`.
-- **Поведение «Купить»** (пошагово):
-  1. Список тарифов: название, трафик, число устройств, минимальная цена в ₽ «от …», при необходимости **краткое** описание (`description`); строка «текущий тариф» по `current_tariff_id` (если не задан — «неизвестно»).
-  2. После выбора тарифа — **подробное** описание (`description_detail`, иначе `description`) и кнопки периодов с ценами из БД.
-  3. После выбора периода — краткий блок **«Способы оплаты»** и кнопки провайдеров.
-  4. После выбора способа — снова карточка тарифа и кнопки **Оплатить** / **Назад** (создаётся счёт).
-- **Кнопки периодов (1 / 3 / 6 / 12 мес.)** строятся только для строк `tariff_price`, где **`amount_rub` > 0**. Если для части периодов цена в рублях равна нулю, соответствующие кнопки **не показываются** — так можно оставить, например, только 1 и 3 месяца, задав цены вроде `150, 600, 0, 0` (и при необходимости ту же схему для Stars). Это не ошибка конфигурации, а осознанный способ «спрятать» длинные периоды.
-- **Редактирование цен в админке**: после `|` можно указать **`auto`** для блока Stars — тогда звёзды считаются из рублёвых сумм по **`RUB_PER_STAR`** (как при мастере создания тарифа), например `1,2,3,4 | auto`.
-не- **Апгрейд** (дешевле → дороже при активной подписке): полная цена нового периода; остаток старого тарифа пересчитывается в **дни нового** по дневным ценам пакетов. Итоговый срок задаётся **от момента оплаты** (`CreateOrUpdateUserWithTariffProfileFromNow`): к `expire_at` нельзя просто прибавлять «месяц + бонус», иначе календарный остаток учитывается дважды.
-- **Даунгрейд** (дороже → дешевле при активной подписке): полная цена выбранного периода на дешёвом тарифе; остаток дорогого тарифа пересчитывается в дни дешёвого **той же формулой**, срок **от момента оплаты** (как у апгрейда). Предупреждение перед оплатой — `tariff_downgrade_early_warning`.
-- **Админка**: при заданном `ADMIN_TELEGRAM_ID` в админ-панели есть раздел управления тарифами (создание, цены в ₽ и Stars, squads, краткое и подробное описание в **web-админке**). Если таблица тарифов **пуста**, при первом открытии списка тарифов в админке может быть **автоматически создан** тариф `standard` из текущих `PRICE_*`, `TRAFFIC_LIMIT`, лимитов устройств и squad/tag из env (удобно для миграции с `classic`).
-
-
-### Какие переменные `.env` на что влияют в каждом режиме
-
-| Переменные | `classic` | `tariffs` |
-| ---------- | --------- | --------- |
-| `PRICE_1` … `PRICE_12` | Основная цена подписки по периоду | **Обязательны при старте** (валидация конфига); используются для сида `standard` и как запасной ориентир; **фактическая цена покупки** — из `tariff_price.amount_rub` |
-| `STARS_PRICE_*` | Цена в Stars по периоду (если Stars включены) | Для сида `standard` и при создании тарифа в админке; **оплата Stars** — из `amount_stars` в БД, либо расчёт через `RUB_PER_STAR` если Stars в строке цены не заданы |
-| `RUB_PER_STAR` | Может не использоваться | Опционально: расчёт Stars при оплате Stars, если в `tariff_price` нет `amount_stars`; также подсказки при вводе цен в админке |
-| `TRAFFIC_LIMIT`, `TRAFFIC_LIMIT_RESET_STRATEGY` | Лимит трафика при выдаче подписки | Лимит и стратегия **на уровне каждого тарифа** в БД; при сиде `standard` подставляются из этих env |
-| `PAID_HWID_LIMIT`, `HWID_FALLBACK_DEVICE_LIMIT` | Лимит устройств при выдаче | Лимит **на уровне тарифа** в БД; сид `standard` берёт устройства из этих настроек |
-| `HWID_ADD_PRICE`, `HWID_ADD_STARS_PRICE` | Доплата за доп. устройства | То же: доплата к счёту при выборе extra HWID |
-| Промокоды (pending % скидка) | Вставка строки перед блоком способов оплаты в текстах `pricing_info_*` | Вставка перед строкой «Способы оплаты» на шаге выбора провайдера, если в тексте есть тот же HTML-маркер |
-| `Tribute` | Без скидки по промокоду (как в коде) | Без изменений |
-
-**Важно:** даже в режиме `tariffs` приложение при старте **требует** заданные `PRICE_1`…`PRICE_12` (и остальную обязательную конфигурацию) — это ограничение текущей инициализации `config`, а не «вторая ценовая сетка» для пользователя.
-
-Тексты пошагового сценария в `tariffs` настраиваются в **`translations/ru.json`** и **`translations/en.json`** (ключи вида `buy_tariff_*`, `tariff_selected_*`, `tariff_payment_methods_text`, `payment_tariff_*`).
-
-## Поддержка Версий
-
-| Remnawave     | Бот    |
-| ------------- | ------ |
-| 1.6           | 2.3.6  |
-| 2.0.0 - 2.1.9 | 3.3.\* |
-| 2.2.\*        | 3.4.\* |
-| 2.3.\*        | 3.5.\* |
-| 2.7.\*        | 4.0.\* |
-| 2.8.\*        | 4.Х.\* |
-
-## API
-
-Веб-сервер запускается на порту из `.env` через `HEALTH_CHECK_PORT`.
-Это единый HTTP-сервер бота: `/healthcheck` + (если включён кабинет) `/cabinet/*` и `/cabinet/api/*`.
-Рекомендуется держать этот порт локальным (`127.0.0.1`) и пускать внешний трафик через reverse proxy (nginx/caddy).
-
-- `/healthcheck` - Проверка здоровья сервиса. Возвращает JSON с информацией о статусе БД, Remnawave API, версии, коммите и дате сборки
-
-## YooKassa и Platega: вебхуки и поллинг
-
-На том же HTTP-сервере, что `/healthcheck` (порт **`HEALTH_CHECK_PORT`**), при **непустом** значении переменных регистрируются обработчики по **относительному пути** (как у Tribute: задайте только суффикс пути, без домена):
-
-- **`YOOKASA_WEBHOOK_URL`** — если **пусто**, успешные оплаты YooKassa обрабатываются **поллингом** по cron; если задан путь (например `/yookassa-hook`), YooKassa может слать уведомления на публичный URL `https://ваш-домен` + путь (за reverse-proxy).
-- **`PLATEGA_WEBHOOK_URL`** — аналогично для Platega: **пусто** = только поллинг; непустой путь = входящий вебхук от Platega.
-
-**CryptoPay** в этом форке по-прежнему подтверждается поллингом. **Tribute** — отдельные `TRIBUTE_*` (см. таблицу env).
-
-## Переменные Окружения
-
-Приложение требует установки следующих переменных окружения:
-
-| Переменная                           | Описание                                                                                                                                                      |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SALES_MODE`                         | Режим продаж: `classic` (цены из env) или `tariffs` (каталог и цены из БД). Подробно — раздел **«Режим продаж: classic и tariffs»**                            |
-| `PRICE_1`                            | Цена за 1 месяц                                                                                                                                               |
-| `PRICE_3`                            | Цена за 3 месяца                                                                                                                                              |
-| `PRICE_6`                            | Цена за 6 месяцев                                                                                                                                             |
-| `PRICE_12`                           | Цена за 12 месяцев                                                                                                                                            |
-| `SHOW_LONG_TERM_SAVINGS_PERCENT`     | Показывать на кнопках выбора периода (3 / 6 / 12 мес) экономию в процентах относительно покупки по месячной цене: формат «…₽ (-N%)». `classic`: база — `PRICE_1`; `tariffs` — цена 1 мес из `tariff_price` того же тарифа. Если многомесячная цена не ниже `N ×` месячной, суффикс не добавляется. По умолчанию `false` |
-| `RUB_PER_STAR`                       | Сколько рублей условно «стоит» одна Telegram Star (`float`, пусто/`0` = не использовать). В `tariffs`: расчёт Stars при оплате, если в БД нет `amount_stars`; подсказки в админке; для **лояльности** — перевод суммы Stars в ₽ эквивалента при начислении XP и при пересчёте из истории |
-| `LOYALTY_ENABLED`                    | Включить программу лояльности (скидки по уровням, XP, UI и админка). По умолчанию `false` |
-| `LOYALTY_MAX_TOTAL_DISCOUNT_PERCENT`| Верхняя граница суммы процентов **лояльность + промо** после сложения (целое 1–100, по умолчанию 100) |
-| `LOYALTY_XP_MIN_PER_PURCHASE`       | Минимум XP за успешную оплату, если сумма в ₽/Stars не дала баллов (0 = выкл.) |
-| `DAYS_IN_MONTH`                      | Дней в месяце                                                                                                                                                 |
-| `DEFAULT_LANGUAGE`                   | Язык по умолчанию для сообщений бота (en или ru). По умолчанию: ru                                                                                            |
-| `REMNAWAVE_TAG`                      | Тег в remnawave                                                                                                                                               |
-| `TRIAL_REMNAWAVE_TAG`                | Тег для назначения пробным пользователям в Remnawave (опционально, если не установлен, используется обычный REMNAWAVE_TAG)                                    |
-| `HEALTH_CHECK_PORT`                  | Порт сервера                                                                                                                                                  |
-| `IS_WEB_APP_LINK`                    | Если true, то ссылка подписки будет показана как webapp..                                                                                                     |
-| `REMNAWAVE_HEADERS`                  | Дополнительные заголовки для запросов к remnawave (формат: key1:value1;key2:value2). Пример: X-Api-Key:your_key;X-Custom:value (опционально)                  |
-| `MINI_APP_URL`                       | URL tg WEB APP. если пустой, не используется.                                                                                                                 |
-| `GREETING_IMAGE`                     | Картинка только для главного меню (`greeting`). Только `http(s)://` URL или путь к локальному файлу (относительный к рабочей директории процесса или абсолютный). Если задан локальный путь и файла нет — при старте в лог пишется предупреждение. Если пусто — главное меню текстом, как раньше. |
-| `STARS_PRICE_1`                      | Цена в Stars за 1 месяц                                                                                                                                       |
-| `STARS_PRICE_3`                      | Цена в Stars за 3 месяца                                                                                                                                      |
-| `STARS_PRICE_6`                      | Цена в Stars за 6 месяцев                                                                                                                                     |
-| `STARS_PRICE_12`                     | Цена в Stars за 12 месяцев                                                                                                                                    |
-| `REFERRAL_MODE`                      | Режим реферальной системы: `default` или `progressive`                                                                                                         |
-| `REFERRAL_DAYS`                      | Дни реферального бонуса в режиме `default`. если 0, то отключено.                                                                                              |
-| `REFERRAL_FIRST_REFERRER_DAYS`       | Дни, которые получает пригласивший при первом пополнении реферала                                                                                             |
-| `REFERRAL_FIRST_REFEREE_DAYS`        | Дни, которые получает новый пользователь при первом пополнении                                                                                                 |
-| `REFERRAL_REPEAT_REFERRER_DAYS`      | Дни, которые получает пригласивший за каждое последующее пополнение реферала                                                                                   |
-| `TRIAL_ADD_TO_PAID`                  | Учитывать дни триала при покупке платной подписки (true/false)                                                                                                 |
-| `TELEGRAM_TOKEN`                     | Telegram Bot API токен для функциональности бота                                                                                                              |
-| `TELEGRAM_PROXY_URL`                 | Прокси для Telegram Bot API (http/https). Пример: http://user:pass@ip:3128. Если пусто — запросы идут напрямую                                               |
-| `DATABASE_URL`                       | Строка подключения PostgreSQL                                                                                                                                 |
-| `POSTGRES_USER`                      | Имя пользователя PostgreSQL                                                                                                                                   |
-| `POSTGRES_PASSWORD`                  | Пароль PostgreSQL                                                                                                                                             |
-| `POSTGRES_DB`                        | Имя базы данных PostgreSQL                                                                                                                                    |
-| `REMNAWAVE_URL`                      | URL API Remnawave                                                                                                                                             |
-| `REMNAWAVE_MODE`                     | Режим Remnawave (remote/local), по умолчанию remote. Если local установлен – можно передать http://remnawave:3000 в REMNAWAVE_URL                             |
-| `REMNAWAVE_TOKEN`                    | Токен аутентификации для Remnawave API                                                                                                                        |
-| `CRYPTO_PAY_ENABLED`                 | Включить/отключить способ оплаты CryptoPay (true/false)                                                                                                       |
-| `CRYPTO_PAY_TOKEN`                   | Токен API CryptoPay                                                                                                                                           |
-| `CRYPTO_PAY_URL`                     | URL API CryptoPay                                                                                                                                             |
-| `YOOKASA_ENABLED`                    | Включить/отключить способ оплаты YooKassa (true/false)                                                                                                        |
-| `YOOKASA_SECRET_KEY`                 | Секретный ключ API YooKassa                                                                                                                                   |
-| `YOOKASA_SHOP_ID`                    | Идентификатор магазина YooKassa                                                                                                                               |
-| `YOOKASA_URL`                        | URL API YooKassa                                                                                                                                              |
-| `YOOKASA_EMAIL`                      | Email адрес, связанный с аккаунтом YooKassa                                                                                                                   |
-| `YOOKASA_WEBHOOK_URL`                | Опционально: **путь** для mux (как `TRIBUTE_WEBHOOK_URL`). Если задан — подтверждение оплат YooKassa по вебхуку; если **пусто** — только поллинг (см. раздел **«YooKassa и Platega: вебхуки и поллинг»**) |
-| `PLATEGA_ENABLED`                    | Включить интеграцию Platega (`true`/`false`). При `true` обязательны **`PLATEGA_MERCHANT_ID`**, **`PLATEGA_SECRET`** и хотя бы один из флагов методов ниже |
-| `PLATEGA_MERCHANT_ID`                | Идентификатор мерчанта в Platega                                                                                                                              |
-| `PLATEGA_SECRET`                     | Секретный ключ API Platega                                                                                                                                   |
-| `PLATEGA_WEBHOOK_URL`                | Опционально: **путь** для mux. Пусто — подтверждение транзакций Platega только **поллингом**                                                                   |
-| `PLATEGA_SBP_ENABLED`                | Показывать и принимать оплату через Platega (СБП), `true`/`false`                                                                                             |
-| `PLATEGA_CARDS_ENABLED`              | Показывать и принимать оплату картами через Platega, `true`/`false`                                                                                            |
-| `PLATEGA_ACQUIRING_ENABLED`          | Показывать и принимать эквайринг через Platega, `true`/`false`                                                                                                 |
-| `PLATEGA_WORLDWIDE_ENABLED`          | Показывать и принимать worldwide-метод Platega, `true`/`false`                                                                                                 |
-| `PLATEGA_CRYPTO_ENABLED`             | Показывать и принимать крипто-метод Platega, `true`/`false`                                                                                                   |
-| `MOYNALOG_ENABLED`                   | Включить/отключить интеграцию с Мой Налог (true/false)                                                                                                         |
-| `MOYNALOG_URL`                       | URL API Мой Налог (по умолчанию https://lknpd.nalog.ru/api/v1)                                                                                                 |
-| `MOYNALOG_USERNAME`                  | Логин для Мой Налог                                                                                                                                           |
-| `MOYNALOG_PASSWORD`                  | Пароль для Мой Налог                                                                                                                                          |
-| `MOYNALOG_PROXY_URL`                 | Прокси для запросов к Мой Налог (http/https/socks5). Пример: http://user:pass@ip:3128 или socks5://user:pass@ip:1080. Если пусто — запросы идут напрямую     |
-| `MOYNALOG_RECEIPT_FOR`               | После успешной оплаты: для каких способов вызывать API дохода «Мой налог». Список через запятую (регистр не важен): **`yookassa`** (алиасы `yookasa`, `youkassa`), **`platega`** (все методы Platega), **`crypto`** — счета CryptoPay (в БД сумма в ₽; в комментарии к доходу только нейтральная формулировка без криптовалюты). **Не задана** — по умолчанию **yookassa** и **platega**. **Задана пустой строкой** — не отправлять доход ни для одного способа |
-| `TRAFFIC_LIMIT`                      | Максимально разрешенный трафик в гб (0 для неограниченного)                                                                                                   |
-| `TELEGRAM_STARS_ENABLED`             | Включить/отключить способ оплаты Telegram Stars (true/false)                                                                                                  |
-| `REQUIRE_PAID_PURCHASE_FOR_STARS`    | Требовать успешную оплату через криптовалюту или карту перед использованием Telegram Stars (true/false). По умолчанию: false                                  |
-| `SERVER_STATUS_URL`                  | URL страницы статуса сервера (опционально) - если не установлен, кнопка не отображается                                                                       |
-| `SUPPORT_URL`                        | URL чата поддержки или страницы (опционально) — если не установлен, кнопка не отображается; при **`SUPPORT_BOT_API=true`** в кабинете открывается встроенный чат, а не эта ссылка |
-| `SUPPORT_BOT_API`                    | Встроенный чат поддержки в web-кабинете через bridge к telegram-support-bot (`true`/`false`, по умолчанию `false`). Миграция **`000036_cabinet_support`** |
-| `SUPPORT_BOT_API_URL`                | Базовый URL HTTP API support-bot (например `http://support-bot:8080` в одной docker-сети). Обязателен при `SUPPORT_BOT_API=true` |
-| `SUPPORT_BRIDGE_SECRET`              | Общий секрет для shop ↔ support-bot (Bearer в webhook и при вызове `POST /internal/cabinet/message`). Обязателен при `SUPPORT_BOT_API=true` |
-| `FEEDBACK_URL`                       | URL страницы отзывов/обратной связи (опционально) — если не установлен, кнопка не отображается. В `classic` показывается при непустом URL; в `minimalism` — только при `CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON=true`. Можно менять в админке (Ссылки в боте) |
-| `CHANNEL_URL`                        | URL Telegram канала (опционально) — если не установлен, кнопка не отображается. В `classic` показывается при непустом URL; в `minimalism` — только при `CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON=true`. Можно менять в админке (Ссылки в боте) |
-| `TOS_URL`                            | URL условий использования (опционально) - если не установлен, кнопка не отображается                                                                          |
-| `VIDEO_GUIDE_URL`                    | URL видеоинструкции (опционально) - если установлен, кнопка "📺 Видеоинструкция" отображается в разделе "Помощь"                                              |
-| `SERVER_SELECTION_URL`               | URL страницы с информацией о выборе сервера (опционально) - если установлен, кнопка "🌏 Какой сервер выбрать" отображается в разделе "Помощь"                 |
-| `PUBLIC_OFFER_URL`                   | URL публичной оферты (опционально) - если установлен, кнопка "📄 Публичная оферта" отображается в разделе "Помощь"                                            |
-| `PRIVACY_POLICY_URL`                 | URL политики конфиденциальности (опционально) - если установлен, кнопка "🔒 Политика конфиденциальности" отображается в разделе "Помощь"                      |
-| `TERMS_OF_SERVICE_URL`               | URL пользовательского соглашения (опционально) - если установлен, кнопка "📋 Пользовательское соглашение" отображается в разделе "Помощь"                     |
-| `ADMIN_TELEGRAM_ID`                  | ID telegram админа; кнопка «Админ» в боте и web-кабинете (при `CABINET_ENABLED=true` и привязанном TG): рассылка, **пользователи**, статистика, синхронизация, промокоды, infra (web); при `SALES_MODE=tariffs` — тарифы; при лояльности — раздел лояльности. Промокоды — миграция `000007_promo_codes` |
-| `LIFECYCLE_NOTIFY_ENABLED`           | Включить систему lifecycle-уведомлений (no-connect, win-back, trial expiring). Миграция `000035_lifecycle_notify`. По умолчанию `false` |
-| `LIFECYCLE_CRON`                     | Расписание cron для проверки lifecycle-событий (формат cron). По умолчанию `*/30 * * * *` (каждые 30 минут) |
-| `LIFECYCLE_NO_CONNECT_PAID_ENABLED`  | Напоминание пользователям с оплаченной подпиской, которые не подключались к VPN (`true`/`false`). По умолчанию `true` |
-| `LIFECYCLE_NO_CONNECT_TRIAL_ENABLED` | Напоминание пользователям с триалом, которые не подключались к VPN (`true`/`false`). По умолчанию `true` |
-| `LIFECYCLE_NO_CONNECT_DELAY_HOURS`   | Минимальный интервал в часах после первой оплаты/триала перед отправкой no-connect уведомления. По умолчанию `1` |
-| `LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS` | Максимальное окно в часах для отправки no-connect уведомления (после этого срока уведомление не отправляется). По умолчанию `24` |
-| `LIFECYCLE_WINBACK_ENABLED`          | Win-back кампания для пользователей с истёкшей подпиской: промокод со скидкой через N дней после окончания (`true`/`false`). По умолчанию `true` |
-| `LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY`| Через сколько дней после окончания подписки отправлять win-back уведомление. По умолчанию `5` |
-| `LIFECYCLE_WINBACK_DISCOUNT_PERCENT` | Процент скидки для win-back промокода (целое число 1–100). По умолчанию `10` |
-| `LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS`| Срок действия win-back промокода в часах. По умолчанию `48` |
-| `LIFECYCLE_VIDEO_GUIDE_URL`          | URL видео-инструкции для no-connect уведомлений (опционально, если пусто — кнопка не показывается) |
-| `LIFECYCLE_SUPPORT_CONTACT`          | Контакт поддержки (например, @username или ссылка) для no-connect уведомлений (опционально) |
-| `CABINET_ENABLED`                    | Включить web-кабинет (`true/false`) |
-| `CABINET_PROFILE_DELETE_ENABLED`     | Разрешить самоудаление профиля в кабинете (`POST /cabinet/api/me/account/delete`) |
-| `CABINET_PUBLIC_URL`                 | Публичный URL кабинета (например, `https://cabinet.example.com`) |
-| `CABINET_ALLOWED_ORIGINS`            | CORS allowlist для кабинета |
-| `CABINET_JWT_SECRET`                 | Секрет подписи access JWT (рекомендуется 32+ байт) |
-| `CABINET_COOKIE_DOMAIN`              | Домен refresh-cookie; если пусто, берётся из `CABINET_PUBLIC_URL` |
-| `CABINET_ACCESS_TTL_MINUTES`         | TTL access token в минутах |
-| `CABINET_REFRESH_TTL_DAYS`           | TTL refresh-сессии в днях |
-| `CABINET_WEB_TELEGRAM_ID_BASE`       | База synthetic Telegram ID для web-only пользователей |
-| `CABINET_BRAND_NAME`                 | Брендовое название в UI кабинета (опционально) |
-| `CABINET_BRAND_LOGO_URL`             | URL логотипа кабинета (опционально, приоритетнее файла) |
-| `CABINET_BRAND_LOGO_FILE`            | Путь к файлу логотипа на диске процесса (опционально) |
-| `CABINET_BRAND_LOGO_FILE_BASE`       | Базовый путь поиска файла логотипа в Docker (опционально) |
-| `CABINET_PWA_ENABLED`                | Включить PWA-манифест кабинета (`true/false`) |
-| `CABINET_PWA_APP_NAME`               | Имя PWA-приложения (опционально) |
-| `CABINET_PWA_SHORT_NAME`             | Короткое имя PWA-приложения (опционально) |
-| `CABINET_LIGHT_THEME_ENABLED`        | Светлая тема в кабинете (`true` по умолчанию; `false` — только тёмная, без переключателя в шапке). Можно менять в админке (Оформление кабинета) без перезапуска |
-| `CABINET_DECOR_THEME`                | Декоративное оформление кабинета (`off` по умолчанию). Порядок в админке по цвету: `green`/`spring`/`cyber` → `neon`/`ocean`/`new_year`/`slate` → `aurora`/`violet`/`lavender` → `pink`/`valentine` → `sunset`/`orange`/`halloween` → `yellow`/`summer`/`black_friday`. Можно менять в админке (Оформление кабинета) без перезапуска; в bootstrap — поле `decor_theme` |
-| `CABINET_TARIFF_PRICE_DISPLAY`       | Витрина тарифов кабинета (режим `tariffs`): `monthly` — помесячная цена на карточках; `marketing` — ₽/мес при оплате за 12 месяцев + сноска «*При оплате за год». Можно менять в админке (Настройки бота → Тарифы) без перезапуска; в `GET /cabinet/api/tariffs` — поле `price_display` |
-| `CABINET_DEEPLINK_HAPP_ENCRYPT`      | Шифровать deep link Happ при подключении устройства (`false` по умолчанию). `true` — кабинет отдаёт зашифрованную ссылку `happ://crypt5/` вместо `happ://add/`: подписку нельзя смотреть/редактировать/шарить в приложении. Ссылка подписки отправляется на сторонний сервис `crypto.happ.su` (официальный API Happ). Можно менять в админке (Настройки бота → Оформление кабинета → Deep link подключения) без перезапуска; в bootstrap — поле `deeplink_happ_encrypt` |
-| `CABINET_DEEPLINK_INCY_ENCRYPT`      | Шифровать deep link INCY при подключении устройства (`false` по умолчанию). `true` — кабинет отдаёт обфусцированную ссылку `incy://crypt1/` вместо `incy://add/`: скрывает адрес подписки от сканеров чатов и скриншотов. Ключ INCY публичный (зашит в клиенты) — это обфускация, а не полная защита. Можно менять в админке без перезапуска; в bootstrap — поле `deeplink_incy_encrypt` |
-| `CABINET_MINI_APP_URL`               | URL Mini App для web↔telegram flow (опционально) |
-| `CABINET_MINI_APP_PATH`              | Path Mini App (опционально, обычно `/cabinet/`) |
-| `CABINET_TELEGRAM_UI_MODE`           | При включённом кабинете: `classic` (меню как раньше) или `minimalism` (кнопки в кабинет: тарифы, подписка, поддержка, инфо + короткий greeting; подписи в `translations/*`) |
-| `CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON` | В режиме `minimalism`: показать кнопку «Канал» внизу меню бота (`false` по умолчанию). Нужен `CHANNEL_URL`. Текст/эмодзи/цвет — `cabinet_minimal_btn_channel` в `translations/*`. Можно менять в админке (Оформление кабинета → Кнопки в Telegram) без перезапуска |
-| `CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON` | В режиме `minimalism`: показать кнопку «Отзывы» внизу меню бота (`false` по умолчанию). Нужен `FEEDBACK_URL`. Текст/эмодзи/цвет — `cabinet_minimal_btn_feedback` в `translations/*`. Одна кнопка — 1 в ряд; обе включены — 2 в ряд. Можно менять в админке без перезапуска |
-| `CABINET_SMTP_HOST` / `CABINET_SMTP_PORT` / `CABINET_SMTP_USER` / `CABINET_SMTP_PASSWORD` / `CABINET_SMTP_TLS` / `CABINET_MAIL_FROM` | SMTP для писем кабинета (verify/reset) |
-| `CABINET_GOOGLE_CLIENT_ID` / `CABINET_GOOGLE_CLIENT_SECRET` / `CABINET_GOOGLE_REDIRECT_URL` | Google OAuth для кабинета |
-| `CABINET_YANDEX_CLIENT_ID` / `CABINET_YANDEX_CLIENT_SECRET` / `CABINET_YANDEX_REDIRECT_URL` | Yandex OAuth для кабинета |
-| `CABINET_VK_CLIENT_ID` / `CABINET_VK_CLIENT_SECRET` / `CABINET_VK_CLIENT_REDIRECT_URL` | VK OAuth для кабинета |
-| `CABINET_TELEGRAM_WEB_AUTH_MODE`     | Режим web-авторизации Telegram: `oidc` (рекомендуется) или `widget` |
-| `CABINET_TELEGRAM_LOGIN_BOT_USERNAME`| Username бота для legacy Telegram Login Widget (режим `widget`) |
-| `CABINET_TELEGRAM_LOGIN_BOT_TOKEN`   | Токен бота для валидации legacy Widget (режим `widget`) |
-| `CABINET_TELEGRAM_OIDC_CLIENT_ID` / `CABINET_TELEGRAM_OIDC_CLIENT_SECRET` / `CABINET_TELEGRAM_OIDC_REDIRECT_URL` | Telegram OAuth 2.0 (OIDC) web-login/link |
-| `CABINET_TURNSTILE_ENABLED`          | Включить Cloudflare Turnstile для `register/login/forgot` |
-| `CABINET_TURNSTILE_SITE_KEY`         | Публичный ключ Turnstile |
-| `CABINET_TURNSTILE_SECRET_KEY`       | Секретный ключ Turnstile |
-| `CABINET_METRICS_USER` / `CABINET_METRICS_PASSWORD` | Опциональный Basic-auth для `GET /cabinet/api/metrics` (оба заданы или оба пусты) |
-| `FORTUNE_*`                          | **Колесо фортуны (кабинет):** `FORTUNE_ENABLED`; **`FORTUNE_MAX_SPINS_PER_DAY`** — максимум платных спинов за UTC-сутки (бесплатный daily в счёт не входит); `FORTUNE_SPIN_COST_DAYS`; `FORTUNE_MIN_SUBSCRIPTION_DAYS`; **`FORTUNE_DAILY_FREE_SPIN`** — один бесплатный спин в сутки (UTC)(`is_daily_free`); **веса** `FORTUNE_WEIGHT_*`; **величины** `FORTUNE_REWARD_*`. **Лента победителей:** `FORTUNE_WINNER_TICKER_ENABLED` (вкл/выкл ленту на странице колеса); `FORTUNE_WINNER_TICKER_FAKE_FILL` (true — только синтетическая лента без БД, до 24 строк, `spin_at` за 24 ч, редко фейк +180 дн.; false — реальные спины + витрина 85/15, до 48 строк). Доступ: хотя бы одна оплаченная подписка (`month>0`). Конфиг: `internal/cabinet/config/fortune_wheel.go`. Миграции: **`000033`**, при daily — **`000034`**. |
-| `BLOCKED_TELEGRAM_IDS`               | Список Telegram ID, разделенных запятыми, для блокировки доступа к боту (например, "123456789,987654321")                                                     |
-| `WHITELISTED_TELEGRAM_IDS`           | Список Telegram ID, разделенных запятыми, которые обходят все проверки на подозрительных пользователей (например, "111111111,222222222,333333333")            |
-| `TRIAL_TRAFFIC_LIMIT`                | Максимально разрешенный трафик в гб для пробных подписок                                                                                                      |
-| `TRIAL_DAYS`                         | Количество дней для пробных подписок. если 0 = отключено.                                                                                                     |
-| `TRIAL_INTERNAL_SQUADS`              | Список UUID squad, разделенных запятыми, для назначения пробным пользователям (опционально, если не установлено, используются SQUAD_UUIDS)                    |
-| `TRIAL_EXTERNAL_SQUAD_UUID`          | Один внешний UUID squad для назначения пробным пользователям (опционально, если не установлено, используется EXTERNAL_SQUAD_UUID)                             |
-| `SQUAD_UUIDS`                        | Список UUID squad, разделенных запятыми, для назначения пользователям (например, "773db654-a8b2-413a-a50b-75c3536238fd,bc979bdd-f1fa-4d94-8a51-38a0f518a2a2") |
-| `EXTERNAL_SQUAD_UUID`                | Один внешний UUID squad для назначения пользователям при создании и обновлении (опционально, например, "773db654-a8b2-413a-a50b-75c3536238fd")                |
-| `TRAFFIC_LIMIT_RESET_STRATEGY`       | Стратегия сброса трафика для обычных подписок (day/week/month/never). По умолчанию: month                                                                     |
-| `TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY` | Стратегия сброса трафика для пробных подписок (day/week/month/never). По умолчанию: month                                                                     |
-| `TRIBUTE_WEBHOOK_URL`                | Путь для обработчика webhook. Пример: /example (https://www.uuidgenerator.net/version4)                                                                       |
-| `TRIBUTE_API_KEY`                    | API ключ, который можно получить через настройки в приложении Tribute.                                                                                        |
-| `TRIBUTE_PAYMENT_URL`                | Ваш URL оплаты для Tribute. (Ссылка подписки telegram)                                                                                                        |
-| `HWID_EXTRA_DEVICES_ENABLED`         | `true` / `false` — продажа доп. HWID в **боте** и блок **«Дополнительные опции»** на странице **`/cabinet/subscription`** в кабинете (см. абзац про HWID в кабинете выше). `false` не отменяет уже выданные слоты до истечения. По умолчанию `true` (если не задано) |
-| `HWID_ADD_PRICE`                     | Цена за 1 доп. устройство в рублях                                                                                                                            |
-| `HWID_ADD_STARS_PRICE`               | Цена за 1 доп. устройство в Telegram Stars                                                                                                                     |
-| `HWID_MAX_DEVICE`                    | Максимальный лимит устройств в одной подписке                                                                                                                 |
-| `TRIAL_HWID_LIMIT`                   | Лимит устройств для пробной подписки                                                                                                                           |
-| `PAID_HWID_LIMIT`                    | Лимит устройств для платной подписки (0 = использовать HWID_FALLBACK_DEVICE_LIMIT)                                                                            |
-| `HWID_FALLBACK_DEVICE_LIMIT`         | Лимит устройств по умолчанию, когда лимит устройств пользователя не установлен в Remnawave (по умолчанию: 2)                                                  |
-
-## Пользовательский Интерфейс
-
-Бот динамически создает кнопки на основе доступных переменных окружения:
-
-- Основные кнопки для покупки и подключения к VPN всегда отображаются
-- Дополнительные кнопки для Статуса Сервера, Поддержки, Отзывов и Канала отображаются только если установлены соответствующие URL переменные окружения
-- В разделе "Помощь" кнопки строятся в порядке: ряд «🌏 Какой сервер выбрать» / «📺 Видеоинструкция» (если заданы `SERVER_SELECTION_URL` и/или `VIDEO_GUIDE_URL`), отдельный ряд «🆘 Поддержка» (`SUPPORT_URL`), ряд «📄 Публичная оферта» / «🔒 Политика конфиденциальности» (`PUBLIC_OFFER_URL`, `PRIVACY_POLICY_URL`), отдельный ряд «📋 Пользовательское соглашение» (`TERMS_OF_SERVICE_URL`); кнопки с пустыми URL не показываются
-
-## Автоматизированные Уведомления
-
-Бот включает систему уведомлений двух типов:
-
-### Уведомление об истечении подписки
-
-Запускается ежедневно в 16:00 UTC для проверки истекающих подписок:
-
-- Пользователи получают уведомление за 3 дня до истечения их подписки
-- Уведомление включает точную дату истечения и кнопку для продления: при **`CABINET_TELEGRAM_UI_MODE=minimalism`** (и рабочем Mini App) кнопка открывает WebApp **`/cabinet/tariffs`**, иначе — сценарий оплаты в боте (callback «Купить»).
-- Уведомления отправляются на предпочитаемом языке пользователя
-
-### Lifecycle-уведомления
-
-Настраиваемая система жизненного цикла пользователей (`LIFECYCLE_NOTIFY_ENABLED=true`, cron задаётся в `LIFECYCLE_CRON`, по умолчанию каждые 30 минут):
-
-- **No-connect (paid/trial)** — напоминание пользователям, которые оплатили подписку или активировали триал, но так и не подключились к VPN (не было активности устройств в панели). Проверяется через заданный интервал (`LIFECYCLE_NO_CONNECT_DELAY_HOURS`) после первой оплаты/триала, но не позже максимального окна (`LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS`). Уведомление содержит ссылки на видео-гайд и поддержку (если заданы `LIFECYCLE_VIDEO_GUIDE_URL` / `LIFECYCLE_SUPPORT_CONTACT`).
-- **Win-back** — возврат пользователей с истёкшей подпиской. Через N дней после окончания подписки (`LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY`) отправляется уведомление с промокодом на скидку (`LIFECYCLE_WINBACK_DISCOUNT_PERCENT`) для продления. Промокод действует ограниченное время (`LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS`). Отправляется только пользователям с хотя бы одной оплаченной подпиской (триалы не учитываются).
-
-### Внутренние Squads (SQUAD_UUIDS)
-
-- Настройте конкретные UUID squad в переменной окружения `SQUAD_UUIDS` (разделенные запятыми)
-- Если указано, только squads с соответствующими UUID будут назначены новым пользователям
-- Если ни один squad не соответствует указанным UUID или переменная пуста, будут назначены все доступные squads
-- Эта функция позволяет точно контролировать, какие методы подключения доступны пользователям
-
-### Внешний Squad (EXTERNAL_SQUAD_UUID)
-
-- Настройте один внешний UUID squad в переменной окружения `EXTERNAL_SQUAD_UUID`
-- Когда установлено, этот внешний squad будет включен во все запросы на создание и обновление пользователей в Remnawave API
-- UUID проверяется и парсится при запуске приложения; неверный формат предотвратит запуск приложения
-- Оставьте пустым, чтобы отключить назначение внешнего squad
-
-### Конфигурация Squad для Пробных Пользователей (TRIAL_INTERNAL_SQUADS и TRIAL_EXTERNAL_SQUAD_UUID)
-
-Пробные пользователи могут быть назначены в отдельные squad, отличные от обычных платных пользователей:
-
-#### Внутренние Squad для Пробных Пользователей (TRIAL_INTERNAL_SQUADS)
-
-- Настройте конкретные UUID squad для пробных пользователей в переменной окружения `TRIAL_INTERNAL_SQUADS` (разделенные запятыми)
-- Если указано, только эти squad будут назначены пользователям при активации пробных подписок
-- Если пусто или не установлено, пробные пользователи будут назначены в обычные squad, определенные в `SQUAD_UUIDS` (поведение fallback)
-- Пример: `TRIAL_INTERNAL_SQUADS=773db654-a8b2-413a-a50b-75c3536238fd,bc979bdd-f1fa-4d94-8a51-38a0f518a2a2`
-
-#### Внешний Squad для Пробных Пользователей (TRIAL_EXTERNAL_SQUAD_UUID)
-
-- Настройте один внешний UUID squad для пробных пользователей в переменной окружения `TRIAL_EXTERNAL_SQUAD_UUID`
-- Если указано, этот внешний squad будет включен во все запросы на создание и обновление пробных пользователей
-- Если пусто или не установлено, пробные пользователи будут использовать обычный squad, определенный в `EXTERNAL_SQUAD_UUID` (поведение fallback)
-- Пример: `TRIAL_EXTERNAL_SQUAD_UUID=773db654-a8b2-413a-a50b-75c3536238fd`
-
-**Применение:** Изоляция пробных пользователей в отдельных squad для мониторинга, распределения ресурсов или тестирования конкретных функций
-
-## Плагины и Зависимости
-
-### Telegram Bot
-
-- [Telegram Bot API](https://core.telegram.org/bots/api)
-- [Go Telegram Bot API](https://github.com/go-telegram/bot)
-
-### База Данных
-
-- [PostgreSQL](https://www.postgresql.org/)
-- [pgx - PostgreSQL Driver](https://github.com/jackc/pgx)
-
-## Инструкции по Установке
-
-1. Клонируйте репозиторий
+Повторный запуск из каталога проекта:
 
 ```bash
-git clone
+cd /opt/remnawave-telegram-shop
+./scripts/meows-shop-setup.sh
 ```
 
-2. Создайте файл `.env` в корневой директории со всеми переменными окружения, перечисленными выше
+В меню:
+
+1. Установить только Telegram-бота  
+2. Установить бота + web-кабинет  
+3. Только web-кабинет (бот уже стоит)  
+4. Reverse-proxy / SSL для кабинета  
+5. Smoke-проверки  
+6. Управление ботом  
+
+### Ручная установка
 
 ```bash
-mv .env.sample .env
-```
-
-3. Запустите бота:
-
-```bash
+git clone https://github.com/MrMe0ws/remnawave-telegram-shop.git
+cd remnawave-telegram-shop
+cp .env.sample .env
+# отредактируйте .env — см. блок ниже и documentation/env.md
 docker compose up -d
 ```
 
-## Мой Налог через прокси (для серверов вне РФ)
+После смены `.env` пересоздайте контейнер: `docker compose up -d --force-recreate`.
 
-Если ваш сервер находится за пределами РФ и доступ к `lknpd.nalog.ru` блокируется, можно направить **только запросы Мой Налог** через прокси (HTTP или SOCKS5, например squid или gost на ВДС в РФ).
+### Web-кабинет с нуля
 
-### Мини‑гайд
+Пошагово (домен, DNS, SSL, вход через Google/Яндекс/Telegram):  
+[documentation/cabinet/SETUP-GUIDE-RU.md](documentation/cabinet/SETUP-GUIDE-RU.md)
 
-1. Убедитесь, что прокси доступен из контейнера (IP/порт, логин/пароль).
-2. В `.env` включите Мой Налог и укажите прокси:
+---
 
-```
-MOYNALOG_ENABLED=true
-MOYNALOG_URL=https://lknpd.nalog.ru/api/v1
-MOYNALOG_PROXY_URL=http://user:pass@ip:3128
-```
+## Что обязательно указать в `.env`
 
-Для SOCKS5 используйте:
+Установщик спросит главное сам. Если правите файл вручную — минимум:
 
-```
-MOYNALOG_PROXY_URL=socks5://user:pass@ip:1080
-```
+| Переменная | Зачем |
+|------------|--------|
+| `TELEGRAM_TOKEN` | Токен бота от [@BotFather](https://t.me/BotFather) |
+| `REMNAWAVE_URL`, `REMNAWAVE_TOKEN` | Адрес и токен панели Remnawave |
+| `DATABASE_URL` или `POSTGRES_*` | База PostgreSQL |
+| `PRICE_1` … `PRICE_12` | Цены за периоды (нужны даже в режиме тарифов) |
+| `ADMIN_TELEGRAM_ID` | Ваш числовой Telegram ID — доступ в админку |
+| `HEALTH_CHECK_PORT` | Порт сервиса (проверка «жив ли бот», кабинет, уведомления от платёжек) |
 
-3. Перезапустите бота:
+Оплаты включаются флагами вроде `YOOKASA_ENABLED`, `PLATEGA_ENABLED`, `TELEGRAM_STARS_ENABLED` — заполните ключи только для тех способов, которыми пользуетесь.
 
-```bash
-docker compose down && docker compose up -d
-```
+**Полный список переменных с пояснениями:** [documentation/env.md](documentation/env.md)  
+Шаблон с комментариями: [`.env.sample`](.env.sample)
 
-Если `MOYNALOG_PROXY_URL` пустой — бот работает как раньше, без прокси.
+Режимы продаж (`classic` / `tariffs`): [documentation/sales-modes.md](documentation/sales-modes.md)
 
-## Настройка кнопок (цвет и emoji)
+---
 
-Кнопки можно задавать строкой (как раньше) или объектом в `translations/*.json`.
-Если `style` не указан — цвет не применяется. Если стиль указан с ошибкой — он игнорируется.
+## Документация
 
-### Пример объекта кнопки
+| Тема | Файл |
+|------|------|
+| Оглавление | [documentation/README.md](documentation/README.md) |
+| Все переменные `.env` | [documentation/env.md](documentation/env.md) |
+| Платежи и вебхуки | [documentation/payments.md](documentation/payments.md) |
+| Уведомления | [documentation/notifications.md](documentation/notifications.md) |
+| Тексты и кнопки | [documentation/customization.md](documentation/customization.md) |
+| Обновление | [documentation/updating.md](documentation/updating.md) |
+| Кабинет | [documentation/cabinet/](documentation/cabinet/) |
 
-```json
-{
-  "buy_button": {
-    "text": "💰 Купить",
-    "style": "blue",
-    "emoji_id": "1234567890123456789"
-  }
-}
-```
+---
 
-### Доступные значения `style`
-
-- `blue` (алиас `primary`)
-- `green` (алиас `success`, также поддерживается опечатка `sucess`)
-- `red` (алиас `danger`)
-
-### Про `emoji_id`
-
-`emoji_id` — это идентификатор кастомного emoji Telegram (не обычный Unicode).
-Его можно получить из объектов Telegram API при выборе/использовании кастомного emoji.
-
-## Как Изменить Сообщения Бота
-
-Перейдите в папку **`translations`** внутри папки бота и измените нужный язык (`ru.json`, `en.json`, при необходимости `admin_ru.json` / `admin_en.json`).
-
-### Как Изменить Тексты Web-Кабинета
-
-1. Редактируйте **`web/cabinet/src/i18n/ru.json`** и/или **`en.json`**.
-2. При деплое через Docker убедитесь, что в compose есть volume **`./web/cabinet/src/i18n:/translations/cabinet/i18n`** (см. `docker-compose.yaml`).
-3. Перезапустите бота и обновите страницу кабинета в браузере.
-
-Пересборка образа нужна только при изменении **кода** кабинета (React/Go), а не при правке этих JSON. Чтобы новые строки попали в **fallback** внутри бандла (на случай недоступного API), после правок JSON выполните `cd web/cabinet && npm run build` и пересоберите бинарник/образ.
-
-## Инструкции по Обновлению
-
-1. Получите последний Docker образ:
+## Обновление
 
 ```bash
 docker compose pull
-```
-
-2. Перезапустите контейнеры:
-
-```bash
 docker compose down && docker compose up -d
 ```
 
-## Конфигурация Обратного Прокси
-
-Если вы не используете ngrok из `docker-compose.yml`, вам нужно настроить обратный прокси для пересылки запросов к боту.
-
-<details>
-<summary>Конфигурация Traefik</summary>
-
-```yaml
-http:
-  routers:
-    remnawave-telegram-shop:
-      rule: "Host(`bot.example.com`)"
-      entrypoints:
-        - http
-      middlewares:
-        - redirect-to-https
-      service: remnawave-telegram-shop
-
-    remnawave-telegram-shop-secure:
-      rule: "Host(`bot.example.com`)"
-      entrypoints:
-        - https
-      tls:
-        certResolver: letsencrypt
-      service: remnawave-telegram-shop
-
-  middlewares:
-    redirect-to-https:
-      redirectScheme:
-        scheme: https
-
-  services:
-    remnawave-telegram-shop:
-      loadBalancer:
-        servers:
-          - url: "http://bot:82251"
-```
-
-</details>
-
-## Пожертвования
-
-Если вы цените этот проект и хотите помочь поддерживать его работу (и подпитывать эти марафоны кодирования на кофеине),
-рассмотрите возможность пожертвования. Ваша поддержка помогает стимулировать будущие обновления и улучшения.
-
-**Способы Пожертвования:**
-
-- **Bep20 USDT:** `0x4D1ee2445fdC88fA49B9d02FB8ee3633f45Bef48`
-
-- **SOL Solana:** `HNQhe6SCoU5UDZicFKMbYjQNv9Muh39WaEWbZayQ9Nn8`
-
-- **TRC20 USDT:** `TBJrguLia8tvydsQ2CotUDTYtCiLDA4nPW`
-
-- **TON USDT:** `UQAdAhVxOr9LS07DDQh0vNzX2575Eu0eOByjImY1yheatXgr`
+Подробнее: [documentation/updating.md](documentation/updating.md)
