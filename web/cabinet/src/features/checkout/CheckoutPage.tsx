@@ -403,6 +403,7 @@ export default function CheckoutPage() {
         createPortal(
           <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[calc(73px+var(--cabinet-tg-safe-bottom))] px-2">
             <div className="mx-auto flex w-full max-w-lg flex-col gap-1.5">
+              <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
               <Button
                 className={cn('w-full shadow-none', !loading && disabledPayButtonClass)}
                 size="lg"
@@ -413,7 +414,6 @@ export default function CheckoutPage() {
                 {t('checkout.pay')}
                 {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
               </Button>
-              <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
             </div>
           </div>,
           document.body,
