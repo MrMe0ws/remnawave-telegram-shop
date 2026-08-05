@@ -15,6 +15,7 @@ import { getTurnstileToken } from '@/lib/turnstile'
 import { useAuthStore } from '@/store/auth'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { getTelegramInitData } from '@/lib/utils'
+import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
 import { AuthSocialProviders } from './AuthSocialProviders'
 import { EmailAuthTabs } from './EmailAuthTabs'
 import type { TelegramWidgetUser } from './TelegramLoginWidget'
@@ -226,6 +227,8 @@ export default function LoginPage() {
               googleLinkPending={googleLinkPending}
               googleMaskedEmail={googleMaskedEmail}
             />
+
+            <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} className="pt-1" />
           </CardContent>
 
           <CardFooter className="justify-center">

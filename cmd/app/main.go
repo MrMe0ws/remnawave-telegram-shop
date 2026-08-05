@@ -270,9 +270,13 @@ func main() {
 	//             SuspiciousUserFilterMiddleware (блокирует подозрительных пользователей)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypePrefix, h.StartCommandHandler, h.ForwardUserMessageToAdminMiddleware, h.SuspiciousUserFilterMiddleware)
 
+	// Согласие с политикой/офертой (gate до основного меню)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackLegalAccept, bot.MatchTypeExact, h.LegalAcceptCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackLegalDecline, bot.MatchTypeExact, h.LegalDeclineCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
+
 	// /connect - команда для подключения устройств
-	// Middleware: SuspiciousUserFilterMiddleware, CreateCustomerIfNotExistMiddleware
-	b.RegisterHandler(bot.HandlerTypeMessageText, "/connect", bot.MatchTypeExact, h.ConnectCommandHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	// Middleware: SuspiciousUserFilterMiddleware, CreateCustomerIfNotExistMiddleware, RequireLegalAcceptanceMiddleware
+	b.RegisterHandler(bot.HandlerTypeMessageText, "/connect", bot.MatchTypeExact, h.ConnectCommandHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware)
 
 	// /sync - команда для синхронизации пользователей с Remnawave (только для админа)
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/sync", bot.MatchTypeExact, h.SyncUsersCommandHandler, isAdminMiddleware)
@@ -310,7 +314,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBroadcastButtonsNext, bot.MatchTypeExact, h.BroadcastButtonsNextHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Админ-панель и промокоды
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackEnterPromo, bot.MatchTypePrefix, h.EnterPromoCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackEnterPromo, bot.MatchTypePrefix, h.EnterPromoCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminPanel, bot.MatchTypeExact, h.AdminPanelHandler, isAdminMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminBroadcast, bot.MatchTypeExact, h.AdminBroadcastShortcutHandler, isAdminMiddleware, h.AnswerCallbackQueryMiddleware)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAdminSync, bot.MatchTypeExact, h.AdminSyncShortcutHandler, isAdminMiddleware)
@@ -425,70 +429,70 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPromoDelYes, bot.MatchTypePrefix, h.PromoDeleteYesHandler, isAdminMiddleware)
 
 	// Callback для реферальной системы
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferral, bot.MatchTypeExact, h.ReferralCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для списка рефералов
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferralList, bot.MatchTypeExact, h.ReferralListCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackReferralList, bot.MatchTypeExact, h.ReferralListCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Экран лояльности (Мой VPN)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackLoyaltyRoot, bot.MatchTypeExact, h.LoyaltyRootCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackLoyaltyRoot, bot.MatchTypeExact, h.LoyaltyRootCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для покупки подписки
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypePrefix, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackBuy, bot.MatchTypePrefix, h.BuyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для пробного периода
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackTrial, bot.MatchTypeExact, h.TrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackTrial, bot.MatchTypeExact, h.TrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для активации пробного периода
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackActivateTrial, bot.MatchTypeExact, h.ActivateTrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackActivateTrial, bot.MatchTypeExact, h.ActivateTrialCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для возврата в главное меню
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackStart, bot.MatchTypePrefix, h.StartCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackStart, bot.MatchTypePrefix, h.StartCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для продажи подписки (с префиксом, т.к. содержит параметры)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackSell, bot.MatchTypePrefix, h.SellCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackSell, bot.MatchTypePrefix, h.SellCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для подключения устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypePrefix, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackConnect, bot.MatchTypePrefix, h.ConnectCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для управления устройствами
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackManageDevices, bot.MatchTypeExact, h.ManageDevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackManageDevices, bot.MatchTypeExact, h.ManageDevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для подтверждения изменения устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceConfirm, bot.MatchTypePrefix, h.AddDeviceConfirmCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceConfirm, bot.MatchTypePrefix, h.AddDeviceConfirmCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для применения изменения без оплаты
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceApply, bot.MatchTypePrefix, h.AddDeviceApplyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDeviceApply, bot.MatchTypePrefix, h.AddDeviceApplyCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для докупки устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevice, bot.MatchTypeExact, h.AddDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevice, bot.MatchTypeExact, h.AddDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для оплаты докупки устройств (с префиксом, т.к. содержит параметры)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevicePayment, bot.MatchTypePrefix, h.AddDevicePaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevicePayment, bot.MatchTypePrefix, h.AddDevicePaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для продления доп. устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackRenewExtraHwid, bot.MatchTypePrefix, h.RenewExtraHwidCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackRenewExtraHwid, bot.MatchTypePrefix, h.RenewExtraHwidCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для истории операций (с префиксом, т.к. содержит параметры страницы)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPurchaseHistory, bot.MatchTypePrefix, h.PurchaseHistoryCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPurchaseHistory, bot.MatchTypePrefix, h.PurchaseHistoryCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для обработки платежей (с префиксом, т.к. содержит параметры)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPayment, bot.MatchTypePrefix, h.PaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPayment, bot.MatchTypePrefix, h.PaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для справки/помощи
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "help", bot.MatchTypeExact, h.HelpCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, "help", bot.MatchTypeExact, h.HelpCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для просмотра списка устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDevices, bot.MatchTypeExact, h.DevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDevices, bot.MatchTypeExact, h.DevicesCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для удаления устройства (с префиксом, т.к. содержит HWID устройства)
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDeleteDevice, bot.MatchTypePrefix, h.DeleteDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.AnswerCallbackQueryMiddleware)
+	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackDeleteDevice, bot.MatchTypePrefix, h.DeleteDeviceCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Обработчик предварительной проверки платежа (Telegram Stars)
 	// Срабатывает перед финальным подтверждением платежа
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.PreCheckoutQuery != nil
-	}, h.PreCheckoutCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware)
+	}, h.PreCheckoutCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware)
 
 	// Обработчик успешного платежа (Telegram Stars)
 	// Срабатывает после успешной оплаты через Telegram Stars
@@ -536,7 +540,7 @@ func main() {
 			}
 		}
 		return true
-	}, h.UserPromoMessageHandler)
+	}, h.UserPromoMessageHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware)
 
 	b.RegisterHandlerMatchFunc(func(update *models.Update) bool {
 		return update.Message != nil &&

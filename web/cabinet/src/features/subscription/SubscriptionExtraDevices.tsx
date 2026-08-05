@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Smartphone, Star, X } from 'lucide-react'
 
+import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
 import { PlategaPaymentExpand, enabledPlategaMethods, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -447,6 +448,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
             >
               {t('checkout.pay')}
             </Button>
+            <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
                 </div>
               </div>
             </div>

@@ -30,6 +30,12 @@
       "mobile": "Main navigation",
       "main": "Cabinet sections"
     },
+    "legal": {
+      "continueBefore": "By continuing, you agree to the ",
+      "privacyPolicy": "privacy policy",
+      "continueAnd": " and ",
+      "userAgreement": "terms of service"
+    },
     "auth": {
       "login": "Sign in",
       "register": "Sign up",

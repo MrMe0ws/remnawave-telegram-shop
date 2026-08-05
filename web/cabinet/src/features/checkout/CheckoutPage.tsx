@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError, type TariffItem } from '@/lib/api'
 import { getTelegramInitData, newIdempotencyKey, cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
 
 type Provider =
   | 'yookassa'
@@ -379,7 +380,7 @@ export default function CheckoutPage() {
           </Alert>
         )}
 
-        <div className="hidden sm:block">
+        <div className="hidden sm:block space-y-2">
           <Button
             className={cn('w-full', !loading && disabledPayButtonClass)}
             size="lg"
@@ -390,26 +391,30 @@ export default function CheckoutPage() {
             {t('checkout.pay')}
             {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
           </Button>
+          <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
         </div>
 
-        {/* Mobile spacer: fixed pay bar should not overlap the last content block */}
-        <div className="sm:hidden h-[6.5rem]" aria-hidden />
+        {/* Mobile spacer: fixed pay bar + legal line should not overlap content */}
+        <div className="sm:hidden h-[8.5rem]" aria-hidden />
       </div>
 
       {/* Mobile: fixed to viewport above bottom navbar (via portal). */}
       {typeof document !== 'undefined' &&
         createPortal(
           <div className="sm:hidden fixed inset-x-0 z-[60] bottom-[calc(73px+var(--cabinet-tg-safe-bottom))] px-2">
-            <Button
-              className={cn('mx-auto inline-flex w-full max-w-lg shadow-none', !loading && disabledPayButtonClass)}
-              size="lg"
-              disabled={payButtonDisabled}
-              loading={loading}
-              onClick={handlePay}
-            >
-              {t('checkout.pay')}
-              {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
-            </Button>
+            <div className="mx-auto flex w-full max-w-lg flex-col gap-1.5">
+              <Button
+                className={cn('w-full shadow-none', !loading && disabledPayButtonClass)}
+                size="lg"
+                disabled={payButtonDisabled}
+                loading={loading}
+                onClick={handlePay}
+              >
+                {t('checkout.pay')}
+                {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+              </Button>
+              <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
+            </div>
           </div>,
           document.body,
         )}

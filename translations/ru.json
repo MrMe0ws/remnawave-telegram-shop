@@ -230,6 +230,16 @@
   "terms_of_service_button": {
     "text": "📋 Пользовательское соглашение"
   },
+  "legal_gate_text": "Для использования бота необходимо принять документы:",
+  "legal_gate_declined": "❗️ Для использования сервиса необходимо принять правила!",
+  "legal_accept_button": {
+    "text": "Принимаю",
+    "style": "green"
+  },
+  "legal_decline_button": {
+    "text": "Отказываюсь",
+    "style": "red"
+  },
   "manage_devices_button": {
     "text": "📱 Управление устройствами"
   },

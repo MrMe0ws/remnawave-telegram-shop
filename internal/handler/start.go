@@ -71,9 +71,6 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 		}
 	}
 
-	displayName := buildDisplayName(update.Message.From.FirstName, update.Message.From.LastName, update.Message.From.Username)
-	inlineKeyboard := h.buildStartKeyboard(existingCustomer, langCode)
-
 	m, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
 		Text:   "🧹",
@@ -97,6 +94,13 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 		return
 	}
 
+	if CustomerNeedsLegalGate(existingCustomer) {
+		h.sendLegalGateMessage(ctx, b, update.Message.Chat.ID, langCode, false)
+		return
+	}
+
+	displayName := buildDisplayName(update.Message.From.FirstName, update.Message.From.LastName, update.Message.From.Username)
+	inlineKeyboard := h.buildStartKeyboard(existingCustomer, langCode)
 	err = h.sendStartMenu(ctx, b, update.Message.Chat.ID, langCode, inlineKeyboard, existingCustomer, displayName)
 	logEditError("Error sending /start message", err)
 }
@@ -111,6 +115,11 @@ func (h Handler) StartCallbackHandler(ctx context.Context, b *bot.Bot, update *m
 	existingCustomer, err := h.customerRepository.FindByTelegramId(ctxWithTime, callback.From.ID)
 	if err != nil {
 		slog.Error("error finding customer by telegram id", err)
+		return
+	}
+
+	if CustomerNeedsLegalGate(existingCustomer) {
+		h.editOrSendLegalGate(ctxWithTime, b, update, langCode, false)
 		return
 	}
 

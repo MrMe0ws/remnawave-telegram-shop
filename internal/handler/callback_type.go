@@ -184,4 +184,7 @@ const (
 	CallbackPromoEditSubsTariffSet = "promo_xta"
 	CallbackPromoEditDiscPay       = "promo_edp"
 	CallbackEnterPromo         = "enter_promo"
+
+	CallbackLegalAccept  = "legal_accept"
+	CallbackLegalDecline = "legal_decline"
 )

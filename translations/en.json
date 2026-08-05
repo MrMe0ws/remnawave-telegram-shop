@@ -198,6 +198,16 @@
   "public_offer_button": "📄 Public offer",
   "privacy_policy_button": "🔒 Privacy Policy",
   "terms_of_service_button": "📋 Terms of Service",
+  "legal_gate_text": "To use the bot you must accept the documents:",
+  "legal_gate_declined": "❗️ To use the service you must accept the rules!",
+  "legal_accept_button": {
+    "text": "Accept",
+    "style": "green"
+  },
+  "legal_decline_button": {
+    "text": "Decline",
+    "style": "red"
+  },
   "manage_devices_button": "📱 Device management",
   "manage_devices_title": "📱 Device management",
   "devices_button": "📱 My Devices",

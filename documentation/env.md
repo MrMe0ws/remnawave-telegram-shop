@@ -192,12 +192,14 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `SUPPORT_URL` | Поддержка |
 | `FEEDBACK_URL` | Отзывы |
 | `CHANNEL_URL` | Канал |
-| `TOS_URL` | Условия |
+| `TOS_URL` | Условия («Помощь» в боте; в кабинете — запасной URL соглашения в дисклеймере) |
 | `VIDEO_GUIDE_URL` | Видеоинструкция |
 | `SERVER_SELECTION_URL` | Какой сервер выбрать |
-| `PUBLIC_OFFER_URL` | Публичная оферта |
-| `PRIVACY_POLICY_URL` | Политика конфиденциальности |
-| `TERMS_OF_SERVICE_URL` | Пользовательское соглашение |
+| `PUBLIC_OFFER_URL` | Публичная оферта («Помощь»; вместе с `PRIVACY_POLICY_URL` включает gate согласия в боте; в кабинете — ссылка соглашения, если нет `TERMS_OF_SERVICE_URL`) |
+| `PRIVACY_POLICY_URL` | Политика конфиденциальности («Помощь»; вместе с `PUBLIC_OFFER_URL` — gate в боте; дисклеймер в кабинете на login/register/оплате) |
+| `TERMS_OF_SERVICE_URL` | Пользовательское соглашение (опциональная URL-кнопка в gate бота; в кабинете — приоритетная ссылка соглашения в дисклеймере) |
+
+**Юридическое согласие (без новых env):** gate в боте включается только если заданы **оба** `PRIVACY_POLICY_URL` и `PUBLIC_OFFER_URL`; принятие хранится в `customer.legal_accepted_at` (миграция `000040`). В кабинете — только текст «Продолжая…» на auth/оплате. Поведение и i18n: [customization.md](./customization.md#юридическое-согласие).
 
 ### Чат поддержки в кабинете
 

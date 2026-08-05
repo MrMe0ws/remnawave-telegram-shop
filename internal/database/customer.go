@@ -24,7 +24,7 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 
 // customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
 // Порядок столбцов синхронизирован со всеми Scan-вызовами и с struct Customer.
-const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only"
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only, legal_accepted_at"
 
 type Customer struct {
 	ID                       int64      `db:"id"`
@@ -44,6 +44,28 @@ type Customer struct {
 	// Telegram-контакта). Для таких клиентов не должны выполняться вызовы
 	// Telegram Bot API — см. utils.IsSyntheticTelegramID и docs/cabinet/audit-telegram-id.md.
 	IsWebOnly bool `db:"is_web_only"`
+	// LegalAcceptedAt — момент принятия политики/оферты в Telegram-боте (NULL = gate).
+	LegalAcceptedAt *time.Time `db:"legal_accepted_at"`
+}
+
+func scanCustomer(sc interface{ Scan(dest ...any) error }, c *Customer) error {
+	return sc.Scan(
+		&c.ID,
+		&c.TelegramID,
+		&c.ExpireAt,
+		&c.CreatedAt,
+		&c.SubscriptionLink,
+		&c.Language,
+		&c.ExtraHwid,
+		&c.ExtraHwidExpiresAt,
+		&c.CurrentTariffID,
+		&c.SubscriptionPeriodStart,
+		&c.SubscriptionPeriodMonths,
+		&c.LoyaltyXP,
+		&c.TelegramUsername,
+		&c.IsWebOnly,
+		&c.LegalAcceptedAt,
+	)
 }
 
 // BroadcastRecipient is a Telegram user with language for localized broadcast keyboards.
@@ -92,22 +114,7 @@ func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDa
 	var customers []Customer
 	for rows.Next() {
 		var customer Customer
-		err := rows.Scan(
-			&customer.ID,
-			&customer.TelegramID,
-			&customer.ExpireAt,
-			&customer.CreatedAt,
-			&customer.SubscriptionLink,
-			&customer.Language,
-			&customer.ExtraHwid,
-			&customer.ExtraHwidExpiresAt,
-			&customer.CurrentTariffID,
-			&customer.SubscriptionPeriodStart,
-			&customer.SubscriptionPeriodMonths,
-			&customer.LoyaltyXP,
-			&customer.TelegramUsername,
-			&customer.IsWebOnly,
-		)
+		err := scanCustomer(rows, &customer)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
 		}
@@ -134,22 +141,7 @@ func (cr *CustomerRepository) FindById(ctx context.Context, id int64) (*Customer
 
 	var customer Customer
 
-	err = cr.pool.QueryRow(ctx, sql, args...).Scan(
-		&customer.ID,
-		&customer.TelegramID,
-		&customer.ExpireAt,
-		&customer.CreatedAt,
-		&customer.SubscriptionLink,
-		&customer.Language,
-		&customer.ExtraHwid,
-		&customer.ExtraHwidExpiresAt,
-		&customer.CurrentTariffID,
-		&customer.SubscriptionPeriodStart,
-		&customer.SubscriptionPeriodMonths,
-		&customer.LoyaltyXP,
-		&customer.TelegramUsername,
-		&customer.IsWebOnly,
-	)
+	err = scanCustomer(cr.pool.QueryRow(ctx, sql, args...), &customer)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -172,22 +164,7 @@ func (cr *CustomerRepository) FindByTelegramId(ctx context.Context, telegramId i
 
 	var customer Customer
 
-	err = cr.pool.QueryRow(ctx, sql, args...).Scan(
-		&customer.ID,
-		&customer.TelegramID,
-		&customer.ExpireAt,
-		&customer.CreatedAt,
-		&customer.SubscriptionLink,
-		&customer.Language,
-		&customer.ExtraHwid,
-		&customer.ExtraHwidExpiresAt,
-		&customer.CurrentTariffID,
-		&customer.SubscriptionPeriodStart,
-		&customer.SubscriptionPeriodMonths,
-		&customer.LoyaltyXP,
-		&customer.TelegramUsername,
-		&customer.IsWebOnly,
-	)
+	err = scanCustomer(cr.pool.QueryRow(ctx, sql, args...), &customer)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -214,22 +191,7 @@ func (cr *CustomerRepository) FindBySubscriptionLink(ctx context.Context, link s
 	}
 
 	var customer Customer
-	err = cr.pool.QueryRow(ctx, sql, args...).Scan(
-		&customer.ID,
-		&customer.TelegramID,
-		&customer.ExpireAt,
-		&customer.CreatedAt,
-		&customer.SubscriptionLink,
-		&customer.Language,
-		&customer.ExtraHwid,
-		&customer.ExtraHwidExpiresAt,
-		&customer.CurrentTariffID,
-		&customer.SubscriptionPeriodStart,
-		&customer.SubscriptionPeriodMonths,
-		&customer.LoyaltyXP,
-		&customer.TelegramUsername,
-		&customer.IsWebOnly,
-	)
+	err = scanCustomer(cr.pool.QueryRow(ctx, sql, args...), &customer)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -253,22 +215,7 @@ func (cr *CustomerRepository) FindOrCreate(ctx context.Context, customer *Custom
 
 	row := cr.pool.QueryRow(ctx, query, customer.TelegramID, customer.ExpireAt, customer.Language)
 	var result Customer
-	if err := row.Scan(
-		&result.ID,
-		&result.TelegramID,
-		&result.ExpireAt,
-		&result.CreatedAt,
-		&result.SubscriptionLink,
-		&result.Language,
-		&result.ExtraHwid,
-		&result.ExtraHwidExpiresAt,
-		&result.CurrentTariffID,
-		&result.SubscriptionPeriodStart,
-		&result.SubscriptionPeriodMonths,
-		&result.LoyaltyXP,
-		&result.TelegramUsername,
-		&result.IsWebOnly,
-	); err != nil {
+	if err := scanCustomer(row, &result); err != nil {
 		return nil, fmt.Errorf("failed to find or create customer: %w", err)
 	}
 
@@ -303,22 +250,7 @@ func (cr *CustomerRepository) CreateWebOnly(ctx context.Context, telegramID int6
 
 	row := cr.pool.QueryRow(ctx, query, telegramID, language)
 	var result Customer
-	if err := row.Scan(
-		&result.ID,
-		&result.TelegramID,
-		&result.ExpireAt,
-		&result.CreatedAt,
-		&result.SubscriptionLink,
-		&result.Language,
-		&result.ExtraHwid,
-		&result.ExtraHwidExpiresAt,
-		&result.CurrentTariffID,
-		&result.SubscriptionPeriodStart,
-		&result.SubscriptionPeriodMonths,
-		&result.LoyaltyXP,
-		&result.TelegramUsername,
-		&result.IsWebOnly,
-	); err != nil {
+	if err := scanCustomer(row, &result); err != nil {
 		return nil, fmt.Errorf("failed to create web-only customer: %w", err)
 	}
 
@@ -326,6 +258,13 @@ func (cr *CustomerRepository) CreateWebOnly(ctx context.Context, telegramID int6
 		return nil, fmt.Errorf("%w: telegram_id=%d", ErrWebOnlyCollision, telegramID)
 	}
 	return &result, nil
+}
+
+// SetLegalAcceptedAt фиксирует согласие с политикой/офертой в Telegram-боте.
+func (cr *CustomerRepository) SetLegalAcceptedAt(ctx context.Context, customerID int64, at time.Time) error {
+	return cr.UpdateFields(ctx, customerID, map[string]interface{}{
+		"legal_accepted_at": at,
+	})
 }
 
 // IncrementLoyaltyXP добавляет накопленный XP лояльности после успешной оплаты.
@@ -435,6 +374,7 @@ func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, update
 		"loyalty_xp":                 {},
 		"telegram_username":          {},
 		"is_web_only":                {},
+		"legal_accepted_at":          {},
 	}
 
 	buildUpdate := sq.Update("customer").
@@ -497,22 +437,7 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 	var customers []Customer
 	for rows.Next() {
 		var customer Customer
-		err := rows.Scan(
-			&customer.ID,
-			&customer.TelegramID,
-			&customer.ExpireAt,
-			&customer.CreatedAt,
-			&customer.SubscriptionLink,
-			&customer.Language,
-			&customer.ExtraHwid,
-			&customer.ExtraHwidExpiresAt,
-			&customer.CurrentTariffID,
-			&customer.SubscriptionPeriodStart,
-			&customer.SubscriptionPeriodMonths,
-			&customer.LoyaltyXP,
-			&customer.TelegramUsername,
-			&customer.IsWebOnly,
-		)
+		err := scanCustomer(rows, &customer)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
 		}
@@ -968,22 +893,7 @@ func (cr *CustomerRepository) ListPaged(ctx context.Context, scope CustomerListS
 	var customers []Customer
 	for rows.Next() {
 		var customer Customer
-		err := rows.Scan(
-			&customer.ID,
-			&customer.TelegramID,
-			&customer.ExpireAt,
-			&customer.CreatedAt,
-			&customer.SubscriptionLink,
-			&customer.Language,
-			&customer.ExtraHwid,
-			&customer.ExtraHwidExpiresAt,
-			&customer.CurrentTariffID,
-			&customer.SubscriptionPeriodStart,
-			&customer.SubscriptionPeriodMonths,
-			&customer.LoyaltyXP,
-			&customer.TelegramUsername,
-			&customer.IsWebOnly,
-		)
+		err := scanCustomer(rows, &customer)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer row: %w", err)
 		}
@@ -1041,22 +951,7 @@ func (cr *CustomerRepository) SearchForAdmin(ctx context.Context, needle string,
 	var customers []Customer
 	for rows.Next() {
 		var customer Customer
-		err := rows.Scan(
-			&customer.ID,
-			&customer.TelegramID,
-			&customer.ExpireAt,
-			&customer.CreatedAt,
-			&customer.SubscriptionLink,
-			&customer.Language,
-			&customer.ExtraHwid,
-			&customer.ExtraHwidExpiresAt,
-			&customer.CurrentTariffID,
-			&customer.SubscriptionPeriodStart,
-			&customer.SubscriptionPeriodMonths,
-			&customer.LoyaltyXP,
-			&customer.TelegramUsername,
-			&customer.IsWebOnly,
-		)
+		err := scanCustomer(rows, &customer)
 		if err != nil {
 			return nil, fmt.Errorf("scan admin search: %w", err)
 		}
@@ -1093,22 +988,7 @@ func (cr *CustomerRepository) FindActiveByCurrentTariffID(ctx context.Context, t
 	var customers []Customer
 	for rows.Next() {
 		var customer Customer
-		err = rows.Scan(
-			&customer.ID,
-			&customer.TelegramID,
-			&customer.ExpireAt,
-			&customer.CreatedAt,
-			&customer.SubscriptionLink,
-			&customer.Language,
-			&customer.ExtraHwid,
-			&customer.ExtraHwidExpiresAt,
-			&customer.CurrentTariffID,
-			&customer.SubscriptionPeriodStart,
-			&customer.SubscriptionPeriodMonths,
-			&customer.LoyaltyXP,
-			&customer.TelegramUsername,
-			&customer.IsWebOnly,
-		)
+		err = scanCustomer(rows, &customer)
 		if err != nil {
 			return nil, fmt.Errorf("scan customer: %w", err)
 		}
