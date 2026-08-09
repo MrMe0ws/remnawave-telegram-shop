@@ -1,0 +1,29 @@
+# Bedolaga → Meows shop migration config
+# Generate via: go run ./tools/migrate-bedolaga -write-example-config
+# Or use: ./scripts/meows-bedolaga-migrate.sh
+source:
+  database_url: postgres://postgres:migrator@127.0.0.1:5433/bedolaga_restore?sslmode=disable
+target:
+  database_url: postgres://user:pass@127.0.0.1:5432/shop?sslmode=disable
+remnawave:
+  base_url: http://remnawave:3000
+  token: CHANGE_ME
+  mode: local
+tariffs:
+  mode: import_from_bedolaga   # or map_existing
+  mapping: {}                  # bedolaga_tariff_id: our_slug (for map_existing)
+balance:
+  enabled: true
+  policy: user_mapped_tariff
+  fallback_policy: cheapest_imported_1m
+  apply_to_remnawave: true     # only on --step balance --apply
+customers:
+  on_conflict: prefer_bedolaga
+  set_legal_accepted: true
+  skip_deleted: true
+  skip_blocked: true
+  import_cabinet: true
+referrals:
+  import_graph: true
+reporting:
+  dir: ./migrate-out

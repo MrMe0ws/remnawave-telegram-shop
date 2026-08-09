@@ -118,4 +118,21 @@ func TestFormatTelegramHTML(t *testing.T) {
 	if strings.Contains(html, "**") {
 		t.Fatal("html should not contain markdown bold")
 	}
+	// После заголовка и между пунктами — пустая строка; между секциями — две.
+	if !strings.Contains(html, "<b>✨ Улучшения</b>\n\n• ") {
+		t.Fatalf("expected blank line after section header, got:\n%s", html)
+	}
+	techIdx := strings.Index(html, `<b>🧱 Технические изменения</b>`)
+	if techIdx < 0 {
+		t.Fatal("tech section missing")
+	}
+	// Две пустые строки перед второй секцией: …id).\n\n\n<b>🧱
+	beforeTech := html[:techIdx]
+	if !strings.HasSuffix(beforeTech, "\n\n\n") {
+		t.Fatalf("expected two blank lines between sections, suffix=%q\nfull:\n%s", beforeTech[len(beforeTech)-10:], html)
+	}
+	techBlock := html[techIdx:]
+	if !strings.Contains(techBlock, "\n\n• Имя пользователя") {
+		t.Fatalf("expected blank line between telegram bullets, got:\n%s", techBlock)
+	}
 }

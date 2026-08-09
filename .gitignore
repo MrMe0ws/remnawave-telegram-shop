@@ -367,7 +367,12 @@ remnawave-telegram-shop-4.3.6/
 /docs/
 /remnawave-bedolaga-telegram-bot-main/
 
+# Bedolaga migrator local artifacts
+/migrate.yaml
+/migrate-out/
+
 # Настройки редактора (локально)
 .vscode/
 
 telegram-support-bot
+remnawave-bedolaga-telegram-bot-main

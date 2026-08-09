@@ -68,6 +68,16 @@ docker compose up -d
 
 После смены `.env` пересоздайте контейнер: `docker compose up -d --force-recreate`.
 
+### Миграция с Bedolaga
+
+Интерактивный перенос клиентов и тарифов:
+
+```bash
+./scripts/meows-bedolaga-migrate.sh
+```
+
+Подробности: [`documentation/bedolaga-migration.md`](documentation/bedolaga-migration.md).
+
 ### Web-кабинет с нуля
 
 Пошагово (домен, DNS, SSL, вход через Google/Яндекс/Telegram):  

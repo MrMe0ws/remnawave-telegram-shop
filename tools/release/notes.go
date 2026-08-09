@@ -160,13 +160,20 @@ func FormatTelegramHTML(n *ReleaseNotes, footer TelegramFooter) string {
 	b.WriteString(escapeHTML(n.Version))
 	b.WriteString(`</a>`)
 
-	for _, sec := range n.TGSections {
-		b.WriteString("\n\n")
+	for si, sec := range n.TGSections {
+		if si == 0 {
+			// Одна пустая строка между версией и первой секцией.
+			b.WriteString("\n\n")
+		} else {
+			// Две пустые строки между секциями.
+			b.WriteString("\n\n\n")
+		}
 		b.WriteString("<b>")
 		b.WriteString(escapeHTML(sec.Header))
 		b.WriteString("</b>")
 		for _, item := range sec.Items {
-			b.WriteString("\n• ")
+			// Пустая строка после заголовка и между пунктами.
+			b.WriteString("\n\n• ")
 			b.WriteString(escapeHTML(item))
 		}
 	}

@@ -25,6 +25,7 @@ import (
 	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"remnawave-tg-shop-bot/internal/remnawavewebhook"
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/tribute"
@@ -759,6 +760,10 @@ func main() {
 	}
 	if config.IsPlategaEnabled() && strings.TrimSpace(config.GetPlategaWebHookURL()) != "" {
 		mux.Handle(config.GetPlategaWebHookURL(), platega.NewWebhookHandler(purchaseRepository, paymentService, config.PlategaMerchantID(), config.PlategaSecret()))
+	}
+	if path := config.GetRemnawaveWebhookPath(); path != "" && config.GetRemnawaveWebhookSecret() != "" {
+		mux.Handle(path, remnawavewebhook.NewHandler(config.GetRemnawaveWebhookSecret(), customerRepository, b, tm))
+		slog.Info("remnawave webhook mounted", "path", path)
 	}
 
 	// Web-кабинет: при CABINET_ENABLED=true регистрируем /cabinet/api/*

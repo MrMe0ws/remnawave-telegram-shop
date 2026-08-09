@@ -18,6 +18,7 @@ type config struct {
 	price1, price3, price6, price12                                              int
 	starsPrice1, starsPrice3, starsPrice6, starsPrice12                          int
 	remnawaveUrl, remnawaveToken, remnawaveMode, remnawaveTag                    string
+	remnawaveWebhookPath, remnawaveWebhookSecret                                 string
 	defaultLanguage                                                              string
 	databaseURL                                                                  string
 	cryptoPayURL, cryptoPayToken                                                 string
@@ -119,6 +120,16 @@ func TrialRemnawaveTag() string {
 		return conf.trialRemnawaveTag
 	}
 	return conf.remnawaveTag
+}
+
+// GetRemnawaveWebhookPath — путь для mux (например /remnawave-webhook); пусто = endpoint не регистрируется.
+func GetRemnawaveWebhookPath() string {
+	return conf.remnawaveWebhookPath
+}
+
+// GetRemnawaveWebhookSecret — секрет HMAC (совпадает с WEBHOOK_SECRET_HEADER панели).
+func GetRemnawaveWebhookSecret() string {
+	return conf.remnawaveWebhookSecret
 }
 
 func DefaultLanguage() string {
@@ -951,6 +962,16 @@ func InitConfig() {
 	if conf.tributeWebhookUrl != "" {
 		conf.tributeAPIKey = mustEnv("TRIBUTE_API_KEY")
 		conf.tributePaymentUrl = mustEnv("TRIBUTE_PAYMENT_URL")
+	}
+
+	conf.remnawaveWebhookPath = strings.TrimSpace(os.Getenv("REMNAWAVE_WEBHOOK_PATH"))
+	conf.remnawaveWebhookSecret = strings.TrimSpace(os.Getenv("REMNAWAVE_WEBHOOK_SECRET"))
+	if conf.remnawaveWebhookPath != "" && !strings.HasPrefix(conf.remnawaveWebhookPath, "/") {
+		slog.Warn("remnawave webhook: REMNAWAVE_WEBHOOK_PATH should start with /", "path", conf.remnawaveWebhookPath)
+		conf.remnawaveWebhookPath = "/" + conf.remnawaveWebhookPath
+	}
+	if (conf.remnawaveWebhookPath == "") != (conf.remnawaveWebhookSecret == "") {
+		slog.Warn("remnawave webhook: set both REMNAWAVE_WEBHOOK_PATH and REMNAWAVE_WEBHOOK_SECRET, or leave both empty")
 	}
 
 	// HWID Fallback Device Limit

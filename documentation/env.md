@@ -73,6 +73,10 @@
 | `REMNAWAVE_HEADERS` | Доп. заголовки: `key1:value1;key2:value2` |
 | `REMNAWAVE_TAG` | Тег пользователей в панели (`^[A-Z0-9_]+$`) |
 | `TRIAL_REMNAWAVE_TAG` | Тег для триала; пусто — как `REMNAWAVE_TAG` |
+| `REMNAWAVE_WEBHOOK_PATH` | Путь mux для webhook панели (например `/remnawave-webhook`). Пусто — endpoint не регистрируется |
+| `REMNAWAVE_WEBHOOK_SECRET` | Секрет HMAC (`X-Remnawave-Signature`); должен совпадать с `WEBHOOK_SECRET_HEADER` панели. Задавайте оба или оба пустыми (иначе warn при старте) |
+
+Webhook torrent blocker → увед клиенту: [notifications.md](./notifications.md). Слушает тот же `HEALTH_CHECK_PORT`, что healthcheck и вебхуки оплат.
 
 Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIAL_INTERNAL_SQUADS`, `TRIAL_EXTERNAL_SQUAD_UUID`.
 

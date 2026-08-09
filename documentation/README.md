@@ -20,7 +20,7 @@
 | [env.md](./env.md) | Справочник переменных окружения |
 | [sales-modes.md](./sales-modes.md) | Classic vs tariffs, цены, тексты покупки |
 | [payments.md](./payments.md) | Платёжные системы, вебхуки и поллинг |
-| [notifications.md](./notifications.md) | Уведомления об истечении и lifecycle |
+| [notifications.md](./notifications.md) | Уведомления: истечение, lifecycle, torrent blocker (Remnawave webhook) |
 | [squads.md](./squads.md) | Squads Remnawave (платные и триал) |
 | [customization.md](./customization.md) | Тексты бота/кабинета, кнопки, emoji |
 | [moynalog-proxy.md](./moynalog-proxy.md) | «Мой налог» через прокси вне РФ |
@@ -28,6 +28,7 @@
 | [updating.md](./updating.md) | Обновление Docker-образа |
 | [compatibility.md](./compatibility.md) | Совместимость версий бота и Remnawave |
 | [cabinet/](./cabinet/) | Web-кабинет: setup, upgrade, support bridge |
+| [bedolaga-migration.md](./bedolaga-migration.md) | Миграция клиентов/тарифов с Bedolaga |
 
 ## Для разработчиков
 
