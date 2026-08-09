@@ -24,20 +24,20 @@ func TestDurationMinutes_secondsHeuristic(t *testing.T) {
 	}
 }
 
-func TestFormatUnblockAt_Moscow(t *testing.T) {
+func TestFormatUnblockParts_Moscow(t *testing.T) {
 	// 09:56 UTC = 12:56 MSK
 	utc := time.Date(2026, 8, 7, 9, 56, 41, 0, time.UTC)
-	got := FormatUnblockAt(utc)
-	if got != "07.08.2026 12:56" {
-		t.Fatalf("got %q", got)
+	date, clock := FormatUnblockParts(utc)
+	if date != "07.08.2026" || clock != "12:56" {
+		t.Fatalf("got %q %q", date, clock)
 	}
 }
 
 func TestFormatMessage(t *testing.T) {
-	tmpl := "⛔ <b>Временная блокировка</b>\n\nНа сервере «%s»...\n\nДлительность: %d мин\nРазблокировка: %s"
-	unblock := time.Date(2026, 8, 7, 9, 56, 0, 0, time.UTC)
+	tmpl := "⛔️ <b>Сервер «%s» временно заблокирован</b>\n\n⏱️ Блокировка на %d минут\n🔓 Снова доступен: %s в %s"
+	unblock := time.Date(2026, 8, 9, 15, 6, 0, 0, time.UTC) // 18:06 MSK
 	got := FormatMessage(tmpl, "Латвия", 60, unblock)
-	if !strings.Contains(got, "«Латвия»") || !strings.Contains(got, "60 мин") || !strings.Contains(got, "07.08.2026 12:56") {
+	if !strings.Contains(got, "«Латвия»") || !strings.Contains(got, "60 минут") || !strings.Contains(got, "09.08.2026 в 18:06") {
 		t.Fatalf("unexpected message: %s", got)
 	}
 	escaped := FormatMessage(tmpl, `Evil <b>x</b> & "y"`, 10, unblock)

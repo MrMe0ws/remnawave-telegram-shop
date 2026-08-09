@@ -15,12 +15,13 @@ func moscowLocation() *time.Location {
 	return loc
 }
 
-// FormatUnblockAt formats willUnblockAt in Europe/Moscow as DD.MM.YYYY HH:MM.
-func FormatUnblockAt(t time.Time) string {
+// FormatUnblockParts returns Moscow date (DD.MM.YYYY) and time (HH:MM) for templates like "%s в %s".
+func FormatUnblockParts(t time.Time) (date, clock string) {
 	if t.IsZero() {
-		return "—"
+		return "—", "—"
 	}
-	return t.In(moscowLocation()).Format("02.01.2006 15:04")
+	m := t.In(moscowLocation())
+	return m.Format("02.01.2006"), m.Format("15:04")
 }
 
 // DurationMinutes prefers wall-clock span; falls back to blockDuration heuristic.
@@ -45,10 +46,11 @@ func DurationMinutes(blockDuration int, processedAt, willUnblockAt time.Time) in
 	return blockDuration
 }
 
-// FormatMessage builds localized text; tmpl must contain %s, %d, %s (node, minutes, unblock).
+// FormatMessage builds localized text; tmpl: %s node, %d minutes, %s date, %s time.
 func FormatMessage(tmpl, nodeName string, durationMin int, unblockAt time.Time) string {
 	if nodeName == "" {
 		nodeName = "—"
 	}
-	return fmt.Sprintf(tmpl, html.EscapeString(nodeName), durationMin, FormatUnblockAt(unblockAt))
+	date, clock := FormatUnblockParts(unblockAt)
+	return fmt.Sprintf(tmpl, html.EscapeString(nodeName), durationMin, date, clock)
 }

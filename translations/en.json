@@ -383,5 +383,5 @@
   "lifecycle_time_expired": "expired",
   "lifecycle_time_hours": "%d h",
   "lifecycle_time_days": "%d d",
-  "torrent_blocked": "⛔ <b>Temporary block</b>\n\nTorrent traffic was detected on server «%s».\nAccess from your IP to this server is restricted.\n\nDuration: %d min\nUnblock at: %s\n\nWhile the block is active, connecting to this server from this IP is not possible.\nOther servers remain available.\n\n⚠️ <b>Do not use torrents over VPN — this violates the service rules.</b>"
+  "torrent_blocked": "⛔️ <b>Server «%s» is temporarily blocked</b>\n\nWe detected torrent traffic from your connection, so access to this server has been temporarily disabled.\n\n⏱️ Block duration: %d minutes\n🔓 Available again: %s at %s\n\nOther servers work as usual.\n\n⚠️ <b>Do not use torrents over VPN to avoid being blocked again.</b>"
 }

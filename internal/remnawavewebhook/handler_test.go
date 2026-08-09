@@ -27,7 +27,7 @@ type fakeTM struct{}
 
 func (fakeTM) GetText(_, key string) string {
 	if key == "torrent_blocked" {
-		return "⛔ <b>Временная блокировка</b>\n\nНа сервере «%s» обнаружен торрент-трафик.\nДлительность: %d мин\nРазблокировка: %s\n\n⚠️ <b>Не используйте торренты</b>"
+		return "⛔️ <b>Сервер «%s» временно заблокирован</b>\n\n⏱️ Блокировка на %d минут\n🔓 Снова доступен: %s в %s\n\n⚠️ <b>Не используйте торренты</b>"
 	}
 	return key
 }
@@ -146,7 +146,7 @@ func TestHandler_NotifiesOnTorrentReport(t *testing.T) {
 	if msg.ChatID != int64(694614437) {
 		t.Fatalf("chat %v", msg.ChatID)
 	}
-	if !strings.Contains(msg.Text, "Латвия") || !strings.Contains(msg.Text, "60 мин") {
+	if !strings.Contains(msg.Text, "Латвия") || !strings.Contains(msg.Text, "60 минут") {
 		t.Fatalf("text %s", msg.Text)
 	}
 	if msg.ReplyMarkup == nil {
