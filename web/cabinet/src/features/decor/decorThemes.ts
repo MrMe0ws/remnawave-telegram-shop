@@ -12,6 +12,7 @@ export const DECOR_THEME_IDS = [
   'slate',
   // teal–violet bridge + purple
   'aurora',
+  'nebula',
   'violet',
   'lavender',
   // pink / red
@@ -58,6 +59,7 @@ export const DECOR_THEMES: Record<DecorThemeId, DecorThemeDef> = {
   new_year: { id: 'new_year', effect: 'snow' },
   slate: { id: 'slate', effect: null },
   aurora: { id: 'aurora', effect: 'aurora' },
+  nebula: { id: 'nebula', effect: null },
   violet: { id: 'violet', effect: null },
   lavender: { id: 'lavender', effect: 'dots' },
   pink: { id: 'pink', effect: null },

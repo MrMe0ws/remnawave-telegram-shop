@@ -27,6 +27,7 @@ export const DECOR_THEME_ADMIN_LABEL_COLOR: Partial<Record<DecorThemeId, string>
   spring: 'hsl(142 52% 38%)',
   black_friday: 'hsl(45 95% 46%)',
   aurora: 'hsl(168 75% 48%)',
+  nebula: 'hsl(198 89% 50%)',
   ocean: 'hsl(210 85% 48%)',
   cyber: 'hsl(140 90% 42%)',
   sunset: 'hsl(18 92% 54%)',

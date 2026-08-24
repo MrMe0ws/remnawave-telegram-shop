@@ -23,6 +23,7 @@ import LandingPage from '@/features/landing/LandingPage'
 // Dev-превью компонентов. Маршрут ниже регистрируется только при import.meta.env.DEV,
 // в прод-бандле ветка мертва и модуль вырезается сборкой.
 import ConnectCtaPreviewPage from '@/features/dev/ConnectCtaPreviewPage'
+import ThemePreviewPage from '@/features/dev/ThemePreviewPage'
 
 // Protected pages (9b)
 import DashboardPage from '@/features/dashboard/DashboardPage'
@@ -87,7 +88,7 @@ const PUBLIC_SHELL_PATHS = new Set([
   '/deeplink',
   '/landing',
   // Dev-превью: без этого страница ждала бы инициализацию auth. В прод не попадает.
-  ...(import.meta.env.DEV ? ['/dev/connect-cta'] : []),
+  ...(import.meta.env.DEV ? ['/dev/connect-cta', '/dev/theme'] : []),
 ])
 
 function normalizePath(pathname: string): string {
@@ -139,6 +140,9 @@ function AppRoutes() {
       {import.meta.env.DEV && (
         <Route path="/dev/connect-cta" element={<ConnectCtaPreviewPage />} />
       )}
+
+      {/* Только dev: превью декор-тем на заглушках главной и подписки. */}
+      {import.meta.env.DEV && <Route path="/dev/theme" element={<ThemePreviewPage />} />}
 
       {/* ── Protected routes ───────────────────────────── */}
       <Route

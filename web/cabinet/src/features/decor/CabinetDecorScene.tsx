@@ -171,6 +171,21 @@ function LavenderMist() {
   )
 }
 
+/**
+ * nebula: сетка-«блюпринт» + три дышащих цветных пятна.
+ * Тот же приём, что на лендинге, — фон живёт, но не отвлекает от контента.
+ */
+function NebulaGlow() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__nebula-grid" aria-hidden />
+      <div className="cabinet-decor-scene__nebula-orb cabinet-decor-scene__nebula-orb--cyan" aria-hidden />
+      <div className="cabinet-decor-scene__nebula-orb cabinet-decor-scene__nebula-orb--violet" aria-hidden />
+      <div className="cabinet-decor-scene__nebula-orb cabinet-decor-scene__nebula-orb--teal" aria-hidden />
+    </>
+  )
+}
+
 function SceneContent({ theme }: { theme: DecorThemeId }) {
   switch (theme) {
     case 'new_year':
@@ -205,6 +220,8 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
       )
     case 'aurora':
       return <AuroraBands />
+    case 'nebula':
+      return <NebulaGlow />
     case 'ocean':
       return <OceanWave />
     case 'cyber':

@@ -2870,3 +2870,402 @@ html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"])
     transition: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * nebula — декор-тема на визуальном языке лендинга
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Отличается от остальных пресетов тем, что меняет не только палитру и фон,
+ * но и поведение поверхностей: кольцо-градиент по контуру карточки на hover,
+ * пятно света под курсором, подъём карточки, лесенка появления при заходе,
+ * градиентная заливка основных кнопок.
+ *
+ * Зацепки: .cabinet-card (components/ui/card.tsx), .cabinet-elevated-card и
+ * .subscription-feature-card (объявлены выше), .cabinet-btn-primary
+ * (components/ui/button.tsx). Координаты курсора в --cd-mx/--cd-my пишет
+ * useDecorCardSpotlight.
+ *
+ * Эффекты карточек ограничены .cabinet-shell (корень AppLayout) — то есть
+ * пользовательским кабинетом. В админке isolation: isolate на карточке
+ * запирал бы вложенные поповеры в её контексте наложения, и они уходили бы
+ * под следующую карточку; модалки и AdminSelect там спасает портал, а вот
+ * пикеры дат внутри секций — нет. Палитра, фон и кнопки действуют везде.
+ *
+ * --accent намеренно НЕ переопределяем: общее правило декор-тем ставит
+ * --accent: var(--primary), и весь кабинет остаётся в одном cyan. Фиолетовый
+ * живёт только в градиентах через --nb-violet.
+ */
+
+html[data-cabinet-decor="nebula"] {
+  --primary: 198 85% 40%;
+  --ring: 198 85% 40%;
+
+  --nb-cyan: 198 85% 44%;
+  --nb-violet: 262 70% 56%;
+  --nb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.dark[data-cabinet-decor="nebula"] {
+  --primary: 198 89% 50%;
+  --ring: 198 89% 50%;
+
+  --nb-cyan: 198 89% 50%;
+  --nb-violet: 262 83% 68%;
+}
+
+/* ── Фон ─────────────────────────────────────────────────────────────────── */
+
+/* Тот же многослойный градиент, что на лендинге. */
+html.dark[data-cabinet-decor="nebula"] body,
+html.dark[data-cabinet-decor="nebula"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(
+      ellipse 150% 92% at 50% -16%,
+      hsl(var(--nb-cyan) / 0.16) 0%,
+      hsl(var(--nb-cyan) / 0.04) 40%,
+      transparent 68%
+    ),
+    radial-gradient(ellipse 70% 55% at 100% 100%, hsl(var(--nb-violet) / 0.14) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(222 46% 12%) 0%, hsl(var(--background)) 42%, hsl(229 54% 7%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="nebula"] body,
+html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 125% 82% at 50% -18%, hsl(var(--nb-cyan) / 0.2), transparent 56%),
+    radial-gradient(ellipse 80% 55% at 100% 100%, hsl(var(--nb-violet) / 0.12), transparent 55%);
+}
+
+/* ── Сцена: сетка-«блюпринт» + дышащие пятна ─────────────────────────────── */
+
+.cabinet-decor-scene__nebula-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, hsl(var(--foreground) / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--foreground) / 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 0%, transparent 78%);
+  mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 0%, transparent 78%);
+}
+
+html:not(.dark) .cabinet-decor-scene__nebula-grid {
+  background-image:
+    linear-gradient(to right, hsl(var(--foreground) / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--foreground) / 0.06) 1px, transparent 1px);
+}
+
+.cabinet-decor-scene__nebula-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0;
+  animation: nebula-orb-in 1.6s var(--nb-ease) forwards;
+}
+
+.cabinet-decor-scene__nebula-orb--cyan {
+  top: -16vh;
+  left: 50%;
+  width: min(72vw, 900px);
+  height: min(72vw, 900px);
+  margin-left: min(-36vw, -450px);
+  background: radial-gradient(circle, hsl(var(--nb-cyan) / 0.42) 0%, transparent 62%);
+}
+
+.cabinet-decor-scene__nebula-orb--violet {
+  top: 34vh;
+  right: -18vw;
+  width: min(56vw, 660px);
+  height: min(56vw, 660px);
+  background: radial-gradient(circle, hsl(var(--nb-violet) / 0.36) 0%, transparent 62%);
+  animation-delay: 0.3s;
+}
+
+.cabinet-decor-scene__nebula-orb--teal {
+  top: 88vh;
+  left: -16vw;
+  width: min(50vw, 600px);
+  height: min(50vw, 600px);
+  background: radial-gradient(circle, hsl(160 74% 46% / 0.24) 0%, transparent 62%);
+  animation-delay: 0.55s;
+}
+
+html:not(.dark) .cabinet-decor-scene__nebula-orb {
+  filter: blur(80px);
+}
+
+@keyframes nebula-orb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cabinet-decor-scene__nebula-orb--cyan {
+    animation:
+      nebula-orb-in 1.6s var(--nb-ease) forwards,
+      nebula-drift-a 26s ease-in-out 1.6s infinite;
+  }
+
+  .cabinet-decor-scene__nebula-orb--violet {
+    animation:
+      nebula-orb-in 1.6s var(--nb-ease) 0.3s forwards,
+      nebula-drift-b 32s ease-in-out 2s infinite;
+  }
+
+  .cabinet-decor-scene__nebula-orb--teal {
+    animation:
+      nebula-orb-in 1.6s var(--nb-ease) 0.55s forwards,
+      nebula-drift-a 38s ease-in-out 2.2s infinite reverse;
+  }
+}
+
+@keyframes nebula-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, 4%, 0) scale(1.08);
+  }
+}
+
+@keyframes nebula-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-5%, -3%, 0) scale(1.06);
+  }
+}
+
+/* ── Карточки: кольцо на hover, пятно света под курсором ─────────────────── */
+
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 0.4s var(--nb-ease),
+    border-color 0.4s var(--nb-ease),
+    box-shadow 0.4s var(--nb-ease);
+}
+
+/*
+ * Кольцо-градиент по контуру. Рисуется псевдоэлементом с mask-composite:
+ * border-image даёт артефакты на скруглениях, а маска — нет. z-index: -1
+ * держит кольцо над фоном карточки и под её содержимым.
+ */
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--nb-cyan) / 0.85) 0%,
+    hsl(var(--nb-violet) / 0.4) 50%,
+    hsl(var(--nb-cyan) / 0.85) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--nb-ease);
+}
+
+/* Лёгкое сияние под курсором: координаты пишет useDecorCardSpotlight. */
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--cd-mx, 50%) var(--cd-my, 0%),
+    hsl(var(--nb-cyan) / 0.16),
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--nb-ease);
+}
+
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:focus-within,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:focus-within,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:focus-within {
+  border-color: transparent;
+}
+
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:focus-within::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:focus-within::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:focus-within::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:focus-within::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:focus-within::before,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover::after,
+html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:focus-within::after {
+  opacity: 1;
+}
+
+html.dark[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
+html.dark[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
+html.dark[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover {
+  box-shadow:
+    0 22px 50px -18px hsl(var(--nb-cyan) / 0.4),
+    inset 0 1px 0 rgb(255 255 255 / 0.08) !important;
+}
+
+html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
+html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
+html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover {
+  box-shadow: 0 18px 40px -20px hsl(var(--nb-cyan) / 0.45) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
+  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* ── Появление при заходе: лесенка по карточкам ──────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card,
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card,
+  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card {
+    animation: nebula-rise 0.55s var(--nb-ease) both;
+  }
+
+  /* Задержка по позиции среди соседей — сетка дашборда проявляется волной. */
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:nth-child(2),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:nth-child(2),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:nth-child(2) {
+    animation-delay: 0.06s;
+  }
+
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:nth-child(3),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:nth-child(3),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:nth-child(3) {
+    animation-delay: 0.12s;
+  }
+
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:nth-child(4),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:nth-child(4),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:nth-child(4) {
+    animation-delay: 0.18s;
+  }
+
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:nth-child(n + 5),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:nth-child(n + 5),
+  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:nth-child(n + 5) {
+    animation-delay: 0.24s;
+  }
+}
+
+@keyframes nebula-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Основные кнопки: градиент и пробегающий блик ────────────────────────── */
+
+html[data-cabinet-decor="nebula"] .cabinet-btn-primary {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--nb-cyan)) 0%,
+    hsl(210 90% 52%) 55%,
+    hsl(var(--nb-violet)) 100%
+  );
+  box-shadow:
+    0 10px 26px -12px hsl(var(--nb-cyan) / 0.7),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+html[data-cabinet-decor="nebula"] .cabinet-btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.26) 50%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.75s var(--nb-ease);
+}
+
+html[data-cabinet-decor="nebula"] .cabinet-btn-primary:hover::after,
+html[data-cabinet-decor="nebula"] .cabinet-btn-primary:focus-visible::after {
+  transform: translateX(120%);
+}
+
+html[data-cabinet-decor="nebula"] .cabinet-btn-primary:hover {
+  box-shadow:
+    0 14px 34px -12px hsl(var(--nb-cyan) / 0.8),
+    inset 0 1px 0 rgb(255 255 255 / 0.26);
+}
+
+/* ── Раскрытие вопросов (FAQ на «Информации») ────────────────────────────── */
+
+/*
+ * Плавная высота у нативного <details> — прогрессивное улучшение: работает
+ * там, где поддержаны ::details-content и interpolate-size (Chromium 131+).
+ * В остальных браузерах блок раскрывается мгновенно, как раньше.
+ */
+html[data-cabinet-decor="nebula"] {
+  interpolate-size: allow-keywords;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-cabinet-decor="nebula"] details::details-content {
+    height: 0;
+    overflow: hidden;
+    transition:
+      height 0.35s var(--nb-ease),
+      content-visibility 0.35s var(--nb-ease) allow-discrete;
+  }
+
+  html[data-cabinet-decor="nebula"] details[open]::details-content {
+    height: auto;
+  }
+}

@@ -257,7 +257,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col">
+    <div className="cabinet-shell relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
       <CabinetDecorLayer />
       <header
