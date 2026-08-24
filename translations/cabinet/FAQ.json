@@ -37,7 +37,7 @@
     {
       "id": "tg-proxy",
       "question": "Не работает Телеграм",
-      "answer_md": "Используйте оба прокси по кнопкам ниже:\n\n[Прокси 1](https://t.me/proxy?server=tg1.me0ws.ru&port=443&secret=96d00e61b3c11ffc1cccb2c725d2c086)\n\n[Прокси 2](https://t.me/proxy?server=tg1.me0ws.ru&port=6443&secret=eea2b5f4e456a1703dda880e74521d362631632e7275)"
+      "answer_md": "Используйте прокси ниже:\n\n[ПРОКСИ 1](https://t.me/proxy?server=germany3.me0ws.ru&port=2443&secret=eed35dc3a5689d9fcb7767dcd0cbefb38c7477697463682e7476)"
     },	
     {
       "id": "pay-subscription",

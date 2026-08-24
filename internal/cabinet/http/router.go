@@ -392,6 +392,13 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	mux.Handle("/cabinet/api/", apiChain)
 	mux.Handle("/cabinet/", spaChain)
 
+	// Публичный лендинг живёт на корне домена: https://host/landing (а не /cabinet/landing).
+	// buildSPAHandler на неизвестный путь отдаёт index.html, а SPA сама выбирает
+	// basename по location.pathname (см. resolveBasename в web/cabinet/src/App.tsx),
+	// поэтому один и тот же бандл обслуживает оба адреса.
+	mux.Handle("/landing", spaChain)
+	mux.Handle("/landing/", spaChain)
+
 	// Часто открывают кабинет как https://host/login без префикса /cabinet — иначе 404.
 	registerCabinetRootRedirects(mux)
 	return nil

@@ -197,16 +197,17 @@ export default function SubscriptionPage() {
                     <Link
                       id="cabinet-onboarding-step2-target"
                       to="/connections"
-                      className="connect-device-cta group block"
+                      className="connect-device-cta connect-device-cta--highlight group block"
                     >
                       <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                        <span className="connect-device-cta-icon inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                           <MonitorSmartphone size={16} />
                         </span>
                         <div className="min-w-0">
                           <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
                           <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
                         </div>
+                        <ChevronRight size={18} className="connect-device-cta-chevron ml-auto shrink-0" />
                       </div>
                     </Link>
                   )

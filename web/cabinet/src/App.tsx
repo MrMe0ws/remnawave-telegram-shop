@@ -17,6 +17,14 @@ import VerifyEmailPage from '@/features/auth/VerifyEmailPage'
 import ForgotPasswordPage from '@/features/auth/ForgotPasswordPage'
 import ResetPasswordPage from '@/features/auth/ResetPasswordPage'
 
+// Публичный лендинг (9a): отдельный маршрут, корень SPA по-прежнему ведёт в кабинет.
+import LandingPage from '@/features/landing/LandingPage'
+
+// Dev-превью компонентов. Маршрут ниже регистрируется только при import.meta.env.DEV,
+// в прод-бандле ветка мертва и модуль вырезается сборкой.
+import ConnectCtaPreviewPage from '@/features/dev/ConnectCtaPreviewPage'
+import ThemePreviewPage from '@/features/dev/ThemePreviewPage'
+
 // Protected pages (9b)
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import SubscriptionPage from '@/features/subscription/SubscriptionPage'
@@ -56,6 +64,16 @@ const queryClient = new QueryClient({
   },
 })
 
+/**
+ * Кабинет живёт под /cabinet, а лендинг отдаётся ещё и с корня домена (/landing) —
+ * см. mux.Handle("/landing") в internal/cabinet/http/router.go. Basename выбираем
+ * по фактическому пути, иначе router с фиксированным '/cabinet' не сматчит /landing.
+ */
+function resolveBasename(): string {
+  if (typeof window === 'undefined') return '/cabinet'
+  return window.location.pathname.startsWith('/cabinet') ? '/cabinet' : ''
+}
+
 const PUBLIC_AUTH_PATHS = new Set([
   '/login',
   '/register',
@@ -64,8 +82,14 @@ const PUBLIC_AUTH_PATHS = new Set([
   '/password/reset',
 ])
 
-/** Показывать оболочку до init auth (публичные страницы + deeplink без сессии). */
-const PUBLIC_SHELL_PATHS = new Set([...PUBLIC_AUTH_PATHS, '/deeplink'])
+/** Показывать оболочку до init auth (публичные страницы + deeplink и лендинг без сессии). */
+const PUBLIC_SHELL_PATHS = new Set([
+  ...PUBLIC_AUTH_PATHS,
+  '/deeplink',
+  '/landing',
+  // Dev-превью: без этого страница ждала бы инициализацию auth. В прод не попадает.
+  ...(import.meta.env.DEV ? ['/dev/connect-cta', '/dev/theme'] : []),
+])
 
 function normalizePath(pathname: string): string {
   const p = (pathname || '/').replace(/\/+$/, '')
@@ -108,6 +132,17 @@ function AppRoutes() {
 
       {/* Публичная страница редиректа на custom scheme — открывается из мини-приложения во внешнем браузере (без сессии). */}
       <Route path="/deeplink" element={<DeepLinkRedirectPage />} />
+
+      {/* Витрина проекта. Доступна и гостю, и авторизованному — редиректа нет. */}
+      <Route path="/landing" element={<LandingPage />} />
+
+      {/* Только dev: превью акцентной кнопки «Подключить устройство». */}
+      {import.meta.env.DEV && (
+        <Route path="/dev/connect-cta" element={<ConnectCtaPreviewPage />} />
+      )}
+
+      {/* Только dev: превью декор-тем на заглушках главной и подписки. */}
+      {import.meta.env.DEV && <Route path="/dev/theme" element={<ThemePreviewPage />} />}
 
       {/* ── Protected routes ───────────────────────────── */}
       <Route
@@ -384,7 +419,7 @@ export default function App() {
         <ThemePolicyProvider>
           <BrandFavicon />
           <CabinetDecorThemeSync />
-          <BrowserRouter basename="/cabinet">
+          <BrowserRouter basename={resolveBasename()}>
             <AppRoutes />
           </BrowserRouter>
         </ThemePolicyProvider>

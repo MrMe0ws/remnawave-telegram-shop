@@ -115,6 +115,7 @@ export interface AuthBootstrapResponse {
     | 'spring'
     | 'black_friday'
     | 'aurora'
+    | 'nebula'
     | 'ocean'
     | 'cyber'
     | 'sunset'
