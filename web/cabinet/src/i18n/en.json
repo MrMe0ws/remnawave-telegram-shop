@@ -1628,6 +1628,155 @@
         "error": "Failed to start synchronization",
         "note": "Synchronization runs in the background. Results will appear in server logs."
       }
+    },
+    "landing": {
+      "nav": {
+        "features": "Features",
+        "how": "How it works",
+        "tariffs": "Pricing",
+        "faq": "FAQ",
+        "cabinet": "Dashboard",
+        "login": "Sign in",
+        "menu": "Menu"
+      },
+      "hero": {
+        "titleBefore": "",
+        "titleAfter": "— fast and private VPN",
+        "subtitle": "Sign in with Telegram, pick a plan and get ready-made VPN configurations.",
+        "ctaBot": "Open in Telegram",
+        "ctaCabinet": "Go to dashboard"
+      },
+      "panel": {
+        "status": "Subscription active",
+        "badge": "Online",
+        "trafficLabel": "Traffic",
+        "trafficValue": "Unlimited",
+        "stats": {
+          "speed": {
+            "value": "up to 10 Gbps",
+            "label": "Server uplinks"
+          },
+          "uptime": {
+            "value": "99.9%",
+            "label": "Uptime over 90 days"
+          },
+          "protocol": {
+            "value": "VLESS Reality",
+            "label": "Connection protocol"
+          }
+        }
+      },
+      "features": {
+        "eyebrow": "Features",
+        "title": "Everything a VPN needs — nothing it does not",
+        "subtitle": "No magic \"internet boosters\". Just a stable connection, real privacy and a subscription you can actually manage.",
+        "items": {
+          "protocols": {
+            "title": "Modern protocols",
+            "text": "VLESS Reality and XTLS: your traffic looks like ordinary HTTPS, so the connection holds where a classic VPN already fails."
+          },
+          "speed": {
+            "title": "No speed ceiling",
+            "text": "Servers on wide uplinks: 4K video, calls and large downloads run without stalls or queues."
+          },
+          "locations": {
+            "title": "Locations to choose from",
+            "text": "Several countries in one subscription. Switch between servers right in the app, in a single tap."
+          },
+          "noLogs": {
+            "title": "No logs, no tracking",
+            "text": "We keep no connection history and share nothing with third parties. Websites see the server address, not yours."
+          },
+          "devices": {
+            "title": "Every device",
+            "text": "iOS, Android, Windows, macOS, Linux and Smart TV. One subscription covers several devices at once."
+          },
+          "support": {
+            "title": "Support in Telegram",
+            "text": "Real people answer: they help with setup, payments and anything that goes wrong."
+          }
+        }
+      },
+      "steps": {
+        "eyebrow": "How it works",
+        "title": "Three steps to a working VPN",
+        "subtitle": "No manual configs, no fiddling with settings — everything happens in the bot or the dashboard.",
+        "ctaBot": "Start in Telegram",
+        "ctaCabinet": "Go to dashboard",
+        "items": {
+          "signup": {
+            "title": "Create an account",
+            "text": "Open the Telegram bot or sign in to the dashboard — registration takes less than a minute."
+          },
+          "plan": {
+            "title": "Pick a plan",
+            "text": "Pay however you like: card, SBP, crypto or Telegram Stars — the exact set depends on the service configuration."
+          },
+          "connect": {
+            "title": "Connect",
+            "text": "Download the app from the link in your dashboard and import the subscription in one tap — the rest is automatic."
+          }
+        }
+      },
+      "tariffs": {
+        "eyebrow": "Pricing",
+        "title": "Simple prices, no surprises",
+        "subtitle": "You pay for the period you choose, with no automatic charges by default. Full terms and plan details live in the dashboard.",
+        "cta": "Get started",
+        "perMonthFull": "/ per month"
+      },
+      "faq": {
+        "eyebrow": "FAQ",
+        "title": "Frequently asked questions",
+        "subtitle": "Missing something? Message support — we will answer.",
+        "items": {
+          "whatIs": {
+            "q": "What is a VPN and why do I need one?",
+            "a": "A VPN encrypts your traffic and routes it through its own server. Your provider and Wi-Fi owners stop seeing which sites you open, and the sites see the server address instead of yours."
+          },
+          "devices": {
+            "q": "How many devices can I use?",
+            "a": "The device count depends on the plan and is listed on its page in the dashboard. You can raise the limit there as well."
+          },
+          "apps": {
+            "q": "Which apps are supported?",
+            "a": "Any VLESS-capable client: INCY, Happ and others. The dashboard has a connect button that configures the app for you."
+          },
+          "payment": {
+            "q": "How do I pay for a subscription?",
+            "a": "Through the Telegram bot or the dashboard. Available payment methods appear automatically and depend on the service configuration."
+          },
+          "limits": {
+            "q": "Are there traffic or speed limits?",
+            "a": "We never throttle speed. The traffic limit depends on the plan — the exact figure is shown on the pricing page and in the dashboard."
+          },
+          "refund": {
+            "q": "What if it does not work for me?",
+            "a": "Message support: we will sort out the setup or discuss a refund. Refund terms are described in the public offer."
+          }
+        }
+      },
+      "cta": {
+        "title": "Ready to try it?",
+        "subtitle": "Set up {{brand}} in a couple of minutes and forget about blocks and lag.",
+        "ctaBot": "Open in Telegram",
+        "ctaCabinet": "Go to dashboard"
+      },
+      "footer": {
+        "tagline": "A VPN service with payments and subscription management in Telegram and the web dashboard.",
+        "botLink": "Telegram bot",
+        "sections": "Sections",
+        "product": "Service",
+        "legal": "Legal",
+        "links": {
+          "channel": "News",
+          "support": "Support",
+          "status": "Server status",
+          "offer": "Public offer",
+          "privacy": "Privacy policy",
+          "tos": "Terms of service"
+        }
+      }
     }
   }
 }
