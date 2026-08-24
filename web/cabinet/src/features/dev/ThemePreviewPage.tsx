@@ -4,10 +4,15 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Home,
+  MessageCircle,
   MonitorSmartphone,
   Newspaper,
+  Shield,
+  Sparkles,
   Star,
   Ticket,
+  User,
   Users,
   Zap,
   type LucideIcon,
@@ -37,11 +42,13 @@ import { useDecorCardSpotlight } from '@/features/decor/useDecorCardSpotlight'
  */
 
 type Page = 'dashboard' | 'subscription'
+type NavVariant = 'pill' | 'underline'
 
 export default function ThemePreviewPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [decor, setDecor] = useState<string>('nebula')
   const [page, setPage] = useState<Page>('dashboard')
+  const [navVariant, setNavVariant] = useState<NavVariant>('underline')
 
   // Подсветка карточек под курсором — тот же хук, что в проде.
   useDecorCardSpotlight()
@@ -62,12 +69,27 @@ export default function ThemePreviewPage() {
     }
   }, [decor])
 
+  // Вариант подсветки навигации: в проде атрибута нет и работает подчёркивание.
+  useEffect(() => {
+    const root = document.documentElement
+    if (navVariant === 'underline') {
+      delete root.dataset.nebulaNav
+    } else {
+      root.dataset.nebulaNav = navVariant
+    }
+    return () => {
+      delete root.dataset.nebulaNav
+    }
+  }, [navVariant])
+
   return (
     <div className="cabinet-shell relative min-h-dvh">
       <div className="cabinet-shell-gradient" aria-hidden />
       <div className="cabinet-decor-layer" aria-hidden>
         <DecorSceneForPreview decor={decor} />
       </div>
+
+      <HeaderStub page={page} />
 
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-6 sm:px-6">
         <Toolbar
@@ -77,6 +99,8 @@ export default function ThemePreviewPage() {
           onDecor={setDecor}
           page={page}
           onPage={setPage}
+          navVariant={navVariant}
+          onNavVariant={setNavVariant}
         />
 
         {/* key на теме — перемонтирует блоки, чтобы заново отыграла лесенка появления. */}
@@ -111,6 +135,8 @@ function Toolbar({
   onDecor,
   page,
   onPage,
+  navVariant,
+  onNavVariant,
 }: {
   theme: 'dark' | 'light'
   onTheme: (v: 'dark' | 'light') => void
@@ -118,6 +144,8 @@ function Toolbar({
   onDecor: (v: string) => void
   page: Page
   onPage: (v: Page) => void
+  navVariant: NavVariant
+  onNavVariant: (v: NavVariant) => void
 }) {
   return (
     <div className="rounded-[var(--radius)] border border-border/70 bg-card/70 p-3 backdrop-blur-md">
@@ -160,7 +188,80 @@ function Toolbar({
           onChange={(v) => onPage(v as Page)}
         />
       </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+        <span className="text-xs font-medium text-muted-foreground">Навигация в шапке</span>
+        <Segmented
+          items={[
+            { id: 'underline', label: 'Подчёркивание' },
+            { id: 'pill', label: 'Акцентная пилюля' },
+          ]}
+          value={navVariant}
+          onChange={(v) => onNavVariant(v as NavVariant)}
+        />
+      </div>
     </div>
+  )
+}
+
+/* ── Заглушка шапки: та же разметка, что в AppLayout ─────────────────────── */
+
+const NAV_STUB: Array<{ id: string; icon: LucideIcon; label: string }> = [
+  { id: 'dashboard', icon: Home, label: 'Главная' },
+  { id: 'subscription', icon: Sparkles, label: 'Подписка' },
+  { id: 'tariffs', icon: Zap, label: 'Тарифы' },
+  { id: 'support', icon: MessageCircle, label: 'Поддержка' },
+  { id: 'profile', icon: User, label: 'Профиль' },
+  { id: 'admin', icon: Shield, label: 'Админка' },
+]
+
+/**
+ * Копия десктопной навигации: те же Button variant="ghost" + cabinet-nav-link
+ * + aria-current, поэтому CSS темы применяется ровно как в настоящей шапке.
+ * Подпись раскрывается на hover — как в кабинете.
+ */
+function HeaderStub({ page }: { page: Page }) {
+  return (
+    <header className="cabinet-app-header relative z-20 border-b border-border/80 bg-card/92 px-4 backdrop-blur-xl sm:px-6">
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-3">
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+            <Shield size={16} />
+          </span>
+          <span className="font-heading text-base font-bold tracking-tight">Meows VPN</span>
+        </span>
+
+        <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto py-0.5">
+          {NAV_STUB.map(({ id, icon: Icon, label }) => {
+            const active = id === page
+            return (
+              <Button
+                key={id}
+                variant="ghost"
+                size="sm"
+                asChild
+                className={cn(
+                  'cabinet-nav-link group h-9 shrink-0 !gap-1 rounded-xl px-2 text-muted-foreground transition-all duration-200 hover:text-foreground',
+                  active && 'bg-secondary text-foreground shadow-sm',
+                )}
+              >
+                <a
+                  href={`#${id}`}
+                  aria-current={active ? 'page' : undefined}
+                  aria-label={label}
+                  className="flex items-center"
+                >
+                  <Icon size={18} strokeWidth={1.75} />
+                  <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200 group-hover:max-w-[9rem] group-hover:opacity-100">
+                    {label}
+                  </span>
+                </a>
+              </Button>
+            )
+          })}
+        </nav>
+      </div>
+    </header>
   )
 }
 

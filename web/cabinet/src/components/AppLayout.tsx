@@ -296,7 +296,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                   size="sm"
                   asChild
                   className={cn(
-                    'group shrink-0 h-9 !gap-1 rounded-xl px-2 text-muted-foreground hover:text-foreground transition-all duration-200',
+                    // cabinet-nav-link — хук для декор-тем: подсветка активного
+                    // пункта и hover переопределяются темой, а не здесь.
+                    'cabinet-nav-link group shrink-0 h-9 !gap-1 rounded-xl px-2 text-muted-foreground hover:text-foreground transition-all duration-200',
                     active && 'bg-secondary text-foreground shadow-sm',
                   )}
                 >
