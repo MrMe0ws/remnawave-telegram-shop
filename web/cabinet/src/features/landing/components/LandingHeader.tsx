@@ -4,12 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, Shield, X } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
 import { LangToggle } from '@/components/LangToggle'
 import { LANDING_NAV_SECTIONS } from '../landingContent'
 import type { LandingBrand } from '../useLandingBrand'
 import { Rise } from './LandingMotion'
-import { TelegramGlyph } from './LandingPrimitives'
 
 /**
  * Шапка лендинга: прозрачная над hero, «застекляется» после прокрутки.
@@ -117,23 +115,10 @@ export function LandingHeader({ brand }: { brand: LandingBrand }) {
                 </motion.a>
               ))}
 
-              <div className="mt-2 flex flex-col gap-2">
-                {brand.botUrl && (
-                  <a
-                    href={brand.botUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      'landing-cta landing-cta--primary inline-flex h-12 items-center justify-center gap-2.5 rounded-full text-sm font-semibold',
-                    )}
-                  >
-                    <TelegramGlyph className="size-5" />
-                    {t('landing.hero.ctaBot')}
-                  </a>
-                )}
+              <div className="mt-2">
                 <a
                   href={brand.cabinetHref}
-                  className="landing-cta landing-cta--ghost inline-flex h-12 items-center justify-center rounded-full text-sm font-semibold"
+                  className="landing-cta landing-cta--primary inline-flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold"
                 >
                   {cabinetLabel}
                 </a>

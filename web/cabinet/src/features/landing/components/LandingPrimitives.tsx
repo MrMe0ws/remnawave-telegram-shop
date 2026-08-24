@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, LayoutDashboard } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Reveal } from './LandingMotion'
 
 /**
  * Монохромный глиф Telegram: в отличие от TelegramBrandIcon (синий круг),
- * наследует currentColor и не спорит с градиентной заливкой CTA-кнопки.
+ * наследует currentColor. Используется ссылкой на бота в футере.
  */
 export function TelegramGlyph({ className }: { className?: string }) {
   return (
@@ -16,68 +16,49 @@ export function TelegramGlyph({ className }: { className?: string }) {
   )
 }
 
-interface ActionsProps {
-  botUrl: string | null
+interface CabinetCtaProps {
   /** Абсолютный URL кабинета — лендинг отдаётся с двух адресов, см. useLandingBrand. */
-  cabinetHref: string
-  /**
-   * Скрыть кнопку кабинета от lg и шире. В hero на десктопе она дублирует
-   * «Войти» в шапке, а на мобильных шапка сворачивается в бургер — там нужна.
-   * Скрываем только когда есть telegram-кнопка, иначе hero остался бы без CTA.
-   */
-  cabinetDesktopHidden?: boolean
-  /** Подписи приходят из i18n — компонент их не выдумывает. */
-  botLabel: string
-  cabinetLabel: string
+  href: string
+  /** Подпись приходит из i18n — компонент её не выдумывает. */
+  label: string
   className?: string
   size?: 'md' | 'lg'
+  /**
+   * Скрыть от lg и шире. Нужно только в hero: на десктопе кнопка дублирует
+   * «Войти» в шапке, а на мобильных шапка сворачивается в бургер — там она
+   * остаётся единственной точкой входа.
+   */
+  desktopHidden?: boolean
 }
 
 /**
- * Пара CTA: «Открыть в Telegram» (внешняя ссылка на бота) и «Личный кабинет».
- * Если BOT_URL в env не задан — telegram-кнопка не рисуется, и кабинетная
- * становится основной.
+ * Единственный CTA лендинга — вход в веб-кабинет.
+ *
+ * Кнопки «Открыть в Telegram» здесь намеренно нет: бот не продаёт тарифы, он
+ * сам уводит пользователя в этот же кабинет, так что промежуточный прыжок в
+ * Telegram и обратно только удлинял бы путь. Ссылка на бота осталась в футере.
  */
-export function LandingActions({
-  botUrl,
-  cabinetHref,
-  botLabel,
-  cabinetLabel,
+export function LandingCabinetCta({
+  href,
+  label,
   className,
   size = 'md',
-  cabinetDesktopHidden = false,
-}: ActionsProps) {
+  desktopHidden = false,
+}: CabinetCtaProps) {
   const sizing =
     size === 'lg' ? 'h-12 px-7 text-base sm:h-14 sm:px-8' : 'h-12 px-6 text-[0.95rem]'
-  const base = cn(
-    'landing-cta group inline-flex items-center justify-center gap-2.5 rounded-full font-semibold',
-    'outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--lp-cyan))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]',
-    sizing,
-  )
 
   return (
-    <div className={cn('flex flex-col gap-3 sm:flex-row sm:items-center', className)}>
-      {botUrl && (
-        <a
-          href={botUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(base, 'landing-cta--primary')}
-        >
-          <TelegramGlyph className="size-5" />
-          {botLabel}
-        </a>
-      )}
+    <div className={cn('flex', desktopHidden && 'lg:hidden', className)}>
       <a
-        href={cabinetHref}
+        href={href}
         className={cn(
-          base,
-          botUrl ? 'landing-cta--ghost' : 'landing-cta--primary',
-          cabinetDesktopHidden && botUrl && 'lg:hidden',
+          'landing-cta landing-cta--primary group inline-flex items-center justify-center gap-2.5 rounded-full font-semibold',
+          'outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--lp-cyan))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]',
+          sizing,
         )}
       >
-        {botUrl ? <LayoutDashboard className="size-[1.15rem]" /> : null}
-        {cabinetLabel}
+        {label}
         <ArrowRight className="size-[1.05rem] transition-transform duration-300 group-hover:translate-x-0.5" />
       </a>
     </div>
@@ -102,7 +83,7 @@ export function SectionHeading({ eyebrow, title, description, className }: Secti
         </span>
       </Reveal>
       <Reveal delay={0.08}>
-        <h2 className="mt-4 text-balance font-heading sm:mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h2 className="mt-4 text-balance font-heading text-3xl font-bold tracking-tight sm:mt-5 sm:text-4xl">
           {title}
         </h2>
       </Reveal>

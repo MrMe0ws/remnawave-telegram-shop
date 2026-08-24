@@ -1649,8 +1649,7 @@
       "hero": {
         "titleBefore": "",
         "titleAfter": "— Быстрый и приватный VPN",
-        "subtitle": "Войдите через Telegram, выберите тариф и получите готовые VPN-конфигурации.",
-        "ctaBot": "Открыть в Telegram",
+        "subtitle": "Доступно на всех устройствах",
         "ctaCabinet": "Войти в кабинет"
       },
       "panel": {
@@ -1708,8 +1707,7 @@
         "eyebrow": "Как подключиться",
         "title": "Три шага до рабочего VPN",
         "subtitle": "Ни конфигов вручную, ни возни с настройками — всё делается из бота или кабинета.",
-        "ctaBot": "Начать в Telegram",
-        "ctaCabinet": "Войти в кабинет",
+            "ctaCabinet": "Войти в кабинет",
         "items": {
           "signup": {
             "title": "Заведите аккаунт",
@@ -1766,8 +1764,14 @@
       "cta": {
         "title": "Готовы попробовать?",
         "subtitle": "Подключите {{brand}} за пару минут — и забудьте про блокировки и лаги.",
-        "ctaBot": "Открыть в Telegram",
         "ctaCabinet": "Перейти в кабинет"
+      },
+      "platforms": {
+        "apple": "iOS / macOS",
+        "android": "Android",
+        "windows": "Windows",
+        "linux": "Linux",
+        "tv": "Smart TV"
       },
       "footer": {
         "tagline": "VPN-сервис с оплатой и управлением подпиской в Telegram и веб-кабинете.",

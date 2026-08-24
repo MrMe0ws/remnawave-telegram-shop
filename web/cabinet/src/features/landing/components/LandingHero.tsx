@@ -6,7 +6,8 @@ import { Activity, Gauge, Shield, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { LandingBrand } from '../useLandingBrand'
 import { Rise, WordsReveal } from './LandingMotion'
-import { LandingActions } from './LandingPrimitives'
+import { LandingPlatformRow } from './LandingPlatforms'
+import { LandingCabinetCta } from './LandingPrimitives'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -58,27 +59,30 @@ export function LandingHero({
       </h1>
 
       <Rise delay={0.5} y={28}>
-        <p
-          className={cn(
-            'mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg',
-            split ? 'mx-auto lg:mx-0' : 'mx-auto',
-          )}
-        >
-          {t('landing.hero.subtitle')}
-        </p>
+        <div className={cn('mt-5 max-w-xl sm:mt-6', split ? 'mx-auto lg:mx-0' : 'mx-auto')}>
+          <p className="text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+            {t('landing.hero.subtitle')}
+          </p>
+          {/* Логотипы платформ вместо перечисления словами — читается с одного взгляда. */}
+          <LandingPlatformRow
+            className={cn('mt-4', split ? 'justify-center lg:justify-start' : 'justify-center')}
+            label={t('landing.hero.subtitle')}
+          />
+        </div>
       </Rise>
 
+      {/*
+        На десктопе CTA скрыт: там его роль берут «Войти» в шапке и «Оформить»
+        в витрине тарифов справа. На мобильных шапка свёрнута в бургер — кнопка
+        остаётся единственной видимой точкой входа.
+      */}
       <Rise delay={0.64} y={28}>
-        <LandingActions
+        <LandingCabinetCta
           className={cn('mt-7 sm:mt-9', split ? 'justify-center lg:justify-start' : 'justify-center')}
           size="lg"
-          botUrl={brand.botUrl}
-          cabinetHref={brand.cabinetHref}
-          botLabel={t('landing.hero.ctaBot')}
-          cabinetLabel={
-            brand.authenticated ? t('landing.nav.cabinet') : t('landing.hero.ctaCabinet')
-          }
-          cabinetDesktopHidden
+          href={brand.cabinetHref}
+          label={brand.authenticated ? t('landing.nav.cabinet') : t('landing.hero.ctaCabinet')}
+          desktopHidden
         />
       </Rise>
     </div>

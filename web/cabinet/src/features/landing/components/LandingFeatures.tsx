@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { accentVar, LANDING_FEATURES } from '../landingContent'
 import { Reveal, useCardSpotlight } from './LandingMotion'
+import { LandingPlatformRow } from './LandingPlatforms'
 import { SectionHeading } from './LandingPrimitives'
 
 /** Сетка преимуществ: 6 карточек с акцентными иконками и подсветкой под курсором. */
@@ -32,9 +33,17 @@ export function LandingFeatures() {
                 <h3 className="mt-5 font-heading text-lg font-bold tracking-tight">
                   {t(`landing.features.items.${feature.id}.title`)}
                 </h3>
-                <p className="mt-2.5 text-pretty text-sm leading-relaxed text-muted-foreground">
-                  {t(`landing.features.items.${feature.id}.text`)}
-                </p>
+                {feature.showPlatforms ? (
+                  /* Текст остаётся в aria-label: скринридеру логотипы бесполезны. */
+                  <LandingPlatformRow
+                    className="mt-4 gap-3.5 sm:gap-4"
+                    label={t(`landing.features.items.${feature.id}.text`)}
+                  />
+                ) : (
+                  <p className="mt-2.5 text-pretty text-sm leading-relaxed text-muted-foreground">
+                    {t(`landing.features.items.${feature.id}.text`)}
+                  </p>
+                )}
               </article>
             </Reveal>
           ))}

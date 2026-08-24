@@ -30,6 +30,8 @@ export interface LandingFeature {
   id: string
   icon: LucideIcon
   accent: LandingAccent
+  /** true — вместо текста в карточке рисуется ряд логотипов платформ. */
+  showPlatforms?: boolean
 }
 
 export const LANDING_FEATURES: LandingFeature[] = [
@@ -37,7 +39,7 @@ export const LANDING_FEATURES: LandingFeature[] = [
   { id: 'speed', icon: Zap, accent: 'amber' },
   { id: 'locations', icon: Globe2, accent: 'violet' },
   { id: 'noLogs', icon: EyeOff, accent: 'emerald' },
-  { id: 'devices', icon: MonitorSmartphone, accent: 'cyan' },
+  { id: 'devices', icon: MonitorSmartphone, accent: 'cyan', showPlatforms: true },
   { id: 'support', icon: Headphones, accent: 'violet' },
 ]
 

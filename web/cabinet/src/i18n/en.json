@@ -1642,8 +1642,7 @@
       "hero": {
         "titleBefore": "",
         "titleAfter": "— fast and private VPN",
-        "subtitle": "Sign in with Telegram, pick a plan and get ready-made VPN configurations.",
-        "ctaBot": "Open in Telegram",
+        "subtitle": "Available on every device",
         "ctaCabinet": "Go to dashboard"
       },
       "panel": {
@@ -1701,8 +1700,7 @@
         "eyebrow": "How it works",
         "title": "Three steps to a working VPN",
         "subtitle": "No manual configs, no fiddling with settings — everything happens in the bot or the dashboard.",
-        "ctaBot": "Start in Telegram",
-        "ctaCabinet": "Go to dashboard",
+            "ctaCabinet": "Go to dashboard",
         "items": {
           "signup": {
             "title": "Create an account",
@@ -1759,8 +1757,14 @@
       "cta": {
         "title": "Ready to try it?",
         "subtitle": "Set up {{brand}} in a couple of minutes and forget about blocks and lag.",
-        "ctaBot": "Open in Telegram",
         "ctaCabinet": "Go to dashboard"
+      },
+      "platforms": {
+        "apple": "iOS / macOS",
+        "android": "Android",
+        "windows": "Windows",
+        "linux": "Linux",
+        "tv": "Smart TV"
       },
       "footer": {
         "tagline": "A VPN service with payments and subscription management in Telegram and the web dashboard.",

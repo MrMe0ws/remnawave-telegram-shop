@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import type { LandingBrand } from '../useLandingBrand'
 import { Reveal } from './LandingMotion'
-import { LandingActions } from './LandingPrimitives'
+import { LandingCabinetCta } from './LandingPrimitives'
 
 /** Финальный призыв к действию перед футером. */
 export function LandingCtaBand({ brand }: { brand: LandingBrand }) {
@@ -20,15 +20,11 @@ export function LandingCtaBand({ brand }: { brand: LandingBrand }) {
               {t('landing.cta.subtitle', { brand: brand.name })}
             </p>
 
-            <LandingActions
+            <LandingCabinetCta
               className="mt-9 justify-center"
               size="lg"
-              botUrl={brand.botUrl}
-              cabinetHref={brand.cabinetHref}
-              botLabel={t('landing.cta.ctaBot')}
-              cabinetLabel={
-                brand.authenticated ? t('landing.nav.cabinet') : t('landing.cta.ctaCabinet')
-              }
+              href={brand.cabinetHref}
+              label={brand.authenticated ? t('landing.nav.cabinet') : t('landing.cta.ctaCabinet')}
             />
           </div>
         </div>

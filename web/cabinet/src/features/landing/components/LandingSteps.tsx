@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { accentVar, LANDING_STEPS } from '../landingContent'
 import type { LandingBrand } from '../useLandingBrand'
 import { Reveal, useCardSpotlight } from './LandingMotion'
-import { LandingActions, SectionHeading } from './LandingPrimitives'
+import { LandingCabinetCta, SectionHeading } from './LandingPrimitives'
 
 /**
  * «Как подключиться»: три шага в ряд, соединённые пунктирной линией на десктопе.
@@ -54,14 +54,10 @@ export function LandingSteps({ brand }: { brand: LandingBrand }) {
         </div>
 
         <Reveal delay={0.2}>
-          <LandingActions
+          <LandingCabinetCta
             className="mt-10 justify-center sm:mt-12"
-            botUrl={brand.botUrl}
-            cabinetHref={brand.cabinetHref}
-            botLabel={t('landing.steps.ctaBot')}
-            cabinetLabel={
-              brand.authenticated ? t('landing.nav.cabinet') : t('landing.steps.ctaCabinet')
-            }
+            href={brand.cabinetHref}
+            label={brand.authenticated ? t('landing.nav.cabinet') : t('landing.steps.ctaCabinet')}
           />
         </Reveal>
       </div>
