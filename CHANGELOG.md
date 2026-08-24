@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+## [4.13.1] - 2026-08-24
+
+### Changed
+
+- **Тема `nebula`:** пятно света под курсором ослаблено вдвое (`0.16` → `0.08`, радиус `260` → `240px`) — в кабинете оно перетягивало внимание с содержимого карточки. Кольцо по контуру и тень не менялись.
+- **Тема `nebula`:** активный пункт в шапке подсвечивается градиентной линией вместо серой пилюли (`bg-secondary`). Пилюля меняла ширину при раскрытии подписи на hover и подталкивала соседние иконки. Вариант с пилюлей остался под `data-nebula-nav="pill"` (ставит только dev-превью).
+
+## [4.13.0] - 2026-08-24
+
+### Added
+
+- **Публичный лендинг** (`web/cabinet/src/features/landing/`): hero, витрина тарифов, три шага подключения, FAQ, финальный CTA, футер. Отдаётся с двух адресов — `/landing` (корень домена, `mux.Handle` в `internal/cabinet/http/router.go`) и `/cabinet/landing`; basename router'а выбирается по `location.pathname` (`resolveBasename()` в `App.tsx`). Бренд и ссылки — из публичного `/auth/bootstrap`, тарифы — из публичного `GET /tariffs`, поддержаны оба `SALES_MODE`. Док: `.cursor/docs/frontend/cabinet-landing.md`, публичный — `documentation/cabinet/landing.md`.
+- **Декор-тема `nebula`** — визуальный язык лендинга в кабинете: палитра cyan + фиолетовый, фон со свечением и сеткой, три дрейфующих пятна в сцене, кольцо-градиент и подсветка карточек, лесенка появления, градиентные кнопки, плавное раскрытие `<details>`. Эффекты поверхностей ограничены `.cabinet-shell` (пользовательский кабинет) — в админке `isolation: isolate` запирал бы вложенные поповеры.
+- **Стабильные классы-зацепки** для декор-тем: `cabinet-card` (`ui/card.tsx`), `cabinet-btn` / `cabinet-btn-primary` (`ui/button.tsx`), `cabinet-nav-link` и `cabinet-shell` (`AppLayout.tsx`). Без активной темы ничего не стилизуют.
+- `useDecorCardSpotlight` — один слушатель `pointermove` на документе пишет `--cd-mx`/`--cd-my`; активен только для `nebula`, выключается при `prefers-reduced-motion` и на тач-устройствах.
+- Dev-превью (только `import.meta.env.DEV`, в прод-бандл не попадают): `/cabinet/dev/theme` — декор-темы на заглушках главной и подписки, `/cabinet/dev/connect-cta` — сравнение CTA подключения.
+
+### Changed
+
+- **Кнопка «Подключить устройство»** на дашборде и странице подписки сливалась с карточкой-родителем (заливка совпадала с `--card`). Модификатор `.connect-device-cta--highlight`: акцентная подложка, кольцо по периметру, свечение, стрелка. Селекторы продублированы под декор-темы, у которых правила заливки специфичнее.
+- Шаблон nginx в `scripts/meows-shop-setup.sh`: `location /landing` проксируется на бота, а не редиректится на `/cabinet/`.
+
+### Technical
+
+- `internal/cabinet/http/router_spa_test.go` — SPA-хендлер отдаёт `index.html` на `/landing`, `/landing/`, `/cabinet/landing`, а ассеты остаются файлами с `immutable`-кэшем.
+- Whitelist `nebula` синхронизирован в трёх местах (`cabinet/config/decor.go`, `config/settings_registry.go`, `decorThemes.ts`) + union `decor_theme` в `lib/api.ts` + i18n `admin.settings.enum.nebula`.
+
 ### Changed
 
 - **Remnawave 2.8.x**: `telegramId` в create/update — `int64` (без усечения); `generateUsername` укладывается в лимит API 3–36 символов (fallback `u_`+sha256 при длинных id).

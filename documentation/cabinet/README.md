@@ -17,6 +17,12 @@
   - [cabinet-upgrade-guide.md](./cabinet-upgrade-guide.md)
 - Общее обновление Docker: [../updating.md](../updating.md)
 
+## Публичный лендинг
+
+- Витрина проекта на `/landing` (и `/cabinet/landing`): адреса, нужна ли правка
+  reverse-proxy, что подтягивается из настроек, где править тексты:
+  - [landing.md](./landing.md)
+
 ## Чат поддержки (bridge к telegram-support-bot)
 
 - Встроенный чат в кабинете при `SUPPORT_BOT_API=true` (миграция `000036_cabinet_support`).
