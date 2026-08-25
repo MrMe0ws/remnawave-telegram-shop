@@ -569,8 +569,21 @@ func (h *AdminUsersHandler) ExtraHwid(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
-	if body.Delta != 1 && body.Delta != -1 {
-		http.Error(w, "delta must be 1 or -1", http.StatusBadRequest)
+	// Раньше принималось только ±1 — под кнопки-степперы. Но модалка устройств
+	// копит правки и сохраняет их одним запросом, отправляя суммарную разницу:
+	// выставить 7 доп. слотов означало delta=7, и сохранение падало с 400.
+	//
+	// Ограничение было артефактом валидации, а не логики: adminApplyExtraHwidDelta
+	// складывает дельту с текущим значением и сама зажимает результат по нулю снизу
+	// и по HWID_MAX_DEVICES сверху. Поэтому принимаем любую ненулевую дельту —
+	// так правка остаётся одним атомарным запросом вместо серии из семи.
+	const maxExtraHwidDelta = 100
+	if body.Delta == 0 {
+		http.Error(w, "delta must not be zero", http.StatusBadRequest)
+		return
+	}
+	if body.Delta > maxExtraHwidDelta || body.Delta < -maxExtraHwidDelta {
+		http.Error(w, "delta out of range", http.StatusBadRequest)
 		return
 	}
 
