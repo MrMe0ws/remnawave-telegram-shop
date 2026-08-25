@@ -199,7 +199,14 @@ export function AdminUserOverview({
   })
 
   const iconStyles = rwIconToneClassNames(accountStatus.tone)
-  const displayName = user.telegram_username ? `@${user.telegram_username}` : `#${user.id}`
+  // Порядок подписей: @username → логин панели (web-клиенты) → #id.
+  // Раньше web-клиент до первой покупки показывался просто как "#222",
+  // и опознать его в карточке было нечем.
+  const displayName = user.telegram_username
+    ? `@${user.telegram_username}`
+    : user.panel_login
+      ? user.panel_login
+      : `#${user.id}`
 
   const handleCopyLink = async () => {
     if (!subscriptionLink) return

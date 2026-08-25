@@ -72,6 +72,10 @@ function UserRow({
       <td className="max-w-[9rem] truncate px-3 py-2.5 text-sm" title={user.telegram_username ? `@${user.telegram_username}` : undefined}>
         {user.telegram_username ? (
           <span className="text-foreground">@{user.telegram_username}</span>
+        ) : user.panel_login ? (
+          /* У web-клиента нет @username, зато есть логин профиля панели —
+             до первой покупки это единственная человекочитаемая подпись. */
+          <span className="font-mono text-foreground/80">{user.panel_login}</span>
         ) : (
           <span className="text-muted-foreground">—</span>
         )}

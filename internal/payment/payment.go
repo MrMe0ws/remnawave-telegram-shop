@@ -24,7 +24,6 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/google/uuid"
 )
 
 // skipTelegramCustomerDM — для web-only / synthetic telegram_id нет TG-чата;
@@ -37,27 +36,10 @@ func skipTelegramCustomerDM(c *database.Customer) bool {
 	return c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID)
 }
 
+// sanitizeEmailLocalForPanel делегирует общей реализации: тем же правилом
+// пользуется админка при показе и поиске web-клиентов по логину.
 func sanitizeEmailLocalForPanel(email string) string {
-	email = strings.TrimSpace(strings.ToLower(email))
-	at := strings.LastIndex(email, "@")
-	if at <= 0 {
-		return ""
-	}
-	local := email[:at]
-	if plus := strings.Index(local, "+"); plus >= 0 {
-		local = local[:plus]
-	}
-	local = strings.ReplaceAll(local, ".", "")
-	var b strings.Builder
-	for _, r := range local {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
-			b.WriteRune(r)
-		case r == '_':
-			b.WriteRune('_')
-		}
-	}
-	return b.String()
+	return utils.PanelLoginLocalFromEmail(email)
 }
 
 func emailLocalPartForDescription(email string) string {
@@ -86,11 +68,7 @@ func (s PaymentService) withRemnawavePanelUsername(ctx context.Context, customer
 		return ctx
 	}
 	email := strings.TrimSpace(emails[customer.ID])
-	local := sanitizeEmailLocalForPanel(email)
-	if local == "" {
-		local = "web"
-	}
-	panelUsername := fmt.Sprintf("%d_%s", customer.ID, local)
+	panelUsername := utils.PanelLoginForCustomer(customer.ID, email)
 	ctx = context.WithValue(ctx, remnawave.CtxKeyPanelUsername, panelUsername)
 	if desc := emailLocalPartForDescription(email); desc != "" {
 		// Для web-only профилей храним local-part email в Description (без домена):
@@ -207,11 +185,11 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 	if messageId, b := s.cache.Get(purchase.ID); b && !skipTelegramCustomerDM(customer) {
 		_, err = s.telegramBot.DeleteMessage(ctx, &bot.DeleteMessageParams{
 			ChatID:    customer.TelegramID,
-		MessageID: messageId,
-	})
-	if err != nil {
-		slog.Error("Error deleting message", "error", err)
-	}
+			MessageID: messageId,
+		})
+		if err != nil {
+			slog.Error("Error deleting message", "error", err)
+		}
 	}
 
 	if purchase.Month <= 0 && purchase.ExtraHwid > 0 {
@@ -343,10 +321,10 @@ func (s PaymentService) ProcessPurchaseById(ctx context.Context, purchaseId int6
 }
 
 func (s PaymentService) resetTrafficAfterSubscriptionPayment(ctx context.Context, user *remnawave.User) error {
-	if user == nil || user.UUID == uuid.Nil {
+	if user == nil || user.ID <= 0 {
 		return nil
 	}
-	if err := s.remnawaveClient.ResetUserTraffic(ctx, user.UUID); err != nil {
+	if err := s.remnawaveClient.ResetUserTraffic(ctx, user.ID); err != nil {
 		slog.Error("failed to reset user traffic after subscription payment", "error", err)
 		return err
 	}
@@ -1192,11 +1170,11 @@ func (s PaymentService) CancelTributePurchase(ctx context.Context, telegramId in
 		_, err = s.telegramBot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:    telegramId,
 			ParseMode: models.ParseModeHTML,
-		Text:      s.translation.GetText(customer.Language, "tribute_cancelled"),
-	})
-	if err != nil {
-		slog.Error("Error sending message about tribute cancelled", "error", err, "telegram_id", utils.MaskHalfInt64(telegramId))
-	}
+			Text:      s.translation.GetText(customer.Language, "tribute_cancelled"),
+		})
+		if err != nil {
+			slog.Error("Error sending message about tribute cancelled", "error", err, "telegram_id", utils.MaskHalfInt64(telegramId))
+		}
 	}
 	slog.Info("Canceled tribute purchase", "purchase_id", utils.MaskHalfInt64(tributePurchase.ID), "telegram_id", utils.MaskHalfInt64(telegramId))
 	return nil
@@ -1433,8 +1411,8 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 
 	now := time.Now().UTC()
 	customerFilesToUpdate := map[string]interface{}{
-		"subscription_link":        user.SubscriptionUrl,
-		"expire_at":                user.ExpireAt,
+		"subscription_link":         user.SubscriptionUrl,
+		"expire_at":                 user.ExpireAt,
 		"subscription_period_start": now,
 	}
 

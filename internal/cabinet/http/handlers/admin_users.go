@@ -15,6 +15,7 @@ import (
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"remnawave-tg-shop-bot/utils"
 )
 
 // AdminUsersHandler — эндпоинты /cabinet/api/admin/users/*.
@@ -49,35 +50,75 @@ func NewAdminUsers(
 // --- DTOs -------------------------------------------------------------------
 
 type adminCustomerDTO struct {
-	ID                      int64   `json:"id"`
-	TelegramID              int64   `json:"telegram_id"`
+	ID                       int64   `json:"id"`
+	TelegramID               int64   `json:"telegram_id,string"`
 	TelegramUsername         *string `json:"telegram_username"`
-	Language                string  `json:"language"`
-	ExpireAt                *string `json:"expire_at"`
-	CreatedAt               string  `json:"created_at"`
-	SubscriptionLink        *string `json:"subscription_link"`
-	ExtraHwid               int     `json:"extra_hwid"`
-	ExtraHwidExpiresAt      *string `json:"extra_hwid_expires_at"`
-	CurrentTariffID         *int64  `json:"current_tariff_id"`
-	SubscriptionPeriodStart *string `json:"subscription_period_start"`
-	SubscriptionPeriodMonths *int   `json:"subscription_period_months"`
-	LoyaltyXP               int64  `json:"loyalty_xp"`
-	LoyaltyLevel            *int   `json:"loyalty_level,omitempty"`
-	LoyaltyDiscountPercent  *int   `json:"loyalty_discount_percent,omitempty"`
-	IsWebOnly               bool   `json:"is_web_only"`
-	Status                  string `json:"status"`
-	RwStatus                *string `json:"rw_status,omitempty"`
+	Language                 string  `json:"language"`
+	ExpireAt                 *string `json:"expire_at"`
+	CreatedAt                string  `json:"created_at"`
+	SubscriptionLink         *string `json:"subscription_link"`
+	ExtraHwid                int     `json:"extra_hwid"`
+	ExtraHwidExpiresAt       *string `json:"extra_hwid_expires_at"`
+	CurrentTariffID          *int64  `json:"current_tariff_id"`
+	SubscriptionPeriodStart  *string `json:"subscription_period_start"`
+	SubscriptionPeriodMonths *int    `json:"subscription_period_months"`
+	LoyaltyXP                int64   `json:"loyalty_xp"`
+	LoyaltyLevel             *int    `json:"loyalty_level,omitempty"`
+	LoyaltyDiscountPercent   *int    `json:"loyalty_discount_percent,omitempty"`
+	IsWebOnly                bool    `json:"is_web_only"`
+	Status                   string  `json:"status"`
+	RwStatus                 *string `json:"rw_status,omitempty"`
+	// PanelLogin — логин web-клиента в панели ("<id>_<local-part email>").
+	// У клиентов с реальным Telegram пусто: там опознавание идёт по @username.
+	// Заполняется отдельно от mapCustomerToDTO, потому что требует запроса
+	// в cabinet_account; собирается пакетно на всю страницу, без N+1.
+	PanelLogin *string `json:"panel_login,omitempty"`
+}
+
+// fillPanelLogins проставляет логины web-клиентам одной пачкой.
+//
+// Нужен, потому что до первой покупки у web-клиента нет ни профиля в панели,
+// ни @username — в списке он выглядел просто как "#222", и найти его было нечем.
+// Ошибка запроса не фатальна: логин — вспомогательная подпись, а не данные операции.
+func (h *AdminUsersHandler) fillPanelLogins(ctx context.Context, items []adminCustomerDTO) {
+	if h.customers == nil || len(items) == 0 {
+		return
+	}
+	ids := make([]int64, 0, len(items))
+	for i := range items {
+		if items[i].IsWebOnly {
+			ids = append(ids, items[i].ID)
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	emails, err := h.customers.CabinetAccountEmailsByCustomerIDs(ctx, ids)
+	if err != nil {
+		slog.Warn("admin users: не удалось загрузить логины web-клиентов", "error", err)
+		return
+	}
+	for i := range items {
+		if !items[i].IsWebOnly {
+			continue
+		}
+		login := utils.PanelLoginForCustomer(items[i].ID, emails[items[i].ID])
+		if login != "" {
+			l := login
+			items[i].PanelLogin = &l
+		}
+	}
 }
 
 func mapCustomerToDTO(c *database.Customer) adminCustomerDTO {
 	dto := adminCustomerDTO{
-		ID:           c.ID,
-		TelegramID:   c.TelegramID,
-		Language:     c.Language,
-		CreatedAt:    c.CreatedAt.Format(time.RFC3339),
-		ExtraHwid:    c.ExtraHwid,
-		LoyaltyXP:    c.LoyaltyXP,
-		IsWebOnly:    c.IsWebOnly,
+		ID:         c.ID,
+		TelegramID: c.TelegramID,
+		Language:   c.Language,
+		CreatedAt:  c.CreatedAt.Format(time.RFC3339),
+		ExtraHwid:  c.ExtraHwid,
+		LoyaltyXP:  c.LoyaltyXP,
+		IsWebOnly:  c.IsWebOnly,
 	}
 	if c.TelegramUsername != nil {
 		u := *c.TelegramUsername
@@ -249,6 +290,7 @@ func (h *AdminUsersHandler) List(w http.ResponseWriter, r *http.Request) {
 		dtos = append(dtos, h.customerDTOWithStatus(ctx, &items[i]))
 	}
 
+	h.fillPanelLogins(ctx, dtos)
 	writeJSON(w, http.StatusOK, adminUsersListResp{
 		Items: dtos,
 		Total: total,
@@ -283,8 +325,10 @@ func (h *AdminUsersHandler) Search(w http.ResponseWriter, r *http.Request) {
 		if tgID, err := strconv.ParseInt(needle, 10, 64); err == nil && tgID > 0 {
 			cust, err := h.customers.FindByTelegramId(ctx, tgID)
 			if err == nil && cust != nil {
+				single := []adminCustomerDTO{h.customerDTOWithStatus(ctx, cust)}
+				h.fillPanelLogins(ctx, single)
 				writeJSON(w, http.StatusOK, adminUsersSearchResp{
-					Items: []adminCustomerDTO{h.customerDTOWithStatus(ctx, cust)},
+					Items: single,
 				})
 				return
 			}
@@ -313,6 +357,7 @@ func (h *AdminUsersHandler) Search(w http.ResponseWriter, r *http.Request) {
 		dtos = append(dtos, h.customerDTOWithStatus(ctx, &merged[i]))
 	}
 
+	h.fillPanelLogins(ctx, dtos)
 	writeJSON(w, http.StatusOK, adminUsersSearchResp{Items: dtos})
 }
 
@@ -421,7 +466,7 @@ func (h *AdminUsersHandler) SetExpire(w http.ResponseWriter, r *http.Request) {
 	}
 	if rwUser != nil {
 		req := &remnawave.UpdateUserRequest{
-			UUID:     &rwUser.UUID,
+			ID:       &rwUser.ID,
 			Status:   "ACTIVE",
 			ExpireAt: &parsed,
 		}
@@ -561,7 +606,7 @@ func (h *AdminUsersHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out, err := h.rw.PatchUser(ctx, &remnawave.UpdateUserRequest{
-		UUID:   &rwUser.UUID,
+		ID:     &rwUser.ID,
 		Status: "DISABLED",
 	})
 	if err != nil {
@@ -619,7 +664,7 @@ func (h *AdminUsersHandler) Enable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out, err := h.rw.PatchUser(ctx, &remnawave.UpdateUserRequest{
-		UUID:   &rwUser.UUID,
+		ID:     &rwUser.ID,
 		Status: "ACTIVE",
 	})
 	if err != nil {
@@ -667,7 +712,7 @@ func (h *AdminUsersHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("admin users: delete — rw lookup failed", "error", findErr.Error())
 	}
 	if rwUser != nil {
-		if delErr := h.rw.DeleteUser(ctx, rwUser.UUID); delErr != nil {
+		if delErr := h.rw.DeleteUser(ctx, rwUser.ID); delErr != nil {
 			slog.Error("admin users: delete — rw delete failed", "error", delErr.Error())
 			http.Error(w, "remnawave delete failed", http.StatusInternalServerError)
 			return
@@ -724,7 +769,7 @@ func (h *AdminUsersHandler) ResetTraffic(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.rw.ResetUserTraffic(ctx, rwUser.UUID); err != nil {
+	if err := h.rw.ResetUserTraffic(ctx, rwUser.ID); err != nil {
 		slog.Error("admin users: reset traffic — rw failed", "error", err.Error())
 		http.Error(w, "remnawave operation failed", http.StatusInternalServerError)
 		return
@@ -901,8 +946,8 @@ func starsRubEquiv(starsSum float64, rubPerStar float64) float64 {
 }
 
 type adminReferralDTO struct {
-	TelegramID       int64   `json:"telegram_id"`
-	TelegramUsername  *string `json:"telegram_username"`
+	TelegramID       int64   `json:"telegram_id,string"`
+	TelegramUsername *string `json:"telegram_username"`
 	Active           bool    `json:"active"`
 	Email            *string `json:"email"`
 }
@@ -988,10 +1033,10 @@ func (h *AdminUsersHandler) Referrals(w http.ResponseWriter, r *http.Request) {
 	dtos := make([]adminReferralDTO, 0, len(summaries))
 	for _, s := range summaries {
 		dtos = append(dtos, adminReferralDTO{
-			TelegramID:      s.TelegramID,
+			TelegramID:       s.TelegramID,
 			TelegramUsername: s.TelegramUsername,
-			Active:          s.Active,
-			Email:           s.Email,
+			Active:           s.Active,
+			Email:            s.Email,
 		})
 	}
 
