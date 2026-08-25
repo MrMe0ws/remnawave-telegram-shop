@@ -31,6 +31,7 @@ type config struct {
 	moynalogURL, moynalogUsername, moynalogPassword                              string
 	moynalogProxyURL                                                             string
 	telegramProxyURL                                                             string
+	yookasaProxyURL                                                              string
 	trafficLimit, trialTrafficLimit                                              int
 	feedbackURL                                                                  string
 	channelURL                                                                   string
@@ -540,6 +541,17 @@ func MoynalogProxyURL() string {
 
 func TelegramProxyURL() string {
 	return conf.telegramProxyURL
+}
+
+// YookasaProxyURL — прокси только для исходящих запросов к API ЮKassa.
+// Нужен, когда сеть до api.yookassa.ru нестабильна или блокируется
+// (например, сервер вне РФ). Поддерживаются http://, https:// и socks5://
+// с basic-авторизацией в URL. Пусто — прямое соединение.
+//
+// Намеренно отдельная переменная, а не глобальный HTTPS_PROXY: последний увёл бы
+// в прокси и обращения к панели Remnawave по внутреннему docker-DNS и сломал бы их.
+func YookasaProxyURL() string {
+	return conf.yookasaProxyURL
 }
 
 func IsMoynalogEnabled() bool {
@@ -1053,6 +1065,7 @@ func InitConfig() {
 	}
 
 	conf.telegramProxyURL = envStringDefault("TELEGRAM_PROXY_URL", "")
+	conf.yookasaProxyURL = envStringDefault("YOOKASA_PROXY_URL", "")
 
 	conf.salesMode = strings.ToLower(envStringDefault("SALES_MODE", "classic"))
 	if conf.salesMode != "classic" && conf.salesMode != "tariffs" {

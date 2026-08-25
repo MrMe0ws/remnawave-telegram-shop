@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
+	"net/url"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -76,9 +79,51 @@ func NewClient(baseURL, shopID, secretKey string) *Client {
 	encodedAuth := base64.StdEncoding.EncodeToString([]byte(auth))
 
 	return &Client{
-		httpClient: &http.Client{},
+		httpClient: newHTTPClient(),
 		baseURL:    baseURL,
 		authHeader: fmt.Sprintf("Basic %s", encodedAuth),
+	}
+}
+
+// newHTTPClient собирает HTTP-клиент для API ЮKassa, при необходимости через прокси.
+//
+// Прокси задаётся YOOKASA_PROXY_URL и применяется ТОЛЬКО к запросам ЮKassa.
+// Глобальный HTTPS_PROXY здесь не подходит: он увёл бы в прокси и вызовы панели
+// Remnawave по внутреннему docker-DNS, которые снаружи не резолвятся.
+//
+// Схемы: http, https, socks5 (в т.ч. с логином/паролем в URL) — их понимает
+// http.Transport напрямую. Таймаут ограничивает всю операцию, включая TLS:
+// без него зависший proxy держал бы HTTP-хендлер кабинета до его собственного таймаута.
+func newHTTPClient() *http.Client {
+	const timeout = 30 * time.Second
+
+	raw := config.YookasaProxyURL()
+	if raw == "" {
+		return &http.Client{Timeout: timeout}
+	}
+
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		slog.Error("Invalid YOOKASA_PROXY_URL, falling back to direct connection", "error", err)
+		return &http.Client{Timeout: timeout}
+	}
+	// url.Parse не считает ошибкой строку без схемы ("host:1080"), но http.Transport
+	// на таком значении завалит КАЖДЫЙ запрос с "unsupported protocol scheme".
+	// Тихая деградация до прямого соединения понятнее, чем сломанные платежи.
+	switch strings.ToLower(parsed.Scheme) {
+	case "http", "https", "socks5", "socks5h":
+	default:
+		slog.Error("YOOKASA_PROXY_URL has unsupported scheme, falling back to direct connection",
+			"scheme", parsed.Scheme, "hint", "ожидается http://, https:// или socks5://")
+		return &http.Client{Timeout: timeout}
+	}
+
+	slog.Info("YooKassa requests go through proxy", "scheme", parsed.Scheme, "host", parsed.Host)
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(parsed),
+		},
 	}
 }
 
