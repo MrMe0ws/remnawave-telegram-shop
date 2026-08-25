@@ -89,6 +89,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `YOOKASA_ENABLED` | Вкл/выкл |
 | `YOOKASA_SECRET_KEY` / `YOOKASA_SHOP_ID` / `YOOKASA_URL` / `YOOKASA_EMAIL` | Учётные данные API |
 | `YOOKASA_WEBHOOK_URL` | Путь для вебхука (без домена). Пусто — только поллинг. См. [payments.md](./payments.md) |
+| `YOOKASA_PROXY_URL` | Прокси **только** для запросов к API ЮKassa: `http://`, `https://` или `socks5://`, можно с `логин:пароль@`. Пусто — прямое соединение. Нужен, если сеть до `api.yookassa.ru` нестабильна или блокируется. См. [payments.md](./payments.md#прокси-для-юkassa) |
 
 ---
 

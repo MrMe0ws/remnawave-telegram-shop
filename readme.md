@@ -10,7 +10,7 @@
 
 **Канал проекта:** [Meows VPN Shop | Канал](https://t.me/meows_vpn_bot)
 
-**Совместимость:** Remnawave `2.8.*` ↔ бот `4.x`. Полная матрица — [documentation/compatibility.md](documentation/compatibility.md).
+**Совместимость:** Remnawave `3.3.*` ↔ бот `5.x`. Панель `2.8.*` — бот `4.x` (заморожен). Полная матрица — [documentation/compatibility.md](documentation/compatibility.md).
 
 ---
 
