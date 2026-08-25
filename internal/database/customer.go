@@ -24,7 +24,7 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 
 // customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
 // Порядок столбцов синхронизирован со всеми Scan-вызовами и с struct Customer.
-const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only, legal_accepted_at"
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only, legal_accepted_at, remnawave_user_id, remnawave_short_uuid"
 
 type Customer struct {
 	ID                       int64      `db:"id"`
@@ -46,6 +46,12 @@ type Customer struct {
 	IsWebOnly bool `db:"is_web_only"`
 	// LegalAcceptedAt — момент принятия политики/оферты в Telegram-боте (NULL = gate).
 	LegalAcceptedAt *time.Time `db:"legal_accepted_at"`
+	// RemnawaveUserID — числовой id профиля в панели Remnawave 3.x.
+	// NULL означает «ещё не резолвили» — заполняется лениво при первом обращении,
+	// см. remnawave.ResolveUserForCustomer. Не путать с Customer.ID.
+	RemnawaveUserID *int64 `db:"remnawave_user_id"`
+	// RemnawaveShortUUID — shortUuid профиля панели (используется в публичных ссылках).
+	RemnawaveShortUUID *string `db:"remnawave_short_uuid"`
 }
 
 func scanCustomer(sc interface{ Scan(dest ...any) error }, c *Customer) error {
@@ -65,6 +71,8 @@ func scanCustomer(sc interface{ Scan(dest ...any) error }, c *Customer) error {
 		&c.TelegramUsername,
 		&c.IsWebOnly,
 		&c.LegalAcceptedAt,
+		&c.RemnawaveUserID,
+		&c.RemnawaveShortUUID,
 	)
 }
 
@@ -265,6 +273,41 @@ func (cr *CustomerRepository) SetLegalAcceptedAt(ctx context.Context, customerID
 	return cr.UpdateFields(ctx, customerID, map[string]interface{}{
 		"legal_accepted_at": at,
 	})
+}
+
+// SetRemnawaveIdentity сохраняет идентификатор профиля панели Remnawave у клиента.
+//
+// Вызывается лениво: как только профиль резолвится любым способом (stream по
+// telegram_id, username, subscription_link), его id кладётся сюда, и дальше
+// адресация идёт напрямую по нему. Схема самовосстанавливающаяся — если запись
+// оказалась неверной, следующий резолв её перезапишет.
+//
+// Ошибка записи намеренно НЕ должна ронять вызывающую операцию: это кеш,
+// а не источник истины. За это отвечает вызывающий код.
+func (cr *CustomerRepository) SetRemnawaveIdentity(ctx context.Context, customerID int64, remnawaveUserID int64, shortUUID string) error {
+	if customerID <= 0 || remnawaveUserID <= 0 {
+		return nil
+	}
+	// Частичный уникальный индекс не даст привязать один профиль панели к двум
+	// клиентам. Если такое случилось (например, после merge аккаунтов), снимаем
+	// привязку с прежнего владельца — актуальным считается последний резолв.
+	if _, err := cr.pool.Exec(ctx,
+		`UPDATE customer SET remnawave_user_id = NULL, remnawave_short_uuid = NULL
+		 WHERE remnawave_user_id = $1 AND id <> $2`,
+		remnawaveUserID, customerID); err != nil {
+		return fmt.Errorf("clear stale remnawave identity: %w", err)
+	}
+
+	var short *string
+	if s := strings.TrimSpace(shortUUID); s != "" {
+		short = &s
+	}
+	if _, err := cr.pool.Exec(ctx,
+		`UPDATE customer SET remnawave_user_id = $2, remnawave_short_uuid = $3 WHERE id = $1`,
+		customerID, remnawaveUserID, short); err != nil {
+		return fmt.Errorf("set remnawave identity: %w", err)
+	}
+	return nil
 }
 
 // IncrementLoyaltyXP добавляет накопленный XP лояльности после успешной оплаты.
@@ -927,11 +970,24 @@ func (cr *CustomerRepository) SearchForAdmin(ctx context.Context, needle string,
 	esc := escapeSQLLikePattern(needle)
 	pattern := "%" + esc + "%"
 
+	// Поиск по email аккаунта кабинета — единственный способ найти web-клиента
+	// до первой покупки: у него нет ни @username, ни профиля в панели, а
+	// синтетический telegram_id админ наизусть не помнит. Логин в панели
+	// выглядит как "<id>_<local-part email>", поэтому подстрока email его находит.
+	// EXISTS, а не JOIN: у клиента может быть несколько связанных аккаунтов,
+	// и JOIN размножил бы строки.
+	const cabinetEmailMatch = `EXISTS (
+		SELECT 1 FROM cabinet_account_customer_link l
+		JOIN cabinet_account a ON a.id = l.account_id
+		WHERE l.customer_id = customer.id AND a.email ILIKE ?
+	)`
+
 	buildSelect := sq.Select(customerSelectColumns).
 		From("customer").
 		Where(sq.Or{
 			sq.Expr("telegram_username ILIKE ?", pattern),
 			sq.Expr("CAST(telegram_id AS TEXT) LIKE ?", pattern),
+			sq.Expr(cabinetEmailMatch, pattern),
 		}).
 		OrderBy("id DESC").
 		Limit(uint64(limit)).

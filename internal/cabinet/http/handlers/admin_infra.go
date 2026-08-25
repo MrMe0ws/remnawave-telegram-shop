@@ -163,10 +163,22 @@ func (h *AdminInfraHandler) DeleteNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := h.rw.DeleteInfraBillingNode(r.Context(), id)
-	if err != nil {
+	if err := h.rw.DeleteInfraBillingNode(r.Context(), id); err != nil {
 		slog.Error("admin infra: delete node", "error", err)
 		http.Error(w, "failed to delete node", http.StatusInternalServerError)
+		return
+	}
+	// Панель 3.x отвечает на DELETE 204 без тела, а прежний контракт отдавал список —
+	// перечитываем его, чтобы форма ответа не менялась.
+	//
+	// Сбой перечитывания НЕ делает операцию неуспешной: нода уже удалена, и ответ 500
+	// показал бы админу «удаление не удалось», после чего повторная попытка упёрлась бы
+	// в 404. SPA тело всё равно игнорирует — после мутации он инвалидирует кеш
+	// и запрашивает список сам.
+	body, err := h.rw.GetInfraBillingNodes(r.Context())
+	if err != nil {
+		slog.Error("admin infra: nodes reload after successful delete failed (non-fatal)", "error", err)
+		writeJSON(w, http.StatusOK, remnawave.InfraBillingNodesBody{})
 		return
 	}
 	writeJSON(w, http.StatusOK, body)

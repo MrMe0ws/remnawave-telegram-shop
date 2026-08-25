@@ -31,7 +31,7 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	}
 
 	// Получаем информацию о пользователе и лимите устройств
-	userUuid, deviceLimit, err := h.syncService.GetRemnawaveClient().GetUserInfo(ctx, callback.From.ID)
+	userID, deviceLimit, err := h.syncService.GetRemnawaveClient().GetUserInfo(ctx, callback.From.ID)
 	if err != nil {
 		slog.Error("Error getting user info", err)
 
@@ -63,8 +63,8 @@ func (h Handler) DevicesCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		deviceLimit = config.GetHwidFallbackDeviceLimit()
 	}
 
-	// Получаем список устройств пользователя по UUID
-	devices, err := h.syncService.GetRemnawaveClient().GetUserDevicesByUuid(ctx, userUuid)
+	// Получаем список устройств пользователя по id
+	devices, err := h.syncService.GetRemnawaveClient().GetUserDevices(ctx, userID)
 	if err != nil {
 		slog.Error("Error getting user devices", err)
 		_, err = editCallbackOriginToHTMLText(ctx, b, callback.Message.Message, h.translation.GetText(langCode, "devices_error"), models.ParseModeHTML, models.InlineKeyboardMarkup{
@@ -167,7 +167,7 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 	}
 
 	// Получаем UUID пользователя
-	userUuid, _, err := h.syncService.GetRemnawaveClient().GetUserInfo(ctx, callback.From.ID)
+	userID, _, err := h.syncService.GetRemnawaveClient().GetUserInfo(ctx, callback.From.ID)
 	if err != nil {
 		slog.Error("Error getting user info", err)
 		_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
@@ -182,7 +182,7 @@ func (h Handler) DeleteDeviceCallbackHandler(ctx context.Context, b *bot.Bot, up
 	}
 
 	// Удаляем устройство
-	err = h.syncService.GetRemnawaveClient().DeleteUserDevice(ctx, userUuid, hwid)
+	err = h.syncService.GetRemnawaveClient().DeleteUserDevice(ctx, userID, hwid)
 	if err != nil {
 		slog.Error("Error deleting device", err)
 		_, err = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{

@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/utils"
 	"strconv"
@@ -135,14 +136,23 @@ func (r *Client) doRequest(ctx context.Context, method, path string, body any) (
 }
 
 func (r *Client) doJSON(ctx context.Context, method, path string, body, result any) error {
-	respBody, _, err := r.doRequest(ctx, method, path, body)
+	respBody, status, err := r.doRequest(ctx, method, path, body)
 	if err != nil {
 		return err
 	}
-	if result != nil {
-		if err := json.Unmarshal(respBody, result); err != nil {
-			return fmt.Errorf("decode response: %w", err)
-		}
+	// Remnawave 3.0.0: DELETE отвечает 204, фоновые операции — 202, и оба без тела.
+	// Такие вызовы передают result == nil и выходят здесь.
+	if result == nil {
+		return nil
+	}
+	// Если тело ждали, а его нет — это ошибка, а не успех. Молча вернуть нулевую
+	// структуру нельзя: вызывающий записал бы в БД пустой subscription_link
+	// и expire_at = 0001-01-01, то есть тихо испортил бы подписку клиента.
+	if len(bytes.TrimSpace(respBody)) == 0 {
+		return fmt.Errorf("empty response body for %s %s (status %d)", method, path, status)
+	}
+	if err := json.Unmarshal(respBody, result); err != nil {
+		return fmt.Errorf("decode response: %w", err)
 	}
 	return nil
 }
@@ -160,25 +170,13 @@ func (r *Client) Ping(ctx context.Context) error {
 // Users — list
 // ---------------------------------------------------------------------------
 
+// GetUsers выгружает всех пользователей панели.
+//
+// Идёт через /api/users/stream, а не через offset-пагинацию /api/users:
+// одна кодовая ветка пагинации на весь клиент и никакого пропуска записей,
+// если список меняется между страницами.
 func (r *Client) GetUsers(ctx context.Context) ([]User, error) {
-	const pageSize = 250
-	var users []User
-
-	for offset := 0; ; offset += pageSize {
-		path := fmt.Sprintf("/api/users?size=%d&start=%d", pageSize, offset)
-		var page getAllUsersResponse
-		if err := r.doJSON(ctx, http.MethodGet, path, nil, &page); err != nil {
-			return nil, fmt.Errorf("fetch users at offset %d: %w", offset, err)
-		}
-
-		users = append(users, page.Response.Users...)
-
-		if len(page.Response.Users) < pageSize {
-			break
-		}
-	}
-
-	return users, nil
+	return r.streamUsers(ctx, "", 0)
 }
 
 func matchUserAdminSearch(u User, rawNeedle, needleLower string) bool {
@@ -234,13 +232,92 @@ func (r *Client) FindUsersMatchingAdminSearch(ctx context.Context, needle string
 // Users — get by Telegram ID
 // ---------------------------------------------------------------------------
 
+// streamUsers постранично забирает пользователей через GET /api/users/stream.
+//
+// Remnawave 3.0.0 удалил точечные lookup-эндпоинты (by-telegram-id, by-email,
+// by-tag, by-id) и заменил их одним stream с фильтрами. filters — уже готовые
+// query-параметры (например "telegramId=123"); пустая строка = выгрузить всех.
+//
+// Пагинация курсорная и асимметричная по типам: в запрос cursor уходит как
+// число, а в ответе nextCursor — строка. Поэтому курсор здесь строка и
+// подставляется как есть.
+func (r *Client) streamUsers(ctx context.Context, filter string, limit int) ([]User, error) {
+	const pageSize = 250
+	// Потолок страниц: 250 000 пользователей — заведомо больше любой реальной панели.
+	// Нужен на случай, если панель перестанет двигать курсор (например, не поймёт
+	// его формат) и будет отдавать первую страницу с hasMore=true: без потолка
+	// цикл копил бы страницы до OOM. Лучше упасть с внятной ошибкой.
+	const maxPages = 1000
+
+	var (
+		users  []User
+		cursor *string
+		seen   = make(map[string]struct{}, 8)
+	)
+
+	for page := 0; ; page++ {
+		if page >= maxPages {
+			return nil, fmt.Errorf("stream users (%s): превышен потолок в %d страниц — панель не двигает курсор", filter, maxPages)
+		}
+		path := fmt.Sprintf("/api/users/stream?size=%d", pageSize)
+		if filter != "" {
+			path += "&" + filter
+		}
+		if cursor != nil && *cursor != "" {
+			path += "&cursor=" + url.QueryEscape(*cursor)
+		}
+
+		var page apiResponse[usersStreamBody]
+		if err := r.doJSON(ctx, http.MethodGet, path, nil, &page); err != nil {
+			return nil, fmt.Errorf("stream users (%s): %w", filter, err)
+		}
+
+		users = append(users, page.Response.Users...)
+
+		if limit > 0 && len(users) >= limit {
+			return users[:limit], nil
+		}
+		// hasMore — основной признак конца; nextCursor страхует от зацикливания,
+		// если панель однажды вернёт hasMore=true без курсора.
+		if !page.Response.HasMore || page.Response.NextCursor == nil || *page.Response.NextCursor == "" {
+			return users, nil
+		}
+		// Курсор обязан двигаться. Повтор уже виденного значения означает, что
+		// панель его не приняла, — дальше был бы бесконечный цикл.
+		next := *page.Response.NextCursor
+		if _, repeated := seen[next]; repeated {
+			return nil, fmt.Errorf("stream users (%s): курсор %q повторился — панель его не принимает", filter, next)
+		}
+		seen[next] = struct{}{}
+		cursor = page.Response.NextCursor
+	}
+}
+
+// getUsersByTelegramID ищет пользователей панели по Telegram ID.
+// До 3.0.0 это был GET /api/users/by-telegram-id/{id}; теперь — фильтр stream.
+//
+// Результат дополнительно фильтруется на нашей стороне. Раньше отбор гарантировал
+// сам эндпоинт — он по определению возвращал только нужного пользователя.
+// Теперь это query-параметр, и если панель его однажды проигнорирует, сюда придут
+// ВСЕ пользователи, а findUserBySuffix отдаст первого попавшегося: продление,
+// смена лимита и удаление ушли бы на чужой аккаунт. Цена проверки — один проход
+// по списку, поэтому доверять фильтру на слово не будем.
 func (r *Client) getUsersByTelegramID(ctx context.Context, telegramID int64) ([]User, error) {
-	var resp apiResponse[[]User]
-	err := r.doJSON(ctx, http.MethodGet, "/api/users/by-telegram-id/"+strconv.FormatInt(telegramID, 10), nil, &resp)
+	users, err := r.streamUsers(ctx, "telegramId="+strconv.FormatInt(telegramID, 10), 0)
 	if err != nil {
 		return nil, err
 	}
-	return resp.Response, nil
+	filtered := make([]User, 0, len(users))
+	for i := range users {
+		if users[i].TelegramID != nil && *users[i].TelegramID == telegramID {
+			filtered = append(filtered, users[i])
+		}
+	}
+	if len(filtered) != len(users) {
+		slog.Warn("remnawave: stream вернул чужие профили при фильтре по telegramId",
+			"requested", len(users), "matched", len(filtered))
+	}
+	return filtered, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -343,22 +420,41 @@ func (r *Client) ExtendSubscriptionByDaysPreserveSquads(ctx context.Context, cus
 	if existingUser == nil {
 		return r.createUser(ctx, customerID, telegramID, config.TrafficLimit(), days, false)
 	}
-	newExpire := getNewExpire(days, existingUser.ExpireAt)
-	userUpdate := &UpdateUserRequest{
-		UUID:     &existingUser.UUID,
-		Status:   "ACTIVE",
-		ExpireAt: &newExpire,
-	}
-	var resp apiResponse[User]
-	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", userUpdate, &resp); err != nil {
+	// Дату считает панель (POST /actions/extend, 3.0.0+), а не мы: это убирает
+	// гонку read-modify-write, когда бот и кабинет продлевают одного клиента
+	// одновременно. Семантика проверена на стенде 3.3.2 и совпадает с
+	// getNewExpire: истёкшему считается от now, активному — от expireAt.
+	updated, err := r.ExtendUserDays(ctx, existingUser.ID, days)
+	if err != nil {
 		return nil, err
 	}
+
+	// Но статус extend чинит не всегда: EXPIRED он переводит в ACTIVE, а
+	// DISABLED и LIMITED оставляет как есть (проверено на стенде). Без этого
+	// клиент с превышенным трафиком или заблокированный админом оплатил бы
+	// продление и остался отрезанным. Патчим только статус, не трогая expireAt,
+	// поэтому гонка по дате не возвращается.
+	if updated.Status != "ACTIVE" {
+		patched, perr := r.PatchUser(ctx, &UpdateUserRequest{ID: &updated.ID, Status: "ACTIVE"})
+		if perr != nil {
+			// Ошибку наверх НЕ поднимаем осознанно: дни панель уже начислила.
+			// Вызывающие (промокоды, рефералка, фортуна, админ-выдача) на ошибке
+			// не сохраняют новый expire_at и могут повторить операцию — тогда
+			// клиент получит дни второй раз. Двойное начисление необратимо,
+			// а неснятый статус чинится следующей операцией или админом.
+			slog.Error("extend succeeded but reactivation failed: user keeps non-active status",
+				"user_id", updated.ID, "status", updated.Status, "error", perr)
+		} else {
+			updated = patched
+		}
+	}
+
 	tgid := ""
 	if existingUser.TelegramID != nil {
 		tgid = strconv.FormatInt(*existingUser.TelegramID, 10)
 	}
 	slog.Info("extended subscription (expire only)", "telegramId", utils.MaskHalf(tgid), "days", days)
-	return &resp.Response, nil
+	return updated, nil
 }
 
 // ShrinkSubscriptionByDaysPreserveSquads уменьшает expire_at на days (положительное число дней),
@@ -376,7 +472,7 @@ func (r *Client) ShrinkSubscriptionByDaysPreserveSquads(ctx context.Context, cus
 	}
 	newExpire := getNewExpire(-days, existingUser.ExpireAt)
 	userUpdate := &UpdateUserRequest{
-		UUID:     &existingUser.UUID,
+		ID:       &existingUser.ID,
 		Status:   "ACTIVE",
 		ExpireAt: &newExpire,
 	}
@@ -504,7 +600,7 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 	tl := int64(trafficLimit)
 	squadsCopy := append([]uuid.UUID(nil), squadIds...)
 	userUpdate := &UpdateUserRequest{
-		UUID:                 &existingUser.UUID,
+		ID:                   &existingUser.ID,
 		ExpireAt:             &newExpire,
 		Status:               "ACTIVE",
 		TrafficLimitBytes:    &tl,
@@ -634,13 +730,15 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 // User info & devices
 // ---------------------------------------------------------------------------
 
-func (r *Client) GetUserInfo(ctx context.Context, telegramId int64) (string, int, error) {
+// GetUserInfo возвращает id пользователя панели и его лимит устройств.
+// До 3.0.0 первым значением был uuid-строка; теперь числовой id.
+func (r *Client) GetUserInfo(ctx context.Context, telegramId int64) (int64, int, error) {
 	users, err := r.getUsersByTelegramID(ctx, telegramId)
 	if err != nil {
-		return "", 0, err
+		return 0, 0, err
 	}
 	if len(users) == 0 {
-		return "", 0, ErrUserNotFound
+		return 0, 0, ErrUserNotFound
 	}
 
 	user := findUserBySuffix(users, telegramId)
@@ -649,7 +747,7 @@ func (r *Client) GetUserInfo(ctx context.Context, telegramId int64) (string, int
 		deviceLimit = *user.HwidDeviceLimit
 	}
 
-	return user.UUID.String(), deviceLimit, nil
+	return user.ID, deviceLimit, nil
 }
 
 func (r *Client) GetUserTrafficInfo(ctx context.Context, telegramId int64) (*User, error) {
@@ -665,18 +763,69 @@ func (r *Client) GetUserTrafficInfo(ctx context.Context, telegramId int64) (*Use
 	return user, nil
 }
 
-// GetUserByUUID возвращает полную карточку пользователя панели GET /api/users/{uuid}.
-func (r *Client) GetUserByUUID(ctx context.Context, userUUID uuid.UUID) (*User, error) {
+// GetUserByID возвращает полную карточку пользователя панели GET /api/users/{userId}.
+func (r *Client) GetUserByID(ctx context.Context, userID int64) (*User, error) {
+	if userID <= 0 {
+		return nil, ErrUserNotFound
+	}
 	var resp apiResponse[User]
-	path := "/api/users/" + userUUID.String()
+	path := "/api/users/" + strconv.FormatInt(userID, 10)
 	if err := r.doJSON(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Response, nil
 }
 
+// ExtendUserDays продлевает подписку на N дней силами панели
+// (POST /api/users/{userId}/actions/extend, появился в 3.0.0).
+//
+// Отличие от PATCH-пути: панель считает новый expireAt сама, поэтому нет гонки
+// read-modify-write, когда бот и кабинет продлевают одного клиента одновременно.
+func (r *Client) ExtendUserDays(ctx context.Context, userID int64, days int) (*User, error) {
+	if userID <= 0 {
+		return nil, ErrUserNotFound
+	}
+	if days <= 0 {
+		return nil, fmt.Errorf("invalid days: %d", days)
+	}
+	var resp apiResponse[User]
+	path := fmt.Sprintf("/api/users/%d/actions/extend", userID)
+	if err := r.doJSON(ctx, http.MethodPost, path, &extendUserRequest{Days: days}, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Response, nil
+}
+
+// sanitizePatchStatus приводит статус к тому, что принимает PATCH /api/users.
+//
+// В Remnawave 3.x ответ панели может содержать ACTIVE, DISABLED, LIMITED или
+// EXPIRED, но на запись принимаются только первые два: LIMITED и EXPIRED панель
+// вычисляет сама и на PATCH отвечает 400 Validation failed.
+//
+// Вызывающие (админка бота и кабинета) часто читают карточку и отправляют её
+// обратно вместе с правкой тега/лимитов/сквадов — вместе с текущим статусом.
+// Без этой нормализации любая такая правка падала бы у клиента с превышенным
+// трафиком или истёкшей подпиской, то есть ровно у тех, кого правят чаще всего.
+//
+// Невалидный статус вычищается, а не подменяется на ACTIVE: смена тега не должна
+// молча снимать блокировку. Пустое поле не уходит в JSON (omitempty) —
+// статус остаётся тем, что вычислила панель.
+func sanitizePatchStatus(status string) string {
+	switch strings.ToUpper(strings.TrimSpace(status)) {
+	case "ACTIVE":
+		return "ACTIVE"
+	case "DISABLED":
+		return "DISABLED"
+	default:
+		return ""
+	}
+}
+
 // PatchUser применяет PATCH /api/users (тело UpdateUserRequest).
 func (r *Client) PatchUser(ctx context.Context, req *UpdateUserRequest) (*User, error) {
+	if req != nil {
+		req.Status = sanitizePatchStatus(req.Status)
+	}
 	var resp apiResponse[User]
 	if err := r.doJSON(ctx, http.MethodPatch, "/api/users", req, &resp); err != nil {
 		return nil, err
@@ -684,43 +833,49 @@ func (r *Client) PatchUser(ctx context.Context, req *UpdateUserRequest) (*User, 
 	return &resp.Response, nil
 }
 
-// DeleteUser удаляет пользователя в панели DELETE /api/users/{uuid}.
-func (r *Client) DeleteUser(ctx context.Context, userUUID uuid.UUID) error {
-	if userUUID == uuid.Nil {
-		return errors.New("nil user uuid")
+// DeleteUser удаляет пользователя в панели DELETE /api/users/{userId}.
+// В 3.0.0 эндпоинт отвечает 204 без тела — это обрабатывает doJSON.
+func (r *Client) DeleteUser(ctx context.Context, userID int64) error {
+	if userID <= 0 {
+		return errors.New("invalid user id")
 	}
-	return r.doJSON(ctx, http.MethodDelete, "/api/users/"+userUUID.String(), nil, nil)
+	return r.doJSON(ctx, http.MethodDelete, "/api/users/"+strconv.FormatInt(userID, 10), nil, nil)
 }
 
-func (r *Client) GetUserDevicesByUuid(ctx context.Context, userUuid string) ([]Device, error) {
+// GetUserDevices возвращает HWID-устройства пользователя
+// GET /api/hwid/devices/{userId} (был /{userUuid} до 3.0.0).
+func (r *Client) GetUserDevices(ctx context.Context, userID int64) ([]Device, error) {
+	if userID <= 0 {
+		return nil, ErrUserNotFound
+	}
 	var resp getUserDevicesResponse
-	if err := r.doJSON(ctx, http.MethodGet, "/api/hwid/devices/"+userUuid, nil, &resp); err != nil {
+	path := "/api/hwid/devices/" + strconv.FormatInt(userID, 10)
+	if err := r.doJSON(ctx, http.MethodGet, path, nil, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Response.Devices, nil
 }
 
-func (r *Client) DeleteUserDevice(ctx context.Context, userUuidStr string, hwid string) error {
-	userUuid, err := uuid.Parse(userUuidStr)
-	if err != nil {
-		return err
+// DeleteUserDevice отвязывает устройство POST /api/hwid/devices/delete.
+// Тело в 3.0.0 принимает userId вместо userUuid.
+func (r *Client) DeleteUserDevice(ctx context.Context, userID int64, hwid string) error {
+	if userID <= 0 {
+		return ErrUserNotFound
 	}
-
 	req := &deleteUserDeviceRequest{
-		Hwid:     hwid,
-		UserUuid: userUuid,
+		Hwid:   hwid,
+		UserID: userID,
 	}
-
 	return r.doJSON(ctx, http.MethodPost, "/api/hwid/devices/delete", req, nil)
 }
 
 // ResetUserTraffic обнуляет накопленный расход трафика у пользователя в панели; лимиты и стратегия сброса не меняются.
-// POST /api/users/{uuid}/actions/reset-traffic — см. https://docs.rw/api/#tag/users-controller/POST/api/users/{uuid}/actions/reset-traffic
-func (r *Client) ResetUserTraffic(ctx context.Context, userUUID uuid.UUID) error {
-	if userUUID == uuid.Nil {
+// POST /api/users/{userId}/actions/reset-traffic
+func (r *Client) ResetUserTraffic(ctx context.Context, userID int64) error {
+	if userID <= 0 {
 		return nil
 	}
-	path := fmt.Sprintf("/api/users/%s/actions/reset-traffic", userUUID.String())
+	path := fmt.Sprintf("/api/users/%d/actions/reset-traffic", userID)
 	return r.doJSON(ctx, http.MethodPost, path, nil, nil)
 }
 
@@ -738,7 +893,7 @@ func (r *Client) UpdateUserDeviceLimit(ctx context.Context, telegramId int64, ne
 	}
 
 	req := &UpdateUserRequest{
-		UUID:            &user.UUID,
+		ID:              &user.ID,
 		Status:          "ACTIVE",
 		HwidDeviceLimit: &newLimit,
 	}
@@ -764,7 +919,7 @@ func (r *Client) UpdateUserDeviceLimitByCustomer(ctx context.Context, customerID
 	}
 
 	req := &UpdateUserRequest{
-		UUID:            &user.UUID,
+		ID:              &user.ID,
 		Status:          "ACTIVE",
 		HwidDeviceLimit: &newLimit,
 	}

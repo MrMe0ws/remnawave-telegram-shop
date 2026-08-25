@@ -119,9 +119,9 @@ type meResp struct {
 	// TelegramID — числовой id пользователя Telegram, если известен (identity или customer без synthetic).
 	TelegramID *int64 `json:"telegram_id,omitempty"`
 	// GoogleMaskedEmail / YandexMaskedEmail / VKMaskedEmail — маска почты из identity (без сырого sub).
-	GoogleMaskedEmail  *string `json:"google_masked_email,omitempty"`
-	YandexMaskedEmail  *string `json:"yandex_masked_email,omitempty"`
-	VKMaskedEmail      *string `json:"vk_masked_email,omitempty"`
+	GoogleMaskedEmail *string `json:"google_masked_email,omitempty"`
+	YandexMaskedEmail *string `json:"yandex_masked_email,omitempty"`
+	VKMaskedEmail     *string `json:"vk_masked_email,omitempty"`
 	// IsAdmin — true, если linked Telegram identity == ADMIN_TELEGRAM_ID.
 	IsAdmin bool `json:"is_admin"`
 }
@@ -724,13 +724,13 @@ func (h *MeHandler) GetDevices(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: false, Devices: []meDeviceItem{}})
 		return
 	}
-	rwUser, err := cabsvc.ResolveRemnawaveCustomerUser(r.Context(), h.rw, c)
+	rwUser, err := cabsvc.ResolveRemnawaveCustomerUser(r.Context(), h.rw, h.customers, c)
 	limit := cabsvc.HwidDeviceLimitFromUser(rwUser)
 	if err != nil {
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: true, DeviceLimit: limit, Devices: []meDeviceItem{}})
 		return
 	}
-	devs, err := h.rw.GetUserDevicesByUuid(r.Context(), rwUser.UUID.String())
+	devs, err := h.rw.GetUserDevices(r.Context(), rwUser.ID)
 	if err != nil {
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: true, DeviceLimit: limit, Devices: []meDeviceItem{}})
 		return
@@ -798,12 +798,12 @@ func (h *MeHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "subscription not found", http.StatusNotFound)
 		return
 	}
-	rwUser, err := cabsvc.ResolveRemnawaveCustomerUser(r.Context(), h.rw, c)
+	rwUser, err := cabsvc.ResolveRemnawaveCustomerUser(r.Context(), h.rw, h.customers, c)
 	if err != nil {
 		http.Error(w, "subscription not found", http.StatusNotFound)
 		return
 	}
-	if err := h.rw.DeleteUserDevice(r.Context(), rwUser.UUID.String(), hwid); err != nil {
+	if err := h.rw.DeleteUserDevice(r.Context(), rwUser.ID, hwid); err != nil {
 		slog.Warn("me: delete device failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "delete device failed", http.StatusBadRequest)
 		return
@@ -954,8 +954,8 @@ func (h *MeHandler) PostAccountDelete(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				if user != nil {
-					if derr := h.rw.DeleteUser(r.Context(), user.UUID); derr != nil {
-						slog.Error("me: delete account: remnawave delete failed", "account_id", claims.AccountID, "user_uuid", user.UUID, "error", derr.Error())
+					if derr := h.rw.DeleteUser(r.Context(), user.ID); derr != nil {
+						slog.Error("me: delete account: remnawave delete failed", "account_id", claims.AccountID, "user_id", user.ID, "error", derr.Error())
 						http.Error(w, "failed to delete subscription", http.StatusBadGateway)
 						return
 					}

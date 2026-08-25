@@ -106,7 +106,7 @@ func (r *Client) updateUserWithTariffProfile(ctx context.Context, existingUser *
 	tl := profile.TrafficLimitBytes
 	squadsPatch := append([]uuid.UUID(nil), squadIds...)
 	userUpdate := &UpdateUserRequest{
-		UUID:                 &existingUser.UUID,
+		ID:                   &existingUser.ID,
 		ExpireAt:             &newExpire,
 		Status:               "ACTIVE",
 		TrafficLimitBytes:    &tl,

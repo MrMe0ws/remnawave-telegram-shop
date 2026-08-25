@@ -29,23 +29,23 @@ const (
 	cbInfraNodePickProv = "ifnt" // + providerUuid (4+36)
 	cbInfraNodePickNode = "ifnx" // + nodeUuid
 
-	cbInfraProvCreate   = "ifpc"
-	cbInfraProvDetail   = "ifpd"
-	cbInfraProvEditMenu = "ifpe"
-	cbInfraProvDelete      = "ifpk" // + uuid — запрос подтверждения удаления
-	cbInfraProvDeleteYes   = "ifpy" // + uuid — подтвердить удаление
-	cbInfraProvDeleteNo    = "ifpx" // + uuid — отмена
-	cbInfraProvWizName     = "ifpm" // + providerUuid — правка имени
-	cbInfraProvWizIcon     = "ifpv" // + providerUuid — favicon
-	cbInfraProvWizLogin    = "ifpl" // + providerUuid — loginUrl
+	cbInfraProvCreate    = "ifpc"
+	cbInfraProvDetail    = "ifpd"
+	cbInfraProvEditMenu  = "ifpe"
+	cbInfraProvDelete    = "ifpk" // + uuid — запрос подтверждения удаления
+	cbInfraProvDeleteYes = "ifpy" // + uuid — подтвердить удаление
+	cbInfraProvDeleteNo  = "ifpx" // + uuid — отмена
+	cbInfraProvWizName   = "ifpm" // + providerUuid — правка имени
+	cbInfraProvWizIcon   = "ifpv" // + providerUuid — favicon
+	cbInfraProvWizLogin  = "ifpl" // + providerUuid — loginUrl
 
-	cbInfraHistCreate    = "ifhc"
-	cbInfraHistPickProv  = "ifht" // + providerUuid — создание записи истории
-	cbInfraHistDelete    = "ifhk" // + recordUuid — удалить выбранную запись
+	cbInfraHistCreate     = "ifhc"
+	cbInfraHistPickProv   = "ifht" // + providerUuid — создание записи истории
+	cbInfraHistDelete     = "ifhk" // + recordUuid — удалить выбранную запись
 	cbInfraHistDeleteMenu = "ifhm" // меню выбора записи для удаления
-	cbInfraWizBackProv   = "ifbp"  // отмена мастера → список провайдеров
-	cbInfraWizBackNodes  = "ifbn"  // → список нод
-	cbInfraWizBackHist   = "ifbh"  // → история (текущая страница)
+	cbInfraWizBackProv    = "ifbp" // отмена мастера → список провайдеров
+	cbInfraWizBackNodes   = "ifbn" // → список нод
+	cbInfraWizBackHist    = "ifbh" // → история (текущая страница)
 )
 
 const infraUUIDCallbackLen = 4 + 36
@@ -422,7 +422,7 @@ func (h Handler) AdminInfraNodeCRUDRouter(ctx context.Context, b *bot.Bot, updat
 		if !ok {
 			return
 		}
-		if _, err := h.remnawaveClient.DeleteInfraBillingNode(ctx, bu); err != nil {
+		if err := h.remnawaveClient.DeleteInfraBillingNode(ctx, bu); err != nil {
 			h.editAdminInfraAPIError(ctx, b, msg, lang, err)
 			return
 		}

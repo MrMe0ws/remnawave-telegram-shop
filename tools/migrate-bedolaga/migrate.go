@@ -18,19 +18,19 @@ import (
 )
 
 type Migrator struct {
-	cfg      *Config
-	dryRun   bool
-	step     string
-	src      *sourceDB
-	target   *pgxpool.Pool
-	rw       *remnawave.Client
-	rep      *reporter
-	custRepo *database.CustomerRepository
+	cfg        *Config
+	dryRun     bool
+	step       string
+	src        *sourceDB
+	target     *pgxpool.Pool
+	rw         *remnawave.Client
+	rep        *reporter
+	custRepo   *database.CustomerRepository
 	tariffRepo *database.TariffRepository
-	refRepo  *database.ReferralRepository
-	accRepo  *cabrepo.AccountRepo
-	idRepo   *cabrepo.IdentityRepo
-	linkRepo *cabrepo.AccountCustomerLinkRepo
+	refRepo    *database.ReferralRepository
+	accRepo    *cabrepo.AccountRepo
+	idRepo     *cabrepo.IdentityRepo
+	linkRepo   *cabrepo.AccountCustomerLinkRepo
 
 	// bedolaga tariff id → our tariff id / slug / price 1m
 	tariffMap       map[int]int64
@@ -39,7 +39,6 @@ type Migrator struct {
 	cheapestPrice1m int
 
 	rwByTelegram map[int64]*remnawave.User
-	rwByUUID     map[string]*remnawave.User
 	rwByShort    map[string]*remnawave.User
 
 	// bedolaga user id → our customer telegram_id (for referrals)
@@ -63,7 +62,6 @@ func newMigrator(cfg *Config, dryRun bool, step string) (*Migrator, error) {
 		tariffPrice1m:   map[int]int{},
 		cheapestPrice1m: 0,
 		rwByTelegram:    map[int64]*remnawave.User{},
-		rwByUUID:        map[string]*remnawave.User{},
 		rwByShort:       map[string]*remnawave.User{},
 		bdgUserToTG:     map[int]int64{},
 	}, nil
@@ -154,7 +152,6 @@ func (m *Migrator) loadRemnawaveIndex(ctx context.Context) error {
 		if u.TelegramID != nil && *u.TelegramID != 0 {
 			m.rwByTelegram[*u.TelegramID] = u
 		}
-		m.rwByUUID[strings.ToLower(u.UUID.String())] = u
 		if u.ShortUUID != "" {
 			m.rwByShort[u.ShortUUID] = u
 		}
@@ -169,16 +166,10 @@ func (m *Migrator) resolveRW(u bedolagaUser, sub *bedolagaSub) (*remnawave.User,
 			return rw, "telegram_id"
 		}
 	}
-	if sub != nil && sub.RemnawaveUUID != nil && *sub.RemnawaveUUID != "" {
-		if rw := m.rwByUUID[strings.ToLower(*sub.RemnawaveUUID)]; rw != nil {
-			return rw, "subscription_uuid"
-		}
-	}
-	if u.RemnawaveUUID != nil && *u.RemnawaveUUID != "" {
-		if rw := m.rwByUUID[strings.ToLower(*u.RemnawaveUUID)]; rw != nil {
-			return rw, "user_uuid"
-		}
-	}
+	// Сопоставление по remnawave uuid больше невозможно: в панели 3.0.0 поле `uuid`
+	// у пользователя удалено, адресация идёт по числовому id. Записи Bedolaga,
+	// у которых есть только uuid и нет ни telegram_id, ни short_uuid, останутся
+	// несопоставленными и попадут в отчёт как unmatched.
 	if sub != nil && sub.RemnawaveShortUUID != nil && *sub.RemnawaveShortUUID != "" {
 		if rw := m.rwByShort[*sub.RemnawaveShortUUID]; rw != nil {
 			return rw, "short_uuid"
@@ -256,15 +247,15 @@ func (m *Migrator) stepTariffs(ctx context.Context) error {
 			status = "exists_updated"
 			if !m.dryRun {
 				upd := map[string]interface{}{
-					"name":                        name,
-					"sort_order":                  t.DisplayOrder,
-					"is_active":                   t.IsActive && !t.IsDaily,
+					"name":                         name,
+					"sort_order":                   t.DisplayOrder,
+					"is_active":                    t.IsActive && !t.IsDaily,
 					"device_limit":                 t.DeviceLimit,
-					"traffic_limit_bytes":         trafficBytes,
+					"traffic_limit_bytes":          trafficBytes,
 					"traffic_limit_reset_strategy": reset,
-					"active_internal_squad_uuids": squadStr,
-					"external_squad_uuid":         ext,
-					"tier_level":                  tier,
+					"active_internal_squad_uuids":  squadStr,
+					"external_squad_uuid":          ext,
+					"tier_level":                   tier,
 				}
 				if desc != nil {
 					upd["description"] = *desc
@@ -278,17 +269,17 @@ func (m *Migrator) stepTariffs(ctx context.Context) error {
 			}
 		} else if !m.dryRun {
 			nt := &database.Tariff{
-				Slug:                       slug,
-				Name:                       &name,
-				SortOrder:                  t.DisplayOrder,
-				IsActive:                   t.IsActive && !t.IsDaily,
-				DeviceLimit:                t.DeviceLimit,
-				TrafficLimitBytes:          trafficBytes,
-				TrafficLimitResetStrategy:  reset,
-				ActiveInternalSquadUUIDs:   squadStr,
-				ExternalSquadUUID:          ext,
-				TierLevel:                  &tier,
-				Description:                desc,
+				Slug:                      slug,
+				Name:                      &name,
+				SortOrder:                 t.DisplayOrder,
+				IsActive:                  t.IsActive && !t.IsDaily,
+				DeviceLimit:               t.DeviceLimit,
+				TrafficLimitBytes:         trafficBytes,
+				TrafficLimitResetStrategy: reset,
+				ActiveInternalSquadUUIDs:  squadStr,
+				ExternalSquadUUID:         ext,
+				TierLevel:                 &tier,
+				Description:               desc,
 			}
 			id, err := m.tariffRepo.CreateWithPrices(ctx, nt, rub, [4]*int{})
 			if err != nil {
@@ -811,9 +802,9 @@ func (m *Migrator) stepBalance(ctx context.Context) error {
 			continue
 		}
 		// ExpireAt only — never create users, never touch squads/status.
-		uid := rw.UUID
+		uid := rw.ID
 		req := &remnawave.UpdateUserRequest{
-			UUID:     &uid,
+			ID:       &uid,
 			ExpireAt: &newExpire,
 		}
 		if _, err := m.rw.PatchUser(ctx, req); err != nil {

@@ -7,12 +7,12 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/google/uuid"
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -63,9 +63,9 @@ type envelope struct {
 }
 
 type torrentBlockerData struct {
-	Node   nodePayload           `json:"node"`
-	User   remnawave.User        `json:"user"`
-	Report torrentBlockerReport  `json:"report"`
+	Node   nodePayload          `json:"node"`
+	User   remnawave.User       `json:"user"`
+	Report torrentBlockerReport `json:"report"`
 }
 
 type nodePayload struct {
@@ -158,12 +158,12 @@ func (h *Handler) handleTorrentReport(ctx context.Context, raw json.RawMessage) 
 	}
 
 	dedupKey := fmt.Sprintf("%s|%s|%s|%s",
-		data.User.UUID.String(),
+		strconv.FormatInt(data.User.ID, 10),
 		strings.TrimSpace(data.Node.UUID),
 		strings.TrimSpace(ar.IP),
 		ar.WillUnblockAt.UTC().Format(time.RFC3339Nano),
 	)
-	if data.User.UUID == uuid.Nil {
+	if data.User.ID == 0 {
 		dedupKey = fmt.Sprintf("%s|%s|%s|%s",
 			strings.TrimSpace(data.User.Username),
 			strings.TrimSpace(data.Node.UUID),
@@ -173,7 +173,7 @@ func (h *Handler) handleTorrentReport(ctx context.Context, raw json.RawMessage) 
 	}
 	if h.dedup.Has(dedupKey, h.now()) {
 		slog.Info("remnawave webhook: duplicate torrent report skipped",
-			"user_uuid", data.User.UUID.String(),
+			"user_id", data.User.ID,
 			"node_uuid", strings.TrimSpace(data.Node.UUID),
 		)
 		return nil
@@ -186,7 +186,7 @@ func (h *Handler) handleTorrentReport(ctx context.Context, raw json.RawMessage) 
 	if customer == nil {
 		slog.Warn("remnawave webhook: customer not found",
 			"username", data.User.Username,
-			"user_uuid", data.User.UUID.String(),
+			"user_id", data.User.ID,
 		)
 		return nil
 	}

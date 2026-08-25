@@ -10,10 +10,10 @@ import (
 
 func TestResolveRemnawaveCustomerUser_nilInputs(t *testing.T) {
 	c := &database.Customer{TelegramID: 1}
-	if _, err := ResolveRemnawaveCustomerUser(t.Context(), nil, c); err == nil {
+	if _, err := ResolveRemnawaveCustomerUser(t.Context(), nil, nil, c); err == nil {
 		t.Fatal("expected error for nil client")
 	}
-	if _, err := ResolveRemnawaveCustomerUser(t.Context(), &remnawave.Client{}, nil); err == nil {
+	if _, err := ResolveRemnawaveCustomerUser(t.Context(), &remnawave.Client{}, nil, nil); err == nil {
 		t.Fatal("expected error for nil customer")
 	}
 }
@@ -35,7 +35,7 @@ func TestResolveRemnawaveCustomerUser_usesWebOnlyPath(t *testing.T) {
 		t.Fatal("expected web-only sync path")
 	}
 	// Без HTTP к Remnawave — только проверяем, что nil client отлавливается до сети.
-	if _, err := ResolveRemnawaveCustomerUser(t.Context(), nil, c); err == nil {
+	if _, err := ResolveRemnawaveCustomerUser(t.Context(), nil, nil, c); err == nil {
 		t.Fatal("expected error")
 	}
 }

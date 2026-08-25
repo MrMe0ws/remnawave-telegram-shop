@@ -248,7 +248,7 @@ func (h Handler) adminApplyPanelExpireAt(ctx context.Context, cust *database.Cus
 		return nil, fmt.Errorf("no rw user")
 	}
 	req := &remnawave.UpdateUserRequest{
-		UUID:     &rwUser.UUID,
+		ID:       &rwUser.ID,
 		Status:   "ACTIVE",
 		ExpireAt: &exp,
 	}

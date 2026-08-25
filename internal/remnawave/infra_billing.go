@@ -187,13 +187,13 @@ func (r *Client) CreateInfraBillingNode(ctx context.Context, req CreateInfraBill
 }
 
 // DeleteInfraBillingNode DELETE /api/infra-billing/nodes/{uuid}.
-func (r *Client) DeleteInfraBillingNode(ctx context.Context, billingUUID uuid.UUID) (*InfraBillingNodesBody, error) {
+//
+// В Remnawave 3.0.0 эндпоинт отвечает 204 без тела (раньше отдавал обновлённый
+// список нод), поэтому возвращается только ошибка. Если вызывающему нужен
+// свежий список — пусть запросит GetInfraBillingNodes отдельно.
+func (r *Client) DeleteInfraBillingNode(ctx context.Context, billingUUID uuid.UUID) error {
 	path := fmt.Sprintf("/api/infra-billing/nodes/%s", billingUUID.String())
-	var resp apiResponse[InfraBillingNodesBody]
-	if err := r.doJSON(ctx, http.MethodDelete, path, nil, &resp); err != nil {
-		return nil, err
-	}
-	return &resp.Response, nil
+	return r.doJSON(ctx, http.MethodDelete, path, nil, nil)
 }
 
 // CreateInfraProvider POST /api/infra-billing/providers.

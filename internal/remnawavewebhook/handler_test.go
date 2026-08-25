@@ -17,7 +17,6 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/google/uuid"
 
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
@@ -94,10 +93,10 @@ func TestHandler_NotifiesOnTorrentReport(t *testing.T) {
 	secret := "secret"
 	fb := &fakeBot{}
 	h := NewHandler(secret, nil, fb, fakeTM{})
-	userUUID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	const userID int64 = 4242
 	h.resolveCustomer = func(_ context.Context, u remnawave.User) (*database.Customer, error) {
-		if u.UUID != userUUID {
-			t.Fatalf("unexpected uuid %s", u.UUID)
+		if u.ID != userID {
+			t.Fatalf("unexpected user id %d", u.ID)
 		}
 		return &database.Customer{ID: 42, TelegramID: 694614437, Language: "ru"}, nil
 	}
@@ -110,7 +109,7 @@ func TestHandler_NotifiesOnTorrentReport(t *testing.T) {
 		"data": map[string]any{
 			"node": map[string]any{"uuid": "node-1", "name": "Латвия"},
 			"user": map[string]any{
-				"uuid":       userUUID.String(),
+				"id":         userID,
 				"username":   "42_694614437",
 				"telegramId": 694614437,
 			},

@@ -38,9 +38,8 @@ func IsUserConnected(ctx context.Context, rw *remnawave.Client, telegramID int64
 	}
 
 	// Проверка 3: наличие устройств
-	uuidStr := user.UUID.String()
-	if uuidStr != "" && uuidStr != "00000000-0000-0000-0000-000000000000" {
-		devices, err := rw.GetUserDevicesByUuid(ctx, uuidStr)
+	if user.ID > 0 {
+		devices, err := rw.GetUserDevices(ctx, user.ID)
 		if err == nil && len(devices) > 0 {
 			return true, nil
 		}

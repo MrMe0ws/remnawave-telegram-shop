@@ -27,20 +27,20 @@ type adminSquadDTO struct {
 }
 
 type adminRWPanelDTO struct {
-	UUID                 string           `json:"uuid"`
-	Username             string           `json:"username"`
-	Status               string           `json:"status"`
-	SubscriptionURL      string           `json:"subscription_url"`
-	ExpireAt             *string          `json:"expire_at"`
-	TrafficUsedBytes     float64          `json:"traffic_used_bytes"`
-	TrafficLimitBytes    int64            `json:"traffic_limit_bytes"`
-	TrafficLimitStrategy string           `json:"traffic_limit_strategy"`
-	HwidDeviceLimit      *int             `json:"hwid_device_limit"`
-	Description          *string          `json:"description"`
-	Tag                  *string          `json:"tag"`
-	LastTrafficResetAt   *string          `json:"last_traffic_reset_at"`
-	OnlineAt             *string          `json:"online_at"`
-	ActiveSquads         []adminSquadDTO  `json:"active_squads"`
+	ID                   int64           `json:"id"`
+	Username             string          `json:"username"`
+	Status               string          `json:"status"`
+	SubscriptionURL      string          `json:"subscription_url"`
+	ExpireAt             *string         `json:"expire_at"`
+	TrafficUsedBytes     float64         `json:"traffic_used_bytes"`
+	TrafficLimitBytes    int64           `json:"traffic_limit_bytes"`
+	TrafficLimitStrategy string          `json:"traffic_limit_strategy"`
+	HwidDeviceLimit      *int            `json:"hwid_device_limit"`
+	Description          *string         `json:"description"`
+	Tag                  *string         `json:"tag"`
+	LastTrafficResetAt   *string         `json:"last_traffic_reset_at"`
+	OnlineAt             *string         `json:"online_at"`
+	ActiveSquads         []adminSquadDTO `json:"active_squads"`
 }
 
 type adminTariffBriefDTO struct {
@@ -61,7 +61,7 @@ type adminUserPanelResp struct {
 
 func mapRWToPanelDTO(rw *remnawave.User) adminRWPanelDTO {
 	dto := adminRWPanelDTO{
-		UUID:                 rw.UUID.String(),
+		ID:                   rw.ID,
 		Username:             rw.Username,
 		Status:               rw.Status,
 		SubscriptionURL:      rw.SubscriptionUrl,
@@ -214,7 +214,7 @@ func (h *AdminUsersHandler) SetSquads(w http.ResponseWriter, r *http.Request) {
 		st = "ACTIVE"
 	}
 	out, err := h.rw.PatchUser(ctx, &remnawave.UpdateUserRequest{
-		UUID:                 &rw.UUID,
+		ID:                   &rw.ID,
 		Status:               st,
 		ActiveInternalSquads: &uuids,
 	})
@@ -266,7 +266,7 @@ func (h *AdminUsersHandler) SetTraffic(w http.ResponseWriter, r *http.Request) {
 	}
 	limit := body.LimitBytes
 	out, err := h.rw.PatchUser(ctx, &remnawave.UpdateUserRequest{
-		UUID:              &rw.UUID,
+		ID:                &rw.ID,
 		Status:            st,
 		TrafficLimitBytes: &limit,
 	})
@@ -326,7 +326,7 @@ func (h *AdminUsersHandler) SetStrategy(w http.ResponseWriter, r *http.Request) 
 		st = "ACTIVE"
 	}
 	out, err := h.rw.PatchUser(ctx, &remnawave.UpdateUserRequest{
-		UUID:                 &rw.UUID,
+		ID:                   &rw.ID,
 		Status:               st,
 		TrafficLimitStrategy: strategy,
 	})
@@ -377,7 +377,7 @@ func (h *AdminUsersHandler) SetDescription(w http.ResponseWriter, r *http.Reques
 		desc = *body.Description
 	}
 	out, err := h.rw.PatchUser(ctx, &remnawave.UpdateUserRequest{
-		UUID:        &rw.UUID,
+		ID:          &rw.ID,
 		Status:      st,
 		Description: &desc,
 	})
@@ -490,7 +490,7 @@ func (h *AdminUsersHandler) Devices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	devices, err := h.rw.GetUserDevicesByUuid(ctx, rw.UUID.String())
+	devices, err := h.rw.GetUserDevices(ctx, rw.ID)
 	if err != nil {
 		slog.Error("admin users: devices failed", "error", err.Error())
 		http.Error(w, "remnawave operation failed", http.StatusInternalServerError)
@@ -539,7 +539,7 @@ func (h *AdminUsersHandler) DeleteDevice(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.rw.DeleteUserDevice(ctx, rw.UUID.String(), hwid); err != nil {
+	if err := h.rw.DeleteUserDevice(ctx, rw.ID, hwid); err != nil {
 		slog.Error("admin users: delete device failed", "error", err.Error())
 		http.Error(w, "remnawave operation failed", http.StatusInternalServerError)
 		return

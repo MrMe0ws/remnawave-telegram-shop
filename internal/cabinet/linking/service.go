@@ -1071,18 +1071,18 @@ func (s *MergeService) updateRemnawaveForMerge(ctx context.Context, loser *datab
 	if strings.HasPrefix(strings.TrimSpace(user.Username), winnerPrefix) {
 		slog.Warn("linking: skip remnawave delete, matched winner profile",
 			"winner_customer_id", winnerCustomerID,
-			"user_uuid", user.UUID,
+			"user_id", user.ID,
 			"username", user.Username,
 		)
 		return
 	}
-	if err := s.remnawave.DeleteUser(ctx, user.UUID); err != nil {
-		slog.Warn("linking: remnawave delete loser user failed (non-fatal)", "uuid", user.UUID, "error", err)
+	if err := s.remnawave.DeleteUser(ctx, user.ID); err != nil {
+		slog.Warn("linking: remnawave delete loser user failed (non-fatal)", "user_id", user.ID, "error", err)
 		return
 	}
 	slog.Info("linking: remnawave loser user deleted",
 		"loser_customer_id", loser.ID,
-		"user_uuid", user.UUID,
+		"user_id", user.ID,
 		"username", user.Username,
 	)
 }
@@ -1117,7 +1117,7 @@ func (s *MergeService) syncRemnawaveWinnerAfterMerge(ctx context.Context, winner
 		return
 	}
 
-	req := &remnawave.UpdateUserRequest{UUID: &target.UUID}
+	req := &remnawave.UpdateUserRequest{ID: &target.ID}
 	tid := realTelegramID
 	req.TelegramID = &tid
 	if name := strings.TrimSpace(telegramUsername); name != "" {
@@ -1126,7 +1126,7 @@ func (s *MergeService) syncRemnawaveWinnerAfterMerge(ctx context.Context, winner
 	if _, err := s.remnawave.PatchUser(ctx, req); err != nil {
 		slog.Warn("linking: remnawave winner sync failed (non-fatal)",
 			"winner_customer_id", winner.ID,
-			"user_uuid", target.UUID,
+			"user_id", target.ID,
 			"telegram_id", realTelegramID,
 			"error", err,
 		)
@@ -1134,7 +1134,7 @@ func (s *MergeService) syncRemnawaveWinnerAfterMerge(ctx context.Context, winner
 	}
 	slog.Info("linking: remnawave winner synced",
 		"winner_customer_id", winner.ID,
-		"user_uuid", target.UUID,
+		"user_id", target.ID,
 		"telegram_id", realTelegramID,
 	)
 }

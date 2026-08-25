@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	adminUsersListPageSize       = 16
-	adminUserPayPageSize         = 8
-	adminUsersPagePickChunkSize  = 12
+	adminUsersListPageSize      = 16
+	adminUserPayPageSize        = 8
+	adminUsersPagePickChunkSize = 12
 )
 
 var (
@@ -388,13 +388,13 @@ func adminUsersPagePickerMarkup(lang string, h Handler, mode string, chunk, retu
 	var nav []models.InlineKeyboardButton
 	if chunk > 0 {
 		nav = append(nav, models.InlineKeyboardButton{
-			Text: "◀️",
+			Text:         "◀️",
 			CallbackData: fmt.Sprintf("%s%s%03d%04d", CallbackAdminUsersListPagePickOpenPrefix, mode, chunk-1, returnPg),
 		})
 	}
 	if end < totalPages {
 		nav = append(nav, models.InlineKeyboardButton{
-			Text: "▶️",
+			Text:         "▶️",
 			CallbackData: fmt.Sprintf("%s%s%03d%04d", CallbackAdminUsersListPagePickOpenPrefix, mode, chunk+1, returnPg),
 		})
 	}
@@ -581,7 +581,7 @@ func (h Handler) adminUsersListPage(ctx context.Context, b *bot.Bot, update *mod
 		}
 		chunk := page / adminUsersPagePickChunkSize
 		nav = append(nav, models.InlineKeyboardButton{
-			Text: fmt.Sprintf("%d/%d", page+1, totalPages),
+			Text:         fmt.Sprintf("%d/%d", page+1, totalPages),
 			CallbackData: fmt.Sprintf("%s%s%03d%04d", CallbackAdminUsersListPagePickOpenPrefix, mode, chunk, page),
 		})
 		if page < totalPages-1 {
@@ -1507,7 +1507,7 @@ func (h Handler) AdminUserResetTrafficConfirmHandler(ctx context.Context, b *bot
 		})
 		return
 	}
-	if err := h.remnawaveClient.ResetUserTraffic(ctx, u.UUID); err != nil {
+	if err := h.remnawaveClient.ResetUserTraffic(ctx, u.ID); err != nil {
 		slog.Error("admin reset traffic", "error", err)
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
@@ -1628,7 +1628,7 @@ func (h Handler) adminUserDevicesMessageAndKeyboard(ctx context.Context, lang st
 	if e != nil || rwUser == nil {
 		return "", nil, e
 	}
-	userUuid := rwUser.UUID.String()
+	userID := rwUser.ID
 	deviceLimit := 0
 	if rwUser.HwidDeviceLimit != nil {
 		deviceLimit = *rwUser.HwidDeviceLimit
@@ -1636,7 +1636,7 @@ func (h Handler) adminUserDevicesMessageAndKeyboard(ctx context.Context, lang st
 	if deviceLimit == 0 {
 		deviceLimit = config.GetHwidFallbackDeviceLimit()
 	}
-	devices, e := h.remnawaveClient.GetUserDevicesByUuid(ctx, userUuid)
+	devices, e := h.remnawaveClient.GetUserDevices(ctx, userID)
 	if e != nil {
 		return "", nil, e
 	}
@@ -1725,8 +1725,8 @@ func (h Handler) AdminUserDevDelHandler(ctx context.Context, b *bot.Bot, update 
 		})
 		return
 	}
-	userUuid := rwUser.UUID.String()
-	devices, err := h.remnawaveClient.GetUserDevicesByUuid(ctx, userUuid)
+	userID := rwUser.ID
+	devices, err := h.remnawaveClient.GetUserDevices(ctx, userID)
 	if err != nil || idx >= len(devices) {
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,
@@ -1735,7 +1735,7 @@ func (h Handler) AdminUserDevDelHandler(ctx context.Context, b *bot.Bot, update 
 		})
 		return
 	}
-	if err := h.remnawaveClient.DeleteUserDevice(ctx, userUuid, devices[idx].Hwid); err != nil {
+	if err := h.remnawaveClient.DeleteUserDevice(ctx, userID, devices[idx].Hwid); err != nil {
 		slog.Error("admin delete device", "error", err)
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: cb.ID,

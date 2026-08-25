@@ -245,7 +245,7 @@ func (h Handler) adminUserSquadToggle(ctx context.Context, b *bot.Bot, cb *model
 	}
 	squadsOrder := append([]uuid.UUID(nil), order...)
 	req := &remnawave.UpdateUserRequest{
-		UUID:                 &rw.UUID,
+		ID:                   &rw.ID,
 		Status:               st,
 		ActiveInternalSquads: &squadsOrder,
 	}
@@ -374,7 +374,7 @@ func (h Handler) adminUserStrategyApply(ctx context.Context, b *bot.Bot, cb *mod
 		st = "ACTIVE"
 	}
 	req := &remnawave.UpdateUserRequest{
-		UUID:                 &rw.UUID,
+		ID:                   &rw.ID,
 		Status:               st,
 		TrafficLimitStrategy: strategy,
 	}
@@ -502,7 +502,7 @@ func (h Handler) adminUserTrafficApply(ctx context.Context, b *bot.Bot, cb *mode
 		st = "ACTIVE"
 	}
 	req := &remnawave.UpdateUserRequest{
-		UUID:              &rw.UUID,
+		ID:                &rw.ID,
 		Status:            st,
 		TrafficLimitBytes: &bytes,
 	}
@@ -589,7 +589,7 @@ func (h Handler) AdminUserDisableConfirmHandler(ctx context.Context, b *bot.Bot,
 		return
 	}
 	req := &remnawave.UpdateUserRequest{
-		UUID:   &rw.UUID,
+		ID:     &rw.ID,
 		Status: "DISABLED",
 	}
 	out, err := h.remnawaveClient.PatchUser(ctx, req)
@@ -673,7 +673,7 @@ func (h Handler) AdminUserEnableConfirmHandler(ctx context.Context, b *bot.Bot, 
 		return
 	}
 	req := &remnawave.UpdateUserRequest{
-		UUID:   &rw.UUID,
+		ID:     &rw.ID,
 		Status: "ACTIVE",
 	}
 	out, err := h.remnawaveClient.PatchUser(ctx, req)
@@ -760,7 +760,7 @@ func (h Handler) AdminUserDeleteConfirmHandler(ctx context.Context, b *bot.Bot, 
 	}
 	rw, errRW := h.adminFindRWUserByCustomer(ctx, cust)
 	if errRW == nil && rw != nil {
-		if err := h.remnawaveClient.DeleteUser(ctx, rw.UUID); err != nil {
+		if err := h.remnawaveClient.DeleteUser(ctx, rw.ID); err != nil {
 			slog.Error("admin delete rw", "error", err)
 			_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 				CallbackQueryID: cb.ID,
@@ -868,7 +868,7 @@ func (h Handler) AdminUserTrafficLimitTextHandler(ctx context.Context, b *bot.Bo
 		st = "ACTIVE"
 	}
 	req := &remnawave.UpdateUserRequest{
-		UUID:              &rw.UUID,
+		ID:                &rw.ID,
 		Status:            st,
 		TrafficLimitBytes: &bytes,
 	}
@@ -1183,7 +1183,7 @@ func (h Handler) AdminUserDescriptionClearHandler(ctx context.Context, b *bot.Bo
 		st = "ACTIVE"
 	}
 	empty := ""
-	req := &remnawave.UpdateUserRequest{UUID: &rw.UUID, Status: st, Description: &empty}
+	req := &remnawave.UpdateUserRequest{ID: &rw.ID, Status: st, Description: &empty}
 	if _, err := h.remnawaveClient.PatchUser(ctx, req); err != nil {
 		slog.Error("admin desc clear patch", "error", err)
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{CallbackQueryID: cb.ID, Text: h.translation.GetText(lang, "admin_user_action_error"), ShowAlert: true})
@@ -1232,7 +1232,7 @@ func (h Handler) AdminUserDescriptionTextHandler(ctx context.Context, b *bot.Bot
 		st = "ACTIVE"
 	}
 	desc := raw
-	req := &remnawave.UpdateUserRequest{UUID: &rw.UUID, Status: st, Description: &desc}
+	req := &remnawave.UpdateUserRequest{ID: &rw.ID, Status: st, Description: &desc}
 	if _, err := h.remnawaveClient.PatchUser(ctx, req); err != nil {
 		slog.Error("admin desc text patch", "error", err)
 		adminUserDescriptionClear(adminID)

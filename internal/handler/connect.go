@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/google/uuid"
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -248,8 +247,8 @@ func (h Handler) buildConnectText(ctx context.Context, customer *database.Custom
 			showDevices = true
 		}
 
-		if userInfo.UUID != uuid.Nil {
-			devices, err := h.syncService.GetRemnawaveClient().GetUserDevicesByUuid(ctx, userInfo.UUID.String())
+		if userInfo.ID > 0 {
+			devices, err := h.syncService.GetRemnawaveClient().GetUserDevices(ctx, userInfo.ID)
 			if err == nil {
 				deviceCount = strconv.Itoa(len(devices))
 			}

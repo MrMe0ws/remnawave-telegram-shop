@@ -164,7 +164,8 @@ export interface AdminPromoStatsDTO {
 
 export interface AdminCustomerDTO {
   id: number
-  telegram_id: number
+  /** Строка, а не число: синтетические ID web-юзеров превышают Number.MAX_SAFE_INTEGER. */
+  telegram_id: string
   telegram_username?: string | null
   language: string
   expire_at?: string | null
@@ -181,6 +182,8 @@ export interface AdminCustomerDTO {
   is_web_only: boolean
   status: 'active' | 'expired' | 'trial' | 'disabled'
   rw_status?: string | null
+  /** Логин web-клиента в панели ("<id>_<local-part email>"). У Telegram-клиентов отсутствует. */
+  panel_login?: string | null
 }
 
 export interface AdminUsersListDTO {
@@ -319,7 +322,8 @@ export interface AdminSquadDTO {
 }
 
 export interface AdminRWPanelDTO {
-  uuid: string
+  /** Числовой id профиля в панели Remnawave. До 3.0.0 здесь был `uuid: string`. */
+  id: number
   username: string
   status: string
   subscription_url: string
@@ -369,7 +373,8 @@ export interface AdminReferralStatsDTO {
 }
 
 export interface AdminRefereeDTO {
-  telegram_id: number
+  /** Строка, а не число: синтетические ID web-юзеров превышают Number.MAX_SAFE_INTEGER. */
+  telegram_id: string
   telegram_username?: string | null
   active: boolean
   email?: string | null
