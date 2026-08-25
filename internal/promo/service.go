@@ -203,7 +203,14 @@ func (s *Service) validatePromoRow(ctx context.Context, p *database.PromoCode, c
 		if p.DiscountPercent == nil || *p.DiscountPercent < 1 || *p.DiscountPercent > 100 {
 			return database.ValidationErrorf("bad discount percent")
 		}
-		if p.DiscountTTLHours == nil {
+		// TTL не обязателен: пустое поле = скидка без срока по времени.
+		// Это совпадает с соглашением остальной формы промокода, где пусто
+		// означает «безлимит», и с тем, как nil уже обрабатывается ниже при
+		// создании pending-скидки (exp остаётся nil). Раньше здесь стоял отказ,
+		// из-за чего админка позволяла сохранить промокод, который потом
+		// никогда не активировался — с неинформативным "promo_validation_failed".
+		// Отрицательный TTL — это уже ошибка ввода, а не «без срока».
+		if p.DiscountTTLHours != nil && *p.DiscountTTLHours < 0 {
 			return database.ValidationErrorf("bad discount ttl")
 		}
 		pd, err := s.PromoRepo.GetPendingDiscountByCustomerID(ctx, customer.ID)
