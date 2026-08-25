@@ -3249,6 +3249,31 @@ html[data-cabinet-decor="nebula"] .cabinet-btn-primary:hover {
     inset 0 1px 0 rgb(255 255 255 / 0.26);
 }
 
+/* Кнопка активации триала.
+ *
+ * Её утилиты (bg-primary/10 + text-primary) рассчитаны на полупрозрачную заливку:
+ * голубой текст на едва подкрашенном фоне. Но правило выше красит .cabinet-btn-primary
+ * градиентом через background-image, а bg-primary/10 — это background-color, и он
+ * градиент не перекрывает. В итоге голубой текст оказывался на голубом градиенте
+ * и почти не читался.
+ *
+ * Возвращаем контраст: белый текст, как у остальных primary-кнопок темы.
+ * Селектор с [data-cabinet-decor] специфичнее одиночного utility-класса,
+ * поэтому !important не нужен. */
+html[data-cabinet-decor="nebula"] .trial-activate-btn,
+html[data-cabinet-decor="nebula"] .trial-activate-btn:hover,
+html[data-cabinet-decor="nebula"] .trial-activate-btn:focus-visible {
+  color: hsl(0 0% 100%);
+  border-color: transparent;
+  text-shadow: 0 1px 2px hsl(var(--nb-violet) / 0.5);
+}
+
+/* Недоступный триал не должен растворяться совсем: базовый disabled:opacity-50
+ * поверх градиента делал надпись нечитаемой. */
+html[data-cabinet-decor="nebula"] .trial-activate-btn:disabled {
+  opacity: 0.72;
+}
+
 /* ── Раскрытие вопросов (FAQ на «Информации») ────────────────────────────── */
 
 /*
