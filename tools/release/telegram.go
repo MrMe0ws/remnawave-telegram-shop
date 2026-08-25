@@ -70,22 +70,9 @@ func sendTelegramHTML(cfg telegramConfig, html string) error {
 		return fmt.Errorf("marshal telegram request: %w", err)
 	}
 
-	client, err := newTelegramHTTPClient(cfg.ProxyURL)
+	resp, err := postTelegram(cfg, payload)
 	if err != nil {
 		return err
-	}
-
-	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", cfg.Token)
-	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(payload))
-	if err != nil {
-		return fmt.Errorf("build telegram request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		// Do not wrap net/http error: it embeds the full URL with bot token.
-		return fmt.Errorf("telegram sendMessage failed (proxy=%q): %s", emptyAs(cfg.ProxyURL, "none"), sanitizeDialError(err))
 	}
 	defer resp.Body.Close()
 
@@ -102,6 +89,72 @@ func sendTelegramHTML(cfg telegramConfig, html string) error {
 		return fmt.Errorf("telegram API error: %s", apiResp.Description)
 	}
 	return nil
+}
+
+// postTelegram отправляет запрос через прокси, а если тот недоступен — напрямую.
+//
+// Прокси на машине релиза может быть не поднят (или мешать включённый VPN), и тогда
+// без фоллбэка релиз просто не публикуется. При этом откат делается ТОЛЬКО когда
+// запрос заведомо не дошёл до Telegram: ошибка подключения к самому прокси или
+// невозможность его разобрать. На любую другую ошибку — включая таймаут и любой
+// ответ API — повтора нет: запрос мог долететь, и вторая попытка отправила бы
+// анонс в канал дважды.
+func postTelegram(cfg telegramConfig, payload []byte) (*http.Response, error) {
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", cfg.Token)
+
+	attempt := func(proxyURL string) (*http.Response, error) {
+		client, err := newTelegramHTTPClient(proxyURL)
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(payload))
+		if err != nil {
+			return nil, fmt.Errorf("build telegram request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		return client.Do(req)
+	}
+
+	resp, err := attempt(cfg.ProxyURL)
+	if err == nil {
+		return resp, nil
+	}
+
+	proxyConfigured := strings.TrimSpace(cfg.ProxyURL) != ""
+	if !proxyConfigured || !isProxyUnreachable(err) {
+		// Не оборачиваем ошибку net/http: в ней полный URL с токеном бота.
+		return nil, fmt.Errorf("telegram sendMessage failed (proxy=%q): %s",
+			emptyAs(cfg.ProxyURL, "none"), sanitizeDialError(err))
+	}
+
+	fmt.Printf("telegram: прокси %s недоступен, пробую напрямую\n", cfg.ProxyURL)
+	resp, err = attempt("")
+	if err != nil {
+		return nil, fmt.Errorf("telegram sendMessage failed (прокси %q недоступен, прямое соединение тоже): %s",
+			cfg.ProxyURL, sanitizeDialError(err))
+	}
+	return resp, nil
+}
+
+// isProxyUnreachable отличает «не смогли подключиться к прокси» от прочих сбоев.
+//
+// Признак должен быть узким: если ошибка возникла уже после того, как запрос ушёл
+// в сеть, повторять отправку нельзя.
+func isProxyUnreachable(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "proxyconnect"): // http/https proxy: соединение с прокси не установилось
+		return true
+	case strings.Contains(msg, "socks connect"): // socks5: то же самое
+		return true
+	case strings.Contains(msg, "unsupported protocol scheme"): // прокси задан с опечаткой в схеме
+		return true
+	default:
+		return false
+	}
 }
 
 func newTelegramHTTPClient(proxyURL string) (*http.Client, error) {
