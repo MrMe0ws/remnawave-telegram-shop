@@ -37,6 +37,13 @@ declare global {
      */
     requestFullscreen?: () => void
     exitFullscreen?: () => void
+    /**
+     * Bot API 7.7+: отключает жест «свайп вниз = свернуть/закрыть Mini App».
+     * У кабинета свой вертикальный скролл — иначе webview дрожит у верха страницы.
+     */
+    disableVerticalSwipes?: () => void
+    enableVerticalSwipes?: () => void
+    isVerticalSwipesEnabled?: boolean
     onEvent?: (eventType: string, callback: () => void) => void
     offEvent?: (eventType: string, callback: () => void) => void
     /** Открыть https-ссылку во внешнем браузере (нужно для обхода webview Desktop). */

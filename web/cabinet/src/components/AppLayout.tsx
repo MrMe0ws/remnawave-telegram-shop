@@ -132,11 +132,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const supportUnread = supportSummary?.unread_count ?? 0
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
-  const [mobileChromeVisible, setMobileChromeVisible] = useState(true)
   const menuRef = useRef<HTMLDivElement>(null)
-  const lastScrollYRef = useRef(0)
-  const scrollTickingRef = useRef(false)
-  const lastTouchYRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -154,78 +150,17 @@ export function AppLayout({ children }: AppLayoutProps) {
     setMenuOpen(false)
   }, [location.pathname, location.hash])
 
-  useEffect(() => {
-    setMobileChromeVisible(true)
-  }, [location.pathname])
-
-  useEffect(() => {
-    const mobileMq = window.matchMedia('(max-width: 639px)')
-
-    function updateMobileChromeVisibility() {
-      const y = window.scrollY
-      const prevY = lastScrollYRef.current
-      const delta = y - prevY
-      const nearTop = y <= 8
-
-      if (!mobileMq.matches) {
-        setMobileChromeVisible((prev) => (prev ? prev : true))
-        lastScrollYRef.current = y
-        scrollTickingRef.current = false
-        return
-      }
-
-      if (nearTop || delta < -4) {
-        setMobileChromeVisible(true)
-      } else if (delta > 6 && y > 40) {
-        setMobileChromeVisible(false)
-      }
-
-      lastScrollYRef.current = y
-      scrollTickingRef.current = false
-    }
-
-    function onScroll() {
-      if (scrollTickingRef.current) return
-      scrollTickingRef.current = true
-      window.requestAnimationFrame(updateMobileChromeVisibility)
-    }
-
-    function onResize() {
-      lastScrollYRef.current = window.scrollY
-      setMobileChromeVisible(true)
-    }
-
-    function onTouchStart(e: TouchEvent) {
-      if (!mobileMq.matches) return
-      lastTouchYRef.current = e.touches[0]?.clientY ?? null
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      if (!mobileMq.matches) return
-      const currentY = e.touches[0]?.clientY
-      const prevY = lastTouchYRef.current
-      if (currentY == null || prevY == null) return
-      const deltaY = currentY - prevY
-      if (deltaY > 6) {
-        // Пользователь скроллит страницу вверх: сразу возвращаем шапку сайта,
-        // даже если window.scrollY ещё почти не изменился из-за анимации браузера.
-        setMobileChromeVisible(true)
-      }
-      lastTouchYRef.current = currentY
-    }
-
-    lastScrollYRef.current = window.scrollY
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onResize)
-    window.addEventListener('touchstart', onTouchStart, { passive: true })
-    window.addEventListener('touchmove', onTouchMove, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('touchstart', onTouchStart)
-      window.removeEventListener('touchmove', onTouchMove)
-    }
-  }, [])
+  /*
+   * Авто-скрытие мобильной шапки убрано намеренно.
+   * Шапка — sticky-элемент в потоке документа, и скрытие её строки через display:none
+   * меняло высоту документа на ~56px. Браузер пересчитывал scrollY → приходил новый
+   * scroll-эвент → обработчик возвращал шапку → высота росла обратно → снова scroll.
+   * Получался самоподдерживающийся цикл на частоте rAF (мигание шапки в Telegram Mini App,
+   * особенно на старте: requestFullscreen анимирует вьюпорт и меняет --tg-safe-area-inset-top,
+   * а контент дашборда догружается асинхронно — оба дают «фальшивые» дельты скролла).
+   * Возвращать фичу можно только layout-нейтрально: fixed-шапка + распорка и transform,
+   * никакого display:none/height внутри потока.
+   */
 
   useEffect(() => {
     if (!menuOpen) return
@@ -260,18 +195,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="cabinet-shell relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
       <CabinetDecorLayer />
-      <header
-        className={cn(
-          'relative sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] cabinet-app-header',
-          // Прячем только ряд кнопок: padding-top (--cabinet-tg-safe-top) остаётся под ✕/⋯.
-          !mobileChromeVisible && !menuOpen && 'max-sm:border-b-0 max-sm:shadow-none',
-        )}
-      >
-        <div
-          className={cn(
-            !mobileChromeVisible && !menuOpen && 'max-sm:hidden',
-          )}
-        >
+      <header className="relative sticky top-0 z-50 isolate shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] cabinet-app-header">
+        <div>
           <CabinetDecorHeader />
           <div className="max-w-5xl mx-auto flex items-center gap-2 px-2.5 py-2 sm:gap-4 sm:px-3 sm:py-2">
           <Link
@@ -585,7 +510,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <div className="relative z-10 min-h-0 flex-1 overflow-x-hidden touch-pan-y">
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 animate-fade-in pb-[max(1rem,calc(5.75rem+max(env(safe-area-inset-bottom,0px),var(--cabinet-tg-safe-bottom))))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
+        {/*
+          Без animate-fade-in: появление контента теперь ведёт PageReveal внутри страниц
+          (components/PageReveal.tsx). Общий фейд поверх «лесенки» давал двойное проявление.
+        */}
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8 pb-[max(1rem,calc(5.75rem+max(env(safe-area-inset-bottom,0px),var(--cabinet-tg-safe-bottom))))] sm:pb-8 [&>*]:mx-auto [&>*]:w-full">
           {children}
         </div>
       </div>
