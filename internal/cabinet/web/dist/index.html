@@ -7,26 +7,31 @@
     <title>Кабинет</title>
     <link rel="icon" type="image/svg+xml" href="/cabinet/favicon.svg" />
     <link rel="manifest" href="/cabinet/api/public/pwa-manifest.webmanifest" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
-      Только JetBrains Mono (font-mono: HWID, коды, поля админки).
-      Onest отсюда убран: он не использовался ни в коде, ни в tailwind.config.ts,
-      но грузился в первой волне переменным начертанием 300..900 с кириллицей
-      и отбирал полосу у Inter/Manrope, которыми набран весь кабинет.
-      Сами Inter и Manrope подключены через @import в src/index.css.
+      Шрифты локальные: файлы в public/fonts, объявления в src/fonts.css.
+      Google Fonts убран целиком. Раньше Inter и Manrope тянулись через @import
+      внутри index.css, то есть браузер узнавал о них только после загрузки и
+      разбора бандла стилей: HTML -> index-*.css -> fonts.googleapis.com ->
+      fonts.gstatic.com. До конца этой цепочки заголовки рисовались системным
+      шрифтом и потом подменялись — заметный рывок при каждом заходе. Плюс
+      внешняя зависимость, ненадёжная в РФ (та же причина, по которой
+      telegram-web-app.js грузится отложенно, см. комментарий ниже).
+
+      Прогреваем то, что рисует первый экран: Inter 400 (основной текст) и
+      Manrope 700 (заголовки, font-heading). Остальные начертания подтянутся
+      из того же бандла стилей. Список файлов должен совпадать с src/fonts.css.
     -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/cabinet/fonts/inter-400-latin.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/cabinet/fonts/inter-400-cyrillic.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/cabinet/fonts/manrope-700-latin.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/cabinet/fonts/manrope-700-cyrillic.woff2" />
     <!-- telegram-web-app.js не подключаем здесь: синхронная загрузка с telegram.org блокирует первый рендер при блокировке (РФ). См. loadTelegramWebAppScriptIfNeeded в main.tsx. -->
-    <script type="module" crossorigin src="/cabinet/assets/index-Btvyqq68.js"></script>
+    <script type="module" crossorigin src="/cabinet/assets/index-BtCjJl8e.js"></script>
     <link rel="modulepreload" crossorigin href="/cabinet/assets/router-B7FBpARj.js">
     <link rel="modulepreload" crossorigin href="/cabinet/assets/query-f91KvRVl.js">
-    <link rel="stylesheet" crossorigin href="/cabinet/assets/index-zzDpDr_o.css">
+    <link rel="stylesheet" crossorigin href="/cabinet/assets/index-D4MrWVtp.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>
