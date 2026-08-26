@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, ChevronRight, CreditCard, Gem, Gift, Link2, User } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, formatDate, maskEmail } from '@/lib/utils'
@@ -39,7 +41,7 @@ export default function ProfilePage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [tab, setTab] = useState<ProfileTab>(() => tabFromHash(location.hash))
 
-  const { data: referrals } = useQuery({
+  const { data: referrals, isPending: referralsPending } = useQuery({
     queryKey: ['referrals'],
     queryFn: () => api.referrals(),
     staleTime: 60_000,
@@ -108,9 +110,12 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-xl space-y-4">
-        <h1 className="text-2xl font-semibold">{t('profile.title')}</h1>
+      <PageReveal className="mx-auto w-full max-w-xl space-y-4">
+        <RevealItem>
+          <h1 className="text-2xl font-semibold">{t('profile.title')}</h1>
+        </RevealItem>
 
+        <RevealItem>
         <div
           role="tablist"
           aria-label={t('profile.title')}
@@ -139,7 +144,10 @@ export default function ProfilePage() {
             </button>
           ))}
         </div>
+        </RevealItem>
 
+        {/* Один RevealItem на всю область вкладок: переключение таба не должно переигрывать анимацию. */}
+        <RevealItem>
         {tab === 'general' && (
           <div className="space-y-4 pt-1">
             <Card>
@@ -230,7 +238,12 @@ export default function ProfilePage() {
                 </Link>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
-                {hasReferralLinks ? (
+                {referralsPending && !hasReferralLinks ? (
+                  <div className="space-y-4" aria-hidden>
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                  </div>
+                ) : hasReferralLinks ? (
                   <>
                     {botRefUrl ? (
                       <ReferralCopyRow
@@ -283,7 +296,8 @@ export default function ProfilePage() {
             <PaymentsHistoryCard />
           </div>
         )}
-      </div>
+        </RevealItem>
+      </PageReveal>
     </AppLayout>
   )
 }

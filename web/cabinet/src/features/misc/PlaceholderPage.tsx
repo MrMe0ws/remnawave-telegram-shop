@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal } from '@/components/PageReveal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -16,7 +17,7 @@ export function PlaceholderPage({ titleKey, bodyKey }: PlaceholderPageProps) {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-xl space-y-6">
+      <PageReveal className="mx-auto w-full max-w-xl space-y-6" wrapChildren>
         <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground space-y-4">
@@ -26,7 +27,7 @@ export function PlaceholderPage({ titleKey, bodyKey }: PlaceholderPageProps) {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </PageReveal>
     </AppLayout>
   )
 }

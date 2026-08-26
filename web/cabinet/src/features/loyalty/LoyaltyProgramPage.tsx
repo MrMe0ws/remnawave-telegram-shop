@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Gem, Gift, Info } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { cn, formatDateTimeShort } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
@@ -62,32 +64,41 @@ export default function LoyaltyProgramPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-lg space-y-6">
-        <PageTitleWithBack
-          title={t('loyaltyPage.title')}
-          subtitle={t('loyaltyPage.subtitle')}
-          titleClassName="text-2xl font-semibold tracking-tight"
-        />
+      <PageReveal className="mx-auto w-full max-w-lg space-y-6">
+        <RevealItem>
+          <PageTitleWithBack
+            title={t('loyaltyPage.title')}
+            subtitle={t('loyaltyPage.subtitle')}
+            titleClassName="text-2xl font-semibold tracking-tight"
+          />
+        </RevealItem>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+          <RevealItem>
+            <LoyaltySkeleton />
+          </RevealItem>
         ) : error ? (
-          <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          <RevealItem>
+            <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          </RevealItem>
         ) : !data?.enabled ? (
-          <Card>
-            <CardContent className="py-6 text-sm text-muted-foreground">{t('loyaltyPage.disabled')}</CardContent>
-          </Card>
+          <RevealItem>
+            <Card>
+              <CardContent className="py-6 text-sm text-muted-foreground">{t('loyaltyPage.disabled')}</CardContent>
+            </Card>
+          </RevealItem>
         ) : (
           <>
             {discount === 0 &&
               data.first_discount_xp_min != null &&
               data.first_discount_xp_min > 0 &&
               data.xp < data.first_discount_xp_min && (
-                <p className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+                <RevealItem className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
                   {t('loyaltyPage.noBonusYet', { xp: data.first_discount_xp_min.toLocaleString('ru-RU') })}
-                </p>
+                </RevealItem>
               )}
 
+            <RevealItem>
             <Card className="subscription-feature-card">
               <CardContent className="space-y-5 px-6 py-7">
                 <div className="flex items-center gap-3">
@@ -136,7 +147,9 @@ export default function LoyaltyProgramPage() {
                 </div>
               </CardContent>
             </Card>
+            </RevealItem>
 
+            <RevealItem>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base font-medium">
@@ -155,14 +168,16 @@ export default function LoyaltyProgramPage() {
                 </ul>
               </CardContent>
             </Card>
+            </RevealItem>
 
+            <RevealItem>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-medium">{t('loyaltyPage.historyTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {isHistoryLoading ? (
-                  <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+                  <LoyaltyHistorySkeleton />
                 ) : historyError ? (
                   <p className="text-sm text-destructive">{t('errors.unknown')}</p>
                 ) : !historyItems.length ? (
@@ -237,10 +252,74 @@ export default function LoyaltyProgramPage() {
                 )}
               </CardContent>
             </Card>
+            </RevealItem>
           </>
         )}
-      </div>
+      </PageReveal>
     </AppLayout>
+  )
+}
+
+/** Заглушка страницы лояльности: карточка уровня, блок «как это работает», история. */
+function LoyaltySkeleton() {
+  return (
+    <div className="space-y-6" aria-hidden>
+      <Card className="subscription-feature-card">
+        <CardContent className="space-y-5 px-6 py-7">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-11 rounded-xl" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between gap-3">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+            <Skeleton className="h-2.5 w-full rounded-full" />
+            <Skeleton className="h-3 w-44" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-4 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-2.5">
+          {HOW_LINES.map((key) => (
+            <Skeleton key={key} className="h-3.5 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-4 w-32" />
+        </CardHeader>
+        <CardContent>
+          <LoyaltyHistorySkeleton />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/** Строки таблицы истории начислений. */
+function LoyaltyHistorySkeleton() {
+  return (
+    <div className="space-y-2.5" aria-hidden>
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center justify-between gap-3">
+          <Skeleton className="h-3.5 w-24" />
+          <Skeleton className="h-3.5 w-20" />
+          <Skeleton className="h-3.5 w-14" />
+        </div>
+      ))}
+    </div>
   )
 }
 

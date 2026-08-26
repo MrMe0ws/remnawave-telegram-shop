@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal } from '@/components/PageReveal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { isSafeDeepLinkTarget } from '@/lib/deep-link-redirect'
@@ -75,7 +76,7 @@ export default function DeepLinkRedirectPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-lg space-y-4 px-1">
+      <PageReveal className="mx-auto w-full max-w-lg space-y-4 px-1" wrapChildren>
         <Card>
           <CardContent className="space-y-4 p-5 sm:p-6">
             {!valid ? (
@@ -106,7 +107,7 @@ export default function DeepLinkRedirectPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </PageReveal>
     </AppLayout>
   )
 }

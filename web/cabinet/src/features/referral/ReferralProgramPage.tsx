@@ -4,10 +4,12 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Users, BookOpen } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { ReferralCopyRow } from '@/features/referral/ReferralCopyRow'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 
 export default function ReferralProgramPage() {
@@ -44,11 +46,16 @@ export default function ReferralProgramPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-2xl space-y-6">
-        <PageTitleWithBack title={t('referralPage.title')} />
-        <p className="text-sm text-muted-foreground">{t('referralPage.intro')}</p>
+      <PageReveal className="mx-auto w-full max-w-2xl space-y-6">
+        <RevealItem>
+          <PageTitleWithBack title={t('referralPage.title')} />
+        </RevealItem>
+        <RevealItem>
+          <p className="text-sm text-muted-foreground">{t('referralPage.intro')}</p>
+        </RevealItem>
 
         {!isLoading && !error && data && (
+          <RevealItem>
           <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base font-medium">
@@ -97,14 +104,20 @@ export default function ReferralProgramPage() {
               <p className="text-xs">{t('referralPage.howLinksHint')}</p>
             </CardContent>
           </Card>
+          </RevealItem>
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+          <RevealItem>
+            <ReferralSkeleton />
+          </RevealItem>
         ) : error ? (
-          <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          <RevealItem>
+            <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          </RevealItem>
         ) : (
           <>
+            <RevealItem>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{t('referralPage.linksTitle')}</CardTitle>
@@ -135,8 +148,9 @@ export default function ReferralProgramPage() {
                 ) : null}
               </CardContent>
             </Card>
+            </RevealItem>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <RevealItem className="grid gap-3 sm:grid-cols-3">
               <StatCard label={t('referralPage.statTotal')} value={String(stats?.total ?? 0)} sub={t('referralPage.statActiveSub', { n: stats?.active ?? 0 })} />
               <StatCard
                 label={t('referralPage.statEarnedDays')}
@@ -144,8 +158,9 @@ export default function ReferralProgramPage() {
                 sub={t('referralPage.statLastMonth', { n: stats?.earned_days_last_month ?? 0 })}
               />
               <StatCard label={t('referralPage.statConversion')} value={`${stats?.conversion_pct ?? 0}%`} sub={t('referralPage.statPaid', { n: stats?.paid ?? 0 })} />
-            </div>
+            </RevealItem>
 
+            <RevealItem>
             <Card>
               <CardHeader className="flex flex-row items-center gap-2">
                 <Users size={18} className="text-muted-foreground" />
@@ -174,10 +189,57 @@ export default function ReferralProgramPage() {
                 )}
               </CardContent>
             </Card>
+            </RevealItem>
           </>
         )}
-      </div>
+      </PageReveal>
     </AppLayout>
+  )
+}
+
+/** Заглушка: карточка ссылок, три плитки статистики и список рефералов. */
+function ReferralSkeleton() {
+  return (
+    <div className="space-y-6" aria-hidden>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-4 w-32" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-16 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-lg" />
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <Card key={i}>
+            <CardContent className="pt-4">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-1.5 h-7 w-14" />
+              <Skeleton className="mt-1.5 h-3 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-2">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-4 w-36" />
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between gap-2 px-3 py-2.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 

@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useCabinetContentConfig } from './contentConfig'
@@ -50,6 +51,9 @@ export function InfoPanel({ hideTitle }: InfoPanelProps) {
       )}
 
       <div className="flex flex-wrap gap-2">
+        {loading && !tabs.length
+          ? [0, 1, 2].map((i) => <Skeleton key={`tab-${i}`} className="h-9 w-28 rounded-md" />)
+          : null}
         {tabs.map((item) => (
           <Button
             key={item.id}
@@ -67,7 +71,11 @@ export function InfoPanel({ hideTitle }: InfoPanelProps) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Загрузка…</p>
+        <div className="space-y-3" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-[3.75rem] w-full rounded-xl" />
+          ))}
+        </div>
       ) : (
         <>
           {tab === 'faq' && (

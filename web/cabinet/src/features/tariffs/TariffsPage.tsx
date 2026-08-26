@@ -4,11 +4,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Cloud, Smartphone, Zap, type LucideIcon } from 'lucide-react'
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { TariffDescription } from '@/components/TariffDescription'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api, type SubscriptionResponse, type TariffItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
@@ -60,51 +62,65 @@ export default function TariffsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className={cn(planSlug && 'mx-auto w-full max-w-lg')}>
+      <PageReveal className="space-y-6">
+        <RevealItem className={cn(planSlug && 'mx-auto w-full max-w-lg')}>
           <PageTitleWithBack
             title={t('tariffs.title')}
             subtitle={t('tariffs.subtitle')}
           />
-        </div>
+        </RevealItem>
 
-        {isLoading && <TariffsSkeleton />}
+        {isLoading && (
+          <RevealItem>
+            <TariffsSkeleton />
+          </RevealItem>
+        )}
 
         {error && (
-          <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          <RevealItem>
+            <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          </RevealItem>
         )}
 
         {data && data.sales_mode === 'tariffs' && !planSlug && (
-          <TariffsGrid
-            tariffs={data.tariffs}
-            priceDisplay={data.price_display ?? 'monthly'}
-            onChoosePlan={setPlan}
-            sub={sub}
-          />
+          <RevealItem>
+            <TariffsGrid
+              tariffs={data.tariffs}
+              priceDisplay={data.price_display ?? 'monthly'}
+              onChoosePlan={setPlan}
+              sub={sub}
+            />
+          </RevealItem>
         )}
 
         {data && data.sales_mode === 'tariffs' && planSlug && (
-          <TariffPeriodStep
-            slug={planSlug}
-            tariffs={data.tariffs}
-            onBack={clearPlan}
-            onSelect={handleCheckout}
-          />
+          <RevealItem>
+            <TariffPeriodStep
+              slug={planSlug}
+              tariffs={data.tariffs}
+              onBack={clearPlan}
+              onSelect={handleCheckout}
+            />
+          </RevealItem>
         )}
 
         {data && data.sales_mode !== 'tariffs' && classicSorted && !planSlug && (
-          <ClassicIntro sorted={classicSorted} onContinue={() => setPlan('classic')} />
+          <RevealItem>
+            <ClassicIntro sorted={classicSorted} onContinue={() => setPlan('classic')} />
+          </RevealItem>
         )}
 
         {data && data.sales_mode !== 'tariffs' && classicSorted && planSlug === 'classic' && (
-          <ClassicPeriodStep
-            sorted={classicSorted}
-            sub={sub}
-            onBack={clearPlan}
-            onSelect={handleCheckout}
-          />
+          <RevealItem>
+            <ClassicPeriodStep
+              sorted={classicSorted}
+              sub={sub}
+              onBack={clearPlan}
+              onSelect={handleCheckout}
+            />
+          </RevealItem>
         )}
-      </div>
+      </PageReveal>
     </AppLayout>
   )
 }
@@ -830,15 +846,15 @@ function TariffsSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {[1, 2, 3].map((i) => (
-        <Card key={i} className="animate-pulse">
+        <Card key={i}>
           <CardHeader>
-            <div className="h-5 bg-muted rounded w-1/2" />
-            <div className="h-8 bg-muted rounded w-2/3 mt-2" />
+            <Skeleton className="h-5 w-1/2" />
+            <Skeleton className="mt-2 h-8 w-2/3" />
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="h-3 bg-muted rounded" />
-            <div className="h-3 bg-muted rounded w-3/4" />
-            <div className="h-9 bg-muted rounded mt-4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="mt-4 h-9 w-full rounded-md" />
           </CardContent>
         </Card>
       ))}

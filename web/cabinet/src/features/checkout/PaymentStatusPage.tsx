@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle2, XCircle, Copy, Check } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
@@ -44,9 +45,12 @@ export default function PaymentStatusPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        <h1 className="text-xl font-semibold">{t('paymentStatus.title')}</h1>
+      <PageReveal className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <RevealItem>
+          <h1 className="text-xl font-semibold">{t('paymentStatus.title')}</h1>
+        </RevealItem>
 
+        <RevealItem className="w-full">
         <Card className="w-full">
           <CardContent className="pt-8 pb-8 flex flex-col items-center gap-5 text-center">
             {isLoading || status === 'new' || status === 'pending' ? (
@@ -67,7 +71,8 @@ export default function PaymentStatusPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </RevealItem>
+      </PageReveal>
     </AppLayout>
   )
 }

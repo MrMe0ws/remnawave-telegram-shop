@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { formatDateTimeShort, formatRub } from '@/lib/utils'
 
@@ -100,7 +101,7 @@ export function PaymentsHistoryCard() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+          <PaymentsHistorySkeleton />
         ) : error ? (
           <p className="text-sm text-destructive">{t('errors.unknown')}</p>
         ) : items.length === 0 ? (
@@ -131,5 +132,21 @@ export function PaymentsHistoryCard() {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/** Заглушка таблицы платежей: четыре колонки, как в реальной разметке. */
+function PaymentsHistorySkeleton() {
+  return (
+    <div className="space-y-2.5" aria-hidden>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex items-center justify-between gap-3">
+          <Skeleton className="h-3.5 w-24" />
+          <Skeleton className="h-3.5 w-16" />
+          <Skeleton className="h-3.5 w-20" />
+          <Skeleton className="h-3.5 w-24" />
+        </div>
+      ))}
+    </div>
   )
 }

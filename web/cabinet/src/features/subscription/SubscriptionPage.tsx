@@ -7,12 +7,14 @@ import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { daysUntil, cn } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
@@ -101,8 +103,8 @@ export default function SubscriptionPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between gap-3">
+      <PageReveal className="space-y-4 sm:space-y-6">
+        <RevealItem className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t('subscriptionPage.title')}</h1>
           {!isLoading && hasRecord && (
             <Button
@@ -120,13 +122,18 @@ export default function SubscriptionPage() {
               )}
             </Button>
           )}
-        </div>
+        </RevealItem>
 
         {isLoading ? (
-          <SkeletonRows n={4} />
+          <RevealItem>
+            <SubscriptionSkeleton />
+          </RevealItem>
         ) : error ? (
-          <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          <RevealItem>
+            <p className="text-sm text-destructive">{t('errors.unknown')}</p>
+          </RevealItem>
         ) : !hasRecord ? (
+          <RevealItem>
           <Card className="max-w-lg mx-auto">
             <CardContent
               id="cabinet-onboarding-step1-target"
@@ -144,8 +151,10 @@ export default function SubscriptionPage() {
               </Button>
             </CardContent>
           </Card>
+          </RevealItem>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
+          <>
+            <RevealItem>
             <Card className="subscription-feature-card">
               <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
@@ -205,7 +214,11 @@ export default function SubscriptionPage() {
                         </span>
                         <div className="min-w-0">
                           <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                          <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
+                          {devicesLoading ? (
+                            <Skeleton className="mt-1 h-3 w-28" />
+                          ) : (
+                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
+                          )}
                         </div>
                         <ChevronRight size={18} className="connect-device-cta-chevron ml-auto shrink-0" />
                       </div>
@@ -241,8 +254,10 @@ export default function SubscriptionPage() {
                 )}
               </CardContent>
             </Card>
+            </RevealItem>
 
             {sub?.subscription_link && (
+              <RevealItem>
               <Card className="subscription-feature-card">
                 <CardContent className="px-5 py-5 sm:px-6">
                   <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground">
@@ -275,20 +290,28 @@ export default function SubscriptionPage() {
                   </div>
                 </CardContent>
               </Card>
+              </RevealItem>
             )}
 
             {showRenewCta && (
-              <RenewSubscriptionCta animated={renewCtaAnimated} subtitle={t('dashboard.tariffsCardTitle')} />
+              <RevealItem>
+                <RenewSubscriptionCta animated={renewCtaAnimated} subtitle={t('dashboard.tariffsCardTitle')} />
+              </RevealItem>
             )}
 
-            <div id="cabinet-loyalty">
-              <LoyaltyCompactCard />
-            </div>
+            <RevealItem>
+              <div id="cabinet-loyalty">
+                <LoyaltyCompactCard />
+              </div>
+            </RevealItem>
 
             {sub?.hwid_extra?.ui_visible && sub.hwid_extra.enabled && (
-              <SubscriptionExtraDevices hwid={sub.hwid_extra} inactive={isExpired} onUpdated={() => void refetch()} />
+              <RevealItem>
+                <SubscriptionExtraDevices hwid={sub.hwid_extra} inactive={isExpired} onUpdated={() => void refetch()} />
+              </RevealItem>
             )}
 
+            <RevealItem>
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
@@ -308,7 +331,7 @@ export default function SubscriptionPage() {
                       })}
                     </div>
                     {devicesLoading ? (
-                      <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+                      <DeviceRowsSkeleton n={2} />
                     ) : !devices.devices?.length ? (
                       <p className="text-sm text-muted-foreground">{t('subscriptionPage.noDevices')}</p>
                     ) : (
@@ -344,6 +367,7 @@ export default function SubscriptionPage() {
                 )}
               </CardContent>
             </Card>
+            </RevealItem>
 
             {deleteConfirmHwid && typeof document !== 'undefined'
               ? createPortal(
@@ -382,9 +406,9 @@ export default function SubscriptionPage() {
                   document.body,
                 )
               : null}
-          </div>
+          </>
         )}
-      </div>
+      </PageReveal>
     </AppLayout>
   )
 }
@@ -495,12 +519,76 @@ function StatusBadge({
   return null
 }
 
-function SkeletonRows({ n }: { n: number }) {
+/**
+ * Заглушка страницы подписки: повторяет реальную раскладку (карточка тарифа,
+ * блок ссылки, список устройств), чтобы после ответа сервера ничего не «прыгало».
+ */
+function SubscriptionSkeleton() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className="h-4 rounded-md bg-muted animate-pulse" style={{ width: `${60 + i * 10}%` }} />
-      ))}
+    <div className="space-y-4 sm:space-y-6">
+      <Card className="subscription-feature-card">
+        <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-3.5 w-44" />
+            </div>
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-2.5 w-full rounded-full" />
+          </div>
+
+          <Skeleton className="h-[3.75rem] w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </CardContent>
+      </Card>
+
+      <Card className="subscription-feature-card">
+        <CardContent className="px-5 py-5 sm:px-6">
+          <Skeleton className="mb-3 h-4 w-40" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 flex-1 rounded-lg" />
+            <Skeleton className="h-9 w-28 rounded-lg" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <Skeleton className="h-4 w-32" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-3.5 w-40" />
+          <DeviceRowsSkeleton n={2} />
+        </CardContent>
+      </Card>
     </div>
+  )
+}
+
+/** Строки списка устройств — высота совпадает с реальным `li`. */
+function DeviceRowsSkeleton({ n }: { n: number }) {
+  return (
+    <ul className="space-y-2">
+      {Array.from({ length: n }).map((_, i) => (
+        <li
+          key={i}
+          className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <Skeleton className="size-8 shrink-0 rounded-lg" />
+            <div className="min-w-0 space-y-1.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </li>
+      ))}
+    </ul>
   )
 }

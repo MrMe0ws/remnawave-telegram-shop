@@ -16,6 +16,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -426,7 +428,8 @@ export default function ConnectionsPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-5xl space-y-4">
+      <PageReveal className="mx-auto w-full max-w-5xl space-y-4">
+        <RevealItem>
         <Card className="overflow-visible border-border/80 bg-card dark:bg-[linear-gradient(180deg,#0e1b34d6,#0a1428d1)]">
           <CardContent className="space-y-5 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-2">
@@ -476,6 +479,16 @@ export default function ConnectionsPage() {
             </div>
 
             <div className="flex w-full flex-wrap gap-2">
+              {/* Пока app-config не пришёл, apps пустой — без заглушек ряд схлопывается и потом раздвигается. */}
+              {configLoading && !apps.length
+                ? [0, 1, 2].map((i) => (
+                    <Skeleton
+                      key={`app-skeleton-${i}`}
+                      className="min-w-0 flex-[1_1_160px] rounded-xl sm:flex-[1_1_220px]"
+                      style={{ height: '2.875rem' }}
+                    />
+                  ))
+                : null}
               {apps.map((app) => (
                 <button
                   key={app.id}
@@ -499,7 +512,7 @@ export default function ConnectionsPage() {
             </div>
 
             {configLoading || subLoading ? (
-              <p className="text-sm text-muted-foreground dark:text-slate-300">Loading…</p>
+              <ConnectionGuideSkeleton />
             ) : configError || !selectedApp ? (
               <p className="text-sm text-destructive">{text.configError}</p>
             ) : (
@@ -567,8 +580,28 @@ export default function ConnectionsPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+        </RevealItem>
+      </PageReveal>
     </AppLayout>
+  )
+}
+
+/** Заглушка блоков инструкции: те же три секции с разделителями, что и в реальном гайде. */
+function ConnectionGuideSkeleton() {
+  return (
+    <div className="space-y-5" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <section key={i} className="border-b border-border/70 pb-4 last:border-b-0 dark:border-white/10">
+          <div className="mb-2 flex items-center gap-2">
+            <Skeleton className="size-7 rounded-lg" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="mt-2 h-3.5 w-3/4" />
+          <Skeleton className="mt-3 h-8 w-36 rounded-md" />
+        </section>
+      ))}
+    </div>
   )
 }
 

@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { DecorSupportIcon } from '@/features/decor/decorNavIcons'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useCabinetContentConfig } from '@/features/info/contentConfig'
 import { InfoPanel } from '@/features/info/InfoPanel'
@@ -71,7 +73,8 @@ export default function SupportPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-xl space-y-8 py-2">
+      <PageReveal className="mx-auto w-full max-w-xl space-y-8 py-2">
+        <RevealItem>
         <section id={SUPPORT_ANCHOR} className="scroll-mt-24">
           <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-muted/40 text-card-foreground">
             <CardContent className="space-y-6 px-[10px] py-[15px] text-center sm:px-6 sm:py-8">
@@ -88,7 +91,7 @@ export default function SupportPage() {
                 </p>
               </div>
               {isLoading || contentLoading ? (
-                <p className="text-sm text-muted-foreground">Загрузка…</p>
+                <Skeleton className="h-10 w-full rounded-md" />
               ) : supportChatEnabled ? (
                 <Button
                   type="button"
@@ -122,14 +125,17 @@ export default function SupportPage() {
             </CardContent>
           </Card>
         </section>
+        </RevealItem>
 
+        <RevealItem>
         <section id={INFO_HASH} ref={infoRef} className="scroll-mt-24 space-y-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">{t('supportPage.infoSectionTitle')}</h2>
           </div>
           <InfoPanel hideTitle />
         </section>
-      </div>
+        </RevealItem>
+      </PageReveal>
 
       <SupportChatModal open={chatOpen} enabled={supportChatEnabled} onClose={() => setChatOpen(false)} />
     </AppLayout>

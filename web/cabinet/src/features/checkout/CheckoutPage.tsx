@@ -6,6 +6,8 @@ import { CreditCard, Bitcoin, AlertCircle, Star } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PlategaPaymentExpand, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { ProviderMethodButton } from '@/components/ProviderMethodButton'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
@@ -183,10 +185,13 @@ export default function CheckoutPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-lg mx-auto space-y-6">
-        <PageTitleWithBack title={t('checkout.title')} />
+      <PageReveal className="max-w-lg mx-auto space-y-6">
+        <RevealItem>
+          <PageTitleWithBack title={t('checkout.title')} />
+        </RevealItem>
 
         {/* Order summary */}
+        <RevealItem>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium text-muted-foreground">
@@ -195,9 +200,19 @@ export default function CheckoutPage() {
           </CardHeader>
           <CardContent>
             {tariffsLoading ? (
-              <div className="space-y-2">
-                <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
-                <div className="h-4 bg-muted rounded animate-pulse w-1/3" />
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-4">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-3.5 w-20" />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <Skeleton className="h-3.5 w-20" />
+                  <Skeleton className="h-3.5 w-16" />
+                </div>
+                <div className="flex items-center justify-between gap-4 border-t border-border pt-2">
+                  <Skeleton className="h-3.5 w-16" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
               </div>
             ) : !tariff ? (
               <p className="text-sm text-destructive">{t('errors.unknown')}</p>
@@ -282,9 +297,11 @@ export default function CheckoutPage() {
             )}
           </CardContent>
         </Card>
+        </RevealItem>
 
         {/* Provider selection */}
         {shouldAskExtraRenew && (
+          <RevealItem>
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium text-muted-foreground">
@@ -325,8 +342,10 @@ export default function CheckoutPage() {
               </div>
             </CardContent>
           </Card>
+          </RevealItem>
         )}
 
+        <RevealItem>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium text-muted-foreground">
@@ -372,15 +391,18 @@ export default function CheckoutPage() {
             )}
           </CardContent>
         </Card>
+        </RevealItem>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle size={14} />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <RevealItem>
+            <Alert variant="destructive">
+              <AlertCircle size={14} />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </RevealItem>
         )}
 
-        <div className="hidden sm:block space-y-2">
+        <RevealItem className="hidden sm:block space-y-2">
           <Button
             className={cn('w-full', !loading && disabledPayButtonClass)}
             size="lg"
@@ -392,11 +414,11 @@ export default function CheckoutPage() {
             {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
           </Button>
           <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
-        </div>
+        </RevealItem>
 
         {/* Mobile spacer: fixed pay bar + legal line should not overlap content */}
         <div className="sm:hidden h-[8.5rem]" aria-hidden />
-      </div>
+      </PageReveal>
 
       {/* Mobile: fixed to viewport above bottom navbar (via portal). */}
       {typeof document !== 'undefined' &&

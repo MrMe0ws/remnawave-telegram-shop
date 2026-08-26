@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { CalendarDays, Ticket, Volume2, VolumeX } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { api, ApiError, type FortuneStatusResponse } from '@/lib/api'
@@ -73,6 +75,21 @@ function useUtcMidnightCountdown(active: boolean): number {
     return () => window.clearInterval(id)
   }, [active])
   return ms
+}
+
+/** Заглушка колеса и списка призов, пока не пришёл status. */
+function FortuneSkeleton() {
+  return (
+    <div className="space-y-4 md:space-y-6" aria-hidden>
+      <Skeleton className="mx-auto aspect-square w-full max-w-[22rem] rounded-full" />
+      <Skeleton className="mx-auto h-11 w-full max-w-[18rem] rounded-full" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function formatCountdownHms(
@@ -382,8 +399,8 @@ export default function FortunePage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-5xl space-y-4 md:space-y-6 pt-2 pb-[max(1rem,calc(5.75rem+env(safe-area-inset-bottom)))] md:px-0 md:pb-2">
-        <div className="flex flex-col gap-2">
+      <PageReveal className="mx-auto w-full max-w-5xl space-y-4 md:space-y-6 pt-2 pb-[max(1rem,calc(5.75rem+env(safe-area-inset-bottom)))] md:px-0 md:pb-2">
+        <RevealItem className="flex flex-col gap-2">
           <div className="flex min-w-0 flex-row items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t('fortune.title')}</h1>
@@ -466,33 +483,51 @@ export default function FortunePage() {
               </div>
             )}
           </div>
-        </div>
+        </RevealItem>
 
-        {isLoading && <p className="text-sm text-muted-foreground">{t('common.loading')}</p>}
-        {error && <p className="text-sm text-destructive">{t('common.error')}</p>}
+        {isLoading && (
+          <RevealItem>
+            <FortuneSkeleton />
+          </RevealItem>
+        )}
+        {error && (
+          <RevealItem>
+            <p className="text-sm text-destructive">{t('common.error')}</p>
+          </RevealItem>
+        )}
 
         {status && !status.enabled && (
-          <Card>
-            <CardContent className="py-6 text-sm text-muted-foreground">{t('fortune.moduleOff')}</CardContent>
-          </Card>
+          <RevealItem>
+            <Card>
+              <CardContent className="py-6 text-sm text-muted-foreground">{t('fortune.moduleOff')}</CardContent>
+            </Card>
+          </RevealItem>
         )}
 
         {status?.enabled && !status.panel_ready && (
-          <Card>
-            <CardContent className="py-6 text-sm text-muted-foreground">{t('fortune.noPanel')}</CardContent>
-          </Card>
+          <RevealItem>
+            <Card>
+              <CardContent className="py-6 text-sm text-muted-foreground">{t('fortune.noPanel')}</CardContent>
+            </Card>
+          </RevealItem>
         )}
 
         {status?.enabled && status.panel_ready && (
           <>
-            {winnerFeedEnabled && <FortuneWinnersMarquee items={recentWins?.items ?? []} t={t} />}
+            {winnerFeedEnabled && (
+              <RevealItem>
+                <FortuneWinnersMarquee items={recentWins?.items ?? []} t={t} />
+              </RevealItem>
+            )}
 
-            <div className={wheelWrapClassName}>{wheelColumn}</div>
+            <RevealItem className={wheelWrapClassName}>{wheelColumn}</RevealItem>
 
-            <FortunePossiblePrizes sectors={orderedSectors} t={t} />
+            <RevealItem>
+              <FortunePossiblePrizes sectors={orderedSectors} t={t} />
+            </RevealItem>
           </>
         )}
-      </div>
+      </PageReveal>
 
       {lastResult && (
         <FortunePrizeModal

@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { BadgePercent, Gift, TicketPercent } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { api, ApiError, type PromoApplyResponse } from '@/lib/api'
 
 export default function PromoCodesPage() {
@@ -60,12 +62,13 @@ export default function PromoCodesPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-xl space-y-6">
-        <div>
+      <PageReveal className="mx-auto w-full max-w-xl space-y-6">
+        <RevealItem>
           <h1 className="text-2xl font-semibold">{t('promocodes.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('promocodes.subtitle')}</p>
-        </div>
+        </RevealItem>
 
+        <RevealItem>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -99,7 +102,9 @@ export default function PromoCodesPage() {
             )}
           </CardContent>
         </Card>
+        </RevealItem>
 
+        <RevealItem>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -109,7 +114,10 @@ export default function PromoCodesPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-52" />
+                <Skeleton className="h-3.5 w-40" />
+              </div>
             ) : !state?.has_pending_discount || !state.pending_discount ? (
               <p className="text-sm text-muted-foreground">{t('promocodes.noPending')}</p>
             ) : (
@@ -129,7 +137,9 @@ export default function PromoCodesPage() {
             )}
           </CardContent>
         </Card>
+        </RevealItem>
 
+        <RevealItem>
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -143,7 +153,8 @@ export default function PromoCodesPage() {
             <p>{t('promocodes.info3')}</p>
           </CardContent>
         </Card>
-      </div>
+        </RevealItem>
+      </PageReveal>
     </AppLayout>
   )
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal } from '@/components/PageReveal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -113,7 +114,7 @@ export default function LinkEmailPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-md mx-auto w-full py-4">
+      <PageReveal className="max-w-md mx-auto w-full py-4" wrapChildren>
         <Card>
           <CardHeader>
             <CardTitle>{t('accounts.linkEmailPageTitle')}</CardTitle>
@@ -215,7 +216,7 @@ export default function LinkEmailPage() {
             </form>
           </CardContent>
         </Card>
-      </div>
+      </PageReveal>
     </AppLayout>
   )
 }

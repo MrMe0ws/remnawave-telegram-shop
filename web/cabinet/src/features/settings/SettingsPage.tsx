@@ -5,6 +5,7 @@ import { CheckCircle2, Mail, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal } from '@/components/PageReveal'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Button } from '@/components/ui/button'
 import { api, ApiError } from '@/lib/api'
@@ -231,7 +232,7 @@ export default function SettingsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-xl mx-auto w-full">
+      <PageReveal className="space-y-6 max-w-xl mx-auto w-full" wrapChildren>
         <PageTitleWithBack
           title={t('accounts.title')}
           subtitle={t('accounts.subtitle')}
@@ -423,7 +424,7 @@ export default function SettingsPage() {
         </div>
 
         <p className="text-xs text-muted-foreground">{t('accounts.mergeHint')}</p>
-      </div>
+      </PageReveal>
 
       {unlinkConfirmProvider && typeof document !== 'undefined'
         ? createPortal(

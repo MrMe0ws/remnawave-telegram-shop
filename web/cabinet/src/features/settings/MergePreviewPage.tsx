@@ -6,6 +6,8 @@ import { AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal } from '@/components/PageReveal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -122,7 +124,7 @@ export default function MergePreviewPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-lg mx-auto space-y-5 pb-10">
+      <PageReveal className="max-w-lg mx-auto space-y-5 pb-10" wrapChildren>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t('merge.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t('merge.subtitle')}</p>
@@ -139,7 +141,12 @@ export default function MergePreviewPage() {
           </Alert>
         ) : null}
 
-        {isLoading && <p className="text-sm text-muted-foreground">{t('merge.loading')}</p>}
+        {isLoading && (
+          <div className="space-y-3" aria-hidden>
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+        )}
 
         {loadErr && (
           <Alert variant="destructive">
@@ -209,7 +216,7 @@ export default function MergePreviewPage() {
               document.body,
             )
           : null}
-      </div>
+      </PageReveal>
     </AppLayout>
   )
 }

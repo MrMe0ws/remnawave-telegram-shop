@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next'
 import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText, Newspaper, Star, type LucideIcon } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { api, type SubscriptionResponse } from '@/lib/api'
 import { daysUntil } from '@/lib/utils'
@@ -21,7 +23,7 @@ export default function DashboardPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
 
-  const { data: sub } = useQuery({
+  const { data: sub, isPending: subPending } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api.subscription(),
     staleTime: 0,
@@ -29,7 +31,7 @@ export default function DashboardPage() {
     retry: 1,
   })
 
-  const { data: trial } = useQuery({
+  const { data: trial, isPending: trialPending } = useQuery({
     queryKey: ['trial-info'],
     queryFn: () => api.trialInfo(),
     staleTime: 0,
@@ -37,7 +39,9 @@ export default function DashboardPage() {
     retry: 1,
   })
 
-  const { data: devices } = useQuery({
+  // isLoading, а не isPending: запрос выключен до появления sub, и в этом состоянии
+  // isPending остаётся true — скелетон устройств висел бы вечно.
+  const { data: devices, isLoading: devicesLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => api.devices(),
     staleTime: 0,
@@ -45,9 +49,16 @@ export default function DashboardPage() {
     retry: 1,
     enabled: Boolean(sub),
   })
-  const { data: bootstrap } = useAuthBootstrap()
+  const { data: bootstrap, isPending: bootstrapPending } = useAuthBootstrap()
 
   const hasSubscription = hasSubscriptionData(sub)
+  /*
+   * Пока подписка не пришла, hasSubscription === false, и раньше отрисовывалась
+   * карточка триала с `trial?.days ?? 0` — пользователь на медленной сети видел
+   * «0 дней / 0 ГБ / 0 устройств» и «Пробный период недоступен», а через секунду
+   * содержимое подменялось. Поэтому до ответа показываем скелетон.
+   */
+  const mainCardLoading = subPending || (!hasSubscription && trialPending)
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
   const isExpiredByDate = days !== null && days <= 0
   const isExpiredByTraffic = Boolean(
@@ -89,12 +100,15 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <PWAInstallPrompt />
-      <div className="space-y-5">
-        <div>
+      <PageReveal className="space-y-5">
+        <RevealItem>
           <h1 className="text-3xl font-semibold tracking-tight">{t('dashboard.welcomeTitle')}</h1>
-        </div>
+        </RevealItem>
 
-        {hasSubscription ? (
+        <RevealItem>
+        {mainCardLoading ? (
+          <DashboardMainCardSkeleton />
+        ) : hasSubscription ? (
           <Card className="subscription-feature-card">
             <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
               <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
@@ -129,7 +143,11 @@ export default function DashboardPage() {
                     </span>
                     <div className="min-w-0">
                       <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
+                      {devicesLoading ? (
+                        <Skeleton className="mt-1 h-3 w-28" />
+                      ) : (
+                        <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
+                      )}
                     </div>
                     <ChevronRight size={18} className="connect-device-cta-chevron ml-auto shrink-0" />
                   </div>
@@ -195,22 +213,67 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+        </RevealItem>
 
-        <div className="grid grid-cols-2 gap-3">
-          <DashboardQuickLink to="/tariffs" icon={Zap} label={t('dashboard.tariffsCardTitle')} />
-          <DashboardQuickLink to="/referral" icon={Users} label={t('dashboard.referralsCardTitle')} />
-          <DashboardQuickLink to="/promocodes" icon={Ticket} label={t('dashboard.promocodesCardTitle')} />
-          <DashboardQuickLink to="/support#cabinet-info" icon={FileText} label={t('dashboard.infoCardTitle')} />
-          {newsUrl && (
-            <DashboardQuickLink href={newsUrl} icon={Newspaper} label={t('dashboard.newsCardTitle')} external />
-          )}
-          {feedbackUrl && (
-            <DashboardQuickLink href={feedbackUrl} icon={Star} label={t('dashboard.feedbackCardTitle')} external />
-          )}
-        </div>
-      </div>
+        <RevealItem>
+          <div className="grid grid-cols-2 gap-3">
+            <DashboardQuickLink to="/tariffs" icon={Zap} label={t('dashboard.tariffsCardTitle')} />
+            <DashboardQuickLink to="/referral" icon={Users} label={t('dashboard.referralsCardTitle')} />
+            <DashboardQuickLink to="/promocodes" icon={Ticket} label={t('dashboard.promocodesCardTitle')} />
+            <DashboardQuickLink to="/support#cabinet-info" icon={FileText} label={t('dashboard.infoCardTitle')} />
+            {/* Ссылки приходят из bootstrap: пока его нет, держим места, иначе сетка подпрыгивает. */}
+            {bootstrapPending ? (
+              <>
+                <QuickLinkSkeleton />
+                <QuickLinkSkeleton />
+              </>
+            ) : (
+              <>
+                {newsUrl && (
+                  <DashboardQuickLink href={newsUrl} icon={Newspaper} label={t('dashboard.newsCardTitle')} external />
+                )}
+                {feedbackUrl && (
+                  <DashboardQuickLink href={feedbackUrl} icon={Star} label={t('dashboard.feedbackCardTitle')} external />
+                )}
+              </>
+            )}
+          </div>
+        </RevealItem>
+      </PageReveal>
     </AppLayout>
   )
+}
+
+/**
+ * Скелетон главной карточки. Высоты подобраны под оба варианта содержимого
+ * (активная подписка и предложение триала) — при подмене нет заметного скачка.
+ */
+function DashboardMainCardSkeleton() {
+  return (
+    <Card className="subscription-feature-card">
+      <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-6 w-40" />
+          </div>
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-2.5 w-full rounded-full" />
+        </div>
+
+        <Skeleton className="h-[3.75rem] w-full rounded-xl" />
+        <Skeleton className="h-11 w-full rounded-full" />
+      </CardContent>
+    </Card>
+  )
+}
+
+function QuickLinkSkeleton() {
+  return <Skeleton className="h-[3.25rem] w-full rounded-[var(--radius)]" />
 }
 
 function subscriptionTariffLabel(sub: SubscriptionResponse | null | undefined, t: TFunction): string {
