@@ -42,20 +42,6 @@ function syncTelegramChromeColors(tg: TelegramWebApp): void {
 }
 
 /**
- * Bot API 7.7+: гасим жест «свайп вниз = свернуть Mini App».
- * У кабинета собственный вертикальный скролл; с включённым жестом webview
- * перехватывает часть тачей и дрожит у верха страницы. Закрытие остаётся по ✕.
- */
-function disableTelegramVerticalSwipes(tg: TelegramWebApp): void {
-  if (typeof tg.isVersionAtLeast === 'function' && !tg.isVersionAtLeast('7.7')) return
-  try {
-    tg.disableVerticalSwipes?.()
-  } catch {
-    // UNSUPPORTED
-  }
-}
-
-/**
  * Включает CSS top safe-area только на мобильном Mini App.
  * На desktop TG отдаёт большой contentSafeAreaInset.top → «дыра» над логотипом.
  */
@@ -86,7 +72,6 @@ export function configureTelegramViewport(): void {
 
   syncTelegramChromeColors(tg)
   syncCabinetTgSafeTopAttr()
-  disableTelegramVerticalSwipes(tg)
 
   if (tg.isFullscreen) return
   if (typeof tg.isVersionAtLeast === 'function' && !tg.isVersionAtLeast('8.0')) return
