@@ -117,6 +117,7 @@ docker compose up -d
 | Уведомления | [documentation/notifications.md](documentation/notifications.md) |
 | Тексты и кнопки | [documentation/customization.md](documentation/customization.md) |
 | Обновление | [documentation/updating.md](documentation/updating.md) |
+| Резервное копирование | [documentation/backup.md](documentation/backup.md) |
 | Кабинет | [documentation/cabinet/](documentation/cabinet/) |
 
 ---
@@ -129,3 +130,19 @@ docker compose down && docker compose up -d
 ```
 
 Подробнее: [documentation/updating.md](documentation/updating.md)
+
+---
+
+## Бэкапы
+
+Своего механизма бэкапов у бота нет. Рекомендуется
+[distillium/remnawave-backup-restore](https://github.com/distillium/remnawave-backup-restore) —
+он бэкапит и панель Remnawave, и этого бота: база, папка проекта, расписание, отправка
+в Telegram, восстановление.
+
+В его меню выбора бота подойдёт пункт **«Бот от Иисуса»**: имена контейнера и тома
+в этом форке сохранены, поэтому параметры совпадают. Версия бота значения не имеет —
+скрипт снимает дамп всей базы и не разбирает её схему.
+
+⚠️ В архив попадает `.env` со всеми секретами. Если бэкапы уходят в Telegram, учтите это
+или исключите файл — подробности в [documentation/backup.md](documentation/backup.md).

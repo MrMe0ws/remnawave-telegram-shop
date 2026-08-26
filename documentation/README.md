@@ -23,6 +23,7 @@
 | [notifications.md](./notifications.md) | Уведомления: истечение, lifecycle, torrent blocker (Remnawave webhook) |
 | [squads.md](./squads.md) | Squads Remnawave (платные и триал) |
 | [customization.md](./customization.md) | Тексты бота/кабинета, кнопки, emoji |
+| [backup.md](./backup.md) | Резервное копирование и восстановление |
 | [moynalog-proxy.md](./moynalog-proxy.md) | «Мой налог» через прокси вне РФ |
 | [reverse-proxy.md](./reverse-proxy.md) | Обратный прокси (Traefik и др.) |
 | [cabinet/landing.md](./cabinet/landing.md) | Публичный лендинг проекта: адреса, что настраивать |
