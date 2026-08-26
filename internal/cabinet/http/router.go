@@ -1548,11 +1548,16 @@ func buildSPAHandler(spaFS fs.FS) http.Handler {
 
 		// Cache policy:
 		// - hashed assets: aggressive immutable cache
+		// - fonts: длинный кэш, но без immutable — имена без хэша содержимого
+		//   (web/cabinet/public/fonts). Повторный заход не должен снова тянуть
+		//   шрифты: пока их нет, заголовки рисуются системным и потом подменяются.
 		// - app shell / worker / manifest: always revalidate
 		// - other static files: short shared cache
 		switch {
 		case strings.HasPrefix(filePath, "assets/"):
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		case strings.HasPrefix(filePath, "fonts/"):
+			w.Header().Set("Cache-Control", "public, max-age=2592000")
 		case filePath == "sw.js" || strings.HasSuffix(filePath, ".webmanifest") || strings.HasSuffix(filePath, ".html"):
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		default:
