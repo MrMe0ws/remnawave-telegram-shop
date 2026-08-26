@@ -8,6 +8,26 @@ export function urlIndicatesTelegramWebApp(): boolean {
   )
 }
 
+/**
+ * Признак «открыто из Telegram», зафиксированный при загрузке модуля.
+ *
+ * Проверять URL позже нельзя: react-router перепишет hash при первой же навигации,
+ * и `tgWebAppData=` исчезнет — на второй странице признак был бы ложно-отрицательным.
+ */
+const openedFromTelegram = urlIndicatesTelegramWebApp()
+
+/**
+ * Сессия внутри Telegram Mini App (а не обычная вкладка браузера).
+ *
+ * Работает и до загрузки SDK: сначала смотрим на зафиксированный URL, затем —
+ * на initData, если telegram-web-app.js уже подтянулся.
+ */
+export function isTelegramMiniAppSession(): boolean {
+  if (openedFromTelegram) return true
+  const initData = window.Telegram?.WebApp?.initData
+  return typeof initData === 'string' && initData !== ''
+}
+
 let webAppScriptInflight: Promise<void> | null = null
 
 /**

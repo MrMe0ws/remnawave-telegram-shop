@@ -10,6 +10,8 @@ import {
 import { motion, useReducedMotion } from 'framer-motion'
 import { useLocation } from 'react-router-dom'
 
+import { isTelegramMiniAppSession } from '@/lib/telegram-web-app-loader'
+
 /**
  * Появление блоков кабинета «лесенкой» — тот же приём, что на лендинге
  * (см. features/landing/components/LandingMotion.tsx), но с двумя отличиями:
@@ -91,7 +93,21 @@ export function PageReveal({
   const { pathname } = useLocation()
   const reduce = useReducedMotion()
   const firstVisit = useFirstPageVisit(routeKey ?? pathname)
-  const animate = firstVisit && !reduce
+  /*
+   * Внутри Telegram Mini App «лесенка» отключена.
+   *
+   * В WebView Telegram анимация opacity + transform на крупных текстовых блоках
+   * давала микро-пропадание заголовков: «Подписка», «Профиль», «Добро пожаловать!»
+   * на доли секунды исчезали и появлялись снова. Границы мигания совпадали ровно
+   * с RevealItem, в обычном мобильном браузере того же эффекта нет. Похоже на
+   * компоновку слоёв: блок промотируется в композитный слой на время анимации
+   * и обратно, и WebView теряет его содержимое на кадр.
+   *
+   * Воспроизвести и убедиться в механизме без устройства не получилось, поэтому
+   * вместо подбора параметров анимации она просто не играет там, где ломается.
+   * В браузере эффект остаётся.
+   */
+  const animate = firstVisit && !reduce && !isTelegramMiniAppSession()
 
   if (!animate) {
     return (
