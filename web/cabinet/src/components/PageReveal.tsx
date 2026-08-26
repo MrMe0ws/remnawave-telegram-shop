@@ -28,19 +28,27 @@ const EASE = [0.22, 1, 0.36, 1] as const
 /**
  * Страницы, на которых «лесенка» уже отыграла, и время регистрации.
  *
- * Время нужно из-за React.StrictMode: в dev он размонтирует и монтирует компонент
- * повторно, и без окна допуска вторая жизнь считалась бы «не первым заходом» —
- * анимации не было бы видно на локальной сборке.
+ * Допуск на повторное монтирование нужен только в dev: React.StrictMode
+ * размонтирует и монтирует компонент повторно, и без него анимации не было бы
+ * видно на локальной сборке.
+ *
+ * В проде допуск вреден. Если страница успевает перемонтироваться (в мини-аппе
+ * первый заход идёт через дополнительный цикл авторизации по initData),
+ * «лесенка» проигрывается второй раз: уже показанный блок уходит в opacity 0
+ * и проявляется снова — заголовки и кнопки мигают. Поэтому вне dev любое
+ * повторное монтирование считается «уже показывали».
  */
 const revealedRoutes = new Map<string, number>()
-const STRICT_MODE_REMOUNT_MS = 500
+const STRICT_MODE_REMOUNT_MS = import.meta.env.DEV ? 500 : 0
 
 /** true — на этот ключ ещё не заходили за текущую загрузку приложения. */
 export function useFirstPageVisit(routeKey: string): boolean {
   const decided = useRef<boolean | null>(null)
   if (decided.current === null) {
     const seenAt = revealedRoutes.get(routeKey)
-    decided.current = seenAt == null || Date.now() - seenAt < STRICT_MODE_REMOUNT_MS
+    decided.current =
+      seenAt == null ||
+      (STRICT_MODE_REMOUNT_MS > 0 && Date.now() - seenAt < STRICT_MODE_REMOUNT_MS)
     revealedRoutes.set(routeKey, Date.now())
   }
   return decided.current
