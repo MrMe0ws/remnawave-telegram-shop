@@ -9,8 +9,15 @@
     <link rel="manifest" href="/cabinet/api/public/pwa-manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      Только JetBrains Mono (font-mono: HWID, коды, поля админки).
+      Onest отсюда убран: он не использовался ни в коде, ни в tailwind.config.ts,
+      но грузился в первой волне переменным начертанием 300..900 с кириллицей
+      и отбирал полосу у Inter/Manrope, которыми набран весь кабинет.
+      Сами Inter и Manrope подключены через @import в src/index.css.
+    -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Onest:wght@300..900&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <!-- telegram-web-app.js не подключаем здесь: синхронная загрузка с telegram.org блокирует первый рендер при блокировке (РФ). См. loadTelegramWebAppScriptIfNeeded в main.tsx. -->
