@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -98,6 +98,16 @@ export function ConnectInviteModal({
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const [manualOpen, setManualOpen] = useState(false)
+  // Появление: первый кадр рисуем в скрытом состоянии и только со следующего
+  // включаем переход — иначе браузер схлопнет оба состояния в одно и анимации
+  // не будет. Закрытие не анимируем: модалка размонтируется родителем.
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
   const { state: inviteCopyState, copy: copyInvite } = useCopyToClipboard()
   const { state: linkCopyState, copy: copyLink } = useCopyToClipboard()
 
@@ -125,7 +135,11 @@ export function ConnectInviteModal({
         // него нельзя, иначе отмена превращается в «скопировано».
         if (e instanceof DOMException && e.name === 'AbortError') return
         // Остальное (share запрещён политикой, нет обработчика) — падаем в
-        // копирование, оно решает ту же задачу.
+        // копирование. Но только если фокус вернулся к странице: пока открыт
+        // системный шит, navigator.clipboard отказывает, а запасной
+        // execCommand в расфокусированном документе возвращает true, ничего не
+        // скопировав, — и пользователь получал галочку при пустом буфере.
+        if (!document.hasFocus()) return
       }
     }
     void copyInvite(shareText)
@@ -140,7 +154,10 @@ export function ConnectInviteModal({
     // дотянуться, а модалка по центру там ещё и обрезается клавиатурой. На
     // sm+ остаётся обычный центрированный диалог.
     <div
-      className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
+      className={cn(
+        'fixed inset-0 z-[2000] flex items-end justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-200 ease-out sm:items-center sm:p-4',
+        visible ? 'opacity-100' : 'opacity-0',
+      )}
       onClick={onClose}
     >
       <div
@@ -148,7 +165,14 @@ export function ConnectInviteModal({
         aria-modal="true"
         aria-label={t('connectInvite.cardTitle')}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm sm:max-h-[90vh] sm:rounded-2xl sm:p-5 sm:pb-5"
+        className={cn(
+          'max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm transition-[opacity,transform] duration-200 ease-out sm:max-h-[90vh] sm:rounded-2xl sm:p-5 sm:pb-5',
+          // На мобиле лист выезжает снизу, на десктопе диалог подрастает из
+          // центра — движение совпадает с тем, откуда элемент появляется.
+          visible
+            ? 'translate-y-0 opacity-100 sm:scale-100'
+            : 'translate-y-4 opacity-0 sm:translate-y-0 sm:scale-[0.97]',
+        )}
       >
         {/* Полоска-ручка: на мобиле она объясняет, что это лист, а не экран. */}
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/30 sm:hidden" aria-hidden />
@@ -189,9 +213,11 @@ export function ConnectInviteModal({
           </div>
         ) : (
           <>
-            {/* Шаг 1 — устройство рядом: камера открывает страницу с инструкцией. */}
+            {/* Шаг 1 — устройство рядом: камера открывает страницу с инструкцией.
+                Своей рамки у картинки нет: спецификация QR требует светлого
+                поля в четыре модуля, и оно уже нарисовано внутри SVG. */}
             <div className="flex flex-col items-center rounded-xl bg-muted/30 px-3 py-4">
-              <div className="rounded-xl bg-white p-2.5">
+              <div className="overflow-hidden rounded-lg bg-white">
                 <QrCode value={inviteUrl} size={196} title={t('connectInvite.qrAlt')} />
               </div>
               <p className="mt-3 text-center text-xs text-muted-foreground">
@@ -199,16 +225,30 @@ export function ConnectInviteModal({
               </p>
             </div>
 
-            {/* Шаг 2 — устройство не рядом: приглашение уезжает текстом. */}
+            {/* Шаг 2 — устройство не рядом: приглашение уезжает текстом.
+                Копирование стоит отдельной кнопкой, а не запасным путём внутри
+                «Отправить»: системный шит Windows показывает только приложения,
+                зарегистрированные как share target, и Telegram в этот список не
+                попадает — там копирование остаётся единственным рабочим путём. */}
             <div className="mt-3 space-y-2">
-              <Button type="button" className="w-full gap-2" onClick={() => void share()}>
-                {inviteCopyState === 'done' ? <Check size={15} /> : <Send size={15} />}
-                {inviteCopyState === 'done'
-                  ? t('connectInvite.inviteCopied')
-                  : canShare
-                    ? t('connectInvite.share')
-                    : t('connectInvite.copyInvite')}
+              {canShare && (
+                <Button type="button" className="w-full gap-2" onClick={() => void share()}>
+                  <Send size={15} />
+                  {t('connectInvite.share')}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant={canShare ? 'outline' : 'default'}
+                className="w-full gap-2"
+                onClick={() => void copyInvite(shareText)}
+              >
+                {inviteCopyState === 'done' ? <Check size={15} className="text-primary" /> : <Copy size={15} />}
+                {inviteCopyState === 'done' ? t('connectInvite.inviteCopied') : t('connectInvite.copyInvite')}
               </Button>
+              {inviteCopyState === 'failed' && (
+                <p className="text-center text-xs text-destructive">{t('common.copyFailed')}</p>
+              )}
               <p className="text-center text-[11px] leading-4 text-muted-foreground">
                 {t('connectInvite.shareHint')}
               </p>
