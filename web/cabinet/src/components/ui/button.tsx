@@ -6,22 +6,22 @@ import { cn } from '@/lib/utils'
 const buttonVariants = cva(
   // cabinet-btn / cabinet-btn-primary — стабильные хуки для декор-тем:
   // цепляться за utility-классы Tailwind (bg-primary и т.п.) слишком хрупко.
-  'cabinet-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'cabinet-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98] active:duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         default:
-          'cabinet-btn-primary bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 active:scale-[0.98]',
+          'cabinet-btn-primary bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 hover:shadow-[0_10px_26px_-10px_hsl(var(--cabinet-accent)/0.6)]',
         destructive:
           'bg-destructive text-destructive-foreground shadow hover:brightness-110',
         outline:
-          'border border-border bg-transparent hover:bg-secondary hover:text-secondary-foreground dark:bg-card/40 dark:hover:bg-secondary/80',
+          'border border-border bg-transparent hover:border-[hsl(var(--cabinet-accent)/0.5)] hover:bg-secondary hover:text-secondary-foreground hover:shadow-[0_8px_22px_-10px_hsl(var(--cabinet-accent)/0.5)] dark:bg-card/40 dark:hover:bg-secondary/80',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-[0_8px_22px_-10px_hsl(var(--cabinet-accent)/0.4)]',
         ghost:
           'hover:bg-secondary hover:text-secondary-foreground',
         link:
-          'text-primary underline-offset-4 hover:underline',
+          'text-primary underline-offset-4 hover:underline active:scale-100',
       },
       size: {
         default: 'h-10 px-4 py-2',

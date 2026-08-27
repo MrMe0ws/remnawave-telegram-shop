@@ -375,13 +375,19 @@ function QuickLinks({
   return (
     <div className="space-y-2.5">
       <div className="grid gap-2.5 sm:grid-cols-2">
-        {primary.map(({ to, icon: Icon, label, hint, accent }) => (
+        {primary.map(({ to, icon: Icon, label, hint, accent }, i) => (
           <Link
             key={to}
             to={to}
             className={cn(
               'cabinet-elevated-card cabinet-row flex items-center gap-3 px-3 py-2.5',
               accent,
+              /*
+               * Нечётный последний остаётся один в ряду — растягиваем его на
+               * обе колонки, иначе рядом с ним висит пустая половина.
+               * Считаем по факту: рефералы могут быть выключены.
+               */
+              i === primary.length - 1 && primary.length % 2 === 1 && 'sm:col-span-2',
             )}
           >
             <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">

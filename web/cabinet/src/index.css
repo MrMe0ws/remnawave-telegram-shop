@@ -20,6 +20,12 @@
      */
     /* Единый easing пластики кабинета — тот же, что на лендинге. */
     --cabinet-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /*
+     * Акцент по умолчанию нужен и вне .cabinet-shell: кнопки живут ещё и в
+     * админке, а hsl() с неизвестной переменной становится невалидным и
+     * declaration просто отбрасывается.
+     */
+    --cabinet-accent: var(--primary);
 
     --cabinet-tg-safe-top: 0px;
     --cabinet-tg-safe-bottom: calc(
@@ -431,7 +437,20 @@
   .cabinet-shell .cabinet-row {
     transition:
       background-color 0.25s var(--cabinet-ease),
-      border-color 0.25s var(--cabinet-ease);
+      border-color 0.25s var(--cabinet-ease),
+      transform 0.25s var(--cabinet-ease);
+  }
+
+  /*
+   * Отклик на нажатие. Только у ссылок и кнопок: .cabinet-row висит и на
+   * некликабельных строках, а те продавливаться не должны. Длительность
+   * перебивается на короткую — нажатие должно быть мгновенным, в отличие
+   * от плавного ховера.
+   */
+  .cabinet-shell a.cabinet-row:active,
+  .cabinet-shell button.cabinet-row:active {
+    transform: scale(0.985);
+    transition-duration: 0.1s;
   }
 
   .cabinet-shell .cabinet-row:hover {

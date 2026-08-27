@@ -563,19 +563,15 @@ function TariffPeriodStep({
             type="button"
             variant="outline"
             className={cn(
-              'h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-[var(--radius)] backdrop-blur-[2px] border transition-[background-color,box-shadow,border-color,filter] duration-200',
+              /*
+               * Ховер и нажатие приходят из варианта outline — свой
+               * tariffOtherCardHoverClassName тут только спорил с ним за бордер.
+               */
+              'h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-[var(--radius)] backdrop-blur-[2px] border duration-200',
               tariffCardShadowClassName,
               p.months === selectedMonths
-                ? cn(
-                    'border-primary bg-primary/10 dark:bg-primary/15',
-                    tariffOtherCardHoverClassName,
-                    'hover:brightness-[1.02]',
-                  )
-                : cn(
-                    'border-border bg-card dark:bg-[hsl(var(--card))]',
-                    tariffOtherCardHoverClassName,
-                    'hover:brightness-[1.02]',
-                  ),
+                ? 'border-primary bg-primary/10 shadow-[0_10px_26px_-12px_hsl(var(--cabinet-accent)/0.5)] dark:bg-primary/15'
+                : 'border-border bg-card dark:bg-[hsl(var(--card))]',
             )}
             onClick={() => {
               setSelectedMonths(p.months)
