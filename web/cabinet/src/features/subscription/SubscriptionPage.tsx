@@ -309,10 +309,7 @@ export default function SubscriptionPage() {
                 )}
 
                 {canAddDevice && (
-                  <AddDeviceSlot
-                    onOpen={() => setConnectOpen(true)}
-                    freeSlots={deviceLimit > 0 ? deviceLimit - connectedDevices : null}
-                  />
+                  <AddDeviceSlot onOpen={() => setConnectOpen(true)} />
                 )}
               </CardContent>
             </Card>

@@ -37,12 +37,15 @@ export function ConnectExtraDeviceCard({
 
   return (
     <Card className="subscription-feature-card">
-      <CardContent className="p-4">
+      {/* Отступ на кнопке, а не на CardContent: суммарно те же 1rem, но
+          подсветка при наведении заливает карточку целиком, а не прямоугольник
+          внутри неё. */}
+      <CardContent className="p-0">
         <button
           type="button"
           disabled={inactive}
           onClick={onOpen}
-          className="cabinet-row flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors disabled:pointer-events-none disabled:opacity-60"
+          className="cabinet-row flex w-full items-center gap-3 rounded-2xl p-4 text-left transition-colors disabled:pointer-events-none disabled:opacity-60"
         >
           <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
             <MonitorSmartphone size={16} className="text-primary" />
@@ -68,7 +71,7 @@ export function ConnectExtraDeviceCard({
  * пунктирная строка читается продолжением списка, а не третьим призывом к
  * действию рядом с двумя имеющимися.
  */
-export function AddDeviceSlot({ onOpen, freeSlots }: { onOpen: () => void; freeSlots: number | null }) {
+export function AddDeviceSlot({ onOpen }: { onOpen: () => void }) {
   const { t } = useTranslation()
 
   return (
@@ -81,11 +84,6 @@ export function AddDeviceSlot({ onOpen, freeSlots }: { onOpen: () => void; freeS
         <Plus size={15} />
       </span>
       <span className="min-w-0 flex-1 text-sm font-medium">{t('connectInvite.addDeviceSlot')}</span>
-      {freeSlots != null && freeSlots > 0 && (
-        <span className="shrink-0 text-xs tabular-nums">
-          {t('connectInvite.freeSlots', { count: freeSlots })}
-        </span>
-      )}
     </button>
   )
 }
@@ -122,9 +120,12 @@ export function ConnectInviteModal({
       try {
         await navigator.share({ text: shareText })
         return
-      } catch {
-        // Пользователь закрыл системный шит либо share недоступен в этом
-        // контексте — молча падаем в копирование, оно решает ту же задачу.
+      } catch (e) {
+        // Закрытый системный шит — это отказ, а не сбой: копировать в ответ на
+        // него нельзя, иначе отмена превращается в «скопировано».
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        // Остальное (share запрещён политикой, нет обработчика) — падаем в
+        // копирование, оно решает ту же задачу.
       }
     }
     void copyInvite(shareText)
@@ -135,8 +136,11 @@ export function ConnectInviteModal({
   if (typeof document === 'undefined') return null
 
   return createPortal(
+    // На узком экране — лист снизу: до верхнего края окна большим пальцем не
+    // дотянуться, а модалка по центру там ещё и обрезается клавиатурой. На
+    // sm+ остаётся обычный центрированный диалог.
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -144,12 +148,14 @@ export function ConnectInviteModal({
         aria-modal="true"
         aria-label={t('connectInvite.cardTitle')}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-background/95 p-4 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm sm:p-5"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm sm:max-h-[90vh] sm:rounded-2xl sm:p-5 sm:pb-5"
       >
+        {/* Полоска-ручка: на мобиле она объясняет, что это лист, а не экран. */}
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/30 sm:hidden" aria-hidden />
+
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-heading text-lg font-semibold">{t('connectInvite.modalTitle')}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t('connectInvite.modalSubtitle')}</p>
           </div>
           <button
             type="button"
@@ -184,7 +190,7 @@ export function ConnectInviteModal({
         ) : (
           <>
             {/* Шаг 1 — устройство рядом: камера открывает страницу с инструкцией. */}
-            <div className="flex flex-col items-center rounded-xl border border-border bg-muted/30 px-3 py-4">
+            <div className="flex flex-col items-center rounded-xl bg-muted/30 px-3 py-4">
               <div className="rounded-xl bg-white p-2.5">
                 <QrCode value={inviteUrl} size={196} title={t('connectInvite.qrAlt')} />
               </div>
