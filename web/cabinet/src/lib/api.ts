@@ -58,6 +58,24 @@ function readCsrfCookie(): string {
  */
 export const SUBSCRIPTION_STALE_MS = 15_000
 
+/**
+ * Расход трафика по дням за расчётный период — график на главной.
+ *
+ * Период считается от последнего сброса счётчика в панели, а не от начала
+ * календарного месяца: только так сумма сходится с лимитом тарифа рядом.
+ * `enabled: false` — интеграции нет или пользователь не заведён в панели;
+ * пустой `points` при `enabled: true` — законный ответ, трафика просто не было.
+ */
+export type TrafficUsageResponse = {
+  enabled: boolean
+  period_start?: string
+  period_end?: string
+  categories: string[]
+  /** Байты по дням. */
+  points: number[]
+  total_bytes: number
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -902,6 +920,9 @@ export const api = {
 
   devices: () =>
     request<DevicesResponse>('GET', '/me/devices'),
+
+  trafficUsage: () =>
+    request<TrafficUsageResponse>('GET', '/me/traffic-usage'),
 
   deleteDevice: (hwid: string) =>
     request<{ ok: boolean }>('POST', '/me/devices/delete', { hwid }),

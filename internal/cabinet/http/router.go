@@ -742,6 +742,16 @@ func registerAPIRoutes(
 			),
 		}),
 	)
+	api.Handle("/cabinet/api/me/traffic-usage",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.GetTrafficUsage),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("traffic_usage")),
+			),
+		}),
+	)
 	api.Handle("/cabinet/api/me/devices/delete",
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.DeleteDevice),

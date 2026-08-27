@@ -143,7 +143,13 @@
       "subscriptionExpiredTrafficHint": "Your traffic limit is exhausted. Renew to continue using the service.",
       "statDays": "days",
       "statTraffic": "traffic",
-      "statDevices": "devices"
+      "statDevices": "devices",
+      "usageChartTitle": "Usage this period",
+      "usageChartSince": "since {{date}}",
+      "untilDate": "until {{date}}",
+      "tariffsCardHint": "Renew or switch",
+      "referralsCardHint": "Days for invites",
+      "promocodesCardHint": "Redeem a code"
     },
     "subscriptionPage": {
       "title": "Subscription",

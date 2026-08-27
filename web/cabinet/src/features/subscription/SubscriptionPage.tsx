@@ -13,7 +13,7 @@ import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBloc
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
@@ -202,14 +202,15 @@ export default function SubscriptionPage() {
 
             {sub?.subscription_link && (
               <RevealItem>
+              {/* Компактнее прежнего: карточка вспомогательная, ссылку копируют и уходят. */}
               <Card className="subscription-feature-card">
-                <CardContent className="px-5 py-5 sm:px-6">
-                  <p className="mb-3 flex items-center gap-2 text-base font-medium text-foreground">
-                    <Wifi size={14} className="text-primary" />
+                <CardContent className="p-4">
+                  <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Wifi size={15} className="text-primary" />
                     {t('subscriptionPage.subscriptionLink')}
                   </p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 truncate rounded-lg bg-muted px-3 py-2 font-mono text-xs text-muted-foreground select-all">
+                    <div className="min-w-0 flex-1 truncate rounded-lg bg-muted/70 px-3 py-2 font-mono text-xs text-muted-foreground select-all">
                       {sub.subscription_link}
                     </div>
                     <Button
@@ -257,58 +258,74 @@ export default function SubscriptionPage() {
             )}
 
             <RevealItem>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
-                  <Smartphone size={14} />
-                  {t('subscriptionPage.myDevices')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            {/*
+              Строки-устройства вместо обведённых блоков с кнопкой-словом:
+              иконка в скруглённом квадрате, название и платформа, удаление —
+              иконкой справа. Счётчик уехал в шапку карточки, отдельная строка
+              «Подключено: N / M» дублировала полосу устройств в главной карточке.
+            */}
+            <Card className="cabinet-elevated-card">
+              <CardContent className="p-4">
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="flex items-center gap-2 text-sm font-semibold">
+                    <Smartphone size={15} className="text-primary" />
+                    {t('subscriptionPage.myDevices')}
+                  </p>
+                  {devices?.enabled && (
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      {devices.connected ?? 0} /{' '}
+                      {devices.device_limit > 0
+                        ? devices.device_limit
+                        : t('subscriptionPage.unlimited')}
+                    </span>
+                  )}
+                </div>
+
                 {!devices?.enabled ? (
-                  <p className="text-sm text-muted-foreground">{t('subscriptionPage.devicesUnavailable')}</p>
+                  <p className="px-1 text-sm text-muted-foreground">
+                    {t('subscriptionPage.devicesUnavailable')}
+                  </p>
+                ) : devicesLoading ? (
+                  <DeviceRowsSkeleton n={2} />
+                ) : !devices.devices?.length ? (
+                  <p className="px-1 py-4 text-center text-sm text-muted-foreground">
+                    {t('subscriptionPage.noDevices')}
+                  </p>
                 ) : (
-                  <>
-                    <div className="text-sm text-muted-foreground">
-                      {t('subscriptionPage.devicesLimitLine', {
-                        used: devices.connected ?? 0,
-                        limit: devices.device_limit > 0 ? devices.device_limit : t('subscriptionPage.unlimited'),
-                      })}
-                    </div>
-                    {devicesLoading ? (
-                      <DeviceRowsSkeleton n={2} />
-                    ) : !devices.devices?.length ? (
-                      <p className="text-sm text-muted-foreground">{t('subscriptionPage.noDevices')}</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {devices.devices.map((d) => {
-                          const title = d.device_model || d.platform || d.hwid
-                          const subtitle = [d.platform, d.os_version].filter(Boolean).join(' · ')
-                          return (
-                            <li key={d.hwid} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <DeviceCardIcon className="shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium">{title}</p>
-                                  <p className="truncate text-xs text-muted-foreground">{subtitle || d.hwid}</p>
-                                </div>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1.5"
-                                disabled={deleteDevice.isPending}
-                                onClick={() => setDeleteConfirmHwid(d.hwid)}
-                              >
-                                <Trash2 size={13} />
-                                {t('subscriptionPage.deleteDevice')}
-                              </Button>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-                  </>
+                  <ul className="space-y-1">
+                    {devices.devices.map((d) => {
+                      const title = d.device_model || d.platform || d.hwid
+                      const subtitle = [d.platform, d.os_version].filter(Boolean).join(' · ')
+                      return (
+                        <li
+                          key={d.hwid}
+                          className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-primary/5"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+                              <DeviceCardIcon />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{title}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {subtitle || d.hwid}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={deleteDevice.isPending}
+                            onClick={() => setDeleteConfirmHwid(d.hwid)}
+                            aria-label={t('subscriptionPage.deleteDevice')}
+                            title={t('subscriptionPage.deleteDevice')}
+                            className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 )}
               </CardContent>
             </Card>
@@ -499,17 +516,15 @@ function DevicesUsageBar({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+      <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
         <span className="text-muted-foreground dark:text-slate-300">{title}</span>
         {loading ? (
-          <Skeleton className="h-3.5 w-16" />
+          <Skeleton className="h-3.5 w-14" />
         ) : (
           <span
             className={cn(
-              'tabular-nums',
-              full
-                ? 'font-medium text-amber-700 dark:text-amber-300'
-                : 'text-muted-foreground dark:text-slate-300',
+              'font-semibold tabular-nums',
+              full ? 'text-amber-700 dark:text-amber-300' : 'text-foreground',
             )}
           >
             {used} / {unlimited ? unlimitedLabel : limit}
@@ -517,7 +532,7 @@ function DevicesUsageBar({
         )}
       </div>
       {!unlimited && (
-        <div className="h-2.5 rounded-full bg-muted dark:bg-white/10">
+        <div className="h-2 rounded-full bg-muted dark:bg-white/10">
           <div
             className={cn(
               'h-full rounded-full transition-all duration-500',

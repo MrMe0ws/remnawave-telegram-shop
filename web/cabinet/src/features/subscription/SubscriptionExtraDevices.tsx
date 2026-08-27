@@ -223,21 +223,28 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   const previewUnit =
     preview?.currency === 'STARS' ? t('checkout.stars') : t('checkout.rub')
 
+  // Скруглённый квадрат, как у строк устройств и разделов кабинета,
+  // а не круг — чтобы блоки на странице читались одним набором.
   const deviceOptionIcon = (
     <div
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary"
+      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary"
       aria-hidden
     >
-      <Smartphone size={14} strokeWidth={2} />
+      <Smartphone size={16} strokeWidth={2} />
     </div>
   )
 
   return (
-    <Card className={inactive ? 'opacity-60 saturate-50 pointer-events-none' : ''}>
-      <CardHeader className="pb-3">
+    <Card
+      className={cn(
+        'cabinet-elevated-card',
+        inactive && 'opacity-60 saturate-50 pointer-events-none',
+      )}
+    >
+      <CardHeader className="px-4 pb-3 pt-4">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base font-medium text-muted-foreground flex min-w-0 flex-1 items-center gap-2">
-            <Cpu size={14} className="shrink-0" />
+          <CardTitle className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground">
+            <Cpu size={15} className="shrink-0 text-primary" />
             <span className="leading-snug">{t('subscriptionPage.extraDevicesTitle')}</span>
           </CardTitle>
           {panel !== 'menu' && (
@@ -267,7 +274,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_increase && (
                     <button
                       type="button"
-                      className="group flex w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-card-foreground transition-colors hover:bg-muted/55"
+                      className="group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground transition-colors hover:border-transparent hover:bg-primary/5"
                       onClick={() => {
                         setBuyTarget(buyOptions[0] ?? hwid.current_limit + 1)
                         setProvider(firstHwidProvider)
@@ -288,7 +295,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_decrease && (
                     <button
                       type="button"
-                      className="group flex w-full items-center gap-3 rounded-xl border border-border bg-muted/35 px-4 py-3 text-left text-card-foreground transition-colors hover:bg-muted/55"
+                      className="group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground transition-colors hover:border-transparent hover:bg-primary/5"
                       onClick={() => {
                         const last = decOptions[decOptions.length - 1] ?? hwid.base_limit
                         setDecTarget(last)

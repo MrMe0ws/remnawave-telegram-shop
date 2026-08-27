@@ -143,7 +143,13 @@
       "subscriptionExpiredTrafficHint": "Лимит трафика исчерпан. Продлите подписку, чтобы продолжить пользоваться сервисом.",
       "statDays": "дней",
       "statTraffic": "трафик",
-      "statDevices": "устройств"
+      "statDevices": "устройств",
+      "usageChartTitle": "Расход за период",
+      "usageChartSince": "с {{date}}",
+      "untilDate": "до {{date}}",
+      "tariffsCardHint": "Продлить или сменить",
+      "referralsCardHint": "Дни за приглашения",
+      "promocodesCardHint": "Активировать код"
     },
     "subscriptionPage": {
       "title": "Подписка",

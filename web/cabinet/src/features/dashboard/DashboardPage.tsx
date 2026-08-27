@@ -19,13 +19,13 @@ import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { StatRing, UnboundedRing } from '@/components/StatRing'
 import { SubscriptionActions } from '@/components/SubscriptionActions'
-import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
+import { TrafficUsageChart } from '@/components/TrafficUsageChart'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { api, SUBSCRIPTION_STALE_MS, type SubscriptionResponse } from '@/lib/api'
-import { cn, daysUntil, trafficUsagePercent } from '@/lib/utils'
+import { cn, daysUntil, formatDate, trafficUsagePercent } from '@/lib/utils'
 import { daysTone, devicesTone, trafficTone } from '@/lib/subscriptionTone'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
@@ -75,6 +75,16 @@ export default function DashboardPage() {
     retry: 1,
     enabled: Boolean(sub),
   })
+  // График расхода за расчётный период. Панель отдаёт готовый ряд по дням;
+  // ошибки и отсутствие интеграции возвращаются как пустой ряд, а не как сбой.
+  const { data: usage, isLoading: usageLoading } = useQuery({
+    queryKey: ['traffic-usage'],
+    queryFn: () => api.trafficUsage(),
+    staleTime: 5 * 60_000,
+    retry: 1,
+    enabled: Boolean(sub),
+  })
+
   const { data: bootstrap, isPending: bootstrapPending } = useAuthBootstrap()
 
   const hasSubscription = hasSubscriptionData(sub)
@@ -140,9 +150,10 @@ export default function DashboardPage() {
                 <h1 className="font-heading text-3xl font-bold tracking-tight">
                   {subscriptionTariffLabel(sub, t)}
                 </h1>
+                {/* Дата вместо блока «Действует до»: он дублировал бы кольцо дней. */}
                 <p className="mt-1 truncate text-sm text-muted-foreground">
                   {isActive && sub?.expire_at
-                    ? t('subscriptionPage.daysLeft', { n: days })
+                    ? t('dashboard.untilDate', { date: formatDate(sub.expire_at, lang) })
                     : t('subscriptionPage.expiredBlockTitle')}
                 </p>
               </div>
@@ -215,12 +226,7 @@ export default function DashboardPage() {
             </RevealItem>
 
             <RevealItem>
-              <SubscriptionExpireAtBlock
-                expireAt={sub?.expire_at}
-                lang={lang}
-                days={days}
-                isActive={isActive}
-              />
+              <TrafficUsageChart data={usage} loading={usageLoading} lang={lang} />
             </RevealItem>
           </>
         ) : (
@@ -242,14 +248,28 @@ export default function DashboardPage() {
                   <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
                 </div>
 
+                {/*
+                  Блик здесь постоянный, в отличие от подключения устройства:
+                  это первый и единственный шаг нового пользователя, и кнопку
+                  нужно заметить сразу. Когда триал недоступен, кнопка неактивна —
+                  привлекать к ней внимание уже незачем.
+                */}
                 <div id="cabinet-onboarding-step2-target">
-                  <Button
-                    className="h-11 w-full"
-                    onClick={() => activateTrial.mutate()}
-                    disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
-                  >
-                    {trialButtonLabel}
-                  </Button>
+                  {trial?.enabled && trial?.can_activate && !activateTrial.isPending ? (
+                    <span className="cabinet-attn-sheen block">
+                      <Button className="h-11 w-full" onClick={() => activateTrial.mutate()}>
+                        {trialButtonLabel}
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button
+                      className="h-11 w-full"
+                      onClick={() => activateTrial.mutate()}
+                      disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
+                    >
+                      {trialButtonLabel}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -323,21 +343,43 @@ function QuickLinks({
 }) {
   const { t } = useTranslation()
 
-  const primary: { to: string; icon: LucideIcon; label: string }[] = [
-    { to: '/tariffs', icon: Zap, label: t('dashboard.tariffsCardTitle') },
-    { to: '/promocodes', icon: Ticket, label: t('dashboard.promocodesCardTitle') },
-    { to: '/referral', icon: Users, label: t('dashboard.referralsCardTitle') },
+  const primary: { to: string; icon: LucideIcon; label: string; hint: string }[] = [
+    {
+      to: '/tariffs',
+      icon: Zap,
+      label: t('dashboard.tariffsCardTitle'),
+      hint: t('dashboard.tariffsCardHint'),
+    },
+    {
+      to: '/referral',
+      icon: Users,
+      label: t('dashboard.referralsCardTitle'),
+      hint: t('dashboard.referralsCardHint'),
+    },
+    {
+      to: '/promocodes',
+      icon: Ticket,
+      label: t('dashboard.promocodesCardTitle'),
+      hint: t('dashboard.promocodesCardHint'),
+    },
   ]
 
   return (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        {primary.map(({ to, icon: Icon, label }) => (
-          <Link key={to} to={to} className="dashboard-quick-link cabinet-elevated-card group flex items-center gap-3 px-4 py-3.5">
+        {primary.map(({ to, icon: Icon, label, hint }) => (
+          <Link
+            key={to}
+            to={to}
+            className="dashboard-quick-link cabinet-elevated-card group flex items-center gap-3 px-4 py-3"
+          >
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
               <Icon size={16} aria-hidden />
             </span>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{label}</span>
+              <span className="block truncate text-xs text-muted-foreground">{hint}</span>
+            </span>
             <ChevronRight
               size={18}
               className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"

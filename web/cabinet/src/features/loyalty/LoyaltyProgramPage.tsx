@@ -356,28 +356,52 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
 
   const discount = data.current?.discount_percent ?? 0
 
+  /*
+   * Шапка и полоса разнесены по вертикали, а не втиснуты в одну строку:
+   * уровень и скидка читаются как заголовок блока, прогресс до следующего
+   * уровня — как подпись под ним.
+   */
   return (
     <Link
       to="/loyalty"
       className={cn(
-        'subscription-feature-card profile-tariff-hover flex w-full items-center gap-3 p-4 text-left transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'subscription-feature-card profile-tariff-hover group block w-full p-4 text-left transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15">
-        <Gem size={16} className="text-primary" />
+      <div className="flex items-center gap-3">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/14 text-primary">
+          <Gem size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {t('loyaltyPage.compactTitle', { n: data.current?.sort_order ?? 0 })}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {t('loyaltyPage.compactDiscount', { pct: discount })}
+          </p>
+        </div>
+        <ChevronRight
+          className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          aria-hidden
+        />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{t('loyaltyPage.compactTitle', { n: data.current?.sort_order ?? 0 })}</p>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="mt-3">
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full rounded-full bg-primary transition-[width]"
+            className="h-full rounded-full bg-primary transition-[width] duration-500"
             style={{ width: `${Math.min(100, Math.max(0, data.progress_percent))}%` }}
           />
         </div>
-        <p className="mt-1.5 text-xs text-muted-foreground">{t('loyaltyPage.compactDiscount', { pct: discount })}</p>
+        {data.next != null && (
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            {t('loyaltyPage.untilNext', {
+              xp: formatNumber(data.xp_until_next),
+              next: data.next.sort_order,
+            })}
+          </p>
+        )}
       </div>
-      <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
     </Link>
   )
 }

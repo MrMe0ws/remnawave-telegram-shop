@@ -40,12 +40,13 @@ export function TrafficUsageBar({
 
   return (
     <div className={className}>
-      <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+      {/* Кегль мельче основного текста: показатели — фон, а не заголовок карточки. */}
+      <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
         <span className="text-muted-foreground dark:text-slate-300">{usageTitle}</span>
         <span
           className={cn(
-            'flex items-center gap-1 tabular-nums',
-            tone === 'calm' ? 'text-muted-foreground dark:text-slate-300' : TONE_TEXT[tone],
+            'flex items-center gap-1 font-semibold tabular-nums',
+            tone === 'calm' ? 'text-foreground' : TONE_TEXT[tone],
           )}
         >
           {unlimited ? (
@@ -60,7 +61,7 @@ export function TrafficUsageBar({
         </span>
       </div>
       {!unlimited && (
-        <div className="h-2.5 rounded-full bg-muted dark:bg-white/10">
+        <div className="h-2 rounded-full bg-muted dark:bg-white/10">
           <div
             className={cn('h-full rounded-full transition-all duration-500', TONE_FILL[tone])}
             style={{ width: `${percent}%` }}
