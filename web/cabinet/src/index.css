@@ -18,6 +18,9 @@
      * Top: только html[data-cabinet-tg-safe-top="1"] (мобильный Mini App).
      * На desktop TG inset большой — не применяем (иначе «дыра» над хедером).
      */
+    /* Единый easing пластики кабинета — тот же, что на лендинге. */
+    --cabinet-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
     --cabinet-tg-safe-top: 0px;
     --cabinet-tg-safe-bottom: calc(
       var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
@@ -257,6 +260,170 @@
     box-shadow:
       0 12px 30px rgba(3, 10, 24, 0.42),
       inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+   * Пластика кабинета: базовый слой
+   *
+   * Язык взят с лендинга и приглушён: градиентная обводка на наведении,
+   * слабое пятно света под курсором, блик по главной кнопке.
+   *
+   * Ключевое — слой базовый и цепляется за существующие имена классов
+   * (.cabinet-card / .cabinet-elevated-card / .subscription-feature-card /
+   * .cabinet-btn-primary), а цвета берёт из --primary и --accent, которые
+   * каждая декор-тема уже переопределяет. Поэтому эффекты появляются сразу
+   * на всех страницах и во всех 20 темах, а ~205 правил под темы продолжают
+   * работать: их селекторы специфичнее и перекрывают базу там, где тема
+   * задаёт своё.
+   *
+   * Ограничено .cabinet-shell — админка (.admin-shell) живёт своей жизнью.
+   * ───────────────────────────────────────────────────────────── */
+
+  .cabinet-shell .cabinet-card,
+  .cabinet-shell .cabinet-elevated-card,
+  .cabinet-shell .subscription-feature-card {
+    position: relative;
+    isolation: isolate;
+    transition:
+      border-color 0.4s var(--cabinet-ease),
+      box-shadow 0.4s var(--cabinet-ease);
+  }
+
+  /*
+   * Кольцо-градиент по контуру. Псевдоэлемент с mask-composite, а не
+   * border-image: последний даёт артефакты на скруглениях. z-index: -1
+   * держит кольцо над фоном карточки и под её содержимым, поэтому у
+   * родителя обязателен isolation: isolate.
+   */
+  .cabinet-shell .cabinet-card::before,
+  .cabinet-shell .cabinet-elevated-card::before,
+  .cabinet-shell .subscription-feature-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.8) 0%,
+      hsl(var(--accent) / 0.35) 50%,
+      hsl(var(--primary) / 0.8) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s var(--cabinet-ease);
+  }
+
+  /*
+   * Пятно света под курсором. Координаты пишет useDecorCardSpotlight
+   * в --cd-mx/--cd-my одним слушателем на документ.
+   *
+   * 0.04 — вчетверо слабее лендинга. Яркое пятно перетягивает внимание
+   * с содержимого карточки; здесь оно только намекает, что карточка живая.
+   */
+  .cabinet-shell .cabinet-card::after,
+  .cabinet-shell .cabinet-elevated-card::after,
+  .cabinet-shell .subscription-feature-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(
+      240px circle at var(--cd-mx, 50%) var(--cd-my, 0%),
+      hsl(var(--primary) / 0.04),
+      transparent 70%
+    );
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s var(--cabinet-ease);
+  }
+
+  .cabinet-shell .cabinet-card:hover,
+  .cabinet-shell .cabinet-card:focus-within,
+  .cabinet-shell .cabinet-elevated-card:hover,
+  .cabinet-shell .cabinet-elevated-card:focus-within,
+  .cabinet-shell .subscription-feature-card:hover,
+  .cabinet-shell .subscription-feature-card:focus-within {
+    border-color: transparent;
+  }
+
+  .cabinet-shell .cabinet-card:hover::before,
+  .cabinet-shell .cabinet-card:focus-within::before,
+  .cabinet-shell .cabinet-card:hover::after,
+  .cabinet-shell .cabinet-card:focus-within::after,
+  .cabinet-shell .cabinet-elevated-card:hover::before,
+  .cabinet-shell .cabinet-elevated-card:focus-within::before,
+  .cabinet-shell .cabinet-elevated-card:hover::after,
+  .cabinet-shell .cabinet-elevated-card:focus-within::after,
+  .cabinet-shell .subscription-feature-card:hover::before,
+  .cabinet-shell .subscription-feature-card:focus-within::before,
+  .cabinet-shell .subscription-feature-card:hover::after,
+  .cabinet-shell .subscription-feature-card:focus-within::after {
+    opacity: 1;
+  }
+
+  .dark .cabinet-shell .cabinet-card:hover,
+  .dark .cabinet-shell .cabinet-elevated-card:hover,
+  .dark .cabinet-shell .subscription-feature-card:hover {
+    box-shadow:
+      0 22px 50px -18px hsl(var(--primary) / 0.18),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  /*
+   * Блик по главной кнопке. .cabinet-btn-primary — стабильный хук из
+   * components/ui/button.tsx, заведённый как раз под такие подцепки.
+   */
+  .cabinet-shell .cabinet-btn-primary {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .cabinet-shell .cabinet-btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgb(255 255 255 / 0.25) 50%,
+      transparent 80%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.75s var(--cabinet-ease);
+  }
+
+  .cabinet-shell .cabinet-btn-primary:hover::after,
+  .cabinet-shell .cabinet-btn-primary:focus-visible::after {
+    transform: translateX(120%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cabinet-shell .cabinet-card,
+    .cabinet-shell .cabinet-elevated-card,
+    .cabinet-shell .subscription-feature-card,
+    .cabinet-shell .cabinet-card::before,
+    .cabinet-shell .cabinet-elevated-card::before,
+    .cabinet-shell .subscription-feature-card::before,
+    .cabinet-shell .cabinet-card::after,
+    .cabinet-shell .cabinet-elevated-card::after,
+    .cabinet-shell .subscription-feature-card::after,
+    .cabinet-shell .cabinet-btn-primary::after {
+      transition: none;
+    }
   }
 
   /* Admin modals — та же поверхность, чуть сильнее отделение от overlay. */
@@ -3140,11 +3307,13 @@ html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card::aft
   border-radius: inherit;
   /*
    * На лендинге это пятно яркое и уместное, но в кабинете оно перетягивало
-   * внимание с содержимого карточки — держим вдвое слабее (0.16 → 0.08).
+   * внимание с содержимого карточки. Было 0.16 → 0.08, теперь 0.04:
+   * подсветка переехала в базовый слой пластики, и nebula выровнена с ним,
+   * иначе на ней ховер был бы вдвое ярче, чем на остальных темах.
    */
   background: radial-gradient(
     240px circle at var(--cd-mx, 50%) var(--cd-my, 0%),
-    hsl(var(--nb-cyan) / 0.08),
+    hsl(var(--nb-cyan) / 0.04),
     transparent 70%
   );
   opacity: 0;

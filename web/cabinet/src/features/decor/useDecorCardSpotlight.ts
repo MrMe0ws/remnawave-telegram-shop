@@ -1,27 +1,22 @@
 import { useEffect } from 'react'
 
-import { useCabinetDecorTheme } from './useCabinetDecorTheme'
-
 /**
- * Подсветка карточки под курсором для темы nebula.
+ * Подсветка карточки под курсором.
  *
- * Один слушатель pointermove на документе вместо onMouseMove на каждой карточке:
- * поверхностей в кабинете десятки, и React-обработчик на каждой давал бы
- * ререндер на каждое движение мыши. Пишем координаты прямо в CSS-переменные
+ * Один слушатель pointermove на документе вместо onMouseMove на каждой
+ * карточке: поверхностей в кабинете десятки, и React-обработчик на каждой давал
+ * бы ререндер на каждое движение мыши. Пишем координаты прямо в CSS-переменные
  * узла (--cd-mx/--cd-my), их читает radial-gradient в index.css.
  *
- * Хук глобальный (монтируется в CabinetDecorThemeSync) и активен только когда
- * выбрана nebula: у остальных тем подсветки нет и слушатель не навешивается.
+ * Хук глобальный (монтируется в CabinetDecorThemeSync) и работает при любой
+ * теме: подсветка переехала из темы nebula в базовый слой пластики, чтобы
+ * появиться на всех страницах и во всех темах разом.
  */
 
 const CARD_SELECTOR = '.cabinet-card, .cabinet-elevated-card, .subscription-feature-card'
 
 export function useDecorCardSpotlight(): void {
-  const theme = useCabinetDecorTheme()
-  const enabled = theme === 'nebula'
-
   useEffect(() => {
-    if (!enabled) return
     // Тонкая моторика мыши — не для тех, кто просил меньше движения.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     // Тач без курсора: подсветке негде жить, только тратили бы события.
@@ -63,5 +58,5 @@ export function useDecorCardSpotlight(): void {
       document.removeEventListener('pointerleave', clear)
       clear()
     }
-  }, [enabled])
+  }, [])
 }
