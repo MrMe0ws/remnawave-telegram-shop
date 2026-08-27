@@ -275,7 +275,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_increase && (
                     <button
                       type="button"
-                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground hover:border-transparent"
+                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-muted/25 p-2 text-left text-card-foreground hover:border-transparent"
                       onClick={() => {
                         setBuyTarget(buyOptions[0] ?? hwid.current_limit + 1)
                         setProvider(firstHwidProvider)
@@ -284,7 +284,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     >
                       {deviceOptionIcon}
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium">{t('subscriptionPage.extraDevicesBuyTitle')}</p>
+                        <p className="text-sm font-medium">{t('subscriptionPage.extraDevicesBuyTitle')}</p>
                         <p className="text-xs text-muted-foreground">{limitLine}</p>
                       </div>
                       <ChevronRight
@@ -296,7 +296,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_decrease && (
                     <button
                       type="button"
-                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground hover:border-transparent"
+                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-muted/25 p-2 text-left text-card-foreground hover:border-transparent"
                       onClick={() => {
                         const last = decOptions[decOptions.length - 1] ?? hwid.base_limit
                         setDecTarget(last)
@@ -305,7 +305,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     >
                       {deviceOptionIcon}
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium">{t('subscriptionPage.extraDevicesDecreaseTitle')}</p>
+                        <p className="text-sm font-medium">{t('subscriptionPage.extraDevicesDecreaseTitle')}</p>
                         <p className="text-xs text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseHint')}</p>
                       </div>
                       <ChevronRight
