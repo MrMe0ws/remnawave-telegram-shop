@@ -108,6 +108,9 @@ const PUBLIC_SHELL_PATHS = new Set([
   ...PUBLIC_AUTH_PATHS,
   '/deeplink',
   '/landing',
+  // Страница приглашения: её открывает получатель ссылки, у которого сессии
+  // нет и быть не может — ждать инициализации auth незачем.
+  '/connect',
   // Dev-превью: без этого страница ждала бы инициализацию auth. В прод не попадает.
   ...(import.meta.env.DEV ? ['/dev/connect-cta', '/dev/theme', '/dev/redesign'] : []),
 ])
@@ -151,6 +154,14 @@ function AppRoutes() {
 
       {/* Публичная страница редиректа на custom scheme — открывается из мини-приложения во внешнем браузере (без сессии). */}
       <Route path="/deeplink" element={<DeepLinkRedirectPage />} />
+
+      {/*
+        Приглашение «подключить ещё устройство»: тот же гайд, что и /connections,
+        но подписка берётся из токена в #t=..., а не из сессии. Отдельный роут, а
+        не флаг на /connections, чтобы владелец случайно не открыл гостевой режим
+        и чтобы ProtectedRoute на основном пути остался нетронутым.
+      */}
+      <Route path="/connect" element={<ConnectionsPage />} />
 
       {/* Витрина проекта. Доступна и гостю, и авторизованному — редиректа нет. */}
       <Route path="/landing" element={<LandingPage />} />

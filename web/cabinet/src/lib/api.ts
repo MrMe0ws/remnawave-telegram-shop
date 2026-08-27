@@ -411,6 +411,25 @@ export interface DevicesResponse {
   devices: DeviceInfo[]
 }
 
+/** Ответ GET /me/connect-invite: короткая ссылка на страницу подключения. */
+export interface ConnectInviteResponse {
+  url: string
+  expires_at: string
+}
+
+/**
+ * Ответ GET /public/connect: чем подключаться на устройстве без кабинета.
+ *
+ * mode=encrypted — админ включил шифрование deep link, и сырая ссылка
+ * подписки наружу не отдаётся: только готовые ссылки по приложениям.
+ * mode=plain — шифрование выключено, страница собирает deep link сама.
+ */
+export interface ConnectResolveResponse {
+  mode: 'plain' | 'encrypted'
+  subscription_link?: string
+  links?: Record<string, string>
+}
+
 export interface LoyaltyTierDTO {
   sort_order: number
   xp_min: number
@@ -871,6 +890,36 @@ export const api = {
   /** Зашифрованный deep link подключения (happ://crypt5/… или incy://crypt1/…). */
   deeplink: (app: 'happ' | 'incy') =>
     request<{ deeplink: string }>('GET', `/me/deeplink?app=${encodeURIComponent(app)}`),
+
+  /** Ссылка-приглашение на устройство, с которого в кабинет не зайти. */
+  connectInvite: () =>
+    request<ConnectInviteResponse>('GET', '/me/connect-invite'),
+
+  /**
+   * Резолв приглашения на публичной странице /connect.
+   *
+   * Мимо request(): у гостя нет сессии, а тот на 401 дёргает refresh и
+   * разлогинивает — на странице приглашения это лишнее. Код ошибки
+   * (invite_expired и т.п.) достаём из тела и кладём в ApiError.body.
+   */
+  publicConnect: async (token: string): Promise<ConnectResolveResponse> => {
+    const res = await fetch(`${BASE}/public/connect?t=${encodeURIComponent(token)}`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    })
+    const raw = await res.text().catch(() => '')
+    if (!res.ok) {
+      let code = raw
+      try {
+        code = (JSON.parse(raw) as { error?: string }).error || raw
+      } catch {
+        /* тело не JSON — отдаём как есть */
+      }
+      throw new ApiError(res.status, code)
+    }
+    return JSON.parse(raw) as ConnectResolveResponse
+  },
 
   loyalty: () => request<LoyaltyDashboardResponse>('GET', '/me/loyalty'),
 

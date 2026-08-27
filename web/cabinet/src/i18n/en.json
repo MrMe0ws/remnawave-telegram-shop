@@ -217,6 +217,25 @@
       "devicesAllTaken": "All slots are in use — free one or buy more",
       "trafficUnlimitedUsed": "{{used}} GB"
     },
+    "connectInvite": {
+      "cardTitle": "Connect another device",
+      "cardSubtitle": "A second phone, computer or TV — where you cannot sign in",
+      "modalTitle": "Connect another device",
+      "modalSubtitle": "One subscription works on several devices. They do not need to sign in.",
+      "qrAlt": "Connection link QR code",
+      "qrHint": "Point the other phone's camera here — it opens the setup instructions",
+      "share": "Send invitation",
+      "copyInvite": "Copy invitation",
+      "inviteCopied": "Copied — send it in a messenger",
+      "shareHint": "A link with instructions: the recipient opens it on their device and connects on their own",
+      "expiresAt": "The link works until {{date}}",
+      "noSubscription": "Get a subscription first — there is nothing to connect yet.",
+      "manualToggle": "Set up manually",
+      "manualHint": "Subscription link to paste into a VPN app by hand — if the guided setup did not work.",
+      "addDeviceSlot": "Add a device",
+      "freeSlots_one": "{{count}} free",
+      "freeSlots_other": "{{count}} free"
+    },
     "accounts": {
       "title": "Linked accounts",
       "subtitle": "Manage how you sign in to the cabinet",

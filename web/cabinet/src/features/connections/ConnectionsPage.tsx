@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import {
   Download,
   Plus,
@@ -21,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { api, SUBSCRIPTION_STALE_MS } from '@/lib/api'
+import { api, ApiError, SUBSCRIPTION_STALE_MS } from '@/lib/api'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { cn } from '@/lib/utils'
 import {
@@ -53,9 +54,29 @@ type AppConfig = {
   platforms: Partial<Record<PlatformKey, AppGuide[]>>
 }
 
+/**
+ * Токен приглашения из фрагмента адреса (#t=...).
+ *
+ * Фрагмент, а не query: он не уходит на сервер, не попадает в Referer и не
+ * виден краулеру, который разворачивает превью ссылки в мессенджере, — а
+ * приглашение рассылают именно через мессенджеры.
+ */
+function parseInviteToken(hash: string): string {
+  const raw = (hash || '').replace(/^#/, '')
+  if (!raw) return ''
+  return new URLSearchParams(raw).get('t')?.trim() || ''
+}
+
 const uiText = {
   ru: {
     pageTitle: 'Установка',
+    invitePageTitle: 'Подключение устройства',
+    inviteSubtitle: 'Установите приложение и добавьте подписку — вход в личный кабинет не нужен',
+    inviteExpired: 'Срок действия ссылки истёк. Попросите отправить новую.',
+    inviteInvalid: 'Ссылка недействительна. Проверьте, что она скопирована целиком.',
+    inviteNoSubscription: 'У этой подписки нет активного доступа.',
+    inviteSubscriptionExpired: 'Подписка закончилась. Продлите её в личном кабинете.',
+    inviteUnavailable: 'Не удалось подготовить подключение. Попробуйте ещё раз через минуту.',
     installTitle: 'Установка приложения',
     addTitle: 'Добавление подписки',
     usageTitle: 'Подключение и использование',
@@ -68,6 +89,13 @@ const uiText = {
   },
   en: {
     pageTitle: 'Setup',
+    invitePageTitle: 'Connect a device',
+    inviteSubtitle: 'Install the app and add the subscription — no account needed',
+    inviteExpired: 'This link has expired. Ask for a new one.',
+    inviteInvalid: 'This link is not valid. Make sure it was copied in full.',
+    inviteNoSubscription: 'This subscription has no active access.',
+    inviteSubscriptionExpired: 'The subscription has ended. Renew it in the account.',
+    inviteUnavailable: 'Could not prepare the connection. Please try again in a minute.',
     installTitle: 'Install app',
     addTitle: 'Add subscription',
     usageTitle: 'Connect and use',
@@ -271,6 +299,20 @@ function subscriptionPayloadForScheme(scheme: string, subscriptionLink: string, 
   return encodeURIComponent(subscriptionLink)
 }
 
+/**
+ * Готовый зашифрованный deep link для приложения, если он пришёл с приглашением.
+ *
+ * Сопоставление идёт по префиксу urlScheme, а не по id приложения: в
+ * app-config один и тот же клиент встречается под разными id по платформам,
+ * а схема у него одна.
+ */
+function encryptedLinkForApp(app: Pick<AppGuide, 'urlScheme'>, links: Record<string, string>): string {
+  const scheme = (app.urlScheme || '').trim().toLowerCase()
+  if (scheme.startsWith('happ://')) return links.happ || ''
+  if (scheme.startsWith('incy://')) return links.incy || ''
+  return ''
+}
+
 function detectPlatformFromUA(): PlatformKey | '' {
   if (typeof navigator === 'undefined') return ''
   const ua = navigator.userAgent.toLowerCase()
@@ -288,6 +330,12 @@ function detectPlatformFromUA(): PlatformKey | '' {
 export default function ConnectionsPage() {
   const { i18n } = useTranslation()
   const currentLanguage: Lang = i18n.language?.toLowerCase().startsWith('en') ? 'en' : 'ru'
+  // Один и тот же гайд обслуживает две страницы: /connections для владельца
+  // (подписка приходит из /me/subscription) и публичную /connect, куда попадают
+  // по приглашению — там нет сессии, и всё нужное отдаёт /public/connect.
+  const location = useLocation()
+  const inviteToken = useMemo(() => parseInviteToken(location.hash), [location.hash])
+  const inviteMode = Boolean(inviteToken)
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey>('')
   const [selectedAppId, setSelectedAppId] = useState<string>('')
   const [platformOpen, setPlatformOpen] = useState(false)
@@ -324,11 +372,33 @@ export default function ConnectionsPage() {
     queryFn: () => api.subscription(),
     staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
+    enabled: !inviteMode,
+  })
+
+  // Приглашение: сервер сам решает, отдать сырую ссылку подписки (шифрование
+  // deep link выключено) или только готовые зашифрованные ссылки по
+  // приложениям. Клиенту гадать не нужно — он рисует то, что пришло.
+  const {
+    data: invite,
+    isLoading: inviteLoading,
+    error: inviteError,
+  } = useQuery({
+    queryKey: ['public-connect', inviteToken],
+    queryFn: () => api.publicConnect(inviteToken),
+    enabled: inviteMode,
+    staleTime: 60_000,
+    retry: 1,
   })
 
   const { data: bootstrap } = useAuthBootstrap()
 
-  const subscriptionLink = (subscription?.subscription_link || '').trim()
+  const encryptedLinks = useMemo(
+    () => (invite?.mode === 'encrypted' ? invite.links || {} : {}),
+    [invite],
+  )
+  const subscriptionLink = (
+    inviteMode ? invite?.subscription_link || '' : subscription?.subscription_link || ''
+  ).trim()
   const text = uiText[currentLanguage]
 
   const availablePlatforms = useMemo(() => {
@@ -354,7 +424,14 @@ export default function ConnectionsPage() {
     setSelectedPlatform(availablePlatforms[0])
   }, [availablePlatforms, selectedPlatform, detectedPlatform])
 
-  const apps = config?.platforms?.[selectedPlatform] || []
+  // В защищённом режиме приглашения сырой ссылки подписки у страницы нет, а
+  // значит нечего подставлять во все остальные клиенты — оставляем только те
+  // приложения, для которых бэкенд прислал готовый зашифрованный deep link.
+  const apps = useMemo(() => {
+    const all = config?.platforms?.[selectedPlatform] || []
+    if (invite?.mode !== 'encrypted') return all
+    return all.filter((app) => Boolean(encryptedLinkForApp(app, encryptedLinks)))
+  }, [config, selectedPlatform, invite?.mode, encryptedLinks])
 
   useEffect(() => {
     if (!apps.length) return
@@ -372,12 +449,25 @@ export default function ConnectionsPage() {
   // Для Happ/INCY при включённом админом шифровании deep link формируется на
   // бэкенде (happ://crypt5/ или incy://crypt1/), чтобы ссылку подписки нельзя было
   // подсмотреть/отредактировать в приложении и она не читалась сканерами чатов.
+  //
+  // В режиме приглашения этой ветки нет: /me/deeplink требует авторизации, а
+  // готовая зашифрованная ссылка уже пришла вместе с приглашением.
   const encryptApp = useMemo<'happ' | 'incy' | ''>(() => {
+    if (inviteMode) return ''
     const s = (selectedApp?.urlScheme || '').trim().toLowerCase()
     if (s.startsWith('happ://') && bootstrap?.deeplink_happ_encrypt) return 'happ'
     if (s.startsWith('incy://') && bootstrap?.deeplink_incy_encrypt) return 'incy'
     return ''
-  }, [selectedApp, bootstrap])
+  }, [selectedApp, bootstrap, inviteMode])
+
+  // Пока приглашение не разрешилось, показывать нечего: фильтр по нему ещё
+  // не применён.
+  const visibleApps = inviteLoading ? [] : apps
+
+  const inviteHref = useMemo(
+    () => (selectedApp ? encryptedLinkForApp(selectedApp, encryptedLinks) : ''),
+    [selectedApp, encryptedLinks],
+  )
 
   // Предзагружаем зашифрованную ссылку заранее, чтобы клик по кнопке оставался
   // синхронным (иначе await ломает открытие deep link на iOS/Safari).
@@ -397,11 +487,17 @@ export default function ConnectionsPage() {
   const encryptedHref = (encryptedDeeplink?.deeplink || '').trim()
 
   function openAddSubscription() {
-    if (!selectedApp || !subscriptionLink) return
+    if (!selectedApp) return
     const scheme = (selectedApp.urlScheme || '').trim()
     if (!scheme) return
     let href: string
-    if (encryptApp) {
+    if (inviteHref) {
+      // Приглашение в защищённом режиме: ссылка уже зашифрована бэкендом,
+      // собирать нечего.
+      href = inviteHref
+    } else if (!subscriptionLink) {
+      return
+    } else if (encryptApp) {
       if (!encryptedHref) {
         // Ещё не готово или прошлая попытка упала — пробуем получить ссылку снова.
         void refetchEncryptedDeeplink()
@@ -425,20 +521,33 @@ export default function ConnectionsPage() {
     window.open(href, '_blank', 'noopener,noreferrer')
   }
 
+  // Гостю по приглашению нельзя показывать оболочку кабинета: её навигация и
+  // счётчик поддержки ведут в защищённые разделы и требуют сессии.
+  const Shell = inviteMode ? InviteShell : AppLayout
+
   return (
-    <AppLayout>
+    <Shell>
       <PageReveal className="mx-auto w-full max-w-5xl space-y-4">
         <RevealItem>
         <Card className="overflow-visible border-border/80 bg-card dark:bg-[linear-gradient(180deg,#0e1b34d6,#0a1428d1)]">
           <CardContent className="space-y-5 p-4 sm:p-6">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-foreground dark:text-slate-100">
-                <PageTitleWithBack
-                  title={text.pageTitle}
-                  titleClassName="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-100"
-                />
+              <div className="min-w-0 text-foreground dark:text-slate-100">
+                {inviteMode ? (
+                  <>
+                    <h1 className="text-2xl font-semibold tracking-tight">{text.invitePageTitle}</h1>
+                    <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">
+                      {text.inviteSubtitle}
+                    </p>
+                  </>
+                ) : (
+                  <PageTitleWithBack
+                    title={text.pageTitle}
+                    titleClassName="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-100"
+                  />
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className={cn('flex items-center gap-2', inviteError && 'hidden')}>
                 <div className="relative" ref={platformMenuRef}>
                   <Button
                     type="button"
@@ -477,9 +586,14 @@ export default function ConnectionsPage() {
               </div>
             </div>
 
-            <div className="flex w-full flex-wrap gap-2">
-              {/* Пока app-config не пришёл, apps пустой — без заглушек ряд схлопывается и потом раздвигается. */}
-              {configLoading && !apps.length
+            {/* Мёртвое приглашение: выбирать приложение и платформу не из чего,
+                ниже вместо гайда стоит объяснение, что со ссылкой не так. */}
+            <div className={cn('flex w-full flex-wrap gap-2', inviteError && 'hidden')}>
+              {/* Пока app-config не пришёл, apps пустой — без заглушек ряд схлопывается и потом раздвигается.
+                  В режиме приглашения ждём ещё и его: список приложений там
+                  зависит от ответа, и без ожидания ряд успел бы моргнуть
+                  полным составом и схлопнуться до Happ. */}
+              {(configLoading || inviteLoading) && !visibleApps.length
                 ? [0, 1, 2].map((i) => (
                     <Skeleton
                       key={`app-skeleton-${i}`}
@@ -488,15 +602,15 @@ export default function ConnectionsPage() {
                     />
                   ))
                 : null}
-              {apps.map((app) => (
+              {visibleApps.map((app) => (
                 <button
                   key={app.id}
                   type="button"
                   onClick={() => setSelectedAppId(app.id)}
-                  className={`relative min-w-0 flex-[1_1_160px] sm:flex-[1_1_220px] rounded-xl border px-3 py-2 pr-12 text-left transition-all ${
+                  className={`relative min-w-0 flex-[1_1_160px] sm:flex-[1_1_220px] rounded-xl border px-3 py-2 pr-12 text-left transition-all duration-200 active:scale-[0.98] active:duration-100 ${
                     app.id === selectedApp?.id
-                      ? 'border-primary/45 bg-primary/15 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/45 dark:bg-primary/15'
-                      : 'border-border bg-muted/30 hover:border-border/80 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20'
+                      ? 'border-primary/45 bg-primary/15 shadow-[0_8px_24px_-10px_hsl(var(--cabinet-accent)/0.5),0_4px_6px_-1px_rgb(0_0_0_/_0.1)] dark:border-primary/45 dark:bg-primary/15'
+                      : 'border-border bg-muted/30 hover:border-[hsl(var(--cabinet-accent)/0.5)] hover:bg-muted/60 hover:shadow-[0_8px_22px_-10px_hsl(var(--cabinet-accent)/0.45)] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10'
                   }`}
                 >
                   <p className="inline-flex items-center gap-2 text-sm font-medium text-foreground dark:text-slate-100">
@@ -510,8 +624,10 @@ export default function ConnectionsPage() {
               ))}
             </div>
 
-            {configLoading || subLoading ? (
+            {configLoading || subLoading || inviteLoading ? (
               <ConnectionGuideSkeleton />
+            ) : inviteError ? (
+              <p className="text-sm text-destructive">{inviteErrorText(inviteError, text)}</p>
             ) : configError || !selectedApp ? (
               <p className="text-sm text-destructive">{text.configError}</p>
             ) : (
@@ -536,7 +652,7 @@ export default function ConnectionsPage() {
                       size="sm"
                       onClick={openAddSubscription}
                       disabled={
-                        !subscriptionLink ||
+                        (!subscriptionLink && !inviteHref) ||
                         !(selectedApp.urlScheme || '').trim() ||
                         (!!encryptApp && encryptedDeeplinkLoading)
                       }
@@ -546,7 +662,7 @@ export default function ConnectionsPage() {
                     </Button>
                   }
                   footerHint={
-                    !subscriptionLink
+                    !subscriptionLink && !inviteHref
                       ? text.noSubscription
                       : encryptedDeeplinkError
                         ? text.encryptedError
@@ -581,8 +697,39 @@ export default function ConnectionsPage() {
         </Card>
         </RevealItem>
       </PageReveal>
-    </AppLayout>
+    </Shell>
   )
+}
+
+/**
+ * Оболочка публичной страницы приглашения.
+ *
+ * Без навигации кабинета: у гостя нет сессии, и любая ссылка отсюда привела бы
+ * его на экран логина — ровно туда, куда он попасть не может.
+ */
+function InviteShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background px-3 py-6 sm:px-4 sm:py-10">
+      <div className="mx-auto w-full max-w-5xl">{children}</div>
+    </div>
+  )
+}
+
+/** Человеческий текст на коды ошибок /public/connect. */
+function inviteErrorText(error: unknown, text: (typeof uiText)['ru'] | (typeof uiText)['en']): string {
+  const code = error instanceof ApiError ? error.body.trim() : ''
+  switch (code) {
+    case 'invite_expired':
+      return text.inviteExpired
+    case 'invite_invalid':
+      return text.inviteInvalid
+    case 'no_subscription':
+      return text.inviteNoSubscription
+    case 'subscription_expired':
+      return text.inviteSubscriptionExpired
+    default:
+      return text.inviteUnavailable
+  }
 }
 
 /** Заглушка блоков инструкции: те же три секции с разделителями, что и в реальном гайде. */

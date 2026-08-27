@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ClipboardList, Copy, Check, Wifi, RefreshCw, Smartphone, Trash2 } from 'lucide-react'
+import { ClipboardList, Check, RefreshCw, Smartphone, Trash2 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
@@ -13,13 +13,13 @@ import { SubscriptionActions } from '@/components/SubscriptionActions'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
+import { AddDeviceSlot, ConnectExtraDeviceCard, ConnectInviteModal } from '@/features/subscription/ConnectExtraDevice'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { api, SUBSCRIPTION_STALE_MS } from '@/lib/api'
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { daysUntil, cn } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
@@ -27,7 +27,6 @@ export default function SubscriptionPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const toast = useToast()
-  const { state: copyState, copy } = useCopyToClipboard()
   const [refreshDone, setRefreshDone] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -57,6 +56,9 @@ export default function SubscriptionPage() {
   })
 
   const [deleteConfirmHwid, setDeleteConfirmHwid] = useState<string | null>(null)
+  // Модалку приглашения открывают из двух мест: карточка-действие и пустой
+  // слот в списке устройств — поэтому состояние живёт на странице.
+  const [connectOpen, setConnectOpen] = useState(false)
 
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
   const isExpiredByDate = sub?.expire_at != null && sub.expire_at !== '' && days !== null && days <= 0
@@ -75,11 +77,15 @@ export default function SubscriptionPage() {
     sub?.tariff?.device_limit ?? 0,
     Math.max(0, devices?.device_limit ?? 0),
   )
-
-  function copyLink() {
-    if (!sub?.subscription_link) return
-    void copy(sub.subscription_link)
-  }
+  // Слот «добавить устройство» показываем, только когда его есть куда занять:
+  // на исчерпанном лимите он звал бы в тупик, там уместнее «докупить».
+  const canAddDevice = Boolean(
+    devices?.enabled &&
+      !devicesLoading &&
+      !isExpired &&
+      hasLink &&
+      (deviceLimit === 0 || connectedDevices < deviceLimit),
+  )
 
   async function handleRefresh() {
     if (isRefreshing) return
@@ -203,46 +209,15 @@ export default function SubscriptionPage() {
 
             {sub?.subscription_link && (
               <RevealItem>
-              {/* Компактнее прежнего: карточка вспомогательная, ссылку копируют и уходят. */}
-              <Card className="subscription-feature-card">
-                <CardContent className="p-4">
-                  <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Wifi size={15} className="text-primary" />
-                    {t('subscriptionPage.subscriptionLink')}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <div className="min-w-0 flex-1 truncate rounded-lg bg-muted/70 px-3 py-2 font-mono text-xs text-muted-foreground select-all">
-                      {sub.subscription_link}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyLink}
-                      className="shrink-0 gap-1.5"
-                      disabled={isExpired}
-                    >
-                      {copyState === 'done' ? (
-                        <>
-                          <Check size={14} className="text-primary" />
-                          {t('subscriptionPage.copied')}
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={14} />
-                          {t('subscriptionPage.copyLink')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  {/* aria-live: смена текста кнопки сама по себе скринридером не объявляется. */}
-                  <p aria-live="polite" className="sr-only">
-                    {copyState === 'done' ? t('subscriptionPage.copied') : ''}
-                  </p>
-                  {copyState === 'failed' && (
-                    <p className="mt-2 text-xs text-destructive">{t('common.copyFailed')}</p>
-                  )}
-                </CardContent>
-              </Card>
+                {/*
+                  Раньше здесь лежала карточка «Ссылка подписки» с открытым URL.
+                  Пользователи её видели, но не понимали, что именно ею
+                  подключается второй телефон или компьютер, — и шли в поддержку
+                  с вопросом «как добавить ещё устройство». Теперь на этом месте
+                  названное действие, а ссылка живёт внутри, под раскрывашкой
+                  «Настроить вручную».
+                */}
+                <ConnectExtraDeviceCard onOpen={() => setConnectOpen(true)} inactive={isExpired} />
               </RevealItem>
             )}
 
@@ -332,9 +307,23 @@ export default function SubscriptionPage() {
                     })}
                   </ul>
                 )}
+
+                {canAddDevice && (
+                  <AddDeviceSlot
+                    onOpen={() => setConnectOpen(true)}
+                    freeSlots={deviceLimit > 0 ? deviceLimit - connectedDevices : null}
+                  />
+                )}
               </CardContent>
             </Card>
             </RevealItem>
+
+            {connectOpen && sub?.subscription_link && (
+              <ConnectInviteModal
+                subscriptionLink={sub.subscription_link}
+                onClose={() => setConnectOpen(false)}
+              />
+            )}
 
             {deleteConfirmHwid && typeof document !== 'undefined'
               ? createPortal(

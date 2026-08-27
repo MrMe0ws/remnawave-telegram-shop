@@ -228,6 +228,9 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		paymentService, purchaseRepo, rw, customerRepo, adminChecker, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
+	// Приглашения «подключить ещё устройство»: токен подписывается тем же
+	// секретом кабинета (connectinvite выводит из него отдельный ключ).
+	connectInviteHandler := handlers.NewConnectInvite(subscriptionSvc, cabcfg.JWTSecret())
 
 	activityHandler := handlers.NewCabinetActivity(linkRepo, identityRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
 
@@ -306,13 +309,20 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// (UI дёргает раз в 3–5 сек на /checkout → /payments/:id/status → /me/subscription).
 	subscriptionAcctLim := ratelimit.New(ratelimit.Rule{Count: 60, Interval: time.Minute})
 
+	// Публичный резолв приглашения: 30/мин/IP. Эндпоинт открыт без авторизации
+	// и в encrypted-режиме дёргает внешний crypto.happ.su, поэтому лимит стоит
+	// и по IP, и по токену (см. connectTokenLim) — первый режет перебор с
+	// одного адреса, второй ограничивает один разосланный токен.
+	connectPublicIPLim := ratelimit.New(ratelimit.Rule{Count: 30, Interval: time.Minute})
+	connectTokenLim := ratelimit.New(ratelimit.Rule{Count: 30, Interval: time.Minute})
+
 	deleteAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 	trialActivateAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 	supportAcctLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
 	// Webhook от support-bot: 100/min/IP — внутренний endpoint, но защита от flood при утечке секрета
 	supportWebhookIPLim := ratelimit.New(ratelimit.Rule{Count: 100, Interval: time.Minute})
 
-	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim} {
+	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim} {
 		lim.RunGC(ctx)
 	}
 
@@ -355,9 +365,9 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		adminSyncHandler = handlers.NewAdminSync(syncService)
 	}
 
-	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
+	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
 		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
-		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
+		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
 	// 404 JSON на любой неизвестный /cabinet/api/*.
@@ -439,6 +449,7 @@ func registerAPIRoutes(
 	me *handlers.MeHandler,
 	tariffs *handlers.TariffsHandler,
 	subscription *handlers.SubscriptionHandler,
+	connectInvite *handlers.ConnectInviteHandler,
 	activity *handlers.CabinetActivityHandler,
 	promocodes *handlers.PromoCodesHandler,
 	oauthH *handlers.OAuthHandler,
@@ -460,7 +471,7 @@ func registerAPIRoutes(
 	adminSquads *handlers.AdminSquadsHandler,
 	adminSync *handlers.AdminSyncHandler,
 	adminAcctLim,
-	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
+	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
 ) {
 	// Healthz — без middleware, открыт всем.
@@ -512,6 +523,21 @@ func registerAPIRoutes(
 			}),
 		)
 	}
+
+	// GET /public/connect?t=<token> — резолв приглашения «подключить ещё
+	// устройство» в deep link. Единственный публичный эндпоинт, отдающий
+	// подписку: получатель приглашения по определению не авторизован, ему
+	// прислали ссылку на другое устройство. Барьеры — подпись и срок токена
+	// плюс два rate-limit'а (по IP и по самому токену).
+	api.Handle("/cabinet/api/public/connect",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(connectInvite.Resolve),
+				middleware.RateLimit(connectPublicIPLim, ipKey("public-connect")),
+				middleware.RateLimit(connectTokenLim, queryKey("public-connect", "t")),
+			),
+		}),
+	)
 
 	// GET /tariffs — публичная витрина. Без RequireAuth: показывается на
 	// странице логина/регистрации; чтения из БД минимальные, rate-limit не
@@ -867,6 +893,19 @@ func registerAPIRoutes(
 				middleware.RequireAuth(jwtIssuer),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("subscription")),
+			),
+		}),
+	)
+	// GET /me/connect-invite — короткая ссылка-приглашение на устройство без
+	// доступа к кабинету. Барьеры те же, что у /me/subscription: токен
+	// обменивается на подписку.
+	api.Handle("/cabinet/api/me/connect-invite",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(connectInvite.Create),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("connect-invite")),
 			),
 		}),
 	)
@@ -1445,6 +1484,18 @@ func ipKey(route string) middleware.KeyFunc {
 			return ""
 		}
 		return route + ":" + ip
+	}
+}
+
+// queryKey строит ключ <route>:<значение query-параметра>. Нужен там, где
+// лимит логично вешать на сам предъявленный токен, а не только на IP.
+func queryKey(route, param string) middleware.KeyFunc {
+	return func(r *http.Request) string {
+		v := strings.TrimSpace(r.URL.Query().Get(param))
+		if v == "" {
+			return ""
+		}
+		return route + ":" + v
 	}
 }
 
