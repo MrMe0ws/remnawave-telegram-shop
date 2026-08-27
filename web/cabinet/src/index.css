@@ -426,6 +426,97 @@
     }
   }
 
+  /*
+   * Кольцевой индикатор. Значение — в --cabinet-ring-value (0–100), цвет
+   * наследуется из --cabinet-ring-color, поэтому тон задаётся снаружи одной
+   * переменной и одинаково работает для дней, трафика и устройств.
+   */
+  .cabinet-ring {
+    --cabinet-ring-value: 0;
+    --cabinet-ring-color: var(--primary);
+    --cabinet-ring-thickness: 7px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(
+      hsl(var(--cabinet-ring-color)) calc(var(--cabinet-ring-value) * 1%),
+      hsl(var(--muted)) 0
+    );
+  }
+
+  /* Вырезаем середину — получается кольцо, а не круг. */
+  .cabinet-ring::before {
+    content: "";
+    position: absolute;
+    inset: var(--cabinet-ring-thickness);
+    border-radius: 50%;
+    background-color: hsl(var(--card));
+  }
+
+  .cabinet-ring > * {
+    position: relative;
+  }
+
+  /*
+   * Статичное кольцо со знаком ∞ — для безлимитного трафика. Прогресса там
+   * быть не может, но место в сетке показателей занять надо.
+   */
+  .cabinet-ring--unbounded {
+    background: none;
+    border: var(--cabinet-ring-thickness) solid hsl(var(--muted));
+  }
+
+  .cabinet-ring--unbounded::before {
+    content: none;
+  }
+
+  /*
+   * Блик, привлекающий внимание к кнопке. В отличие от блика на hover
+   * (.cabinet-btn-primary::after) идёт сам по себе: применяется точечно там,
+   * где кнопку иначе не находят — подключение устройства у новичка и
+   * продление, когда подписка вот-вот кончится.
+   */
+  .cabinet-attn-sheen {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--radius);
+  }
+
+  .cabinet-attn-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgb(255 255 255 / 0.4) 50%,
+      transparent 70%
+    );
+    transform: translateX(-130%);
+    animation: cabinet-attn-sheen 3.4s var(--cabinet-ease) infinite;
+  }
+
+  @keyframes cabinet-attn-sheen {
+    0% {
+      transform: translateX(-130%);
+    }
+    55%,
+    100% {
+      transform: translateX(130%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cabinet-attn-sheen::after {
+      animation: none;
+    }
+  }
+
   /* Admin modals — та же поверхность, чуть сильнее отделение от overlay. */
   .admin-modal-panel {
     border-color: hsl(var(--border));

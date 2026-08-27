@@ -140,7 +140,10 @@
       "trafficUsage": "Traffic usage",
       "subscriptionExpiredTitle": "Subscription expired",
       "subscriptionExpiredDateHint": "Your subscription period has ended. Renew to restore access.",
-      "subscriptionExpiredTrafficHint": "Your traffic limit is exhausted. Renew to continue using the service."
+      "subscriptionExpiredTrafficHint": "Your traffic limit is exhausted. Renew to continue using the service.",
+      "statDays": "days",
+      "statTraffic": "traffic",
+      "statDevices": "devices"
     },
     "subscriptionPage": {
       "title": "Subscription",
@@ -200,7 +203,13 @@
       "extraDevicesDecreaseModalNoRefund": "Once you confirm, the change takes effect immediately. There is no proration or refund for the current billing period.",
       "extraDevicesDecreaseModalIrreversible": "This action cannot be undone after it is applied.",
       "extraDevicesDecreaseModalEnsure": "Please make sure you want to continue.",
-      "extraDevicesDecreaseModalConfirm": "Continue"
+      "extraDevicesDecreaseModalConfirm": "Continue",
+      "statusEnding": "Ending soon",
+      "renewNow": "Renew now",
+      "resumeSubscription": "Resume subscription",
+      "expiredRestoreHint": "Renew to restore access",
+      "devicesAllTaken": "All slots are in use — free one or buy more",
+      "trafficUnlimitedUsed": "{{used}} GB"
     },
     "accounts": {
       "title": "Linked accounts",

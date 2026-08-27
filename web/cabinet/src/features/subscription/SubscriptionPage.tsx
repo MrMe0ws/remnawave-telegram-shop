@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ClipboardList, Copy, Check, Wifi, RefreshCw, ChevronRight, Smartphone, Trash2, AlertTriangle, MonitorSmartphone, Zap } from 'lucide-react'
+import { ClipboardList, Copy, Check, Wifi, RefreshCw, Smartphone, Trash2 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
+import { SubscriptionActions } from '@/components/SubscriptionActions'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
@@ -65,25 +66,14 @@ export default function SubscriptionPage() {
   )
   const isExpired = isExpiredByDate || isExpiredByTraffic
   const isActive = !isExpired
-  const showRenewCta = isActive && days !== null && days <= 7
-  const renewCtaAnimated = days !== null && days <= 3
   const hasLink = Boolean(sub?.subscription_link && String(sub.subscription_link).trim() !== '')
   const hasExpire = Boolean(sub?.expire_at && String(sub.expire_at).trim() !== '')
   const hasRecord = hasLink || hasExpire
   const connectedDevices = Math.max(0, devices?.connected ?? 0)
-  const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
-  const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
-  const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
-  const tariffExtraFromHwid = Math.max(0, sub?.hwid_extra?.extra_active ?? 0)
-  const tariffExtraFromActualLimit =
-    deviceLimitByPlan > 0 && deviceLimitFromDevices > deviceLimitByPlan
-      ? deviceLimitFromDevices - deviceLimitByPlan
-      : 0
-  const tariffExtraDevices = Math.max(tariffExtraFromHwid, tariffExtraFromActualLimit)
-  const deviceLimitText =
-    deviceLimit > 0
-      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
-      : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
+  const deviceLimit = Math.max(
+    sub?.tariff?.device_limit ?? 0,
+    Math.max(0, devices?.device_limit ?? 0),
+  )
 
   function copyLink() {
     if (!sub?.subscription_link) return
@@ -162,73 +152,34 @@ export default function SubscriptionPage() {
             <Card className="subscription-feature-card">
               <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
                 <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-primary/80">
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
                       {t('dashboard.subscriptionLabel')}
-                    </p>
-                    <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {deviceLimit > 0
-                        ? tariffExtraDevices > 0
-                          ? t('subscriptionPage.tariffDevicesWithExtra', { base: deviceLimit - tariffExtraDevices, extra: tariffExtraDevices })
-                          : `${deviceLimit} ${t('subscriptionPage.devices').toLowerCase()}`
-                        : t('subscriptionPage.unlimited')}
-                      {' · '}
-                      {sub?.traffic_limit_gb && sub.traffic_limit_gb > 0 ? `${sub.traffic_limit_gb} ${t('dashboard.gigabytes')}` : t('subscriptionPage.unlimited')}
-                    </p>
+                    </span>
+                    <p className="mt-2 font-heading text-2xl font-bold">{subscriptionTariffLabel(sub, t)}</p>
                   </div>
-                  <div className="text-right">
-                    <StatusBadge isActive={isActive} isExpired={isExpired} hasSubscription={Boolean(sub?.expire_at)} />
-                  </div>
+                  <StatusBadge isActive={isActive} isExpired={isExpired} hasSubscription={Boolean(sub?.expire_at)} />
                 </div>
 
-                <TrafficUsageBar
-                  usedGb={sub?.traffic_used_gb}
-                  limitGb={sub?.traffic_limit_gb}
-                  usageTitle={t('dashboard.trafficUsage')}
-                  gigabytesLabel={t('dashboard.gigabytes')}
-                  unlimitedLabel={t('subscriptionPage.unlimited')}
-                />
+                {/* Показатели полосами: трафик и устройства рядом, одинаковой формы. */}
+                <div className="space-y-3">
+                  <TrafficUsageBar
+                    usedGb={sub?.traffic_used_gb}
+                    limitGb={sub?.traffic_limit_gb}
+                    usageTitle={t('dashboard.trafficUsage')}
+                    gigabytesLabel={t('dashboard.gigabytes')}
+                    unlimitedLabel={t('subscriptionPage.unlimited')}
+                  />
 
-                {sub?.subscription_link && (
-                  isExpired ? (
-                    <div
-                      id="cabinet-onboarding-step2-target"
-                      className="rounded-xl border border-border bg-muted/35 px-4 py-3 opacity-70"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                          <MonitorSmartphone size={16} />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-medium text-muted-foreground">{t('subscriptionPage.connectDevice')}</p>
-                          <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <Link
-                      id="cabinet-onboarding-step2-target"
-                      to="/connections"
-                      className="connect-device-cta connect-device-cta--highlight group block"
-                    >
-                      <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-                        <span className="connect-device-cta-icon inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                          <MonitorSmartphone size={16} />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                          {devicesLoading ? (
-                            <Skeleton className="mt-1 h-3 w-28" />
-                          ) : (
-                            <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
-                          )}
-                        </div>
-                        <ChevronRight size={18} className="connect-device-cta-chevron ml-auto shrink-0" />
-                      </div>
-                    </Link>
-                  )
-                )}
+                  <DevicesUsageBar
+                    used={connectedDevices}
+                    limit={deviceLimit}
+                    loading={devicesLoading}
+                    title={t('subscriptionPage.devices')}
+                    allTakenHint={t('subscriptionPage.devicesAllTaken')}
+                    unlimitedLabel={t('subscriptionPage.unlimited')}
+                  />
+                </div>
 
                 {hasExpire && (
                   <SubscriptionExpireAtBlock
@@ -239,23 +190,12 @@ export default function SubscriptionPage() {
                   />
                 )}
 
-                {isExpired && (
-                  <Link
-                    to="/tariffs"
-                    className="renew-subscription-cta-danger group block"
-                  >
-                    <div className="renew-subscription-cta-danger-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                        <AlertTriangle size={16} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-                        <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
-                      </div>
-                      <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    </div>
-                  </Link>
-                )}
+                <SubscriptionActions
+                  days={isExpired ? 0 : days}
+                  devicesUsed={connectedDevices}
+                  devicesLimit={deviceLimit}
+                  connectId="cabinet-onboarding-step2-target"
+                />
               </CardContent>
             </Card>
             </RevealItem>
@@ -301,12 +241,6 @@ export default function SubscriptionPage() {
                   )}
                 </CardContent>
               </Card>
-              </RevealItem>
-            )}
-
-            {showRenewCta && (
-              <RevealItem>
-                <RenewSubscriptionCta animated={renewCtaAnimated} subtitle={t('dashboard.tariffsCardTitle')} />
               </RevealItem>
             )}
 
@@ -434,47 +368,6 @@ function subscriptionTariffLabel(sub: Awaited<ReturnType<typeof api.subscription
   return t('dashboard.basicPlan')
 }
 
-function RenewSubscriptionCta({ animated, subtitle }: { animated: boolean; subtitle: string }) {
-  const { t } = useTranslation()
-
-  const inner = (
-    <>
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-        <Zap size={16} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
-      </div>
-      <ChevronRight size={16} className="text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-    </>
-  )
-
-  if (animated) {
-    return (
-      <Link
-        to="/tariffs"
-        className="connect-device-cta group block shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
-      >
-        <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-          {inner}
-        </div>
-      </Link>
-    )
-  }
-
-  return (
-    <Link
-      to="/tariffs"
-      className="renew-subscription-cta-static group"
-    >
-      <div className="flex items-center gap-3 px-4 py-3 text-card-foreground">
-        {inner}
-      </div>
-    </Link>
-  )
-}
-
 function DeviceCardIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -577,6 +470,66 @@ function SubscriptionSkeleton() {
           <DeviceRowsSkeleton n={2} />
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+/**
+ * Полоса занятых слотов устройств — той же формы, что полоса трафика.
+ * До красного не эскалирует: занятые слоты не поломка, а обычная граница.
+ */
+function DevicesUsageBar({
+  used,
+  limit,
+  loading,
+  title,
+  allTakenHint,
+  unlimitedLabel,
+}: {
+  used: number
+  limit: number
+  loading: boolean
+  title: string
+  allTakenHint: string
+  unlimitedLabel: string
+}) {
+  const unlimited = limit <= 0
+  const percent = unlimited ? 0 : Math.min(100, (used / limit) * 100)
+  const full = !unlimited && used >= limit
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+        <span className="text-muted-foreground dark:text-slate-300">{title}</span>
+        {loading ? (
+          <Skeleton className="h-3.5 w-16" />
+        ) : (
+          <span
+            className={cn(
+              'tabular-nums',
+              full
+                ? 'font-medium text-amber-700 dark:text-amber-300'
+                : 'text-muted-foreground dark:text-slate-300',
+            )}
+          >
+            {used} / {unlimited ? unlimitedLabel : limit}
+          </span>
+        )}
+      </div>
+      {!unlimited && (
+        <div className="h-2.5 rounded-full bg-muted dark:bg-white/10">
+          <div
+            className={cn(
+              'h-full rounded-full transition-all duration-500',
+              full
+                ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-500'
+                : 'bg-gradient-to-r from-primary via-primary/90 to-primary/70',
+            )}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      )}
+      {full && <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-300">{allTakenHint}</p>}
     </div>
   )
 }

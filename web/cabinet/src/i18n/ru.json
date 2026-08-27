@@ -140,7 +140,10 @@
       "trafficUsage": "Расход трафика",
       "subscriptionExpiredTitle": "Подписка истекла",
       "subscriptionExpiredDateHint": "Срок подписки завершился. Продлите подписку, чтобы снова получить доступ.",
-      "subscriptionExpiredTrafficHint": "Лимит трафика исчерпан. Продлите подписку, чтобы продолжить пользоваться сервисом."
+      "subscriptionExpiredTrafficHint": "Лимит трафика исчерпан. Продлите подписку, чтобы продолжить пользоваться сервисом.",
+      "statDays": "дней",
+      "statTraffic": "трафик",
+      "statDevices": "устройств"
     },
     "subscriptionPage": {
       "title": "Подписка",
@@ -204,7 +207,13 @@
       "extraDevicesDecreaseModalNoRefund": "Обратите внимание: после подтверждения изменения вступят в силу сразу, и перерасчёт или возврат средств за текущий период не производится.",
       "extraDevicesDecreaseModalIrreversible": "Это действие является необратимым — отменить его после применения будет невозможно.",
       "extraDevicesDecreaseModalEnsure": "Пожалуйста, убедитесь, что вы хотите продолжить.",
-      "extraDevicesDecreaseModalConfirm": "Продолжить"
+      "extraDevicesDecreaseModalConfirm": "Продолжить",
+      "statusEnding": "Заканчивается",
+      "renewNow": "Продлить сейчас",
+      "resumeSubscription": "Возобновить подписку",
+      "expiredRestoreHint": "Продлите, чтобы восстановить доступ",
+      "devicesAllTaken": "Все слоты заняты — освободите один или докупите",
+      "trafficUnlimitedUsed": "{{used}} ГБ"
     },
     "tariffs": {
       "title": "Тарифы",

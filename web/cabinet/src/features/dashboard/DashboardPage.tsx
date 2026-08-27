@@ -2,21 +2,48 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Users, Zap, ChevronRight, MonitorSmartphone, AlertTriangle, Ticket, FileText, Newspaper, Star, type LucideIcon } from 'lucide-react'
+import {
+  Sparkles,
+  Users,
+  Zap,
+  ChevronRight,
+  Ticket,
+  FileText,
+  Newspaper,
+  Star,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
-import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
-import { TrafficUsageBar } from '@/components/TrafficUsageBar'
+import { StatRing, UnboundedRing } from '@/components/StatRing'
+import { SubscriptionActions } from '@/components/SubscriptionActions'
+import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { api, SUBSCRIPTION_STALE_MS, type SubscriptionResponse } from '@/lib/api'
-import { daysUntil } from '@/lib/utils'
+import { cn, daysUntil, trafficUsagePercent } from '@/lib/utils'
+import { daysTone, devicesTone, trafficTone } from '@/lib/subscriptionTone'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+
+/**
+ * Главная — «приборная панель».
+ *
+ * Состояние подписки читается за секунду по трём кольцам: дни, трафик,
+ * устройства. Все три красятся по общей шкале тревоги (lib/subscriptionTone),
+ * поэтому цвет означает одно и то же независимо от показателя.
+ *
+ * Разделы кабинета разложены в два уровня. Шесть равновесных плиток заявляли
+ * одинаковую важность, хотя «Тарифы» — это деньги, а «Отзывы» — ссылка в
+ * Telegram: главные три остались карточками, редкие ушли строкой ниже.
+ */
+
+/** Опорный горизонт для кольца дней: 90 суток закрывают типичные периоды подписки. */
+const DAYS_RING_HORIZON = 90
 
 export default function DashboardPage() {
   const { t } = useTranslation()
@@ -25,16 +52,6 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const toast = useToast()
 
-  /*
-   * staleTime вместо `staleTime: 0` + `refetchOnMount: 'always'`.
-   *
-   * Раньше каждое открытие страницы било в сеть и показывало скелетон, даже если
-   * данные получены секунду назад — при переходах «главная → подписка → главная»
-   * пользователь видел загрузку на ровном месте. Теперь в пределах окна берём
-   * кэш и рисуем сразу; устаревшие данные обновляются фоном, без скелетона,
-   * потому что isPending ложен при наличии кэша. Мутации, меняющие подписку,
-   * инвалидируют её явно, так что свежесть после оплаты и активации не страдает.
-   */
   const { data: sub, isPending: subPending } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api.subscription(),
@@ -49,8 +66,8 @@ export default function DashboardPage() {
     retry: 1,
   })
 
-  // isLoading, а не isPending: запрос выключен до появления sub, и в этом состоянии
-  // isPending остаётся true — скелетон устройств висел бы вечно.
+  // isLoading, а не isPending: запрос выключен до появления sub, и в этом
+  // состоянии isPending остаётся true — скелетон висел бы вечно.
   const { data: devices, isLoading: devicesLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => api.devices(),
@@ -68,23 +85,22 @@ export default function DashboardPage() {
    * содержимое подменялось. Поэтому до ответа показываем скелетон.
    */
   const mainCardLoading = subPending || (!hasSubscription && trialPending)
+
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
-  const isExpiredByDate = days !== null && days <= 0
+  const trafficPct = trafficUsagePercent(sub?.traffic_used_gb, sub?.traffic_limit_gb)
+  const connectedDevices = Math.max(0, devices?.connected ?? 0)
+  const deviceLimit = Math.max(
+    sub?.tariff?.device_limit ?? 0,
+    Math.max(0, devices?.device_limit ?? 0),
+  )
   const isExpiredByTraffic = Boolean(
     sub?.traffic_limit_gb != null &&
-    sub.traffic_limit_gb > 0 &&
-    (sub.traffic_used_gb ?? 0) >= sub.traffic_limit_gb,
+      sub.traffic_limit_gb > 0 &&
+      (sub.traffic_used_gb ?? 0) >= sub.traffic_limit_gb,
   )
-  const isInactive = isExpiredByDate || isExpiredByTraffic
-  const isActive = !isInactive
-  const connectedDevices = Math.max(0, devices?.connected ?? 0)
-  const deviceLimitByPlan = sub?.tariff?.device_limit ?? 0
-  const deviceLimitFromDevices = Math.max(0, devices?.device_limit ?? 0)
-  const deviceLimit = Math.max(deviceLimitByPlan, deviceLimitFromDevices)
-  const deviceLimitText =
-    deviceLimit > 0
-      ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
-      : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
+  const isActive = !(isExpiredByTraffic || (days !== null && days <= 0))
+  const effectiveDays = isActive ? days : 0
+
   const newsUrl = bootstrap?.site_links?.channel?.trim()
   const feedbackUrl = bootstrap?.site_links?.feedback?.trim()
 
@@ -99,7 +115,7 @@ export default function DashboardPage() {
     },
     // Без этого при ошибке кнопка просто разблокировалась, и пользователь
     // не понимал, активировался триал или нет.
-    onError: () => toast.error(t('errors.unknown')),
+    onError: () => toast.error(t('dashboard.trialActivateFailed')),
   })
 
   const trialButtonLabel = (() => {
@@ -113,179 +129,295 @@ export default function DashboardPage() {
     <AppLayout>
       <PWAInstallPrompt />
       <PageReveal className="space-y-5">
-        <RevealItem>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('dashboard.welcomeTitle')}</h1>
-        </RevealItem>
-
-        <RevealItem>
         {mainCardLoading ? (
-          <DashboardMainCardSkeleton />
+          <RevealItem>
+            <DashboardSkeleton />
+          </RevealItem>
         ) : hasSubscription ? (
-          <Card className="subscription-feature-card">
-            <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-              <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-primary/80">
-                    {t('dashboard.yourSubscriptionTitle')}
-                  </p>
-                  <p className="mt-1 text-xl font-semibold">{subscriptionTariffLabel(sub, t)}</p>
-                </div>
-                <div className="text-right">
-                  <StatusBadge isActive={isActive} isExpired={isInactive} hasSubscription={Boolean(sub?.expire_at)} />
-                </div>
+          <>
+            <RevealItem className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="font-heading text-3xl font-bold tracking-tight">
+                  {subscriptionTariffLabel(sub, t)}
+                </h1>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {isActive && sub?.expire_at
+                    ? t('subscriptionPage.daysLeft', { n: days })
+                    : t('subscriptionPage.expiredBlockTitle')}
+                </p>
               </div>
+              <StatusBadge days={effectiveDays} isActive={isActive} />
+            </RevealItem>
 
-              <TrafficUsageBar
-                usedGb={sub?.traffic_used_gb}
-                limitGb={sub?.traffic_limit_gb}
-                usageTitle={t('dashboard.trafficUsage')}
-                gigabytesLabel={t('dashboard.gigabytes')}
-                unlimitedLabel={t('subscriptionPage.unlimited')}
+            <RevealItem>
+              <div className="grid grid-cols-3 gap-3" id="cabinet-onboarding-step1-target">
+                <Card className="cabinet-elevated-card">
+                  <CardContent className="flex items-center justify-center px-2 py-4">
+                    <StatRing
+                      value={
+                        isActive && days !== null
+                          ? Math.min(100, (days / DAYS_RING_HORIZON) * 100)
+                          : 0
+                      }
+                      tone={daysTone(effectiveDays)}
+                      label={t('dashboard.statDays')}
+                    >
+                      <span className="font-heading text-base font-bold">
+                        {isActive && days !== null ? days : 0}
+                      </span>
+                    </StatRing>
+                  </CardContent>
+                </Card>
+
+                <Card className="cabinet-elevated-card">
+                  <CardContent className="flex items-center justify-center px-2 py-4">
+                    {trafficPct === null ? (
+                      <UnboundedRing label={t('dashboard.statTraffic')} />
+                    ) : (
+                      <StatRing
+                        value={trafficPct}
+                        tone={trafficTone(trafficPct)}
+                        label={t('dashboard.statTraffic')}
+                      >
+                        <span className="font-heading text-base font-bold">
+                          {Math.round(trafficPct)}%
+                        </span>
+                      </StatRing>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="cabinet-elevated-card">
+                  <CardContent className="flex items-center justify-center px-2 py-4">
+                    {devicesLoading ? (
+                      <Skeleton className="size-[72px] rounded-full" />
+                    ) : (
+                      <StatRing
+                        value={deviceLimit > 0 ? (connectedDevices / deviceLimit) * 100 : 0}
+                        tone={devicesTone(connectedDevices, deviceLimit)}
+                        label={t('dashboard.statDevices')}
+                      >
+                        <span className="font-heading text-base font-bold">{connectedDevices}</span>
+                      </StatRing>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </RevealItem>
+
+            <RevealItem>
+              <SubscriptionActions
+                days={effectiveDays}
+                devicesUsed={connectedDevices}
+                devicesLimit={deviceLimit}
+                connectId="cabinet-onboarding-step2-target"
               />
+            </RevealItem>
 
-              {sub?.subscription_link && !isInactive && (
-                <Link
-                  id="cabinet-onboarding-step2-target"
-                  to="/connections"
-                  className="connect-device-cta connect-device-cta--highlight group block"
-                >
-                  <div className="connect-device-cta-inner flex items-center gap-3 px-4 py-3 text-card-foreground">
-                    <span className="connect-device-cta-icon inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                      <MonitorSmartphone size={16} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-medium">{t('subscriptionPage.connectDevice')}</p>
-                      {devicesLoading ? (
-                        <Skeleton className="mt-1 h-3 w-28" />
-                      ) : (
-                        <p className="text-xs text-muted-foreground">{deviceLimitText}</p>
-                      )}
-                    </div>
-                    <ChevronRight size={18} className="connect-device-cta-chevron ml-auto shrink-0" />
-                  </div>
-                </Link>
-              )}
-
+            <RevealItem>
               <SubscriptionExpireAtBlock
                 expireAt={sub?.expire_at}
                 lang={lang}
                 days={days}
                 isActive={isActive}
               />
-
-              {isInactive && (
-                <Link
-                  id="cabinet-onboarding-step2-target"
-                  to="/tariffs"
-                  className="renew-subscription-cta-danger group block"
-                >
-                  <div className="renew-subscription-cta-danger-inner flex items-start gap-3 px-4 py-3 text-card-foreground">
-                    <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                      <AlertTriangle size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{t('subscriptionPage.renewSubscription')}</p>
-                      <p className="text-xs text-muted-foreground">{t('subscriptionPage.statusExpired')}</p>
-                    </div>
-                    <ChevronRight size={16} className="mt-1 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
+            </RevealItem>
+          </>
         ) : (
-          <Card className="subscription-feature-card">
-            <CardContent className="space-y-5 px-6 py-7">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
-                <Sparkles size={18} className="text-primary" />
-              </div>
+          <RevealItem>
+            <Card className="subscription-feature-card">
+              <CardContent className="space-y-5 px-6 py-7">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+                  <Sparkles size={18} className="text-primary" />
+                </div>
 
-              <div className="text-center" id="cabinet-onboarding-step1-target">
-                <h2 className="text-2xl font-semibold">{t('dashboard.trialTitle')}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.trialSubtitle')}</p>
-              </div>
+                <div className="text-center" id="cabinet-onboarding-step1-target">
+                  <h2 className="font-heading text-2xl font-bold">{t('dashboard.trialTitle')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.trialSubtitle')}</p>
+                </div>
 
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <TrialStat value={trial?.days ?? 0} label={t('dashboard.days')} />
-                <TrialStat value={trial?.traffic_gb ?? 0} label={t('dashboard.gigabytes')} />
-                <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
-              </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <TrialStat value={trial?.days ?? 0} label={t('dashboard.days')} />
+                  <TrialStat value={trial?.traffic_gb ?? 0} label={t('dashboard.gigabytes')} />
+                  <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
+                </div>
 
-              <div className="connect-device-cta trial-activate-cta rounded-full" id="cabinet-onboarding-step2-target">
-                <div className="connect-device-cta-inner trial-activate-cta-inner p-[1px]">
+                <div id="cabinet-onboarding-step2-target">
                   <Button
-                    className="trial-activate-btn h-11 w-full rounded-full border border-primary/25 bg-primary/10 text-primary hover:bg-primary/15"
+                    className="h-11 w-full"
                     onClick={() => activateTrial.mutate()}
                     disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
                   >
                     {trialButtonLabel}
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </RevealItem>
         )}
-        </RevealItem>
 
         <RevealItem>
-          <div className="grid grid-cols-2 gap-3">
-            <DashboardQuickLink to="/tariffs" icon={Zap} label={t('dashboard.tariffsCardTitle')} />
-            <DashboardQuickLink to="/referral" icon={Users} label={t('dashboard.referralsCardTitle')} />
-            <DashboardQuickLink to="/promocodes" icon={Ticket} label={t('dashboard.promocodesCardTitle')} />
-            <DashboardQuickLink to="/support#cabinet-info" icon={FileText} label={t('dashboard.infoCardTitle')} />
-            {/* Ссылки приходят из bootstrap: пока его нет, держим места, иначе сетка подпрыгивает. */}
-            {bootstrapPending ? (
-              <>
-                <QuickLinkSkeleton />
-                <QuickLinkSkeleton />
-              </>
-            ) : (
-              <>
-                {newsUrl && (
-                  <DashboardQuickLink href={newsUrl} icon={Newspaper} label={t('dashboard.newsCardTitle')} external />
-                )}
-                {feedbackUrl && (
-                  <DashboardQuickLink href={feedbackUrl} icon={Star} label={t('dashboard.feedbackCardTitle')} external />
-                )}
-              </>
-            )}
-          </div>
+          <QuickLinks
+            newsUrl={newsUrl}
+            feedbackUrl={feedbackUrl}
+            bootstrapPending={bootstrapPending}
+          />
         </RevealItem>
       </PageReveal>
     </AppLayout>
   )
 }
 
-/**
- * Скелетон главной карточки. Высоты подобраны под оба варианта содержимого
- * (активная подписка и предложение триала) — при подмене нет заметного скачка.
- */
-function DashboardMainCardSkeleton() {
+/** Статус подписки по общей шкале: зелёный → янтарный → красный. */
+function StatusBadge({ days, isActive }: { days: number | null; isActive: boolean }) {
+  const { t } = useTranslation()
+  const tone = isActive ? daysTone(days) : 'danger'
+
+  if (!isActive) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-destructive/45 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+        <span className="size-1.5 rounded-full bg-destructive" />
+        {t('subscriptionPage.statusExpired')}
+      </span>
+    )
+  }
+
+  if (tone !== 'calm') {
+    const danger = tone === 'danger'
+    return (
+      <span
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+          danger
+            ? 'border-destructive/45 bg-destructive/10 text-destructive'
+            : 'border-amber-400/50 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+        )}
+      >
+        <span className={cn('size-1.5 rounded-full', danger ? 'bg-destructive' : 'bg-amber-500')} />
+        {t('subscriptionPage.statusEnding')}
+      </span>
+    )
+  }
+
   return (
-    <Card className="subscription-feature-card">
-      <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-6 w-40" />
-          </div>
-          <Skeleton className="h-6 w-24 rounded-full" />
-        </div>
-
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-2.5 w-full rounded-full" />
-        </div>
-
-        <Skeleton className="h-[3.75rem] w-full rounded-xl" />
-        <Skeleton className="h-11 w-full rounded-full" />
-      </CardContent>
-    </Card>
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
+      <span className="size-1.5 rounded-full bg-emerald-500" />
+      {t('subscriptionPage.statusActive')}
+    </span>
   )
 }
 
-function QuickLinkSkeleton() {
-  return <Skeleton className="h-[3.25rem] w-full rounded-[var(--radius)]" />
+/**
+ * Разделы кабинета в два уровня: главные — карточками, редкие — строкой.
+ * «Новости» и «Отзывы» приходят из bootstrap, поэтому до его ответа держим
+ * места заглушками, иначе строка подпрыгивает.
+ */
+function QuickLinks({
+  newsUrl,
+  feedbackUrl,
+  bootstrapPending,
+}: {
+  newsUrl?: string
+  feedbackUrl?: string
+  bootstrapPending: boolean
+}) {
+  const { t } = useTranslation()
+
+  const primary: { to: string; icon: LucideIcon; label: string }[] = [
+    { to: '/tariffs', icon: Zap, label: t('dashboard.tariffsCardTitle') },
+    { to: '/promocodes', icon: Ticket, label: t('dashboard.promocodesCardTitle') },
+    { to: '/referral', icon: Users, label: t('dashboard.referralsCardTitle') },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {primary.map(({ to, icon: Icon, label }) => (
+          <Link key={to} to={to} className="dashboard-quick-link cabinet-elevated-card group flex items-center gap-3 px-4 py-3.5">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+              <Icon size={16} aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
+            <ChevronRight
+              size={18}
+              className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </Link>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 py-1">
+        <Link
+          to="/support#cabinet-info"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <FileText size={13} aria-hidden />
+          {t('dashboard.infoCardTitle')}
+        </Link>
+        {bootstrapPending ? (
+          <>
+            <Skeleton className="h-3.5 w-16" />
+            <Skeleton className="h-3.5 w-16" />
+          </>
+        ) : (
+          <>
+            {newsUrl && (
+              <a
+                href={newsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Newspaper size={13} aria-hidden />
+                {t('dashboard.newsCardTitle')}
+              </a>
+            )}
+            {feedbackUrl && (
+              <a
+                href={feedbackUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Star size={13} aria-hidden />
+                {t('dashboard.feedbackCardTitle')}
+              </a>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Скелетон под приборную панель: заголовок, три кольца, кнопки, срок. */
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-end justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-3.5 w-28" />
+        </div>
+        <Skeleton className="h-6 w-24 rounded-full" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[0, 1, 2].map((i) => (
+          <Card key={i} className="cabinet-elevated-card">
+            <CardContent className="flex flex-col items-center gap-2 px-2 py-4">
+              <Skeleton className="size-[72px] rounded-full" />
+              <Skeleton className="h-3 w-14" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Skeleton className="h-11 w-full rounded-lg" />
+      <Skeleton className="h-[4.5rem] w-full rounded-xl" />
+    </div>
+  )
 }
 
 function subscriptionTariffLabel(sub: SubscriptionResponse | null | undefined, t: TFunction): string {
@@ -305,92 +437,11 @@ function hasSubscriptionData(sub?: SubscriptionResponse | null): boolean {
   return false
 }
 
-function StatusBadge({
-  isActive,
-  isExpired,
-  hasSubscription,
-}: {
-  isActive: boolean
-  isExpired: boolean
-  hasSubscription: boolean
-}) {
-  const { t } = useTranslation()
-
-  if (isActive) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
-        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        {t('subscriptionPage.statusActive')}
-      </span>
-    )
-  }
-  if (isExpired) {
-    return (
-      <span className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
-        {t('subscriptionPage.statusExpired')}
-      </span>
-    )
-  }
-  if (!hasSubscription) {
-    return (
-      <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-        {t('subscriptionPage.statusNone')}
-      </span>
-    )
-  }
-  return null
-}
-
 function TrialStat({ value, label }: { value: number; label: string }) {
   return (
     <div>
-      <div className="text-3xl font-semibold leading-none">{value}</div>
+      <div className="font-heading text-3xl font-bold leading-none">{value}</div>
       <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
-  )
-}
-
-function DashboardQuickLink({
-  to,
-  href,
-  icon: Icon,
-  label,
-  external,
-}: {
-  to?: string
-  href?: string
-  icon: LucideIcon
-  label: string
-  external?: boolean
-}) {
-  const className =
-    'group subscription-feature-card dashboard-quick-link flex h-full min-h-[3.25rem] items-center justify-between gap-2 px-3 py-4 sm:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-
-  const inner = (
-    <>
-      <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
-        <Icon size={16} className="shrink-0 text-primary" aria-hidden />
-        <span className="truncate">{label}</span>
-      </p>
-      <ChevronRight
-        size={18}
-        className="shrink-0 text-muted-foreground"
-        aria-hidden
-      />
-    </>
-  )
-
-  if (external && href) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
-        {inner}
-      </a>
-    )
-  }
-
-  return (
-    <Link to={to ?? '/'} className={className}>
-      {inner}
-    </Link>
   )
 }
