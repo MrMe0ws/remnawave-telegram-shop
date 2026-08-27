@@ -8,8 +8,12 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       className={cn(
         // cabinet-card — единственный стабильный хук на поверхность карточки:
         // декор-темы цепляются за него, а не за utility-классы Tailwind.
+        // Тёмная тема живёт в .dark .cabinet-card: здесь стояло
+        // dark:border-primary/20, и каждая карточка была обведена синим.
+        // Utility-классы Tailwind идут после @layer components, поэтому
+        // перебивали нейтральную обводку базового слоя.
         'cabinet-card',
-        'rounded-[var(--radius)] border border-border bg-card text-card-foreground backdrop-blur-[2px] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] dark:border-primary/20 dark:bg-gradient-to-br dark:from-[hsl(var(--card))] dark:to-[hsl(var(--secondary)/0.45)] dark:shadow-[0_12px_30px_rgba(3,10,24,0.42),inset_0_1px_0_rgba(255,255,255,0.06)]',
+        'rounded-[var(--radius)] border border-border bg-card text-card-foreground backdrop-blur-[2px] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]',
         className,
       )}
       {...props}

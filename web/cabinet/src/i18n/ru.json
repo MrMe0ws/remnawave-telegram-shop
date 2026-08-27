@@ -590,7 +590,7 @@
       "heroXp": "{{xp}} XP всего",
       "levelNumber": "Уровень {{n}}",
       "progressLabel": "Прогресс {{cur}} / {{span}} XP",
-      "untilNext": "🚀 До уровня {{next}}: {{xp}} XP",
+      "untilNext": "До уровня {{next}} — ещё {{xp}} XP",
       "maxLevel": "Вы на максимальном уровне в программе.",
       "discountLine": "Скидка: {{pct}}%",
       "howTitle": "Как это работает",
@@ -607,8 +607,8 @@
       "historyPrev": "Назад",
       "historyNext": "Далее",
       "historyPage": "Страница {{n}}",
-      "compactTitle": "💎 Лояльность — Lv.{{n}}",
-      "compactDiscount": "🎁 Скидка: {{pct}}%"
+      "compactTitle": "Уровень {{n}}",
+      "compactDiscount": "Скидка {{pct}}% на продление"
     },
     "referralPage": {
       "title": "Реферальная программа",

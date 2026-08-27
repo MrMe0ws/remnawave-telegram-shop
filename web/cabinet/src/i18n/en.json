@@ -474,7 +474,7 @@
       "heroXp": "{{xp}} XP total",
       "levelNumber": "Level {{n}}",
       "progressLabel": "Progress {{cur}} / {{span}} XP",
-      "untilNext": "🚀 To level {{next}}: {{xp}} XP left",
+      "untilNext": "{{xp}} XP to level {{next}}",
       "maxLevel": "You are at the top loyalty tier.",
       "discountLine": "🎁 Discount: {{pct}}%",
       "howTitle": "How it works",
@@ -491,8 +491,8 @@
       "historyPrev": "Previous",
       "historyNext": "Next",
       "historyPage": "Page {{n}}",
-      "compactTitle": "💎 Loyalty — Lv.{{n}}",
-      "compactDiscount": "🎁 Discount: {{pct}}%"
+      "compactTitle": "Level {{n}}",
+      "compactDiscount": "{{pct}}% off renewals"
     },
     "referralPage": {
       "title": "Referral program",

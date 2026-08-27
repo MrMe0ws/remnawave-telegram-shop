@@ -260,6 +260,7 @@
    * !important сохранён: глобальное `* { @apply border-border }` иначе
    * перекрывает эти значения.
    */
+  .dark .cabinet-card,
   .dark .cabinet-elevated-card,
   .dark .subscription-feature-card {
     border-color: hsl(var(--border) / 0.75) !important;
@@ -2560,25 +2561,19 @@ html:not(.dark)[data-cabinet-decor="lavender"] .cabinet-shell-gradient {
     radial-gradient(ellipse 70% 45% at 0% 60%, hsl(250 35% 70% / 0.1), transparent 48%);
 }
 
-/* Карточки и CTA: лёгкий акцентный бордер/свечение для всех декор-тем (кроме off). */
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .cabinet-elevated-card,
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]) .subscription-feature-card {
-  border-color: hsl(var(--primary) / 0.28) !important;
-  box-shadow:
-    0 12px 30px rgba(3, 10, 24, 0.42),
-    0 0 0 1px hsl(var(--primary) / 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-}
-
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not([data-cabinet-decor="cyber"])
-  .cabinet-elevated-card:hover,
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not([data-cabinet-decor="cyber"])
-  .subscription-feature-card.profile-tariff-hover:hover,
-html.dark[data-cabinet-decor]:not([data-cabinet-decor="off"]):not([data-cabinet-decor="neon"]):not([data-cabinet-decor="cyber"])
-  .dashboard-quick-link:hover {
-  border-color: hsl(var(--primary) / 0.42) !important;
-}
-
+/*
+ * Общей акцентной обводки у карточек больше нет.
+ *
+ * Здесь на все декор-темы разом вешалось `border-color: hsl(var(--primary)
+ * / 0.28) !important` плюс вторая волосяная линия тем же цветом в тени —
+ * это и была синеватая рамка вокруг каждой карточки. Парное правило на
+ * :hover доводило её до 0.42, то есть на наведении обводка становилась
+ * ярче вместо того, чтобы уступить место градиентному кольцу.
+ *
+ * Оба правила стояли вне слоёв и были специфичнее базовых, поэтому
+ * перебивали и нейтральную обводку, и `border-color: transparent` из слоя
+ * пластики. Цвет карточки и её ховер теперь целиком за базовым слоем.
+ */
 /* ── Декор: гирлянда (new_year), неон-хедер, фоновые сцены ───────────────── */
 
 .cabinet-decor-garland {
@@ -3402,123 +3397,16 @@ html:not(.dark) .cabinet-decor-scene__nebula-orb {
   }
 }
 
-/* ── Карточки: кольцо на hover, пятно света под курсором ─────────────────── */
-
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card {
-  position: relative;
-  isolation: isolate;
-  transition:
-    transform 0.4s var(--nb-ease),
-    border-color 0.4s var(--nb-ease),
-    box-shadow 0.4s var(--nb-ease);
-}
-
 /*
- * Кольцо-градиент по контуру. Рисуется псевдоэлементом с mask-composite:
- * border-image даёт артефакты на скруглениях, а маска — нет. z-index: -1
- * держит кольцо над фоном карточки и под её содержимым.
+ * Карточки nebula намеренно не переопределяются.
+ *
+ * Здесь лежал полный дубль кольца, пятна света и ховер-тени — он появился
+ * раньше базового слоя пластики. Дубль был специфичнее и жёстко зашивал
+ * --nb-cyan, поэтому перебивал --cabinet-accent: акцент блока (фиолетовая
+ * лояльность, янтарные промокоды) красил иконку, а свечение всё равно
+ * оставалось голубым. Базовый слой даёт ровно тот же вид: nebula задаёт
+ * --primary тем же цианом, а --cabinet-accent по умолчанию равен --primary.
  */
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: linear-gradient(
-    135deg,
-    hsl(var(--nb-cyan) / 0.85) 0%,
-    hsl(var(--nb-violet) / 0.4) 50%,
-    hsl(var(--nb-cyan) / 0.85) 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s var(--nb-ease);
-}
-
-/* Лёгкое сияние под курсором: координаты пишет useDecorCardSpotlight. */
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  /*
-   * На лендинге это пятно яркое и уместное, но в кабинете оно перетягивало
-   * внимание с содержимого карточки. Было 0.16 → 0.08, теперь 0.04:
-   * подсветка переехала в базовый слой пластики, и nebula выровнена с ним,
-   * иначе на ней ховер был бы вдвое ярче, чем на остальных темах.
-   */
-  background: radial-gradient(
-    240px circle at var(--cd-mx, 50%) var(--cd-my, 0%),
-    hsl(var(--nb-cyan) / 0.04),
-    transparent 70%
-  );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s var(--nb-ease);
-}
-
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:focus-within,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:focus-within,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:focus-within {
-  border-color: transparent;
-}
-
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:focus-within::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:focus-within::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:focus-within::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:focus-within::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:focus-within::before,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover::after,
-html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:focus-within::after {
-  opacity: 1;
-}
-
-html.dark[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
-html.dark[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
-html.dark[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover {
-  box-shadow:
-    0 22px 50px -18px hsl(var(--nb-cyan) / 0.4),
-    inset 0 1px 0 rgb(255 255 255 / 0.08) !important;
-}
-
-html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
-html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
-html:not(.dark)[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover {
-  box-shadow: 0 18px 40px -20px hsl(var(--nb-cyan) / 0.45) !important;
-}
-
-@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
-  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-card:hover,
-  html[data-cabinet-decor="nebula"] .cabinet-shell .cabinet-elevated-card:hover,
-  html[data-cabinet-decor="nebula"] .cabinet-shell .subscription-feature-card:hover {
-    transform: translateY(-3px);
-  }
-}
-
 /* ── Появление при заходе: лесенка по карточкам ──────────────────────────── */
 
 @media (prefers-reduced-motion: no-preference) {
