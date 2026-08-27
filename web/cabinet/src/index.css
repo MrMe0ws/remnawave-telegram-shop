@@ -1000,42 +1000,6 @@
     will-change: color, filter;
   }
 
-  /** Как hover карточек тарифов (TariffsPage — tariffOtherCardHoverClassName). */
-  .profile-tariff-hover {
-    @apply transition-[border-color,box-shadow,filter] hover:border-primary/35 hover:shadow-[0_10px_28px_-12px_hsl(var(--foreground)/0.12)] hover:brightness-[1.01] dark:hover:shadow-[0_12px_32px_-10px_hsl(var(--primary)/0.22)];
-  }
-
-  /*
-   * Кликабельные feature-card (лояльность, промокоды): hover как renew-subscription-cta-static.
-   * Базовые .dark .subscription-feature-card ставят border/shadow с !important — без
-   * переопределения hover в тёмной теме почти не виден.
-   */
-  .subscription-feature-card.profile-tariff-hover {
-    @apply transition-[border-color,box-shadow,filter,background-color,background-image];
-  }
-
-  .subscription-feature-card.profile-tariff-hover:hover,
-  .subscription-feature-card.profile-tariff-hover:focus-visible {
-    border-color: hsl(var(--primary) / 0.35);
-    background-color: hsl(var(--accent) / 0.1);
-    box-shadow: 0 10px 28px -12px hsl(var(--foreground) / 0.12);
-    filter: brightness(1.01);
-  }
-
-  .dark .subscription-feature-card.profile-tariff-hover:hover,
-  .dark .subscription-feature-card.profile-tariff-hover:focus-visible {
-    border-color: hsl(var(--primary) / 0.4) !important;
-    background-color: hsl(var(--secondary)) !important;
-    background-image: linear-gradient(
-      165deg,
-      hsl(var(--secondary) / 0.85) 0%,
-      hsl(var(--primary) / 0.12) 100%
-    ) !important;
-    filter: brightness(1.03);
-    box-shadow:
-      0 12px 30px rgba(3, 10, 24, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
-  }
 }
 
 @keyframes connect-border-spin {

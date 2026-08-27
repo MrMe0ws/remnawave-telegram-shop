@@ -180,7 +180,7 @@ export default function ProfilePage() {
               </Link>
             ) : (
               <Link to="/accounts" className="block">
-                <Card className="profile-tariff-hover transition-[border-color,box-shadow,filter]">
+                <Card>
                   <CardContent className="flex items-center gap-3 py-3.5">
                     <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                       <Link2 size={16} aria-hidden />
@@ -224,7 +224,7 @@ export default function ProfilePage() {
                 </div>
                 <Link
                   to="/referral"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card/70 px-2.5 py-1.5 text-xs font-medium text-primary shadow-sm profile-tariff-hover"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card/70 px-2.5 py-1.5 text-xs font-medium text-primary shadow-sm"
                 >
                   {t('profile.referralProgramLink')}
                   <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
@@ -266,16 +266,16 @@ export default function ProfilePage() {
 
             <Link
               to="/promocodes"
-              className="subscription-feature-card profile-tariff-hover flex w-full items-center gap-3 p-4 text-left transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="subscription-feature-card cabinet-accent-violet cabinet-row flex w-full items-center gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/15 dark:bg-violet-400/20">
-                <Gift size={16} className="text-violet-600 dark:text-violet-300" strokeWidth={1.75} aria-hidden />
+              <div className="cabinet-icon-box flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                <Gift size={16} strokeWidth={1.75} aria-hidden />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{t('profile.promocodesCardTitle')}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{t('profile.promocodesCardHint')}</p>
               </div>
-              <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+              <ChevronRight className="cabinet-row-chevron size-5 shrink-0 text-muted-foreground" aria-hidden />
             </Link>
           </div>
         )}
