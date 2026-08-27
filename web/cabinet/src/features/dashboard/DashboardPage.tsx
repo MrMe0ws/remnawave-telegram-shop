@@ -380,7 +380,7 @@ function QuickLinks({
             key={to}
             to={to}
             className={cn(
-              'dashboard-quick-link cabinet-elevated-card cabinet-row flex items-center gap-3 px-3 py-2.5',
+              'cabinet-elevated-card cabinet-row flex items-center gap-3 px-3 py-2.5',
               accent,
             )}
           >
