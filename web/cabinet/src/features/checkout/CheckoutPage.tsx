@@ -18,6 +18,7 @@ import { api, ApiError, type TariffItem } from '@/lib/api'
 import { getTelegramInitData, newIdempotencyKey, cn } from '@/lib/utils'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
+import { formatNumber } from '@/lib/format'
 
 type Provider =
   | 'yookassa'
@@ -233,7 +234,7 @@ export default function CheckoutPage() {
                         ? t('checkout.devicesWithExtra', {
                             base: tariff.device_limit,
                             extra: preview.extra_hwid_active ?? 0,
-                            amount: (preview.extra_hwid_amount_rub ?? 0).toLocaleString('ru-RU'),
+                            amount: formatNumber(preview.extra_hwid_amount_rub ?? 0),
                             unit: amountSuffix,
                           })
                         : String(tariff.device_limit)
@@ -276,7 +277,7 @@ export default function CheckoutPage() {
                           label={t('checkout.discountLabel')}
                           value={t('checkout.discountValueWithAmount', {
                             pct: preview.total_discount_pct,
-                            amount: (preview.base_amount_rub - preview.amount_rub).toLocaleString('ru-RU'),
+                            amount: formatNumber(preview.base_amount_rub - preview.amount_rub),
                             unit: amountSuffix,
                           })}
                         />
@@ -288,7 +289,7 @@ export default function CheckoutPage() {
                     label={t('checkout.total')}
                     value={
                       <span className="text-lg font-bold">
-                        {amountValue.toLocaleString('ru-RU')} {amountSuffix}
+                        {formatNumber(amountValue)} {amountSuffix}
                       </span>
                     }
                   />
@@ -411,7 +412,7 @@ export default function CheckoutPage() {
             onClick={handlePay}
           >
             {t('checkout.pay')}
-            {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+            {tariff ? ` ${formatNumber(amountValue)} ${amountSuffix}` : ''}
           </Button>
           <LegalContinueDisclaimer siteLinks={bootstrap?.site_links} />
         </RevealItem>
@@ -434,7 +435,7 @@ export default function CheckoutPage() {
                 onClick={handlePay}
               >
                 {t('checkout.pay')}
-                {tariff ? ` ${amountValue.toLocaleString('ru-RU')} ${amountSuffix}` : ''}
+                {tariff ? ` ${formatNumber(amountValue)} ${amountSuffix}` : ''}
               </Button>
             </div>
           </div>,

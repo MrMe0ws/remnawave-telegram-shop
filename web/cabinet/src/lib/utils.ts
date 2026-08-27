@@ -83,10 +83,12 @@ export function formatDateTimeShort(iso: string): string {
   return `${dd}.${mm}.${yyyy} ${hh}:${min}`
 }
 
-/** Форматирует цену в рублях. */
-export function formatRub(n: number): string {
-  return n.toLocaleString('ru-RU') + ' ₽'
-}
+/**
+ * Форматирует цену в рублях.
+ * Реализация — в `@/lib/format` (локаль берётся из i18n); здесь реэкспорт,
+ * чтобы не переписывать существующие импорты из `@/lib/utils`.
+ */
+export { formatRub } from '@/lib/format'
 
 /** initData из Telegram Mini App (пустая строка в обычном браузере). */
 export function getTelegramInitData(): string {

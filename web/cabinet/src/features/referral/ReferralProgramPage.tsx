@@ -14,7 +14,6 @@ import { api } from '@/lib/api'
 
 export default function ReferralProgramPage() {
   const { t } = useTranslation()
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const canShare = useMemo(() => typeof navigator !== 'undefined' && typeof navigator.share === 'function', [])
 
   const { data, isLoading, error } = useQuery({
@@ -23,12 +22,6 @@ export default function ReferralProgramPage() {
     staleTime: 60_000,
     retry: 1,
   })
-
-  async function copy(text: string, key: string) {
-    await navigator.clipboard.writeText(text)
-    setCopiedKey(key)
-    setTimeout(() => setCopiedKey(null), 2000)
-  }
 
   async function share(text: string) {
     if (!canShare) return
@@ -127,8 +120,6 @@ export default function ReferralProgramPage() {
                   <ReferralCopyRow
                     label={t('referralPage.linkBot')}
                     value={data.bot_start_link}
-                    copied={copiedKey === 'bot'}
-                    onCopy={() => void copy(data.bot_start_link!, 'bot')}
                     canShare={canShare}
                     onShare={() => void share(data.bot_start_link!)}
                   />
@@ -137,8 +128,6 @@ export default function ReferralProgramPage() {
                   <ReferralCopyRow
                     label={t('referralPage.linkCabinet')}
                     value={data.cabinet_register_link}
-                    copied={copiedKey === 'cab'}
-                    onCopy={() => void copy(data.cabinet_register_link!, 'cab')}
                     canShare={canShare}
                     onShare={() => void share(data.cabinet_register_link!)}
                   />

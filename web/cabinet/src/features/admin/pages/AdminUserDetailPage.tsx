@@ -48,6 +48,7 @@ import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import type { AdminTariffBriefDTO } from '@/lib/types/admin'
 import { AdminModal } from '../components/AdminModal'
 import { AdminTablePagination } from '../components/AdminTablePagination'
+import { formatDecimals, formatNumber } from '@/lib/format'
 
 const LIST_PAGE_LIMIT = 20
 
@@ -205,7 +206,7 @@ export default function AdminUserDetailPage() {
                 <div className="mb-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border bg-muted/30 p-3">
                     <p className="text-xs text-muted-foreground">{t('admin.users.paymentsRub')}</p>
-                    <p className="text-lg font-semibold tabular-nums">{paymentsData.rub_sum.toLocaleString('ru-RU')} ₽</p>
+                    <p className="text-lg font-semibold tabular-nums">{formatNumber(paymentsData.rub_sum)} ₽</p>
                     <p className="text-xs text-muted-foreground">{paymentsData.rub_count} {t('admin.users.paymentsCount')}</p>
                   </div>
                   <div className="rounded-lg border bg-muted/30 p-3">
@@ -215,7 +216,7 @@ export default function AdminUserDetailPage() {
                     {paymentsData.stars_rub_equiv > 0 && (
                       <p className="mt-1 text-xs text-muted-foreground">
                         {t('admin.users.starsRubEquiv', {
-                          value: paymentsData.stars_rub_equiv.toLocaleString('ru-RU', { maximumFractionDigits: 2 }),
+                          value: formatDecimals(paymentsData.stars_rub_equiv, 2),
                           rate: paymentsData.rub_per_star,
                         })}
                       </p>

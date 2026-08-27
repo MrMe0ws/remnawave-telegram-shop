@@ -1,4 +1,5 @@
 import type { TariffItem } from '@/lib/api'
+import { formatInteger, formatNumber } from '@/lib/format'
 
 export type TariffPriceDisplayMode = 'monthly' | 'marketing'
 
@@ -15,14 +16,14 @@ export function showcaseMonthlyRub(periods: TariffItem[], mode: TariffPriceDispl
 
 export function formatShowcasePriceRub(n: number, mode: TariffPriceDisplayMode): string {
   if (mode === 'marketing') {
-    return Math.ceil(n).toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+    return formatInteger(Math.ceil(n))
   }
-  return n.toLocaleString('ru-RU')
+  return formatNumber(n)
 }
 
 /** Целые рубли без копеек (витрина периодов, синяя сумма). */
 export function formatRubInteger(n: number): string {
-  return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+  return formatInteger(n)
 }
 
 export function anyTariffHasYearPeriod(cardPeriods: TariffItem[][]): boolean {

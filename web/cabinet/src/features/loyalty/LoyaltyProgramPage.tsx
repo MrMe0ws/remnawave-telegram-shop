@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { cn, formatDateTimeShort } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
+import { formatNumber } from '@/lib/format'
 
 const HOW_LINES: Array<'loyaltyPage.howBullet1' | 'loyaltyPage.howBullet2' | 'loyaltyPage.howBullet3' | 'loyaltyPage.howBullet4'> = [
   'loyaltyPage.howBullet1',
@@ -94,7 +95,7 @@ export default function LoyaltyProgramPage() {
               data.first_discount_xp_min > 0 &&
               data.xp < data.first_discount_xp_min && (
                 <RevealItem className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-                  {t('loyaltyPage.noBonusYet', { xp: data.first_discount_xp_min.toLocaleString('ru-RU') })}
+                  {t('loyaltyPage.noBonusYet', { xp: formatNumber(data.first_discount_xp_min) })}
                 </RevealItem>
               )}
 
@@ -109,7 +110,7 @@ export default function LoyaltyProgramPage() {
                     <p className="text-lg font-semibold leading-tight">
                       {t('loyaltyPage.heroTitle', { level: levelLabel })}
                     </p>
-                    <p className="text-xs text-muted-foreground">{t('loyaltyPage.heroXp', { xp: data.xp.toLocaleString('ru-RU') })}</p>
+                    <p className="text-xs text-muted-foreground">{t('loyaltyPage.heroXp', { xp: formatNumber(data.xp) })}</p>
                   </div>
                 </div>
 
@@ -118,8 +119,8 @@ export default function LoyaltyProgramPage() {
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>
                         {t('loyaltyPage.progressLabel', {
-                          cur: data.xp_in_segment.toLocaleString('ru-RU'),
-                          span: data.xp_segment_span.toLocaleString('ru-RU'),
+                          cur: formatNumber(data.xp_in_segment),
+                          span: formatNumber(data.xp_segment_span),
                         })}
                       </span>
                       <span>{data.progress_percent}%</span>
@@ -132,7 +133,7 @@ export default function LoyaltyProgramPage() {
                     </div>
                     <p className="text-xs text-primary/90">
                       {t('loyaltyPage.untilNext', {
-                        xp: data.xp_until_next.toLocaleString('ru-RU'),
+                        xp: formatNumber(data.xp_until_next),
                         next: data.next.sort_order,
                       })}
                     </p>

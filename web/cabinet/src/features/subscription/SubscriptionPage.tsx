@@ -15,29 +15,33 @@ import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionEx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
+import { useToast } from '@/components/ui/toast'
+import { api, SUBSCRIPTION_STALE_MS } from '@/lib/api'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { daysUntil, cn } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
 export default function SubscriptionPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
-  const [copied, setCopied] = useState(false)
+  const toast = useToast()
+  const { state: copyState, copy } = useCopyToClipboard()
   const [refreshDone, setRefreshDone] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
+  // staleTime вместо принудительного refetch на каждом монтировании — разбор
+  // в DashboardPage. Кнопка «Обновить» рядом с заголовком остаётся для явного
+  // запроса свежих данных.
   const { data: sub, isLoading, error, refetch } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api.subscription(),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
   })
   const { data: devices, refetch: refetchDevices, isLoading: devicesLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => api.devices(),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
     enabled: Boolean(sub),
   })
@@ -46,6 +50,8 @@ export default function SubscriptionPage() {
     onSuccess: async () => {
       await refetchDevices()
     },
+    // Удаление устройства молча ничего не делало при отказе сервера.
+    onError: () => toast.error(t('errors.unknown')),
   })
 
   const [deleteConfirmHwid, setDeleteConfirmHwid] = useState<string | null>(null)
@@ -79,11 +85,9 @@ export default function SubscriptionPage() {
       ? t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: deviceLimit })
       : t('subscriptionPage.devicesLimitLine', { used: connectedDevices, limit: t('subscriptionPage.unlimited') })
 
-  async function copyLink() {
+  function copyLink() {
     if (!sub?.subscription_link) return
-    await navigator.clipboard.writeText(sub.subscription_link)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    void copy(sub.subscription_link)
   }
 
   async function handleRefresh() {
@@ -275,7 +279,7 @@ export default function SubscriptionPage() {
                       className="shrink-0 gap-1.5"
                       disabled={isExpired}
                     >
-                      {copied ? (
+                      {copyState === 'done' ? (
                         <>
                           <Check size={14} className="text-primary" />
                           {t('subscriptionPage.copied')}
@@ -288,6 +292,13 @@ export default function SubscriptionPage() {
                       )}
                     </Button>
                   </div>
+                  {/* aria-live: смена текста кнопки сама по себе скринридером не объявляется. */}
+                  <p aria-live="polite" className="sr-only">
+                    {copyState === 'done' ? t('subscriptionPage.copied') : ''}
+                  </p>
+                  {copyState === 'failed' && (
+                    <p className="mt-2 text-xs text-destructive">{t('common.copyFailed')}</p>
+                  )}
                 </CardContent>
               </Card>
               </RevealItem>

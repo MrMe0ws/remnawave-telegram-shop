@@ -9,12 +9,14 @@ import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 
 export default function PaymentStatusPage() {
   const { t } = useTranslation()
   const { id: idParam } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
-  const [copied, setCopied] = useState(false)
+  const { state: copyState, copy } = useCopyToClipboard()
+  const copied = copyState === 'done'
 
   // Поддерживаем /payment/status/:id и /payment/status?id=…
   const rawId = idParam ?? searchParams.get('id') ?? ''
@@ -36,11 +38,9 @@ export default function PaymentStatusPage() {
 
   const status = data?.status
 
-  async function copyLink() {
+  function copyLink() {
     if (!data?.subscription_link) return
-    await navigator.clipboard.writeText(data.subscription_link)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    void copy(data.subscription_link)
   }
 
   return (
@@ -60,6 +60,7 @@ export default function PaymentStatusPage() {
                 link={data?.subscription_link ?? null}
                 purchaseKind={data?.purchase_kind}
                 copied={copied}
+                copyFailed={copyState === 'failed'}
                 onCopy={copyLink}
               />
             ) : (
@@ -101,11 +102,13 @@ function SuccessState({
   link,
   purchaseKind,
   copied,
+  copyFailed,
   onCopy,
 }: {
   link: string | null
   purchaseKind?: string
   copied: boolean
+  copyFailed: boolean
   onCopy: () => void
 }) {
   const { t } = useTranslation()
@@ -129,10 +132,23 @@ function SuccessState({
             <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono text-muted-foreground truncate select-all">
               {link}
             </div>
-            <Button variant="outline" size="sm" onClick={onCopy} className="shrink-0 gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCopy}
+              className="shrink-0 gap-1"
+              aria-label={t('subscriptionPage.copyLink')}
+            >
               {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
             </Button>
           </div>
+          {/* Кнопка без текста — результат копирования иначе никак не сообщается. */}
+          <p aria-live="polite" className="text-left text-xs text-muted-foreground">
+            {copied ? t('subscriptionPage.copied') : ''}
+          </p>
+          {copyFailed && (
+            <p className="text-left text-xs text-destructive">{t('common.copyFailed')}</p>
+          )}
         </div>
       )}
 

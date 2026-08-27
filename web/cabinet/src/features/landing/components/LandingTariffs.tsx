@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight } from 'lucide-react'
 
 import { api, type TariffItem, type TariffsResponse } from '@/lib/api'
+import { formatDecimals, formatInteger } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { LANDING_POPULAR_PLAN_PATTERNS } from '../landingContent'
 import { logLandingMockHint, readLandingTariffsMock } from '../landingTariffsMock'
@@ -42,11 +43,11 @@ interface TariffCardData {
 }
 
 function formatRubInteger(n: number): string {
-  return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+  return formatInteger(n)
 }
 
 function formatRub2(n: number): string {
-  return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return formatDecimals(n, 2)
 }
 
 /**

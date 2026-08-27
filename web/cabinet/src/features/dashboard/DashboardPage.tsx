@@ -11,8 +11,9 @@ import { PWAInstallPrompt } from '@/components/PWAInstallPrompt'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
-import { api, type SubscriptionResponse } from '@/lib/api'
+import { api, SUBSCRIPTION_STALE_MS, type SubscriptionResponse } from '@/lib/api'
 import { daysUntil } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
@@ -22,20 +23,29 @@ export default function DashboardPage() {
   const { lang } = useTranslationWithLang()
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const toast = useToast()
 
+  /*
+   * staleTime вместо `staleTime: 0` + `refetchOnMount: 'always'`.
+   *
+   * Раньше каждое открытие страницы било в сеть и показывало скелетон, даже если
+   * данные получены секунду назад — при переходах «главная → подписка → главная»
+   * пользователь видел загрузку на ровном месте. Теперь в пределах окна берём
+   * кэш и рисуем сразу; устаревшие данные обновляются фоном, без скелетона,
+   * потому что isPending ложен при наличии кэша. Мутации, меняющие подписку,
+   * инвалидируют её явно, так что свежесть после оплаты и активации не страдает.
+   */
   const { data: sub, isPending: subPending } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api.subscription(),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
   })
 
   const { data: trial, isPending: trialPending } = useQuery({
     queryKey: ['trial-info'],
     queryFn: () => api.trialInfo(),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
   })
 
@@ -44,8 +54,7 @@ export default function DashboardPage() {
   const { data: devices, isLoading: devicesLoading } = useQuery({
     queryKey: ['devices'],
     queryFn: () => api.devices(),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
     enabled: Boolean(sub),
   })
@@ -88,6 +97,9 @@ export default function DashboardPage() {
       ])
       navigate('/subscription', { replace: true })
     },
+    // Без этого при ошибке кнопка просто разблокировалась, и пользователь
+    // не понимал, активировался триал или нет.
+    onError: () => toast.error(t('errors.unknown')),
   })
 
   const trialButtonLabel = (() => {

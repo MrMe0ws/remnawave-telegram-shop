@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { api, type SubscriptionResponse, type TariffItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
+import { formatDecimals, formatNumber } from '@/lib/format'
 import {
   formatRubInteger,
   formatShowcasePriceRub,
@@ -530,11 +531,7 @@ function TariffPeriodStep({
 
   if (!head) return null
 
-  const formatRub2 = (n: number) =>
-    n.toLocaleString('ru-RU', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
+  const formatRub2 = (n: number) => formatDecimals(n, 2)
 
   // Период изначально НЕ выбран — подсветка появляется только после клика.
   const [selectedMonths, setSelectedMonths] = useState<number | null>(null)
@@ -646,7 +643,7 @@ function ClassicIntro({
       <Card>
         <CardContent className="px-5 py-6 space-y-4">
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold">{head.monthly_base_rub.toLocaleString('ru-RU')}</span>
+            <span className="text-3xl font-bold">{formatNumber(head.monthly_base_rub)}</span>
             <span className="text-sm text-muted-foreground">₽{t('tariffs.perMonth')}</span>
           </div>
           {head.description ? (
@@ -763,11 +760,11 @@ function PeriodCard({
       <CardContent className="flex flex-col flex-1 gap-3">
         <div className="flex-1">
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{tariff.price_rub.toLocaleString('ru-RU')}</span>
+            <span className="text-2xl font-bold">{formatNumber(tariff.price_rub)}</span>
             <span className="text-sm text-muted-foreground">₽</span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {tariff.monthly_base_rub.toLocaleString('ru-RU')} ₽{t('tariffs.perMonth')}
+            {formatNumber(tariff.monthly_base_rub)} ₽{t('tariffs.perMonth')}
           </p>
         </div>
 

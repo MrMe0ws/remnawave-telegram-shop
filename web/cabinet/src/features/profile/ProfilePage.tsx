@@ -38,7 +38,6 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, fetchMe } = useAuthStore()
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [tab, setTab] = useState<ProfileTab>(() => tabFromHash(location.hash))
 
   const { data: referrals, isPending: referralsPending } = useQuery({
@@ -73,12 +72,6 @@ export default function ProfilePage() {
     } else {
       navigate('/profile', { replace: true })
     }
-  }
-
-  async function copyRef(text: string, key: string) {
-    await navigator.clipboard.writeText(text)
-    setCopiedKey(key)
-    setTimeout(() => setCopiedKey(null), 2000)
   }
 
   async function shareRef(text: string) {
@@ -249,8 +242,6 @@ export default function ProfilePage() {
                       <ReferralCopyRow
                         label={t('referralPage.linkBot')}
                         value={botRefUrl}
-                        copied={copiedKey === 'bot'}
-                        onCopy={() => void copyRef(botRefUrl, 'bot')}
                         canShare={canShare}
                         onShare={() => void shareRef(botRefUrl)}
                       />
@@ -259,8 +250,6 @@ export default function ProfilePage() {
                       <ReferralCopyRow
                         label={t('referralPage.linkCabinet')}
                         value={cabinetRefUrl}
-                        copied={copiedKey === 'cab'}
-                        onCopy={() => void copyRef(cabinetRefUrl, 'cab')}
                         canShare={canShare}
                         onShare={() => void shareRef(cabinetRefUrl)}
                       />

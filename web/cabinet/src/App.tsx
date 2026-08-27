@@ -1,59 +1,79 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
 import { useAuthStore } from '@/store/auth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
 import { AdminRoute } from '@/components/AdminRoute'
 import { BrandFavicon } from '@/components/BrandFavicon'
 import { ThemePolicyProvider } from '@/components/ThemePolicyProvider'
+import { ToastProvider } from '@/components/ui/toast'
 import { CabinetDecorThemeSync } from '@/features/decor/CabinetDecorThemeSync'
 
+// Главная — единственная страница, загружаемая сразу: мини-апп открывается на ней,
+// и отдельный запрос за чанком добавил бы round-trip к первому экрану.
+import DashboardPage from '@/features/dashboard/DashboardPage'
+
+/*
+ * Остальные маршруты — через lazy.
+ *
+ * Раньше всё импортировалось статически и уезжало в один чанк на 2 МБ. Из него
+ * 39% исходников — админка, плюс recharts, который используется только в
+ * features/admin/stats (10 файлов). То есть обычный пользователь мини-аппа
+ * скачивал целиком админпанель с графической библиотекой, чтобы посмотреть
+ * остаток трафика. Теперь админка, лендинг, dev-превью и редкие экраны едут
+ * отдельными чанками и подгружаются по требованию.
+ *
+ * default-экспорт страниц сохранён, поэтому lazy() принимает импорт как есть.
+ */
+
 // Auth pages (9a)
-import LoginPage from '@/features/auth/LoginPage'
-import RegisterPage from '@/features/auth/RegisterPage'
-import VerifyEmailPage from '@/features/auth/VerifyEmailPage'
-import ForgotPasswordPage from '@/features/auth/ForgotPasswordPage'
-import ResetPasswordPage from '@/features/auth/ResetPasswordPage'
+const LoginPage = lazy(() => import('@/features/auth/LoginPage'))
+const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'))
+const VerifyEmailPage = lazy(() => import('@/features/auth/VerifyEmailPage'))
+const ForgotPasswordPage = lazy(() => import('@/features/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage'))
 
 // Публичный лендинг (9a): отдельный маршрут, корень SPA по-прежнему ведёт в кабинет.
-import LandingPage from '@/features/landing/LandingPage'
+const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
 
-// Dev-превью компонентов. Маршрут ниже регистрируется только при import.meta.env.DEV,
-// в прод-бандле ветка мертва и модуль вырезается сборкой.
-import ConnectCtaPreviewPage from '@/features/dev/ConnectCtaPreviewPage'
-import ThemePreviewPage from '@/features/dev/ThemePreviewPage'
+// Dev-превью компонентов. Маршруты ниже регистрируются только при import.meta.env.DEV;
+// через lazy модули не попадают и в прод-чанки.
+const ConnectCtaPreviewPage = lazy(() => import('@/features/dev/ConnectCtaPreviewPage'))
+const ThemePreviewPage = lazy(() => import('@/features/dev/ThemePreviewPage'))
 
 // Protected pages (9b)
-import DashboardPage from '@/features/dashboard/DashboardPage'
-import SubscriptionPage from '@/features/subscription/SubscriptionPage'
-import TariffsPage from '@/features/tariffs/TariffsPage'
-import CheckoutPage from '@/features/checkout/CheckoutPage'
-import PaymentStatusPage from '@/features/checkout/PaymentStatusPage'
-import SettingsPage from '@/features/settings/SettingsPage'
-import LinkEmailPage from '@/features/settings/LinkEmailPage'
-import MergePreviewPage from '@/features/settings/MergePreviewPage'
-import ProfilePage from '@/features/profile/ProfilePage'
-import ConnectionsPage from '@/features/connections/ConnectionsPage'
-import DeepLinkRedirectPage from '@/features/connections/DeepLinkRedirectPage'
-import ReferralProgramPage from '@/features/referral/ReferralProgramPage'
-import FortunePage from '@/features/fortune/FortunePage'
-import LoyaltyProgramPage from '@/features/loyalty/LoyaltyProgramPage'
-import PromoCodesPage from '@/features/promocodes/PromoCodesPage'
-import SupportPage from '@/features/support/SupportPage'
-import InfoPage from '@/features/info/InfoPage'
-import AdminDashboardPage from '@/features/admin/pages/AdminDashboardPage'
-import AdminStatsPage from '@/features/admin/pages/AdminStatsPage'
-import AdminUsersPage from '@/features/admin/pages/AdminUsersPage'
-import AdminUserDetailPage from '@/features/admin/pages/AdminUserDetailPage'
-import AdminPromosPage from '@/features/admin/pages/AdminPromosPage'
-import AdminTariffsPage from '@/features/admin/pages/AdminTariffsPage'
-import AdminLoyaltyPage from '@/features/admin/pages/AdminLoyaltyPage'
-import AdminBroadcastPage from '@/features/admin/pages/AdminBroadcastPage'
-import AdminInfraPage from '@/features/admin/pages/AdminInfraPage'
-import AdminSyncPage from '@/features/admin/pages/AdminSyncPage'
-import AdminSettingsPage from '@/features/admin/pages/AdminSettingsPage'
+const SubscriptionPage = lazy(() => import('@/features/subscription/SubscriptionPage'))
+const TariffsPage = lazy(() => import('@/features/tariffs/TariffsPage'))
+const CheckoutPage = lazy(() => import('@/features/checkout/CheckoutPage'))
+const PaymentStatusPage = lazy(() => import('@/features/checkout/PaymentStatusPage'))
+const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
+const LinkEmailPage = lazy(() => import('@/features/settings/LinkEmailPage'))
+const MergePreviewPage = lazy(() => import('@/features/settings/MergePreviewPage'))
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'))
+const ConnectionsPage = lazy(() => import('@/features/connections/ConnectionsPage'))
+const DeepLinkRedirectPage = lazy(() => import('@/features/connections/DeepLinkRedirectPage'))
+const ReferralProgramPage = lazy(() => import('@/features/referral/ReferralProgramPage'))
+const FortunePage = lazy(() => import('@/features/fortune/FortunePage'))
+const LoyaltyProgramPage = lazy(() => import('@/features/loyalty/LoyaltyProgramPage'))
+const PromoCodesPage = lazy(() => import('@/features/promocodes/PromoCodesPage'))
+const SupportPage = lazy(() => import('@/features/support/SupportPage'))
+const InfoPage = lazy(() => import('@/features/info/InfoPage'))
+
+// Админка: самый крупный кусок, обычному пользователю не нужен никогда.
+const AdminDashboardPage = lazy(() => import('@/features/admin/pages/AdminDashboardPage'))
+const AdminStatsPage = lazy(() => import('@/features/admin/pages/AdminStatsPage'))
+const AdminUsersPage = lazy(() => import('@/features/admin/pages/AdminUsersPage'))
+const AdminUserDetailPage = lazy(() => import('@/features/admin/pages/AdminUserDetailPage'))
+const AdminPromosPage = lazy(() => import('@/features/admin/pages/AdminPromosPage'))
+const AdminTariffsPage = lazy(() => import('@/features/admin/pages/AdminTariffsPage'))
+const AdminLoyaltyPage = lazy(() => import('@/features/admin/pages/AdminLoyaltyPage'))
+const AdminBroadcastPage = lazy(() => import('@/features/admin/pages/AdminBroadcastPage'))
+const AdminInfraPage = lazy(() => import('@/features/admin/pages/AdminInfraPage'))
+const AdminSyncPage = lazy(() => import('@/features/admin/pages/AdminSyncPage'))
+const AdminSettingsPage = lazy(() => import('@/features/admin/pages/AdminSettingsPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -114,14 +134,12 @@ function AppRoutes() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!initialized && !showAuthShellEarly) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <span className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-      </div>
-    )
+    return <FullscreenSpinner />
   }
 
   return (
+    <RouteErrorBoundary>
+    <Suspense fallback={<FullscreenSpinner />}>
     <Routes>
       {/* ── Public auth routes ─────────────────────────── */}
       <Route path="/login" element={<LoginPage />} />
@@ -409,6 +427,17 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
+    </RouteErrorBoundary>
+  )
+}
+
+/** Общий индикатор: инициализация auth и подгрузка чанка страницы выглядят одинаково. */
+function FullscreenSpinner() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center">
+      <span className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
   )
 }
 
@@ -417,11 +446,13 @@ export default function App() {
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <ThemePolicyProvider>
-          <BrandFavicon />
-          <CabinetDecorThemeSync />
-          <BrowserRouter basename={resolveBasename()}>
-            <AppRoutes />
-          </BrowserRouter>
+          <ToastProvider>
+            <BrandFavicon />
+            <CabinetDecorThemeSync />
+            <BrowserRouter basename={resolveBasename()}>
+              <AppRoutes />
+            </BrowserRouter>
+          </ToastProvider>
         </ThemePolicyProvider>
       </QueryClientProvider>
     </I18nextProvider>

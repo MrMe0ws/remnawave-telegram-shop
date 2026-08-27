@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
+import { api, SUBSCRIPTION_STALE_MS } from '@/lib/api'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { cn } from '@/lib/utils'
 import {
@@ -314,16 +314,15 @@ export default function ConnectionsPage() {
       if (!resp.ok) throw new Error(`config status ${resp.status}`)
       return (await resp.json()) as AppConfig
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    // Список приложений и инструкций меняется вместе с деплоем, не в рантайме.
+    staleTime: 5 * 60_000,
     retry: 1,
   })
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ['subscription'],
     queryFn: () => api.subscription(),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: SUBSCRIPTION_STALE_MS,
     retry: 1,
   })
 
