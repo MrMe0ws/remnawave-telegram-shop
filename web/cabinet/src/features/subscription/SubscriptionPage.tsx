@@ -7,6 +7,7 @@ import type { TFunction } from 'i18next'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { DevicePlatformIcon } from '@/components/DevicePlatformIcon'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { SubscriptionActions } from '@/components/SubscriptionActions'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
@@ -97,7 +98,7 @@ export default function SubscriptionPage() {
 
   return (
     <AppLayout>
-      <PageReveal className="space-y-4 sm:space-y-6">
+      <PageReveal className="space-y-4">
         <RevealItem className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t('subscriptionPage.title')}</h1>
           {!isLoading && hasRecord && (
@@ -150,7 +151,7 @@ export default function SubscriptionPage() {
           <>
             <RevealItem>
             <Card className="subscription-feature-card">
-              <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+              <CardContent className="space-y-4 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
                   <div className="min-w-0">
                     <span className="inline-flex items-center rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
@@ -299,11 +300,15 @@ export default function SubscriptionPage() {
                       return (
                         <li
                           key={d.hwid}
-                          className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-primary/5"
+                          className="cabinet-row flex items-center justify-between gap-3 rounded-xl px-3 py-2"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                              <DeviceCardIcon />
+                            {/* Иконка по платформе: ноутбук для macOS/Windows, телефон для мобильных. */}
+                            <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
+                              <DevicePlatformIcon
+                                platform={d.platform ?? d.device_model}
+                                className="size-4"
+                              />
                             </span>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium">{title}</p>
@@ -448,7 +453,7 @@ function SubscriptionSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <Card className="subscription-feature-card">
-        <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+        <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-2">
               <Skeleton className="h-3 w-24" />

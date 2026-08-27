@@ -227,7 +227,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   // а не круг — чтобы блоки на странице читались одним набором.
   const deviceOptionIcon = (
     <div
-      className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary"
+      className="cabinet-icon-box flex size-9 shrink-0 items-center justify-center rounded-lg"
       aria-hidden
     >
       <Smartphone size={16} strokeWidth={2} />
@@ -237,7 +237,8 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   return (
     <Card
       className={cn(
-        'cabinet-elevated-card',
+        // Изумрудный акцент: докупка — про «добавить», а не про состояние подписки.
+        'cabinet-elevated-card cabinet-accent-emerald',
         inactive && 'opacity-60 saturate-50 pointer-events-none',
       )}
     >
@@ -274,7 +275,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_increase && (
                     <button
                       type="button"
-                      className="group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground transition-colors hover:border-transparent hover:bg-primary/5"
+                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground hover:border-transparent"
                       onClick={() => {
                         setBuyTarget(buyOptions[0] ?? hwid.current_limit + 1)
                         setProvider(firstHwidProvider)
@@ -295,7 +296,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_decrease && (
                     <button
                       type="button"
-                      className="group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground transition-colors hover:border-transparent hover:bg-primary/5"
+                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-background/40 px-3 py-3 text-left text-card-foreground hover:border-transparent"
                       onClick={() => {
                         const last = decOptions[decOptions.length - 1] ?? hwid.base_limit
                         setDecTarget(last)

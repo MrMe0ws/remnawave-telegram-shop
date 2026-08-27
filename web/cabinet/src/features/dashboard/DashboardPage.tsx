@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+﻿import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
@@ -138,7 +138,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <PWAInstallPrompt />
-      <PageReveal className="space-y-5">
+      <PageReveal className="space-y-4">
         {mainCardLoading ? (
           <RevealItem>
             <DashboardSkeleton />
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             </RevealItem>
 
             <RevealItem>
-              <div className="grid grid-cols-3 gap-3" id="cabinet-onboarding-step1-target">
+              <div className="grid grid-cols-3 gap-2.5" id="cabinet-onboarding-step1-target">
                 <Card className="cabinet-elevated-card">
                   <CardContent className="flex items-center justify-center px-2 py-4">
                     <StatRing
@@ -343,37 +343,48 @@ function QuickLinks({
 }) {
   const { t } = useTranslation()
 
-  const primary: { to: string; icon: LucideIcon; label: string; hint: string }[] = [
+  /*
+   * У каждого раздела свой акцент: он же красит иконку, кольцо на наведении
+   * и подсветку строки, поэтому элемент читается как одно целое, а не как
+   * цветная иконка на нейтральной плашке.
+   */
+  const primary: { to: string; icon: LucideIcon; label: string; hint: string; accent: string }[] = [
     {
       to: '/tariffs',
       icon: Zap,
       label: t('dashboard.tariffsCardTitle'),
       hint: t('dashboard.tariffsCardHint'),
+      accent: 'cabinet-accent-violet',
     },
     {
       to: '/referral',
       icon: Users,
       label: t('dashboard.referralsCardTitle'),
       hint: t('dashboard.referralsCardHint'),
+      accent: '',
     },
     {
       to: '/promocodes',
       icon: Ticket,
       label: t('dashboard.promocodesCardTitle'),
       hint: t('dashboard.promocodesCardHint'),
+      accent: 'cabinet-accent-amber',
     },
   ]
 
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {primary.map(({ to, icon: Icon, label, hint }) => (
+    <div className="space-y-2.5">
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {primary.map(({ to, icon: Icon, label, hint, accent }) => (
           <Link
             key={to}
             to={to}
-            className="dashboard-quick-link cabinet-elevated-card group flex items-center gap-3 px-4 py-3"
+            className={cn(
+              'dashboard-quick-link cabinet-elevated-card cabinet-row flex items-center gap-3 px-3 py-2.5',
+              accent,
+            )}
           >
-            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+            <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
               <Icon size={16} aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
@@ -382,7 +393,7 @@ function QuickLinks({
             </span>
             <ChevronRight
               size={18}
-              className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+              className="cabinet-row-chevron shrink-0 text-muted-foreground"
               aria-hidden
             />
           </Link>

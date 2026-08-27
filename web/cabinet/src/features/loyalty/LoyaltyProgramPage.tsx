@@ -365,12 +365,13 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
     <Link
       to="/loyalty"
       className={cn(
-        'subscription-feature-card profile-tariff-hover group block w-full p-4 text-left transition-[border-color,box-shadow,filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        // Фиолетовый акцент: он же красит иконку, кольцо на наведении и подсветку.
+        'subscription-feature-card cabinet-accent-violet cabinet-row group block w-full p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     >
       <div className="flex items-center gap-3">
-        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/14 text-primary">
+        <span className="cabinet-icon-box inline-flex size-10 shrink-0 items-center justify-center rounded-xl">
           <Gem size={18} />
         </span>
         <div className="min-w-0 flex-1">
@@ -381,15 +382,12 @@ export function LoyaltyCompactCard({ className }: { className?: string }) {
             {t('loyaltyPage.compactDiscount', { pct: discount })}
           </p>
         </div>
-        <ChevronRight
-          className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-          aria-hidden
-        />
+        <ChevronRight className="cabinet-row-chevron size-5 shrink-0 text-muted-foreground" aria-hidden />
       </div>
       <div className="mt-3">
         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500"
+            className="h-full rounded-full bg-[hsl(var(--cabinet-accent))] transition-[width] duration-500"
             style={{ width: `${Math.min(100, Math.max(0, data.progress_percent))}%` }}
           />
         </div>

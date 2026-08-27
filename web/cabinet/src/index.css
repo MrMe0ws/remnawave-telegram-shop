@@ -248,18 +248,30 @@
       0 2px 4px -2px rgb(0 0 0 / 0.1);
   }
 
+  /*
+   * Обводка нейтральная, а не синяя.
+   *
+   * Раньше здесь стояло `hsl(var(--primary) / 0.22)`, и каждая карточка была
+   * постоянно обведена синим. Из-за этого, во-первых, градиентное кольцо на
+   * наведении почти не читалось — оно появлялось поверх уже цветной рамки;
+   * во-вторых, `!important` перебивал `border-color: transparent` из слоя
+   * пластики, и кольцо не могло проявиться как надо.
+   *
+   * !important сохранён: глобальное `* { @apply border-border }` иначе
+   * перекрывает эти значения.
+   */
   .dark .cabinet-elevated-card,
   .dark .subscription-feature-card {
-    border-color: hsl(var(--primary) / 0.22) !important;
-    background-color: hsl(var(--card));
+    border-color: hsl(var(--border) / 0.75) !important;
+    background-color: hsl(var(--card) / 0.72);
     background-image: linear-gradient(
       165deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--secondary) / 0.55) 100%
+      hsl(var(--card) / 0.92) 0%,
+      hsl(var(--secondary) / 0.45) 100%
     ) !important;
     box-shadow:
-      0 12px 30px rgba(3, 10, 24, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+      0 12px 30px rgba(3, 10, 24, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   }
 
   /* ─────────────────────────────────────────────────────────────
@@ -278,6 +290,26 @@
    *
    * Ограничено .cabinet-shell — админка (.admin-shell) живёт своей жизнью.
    * ───────────────────────────────────────────────────────────── */
+
+  /*
+   * Акцент блока. По умолчанию — основной цвет темы, но отдельные карточки
+   * могут задать свой: лояльность фиолетовая, промокоды янтарные и так далее.
+   * Кольцо, пятно света и подсветка строк читают именно эту переменную,
+   * поэтому цвет элемента и его свечение на наведении всегда совпадают.
+   */
+  .cabinet-shell {
+    --cabinet-accent: var(--primary);
+  }
+
+  .cabinet-accent-violet {
+    --cabinet-accent: 262 83% 68%;
+  }
+  .cabinet-accent-emerald {
+    --cabinet-accent: 160 74% 46%;
+  }
+  .cabinet-accent-amber {
+    --cabinet-accent: 38 92% 58%;
+  }
 
   .cabinet-shell .cabinet-card,
   .cabinet-shell .cabinet-elevated-card,
@@ -306,9 +338,9 @@
     padding: 1.5px;
     background: linear-gradient(
       135deg,
-      hsl(var(--primary) / 0.8) 0%,
+      hsl(var(--cabinet-accent) / 0.8) 0%,
       hsl(var(--accent) / 0.35) 50%,
-      hsl(var(--primary) / 0.8) 100%
+      hsl(var(--cabinet-accent) / 0.8) 100%
     );
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
@@ -340,7 +372,7 @@
     border-radius: inherit;
     background: radial-gradient(
       240px circle at var(--cd-mx, 50%) var(--cd-my, 0%),
-      hsl(var(--primary) / 0.04),
+      hsl(var(--cabinet-accent) / 0.05),
       transparent 70%
     );
     opacity: 0;
@@ -348,13 +380,14 @@
     transition: opacity 0.4s var(--cabinet-ease);
   }
 
+  /* !important — иначе базовая обводка карточки (тоже !important) не отпускает. */
   .cabinet-shell .cabinet-card:hover,
   .cabinet-shell .cabinet-card:focus-within,
   .cabinet-shell .cabinet-elevated-card:hover,
   .cabinet-shell .cabinet-elevated-card:focus-within,
   .cabinet-shell .subscription-feature-card:hover,
   .cabinet-shell .subscription-feature-card:focus-within {
-    border-color: transparent;
+    border-color: transparent !important;
   }
 
   .cabinet-shell .cabinet-card:hover::before,
@@ -376,8 +409,36 @@
   .dark .cabinet-shell .cabinet-elevated-card:hover,
   .dark .cabinet-shell .subscription-feature-card:hover {
     box-shadow:
-      0 22px 50px -18px hsl(var(--primary) / 0.18),
-      inset 0 1px 0 rgb(255 255 255 / 0.06);
+      0 22px 50px -18px hsl(var(--cabinet-accent) / 0.18),
+      inset 0 1px 0 rgb(255 255 255 / 0.06) !important;
+  }
+
+  /*
+   * Строка-действие: подсветка фона и сдвиг шеврона на наведении.
+   * Цвет берётся из акцента блока, поэтому у каждой строки он свой.
+   */
+  .cabinet-shell .cabinet-row {
+    transition:
+      background-color 0.25s var(--cabinet-ease),
+      border-color 0.25s var(--cabinet-ease);
+  }
+
+  .cabinet-shell .cabinet-row:hover {
+    background-color: hsl(var(--cabinet-accent) / 0.07);
+  }
+
+  .cabinet-shell .cabinet-row:hover .cabinet-row-chevron {
+    transform: translateX(3px);
+  }
+
+  .cabinet-row-chevron {
+    transition: transform 0.25s var(--cabinet-ease);
+  }
+
+  /* Иконка блока в скруглённом квадрате — общий вид для строк и карточек. */
+  .cabinet-shell .cabinet-icon-box {
+    background-color: hsl(var(--cabinet-accent) / 0.12);
+    color: hsl(var(--cabinet-accent));
   }
 
   /*
