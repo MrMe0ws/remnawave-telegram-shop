@@ -43,6 +43,7 @@ const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
 // через lazy модули не попадают и в прод-чанки.
 const ConnectCtaPreviewPage = lazy(() => import('@/features/dev/ConnectCtaPreviewPage'))
 const ThemePreviewPage = lazy(() => import('@/features/dev/ThemePreviewPage'))
+const RedesignPreviewPage = lazy(() => import('@/features/dev/RedesignPreviewPage'))
 
 // Protected pages (9b)
 const SubscriptionPage = lazy(() => import('@/features/subscription/SubscriptionPage'))
@@ -108,7 +109,7 @@ const PUBLIC_SHELL_PATHS = new Set([
   '/deeplink',
   '/landing',
   // Dev-превью: без этого страница ждала бы инициализацию auth. В прод не попадает.
-  ...(import.meta.env.DEV ? ['/dev/connect-cta', '/dev/theme'] : []),
+  ...(import.meta.env.DEV ? ['/dev/connect-cta', '/dev/theme', '/dev/redesign'] : []),
 ])
 
 function normalizePath(pathname: string): string {
@@ -161,6 +162,9 @@ function AppRoutes() {
 
       {/* Только dev: превью декор-тем на заглушках главной и подписки. */}
       {import.meta.env.DEV && <Route path="/dev/theme" element={<ThemePreviewPage />} />}
+
+      {/* Только dev: варианты редизайна главной и подписки на моках. */}
+      {import.meta.env.DEV && <Route path="/dev/redesign" element={<RedesignPreviewPage />} />}
 
       {/* ── Protected routes ───────────────────────────── */}
       <Route
