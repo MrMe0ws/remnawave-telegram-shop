@@ -3,9 +3,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   Calendar,
+  Check,
   ChevronRight,
   Copy,
+  Download,
   FileText,
+  Gauge,
   Gem,
   Infinity as InfinityIcon,
   Laptop,
@@ -1054,9 +1057,233 @@ function SubscriptionDense() {
 }
 
 
+// ── Новый пользователь: гибрид по фазам ─────────────────────────────────────
+
+/*
+ * Один герой на этапе, а не два онбординга разом.
+ *
+ * Сейчас новый пользователь видит карточку триала и поверх неё тур из трёх
+ * шагов, причём шаг «нажмите эту кнопку, чтобы получить инструкции по
+ * подключению» подсвечивает кнопку активации. После нажатия экран сразу
+ * становится обычной панелью, хотя приложение ещё не установлено.
+ *
+ * Здесь герой меняется по фазе: оффер → дорожка подключения → обычная главная.
+ */
+
+type OnbPhase = 'offer' | 'blocked' | 'setup' | 'done'
+
+/** Строка выгоды: что это даёт словами, а не голая цифра под подписью. */
+function OfferRow({ icon: Icon, title, hint }: { icon: LucideIcon; title: string; hint: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
+        <Icon size={15} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+    </div>
+  )
+}
+
+function OnboardingOffer() {
+  return (
+    <div className="cab-card p-5 sm:p-6">
+      <Pill>Пробный период</Pill>
+      <h1 className="mt-3 font-heading text-2xl font-bold leading-tight sm:text-3xl">
+        7 дней бесплатно
+      </h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Карта не нужна, ничего не спишется. Подписка не продлевается сама.
+      </p>
+
+      <div className="mt-5 space-y-3">
+        <OfferRow icon={Calendar} title="7 дней доступа" hint="Отсчёт пойдёт с момента активации" />
+        <OfferRow
+          icon={Gauge}
+          title="3 ГБ трафика"
+          hint="Хватит на неделю мессенджеров, почты и карт"
+        />
+        <OfferRow
+          icon={Smartphone}
+          title="1 устройство"
+          hint="Телефон, ноутбук или телевизор — на выбор"
+        />
+      </div>
+
+      <div className="mt-5">
+        {/* Блик постоянный: это единственное действие на экране. */}
+        <span className="cab-attn-sheen block">
+          <button type="button" className="cab-cta h-11 w-full rounded-xl text-sm font-semibold">
+            Активировать бесплатно
+          </button>
+        </span>
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Дальше покажем, как подключить — это пара минут
+        </p>
+      </div>
+
+      <button
+        type="button"
+        className="mt-4 w-full text-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+      >
+        Не нужен пробный — сразу к тарифам
+      </button>
+    </div>
+  )
+}
+
+/*
+ * Триал недоступен: уже использован или выключен в настройках.
+ *
+ * Сейчас здесь тупик — кнопка гаснет с подписью «Пробный период недоступен»,
+ * и предложить человеку нечего. Экран должен вести к тарифам.
+ */
+function OnboardingBlocked() {
+  return (
+    <div className="cab-card p-5 sm:p-6">
+      <Pill>Подписка</Pill>
+      <h1 className="mt-3 font-heading text-2xl font-bold leading-tight sm:text-3xl">
+        Выберите тариф
+      </h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Пробный период уже использован. Дальше — платные тарифы.
+      </p>
+
+      <div className="mt-5 space-y-3">
+        <OfferRow icon={Zap} title="От 110 ₽ в месяц" hint="На год выгоднее почти на треть" />
+        <OfferRow
+          icon={Gauge}
+          title="Без ограничения скорости"
+          hint="Видео в высоком качестве и загрузки"
+        />
+        <OfferRow icon={MonitorSmartphone} title="До 5 устройств" hint="Вся семья на одной подписке" />
+      </div>
+
+      <button type="button" className="cab-cta mt-5 h-11 w-full rounded-xl text-sm font-semibold">
+        Смотреть тарифы
+      </button>
+    </div>
+  )
+}
+
+function SetupStep({
+  state,
+  n,
+  title,
+  hint,
+  cta,
+}: {
+  state: 'done' | 'current' | 'todo'
+  n: number
+  title: string
+  hint?: string
+  cta?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-xl px-3 py-3',
+        state === 'current' && 'bg-[hsl(var(--cab-accent)/0.07)]',
+      )}
+    >
+      <span
+        className={cn(
+          'mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+          state === 'done' && 'bg-[hsl(var(--cab-emerald)/0.16)] text-[hsl(var(--cab-emerald))]',
+          state === 'current' && 'bg-[hsl(var(--cab-accent))] text-white',
+          state === 'todo' && 'border border-border text-muted-foreground',
+        )}
+      >
+        {state === 'done' ? <Check size={14} /> : n}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn('block text-sm font-medium', state !== 'current' && 'text-muted-foreground')}
+        >
+          {title}
+        </span>
+        {hint && state === 'current' && (
+          <span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span>
+        )}
+        {cta && state === 'current' && (
+          <button
+            type="button"
+            className="cab-cta mt-3 inline-flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-semibold"
+          >
+            <Download size={14} />
+            {cta}
+          </button>
+        )}
+      </span>
+    </div>
+  )
+}
+
+/*
+ * Фаза 2: подписка уже есть, устройств ноль.
+ *
+ * Место, где сейчас обрыв: человек активировал триал и попал на обычную
+ * панель с нулями, хотя приложение ещё не установлено.
+ */
+function OnboardingSetup() {
+  return (
+    <div className="cab-card p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-heading text-lg font-bold leading-tight">Осталось подключить</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Пробный период активен · 7 дней</p>
+        </div>
+        <Pill className="shrink-0">Шаг 2 из 3</Pill>
+      </div>
+
+      <div className="mt-3 space-y-1">
+        <SetupStep state="done" n={1} title="Пробный период активирован" />
+        <SetupStep
+          state="current"
+          n={2}
+          title="Установите приложение"
+          hint="Подберём под вашу систему — займёт минуту"
+          cta="Выбрать приложение"
+        />
+        <SetupStep state="todo" n={3} title="Добавьте подписку в приложение" />
+      </div>
+    </div>
+  )
+}
+
+/** Узкая сводка на время дорожки: кольца рядом с ней перетягивали бы внимание. */
+function OnboardingSubStrip() {
+  return (
+    <div className="cab-card flex items-center justify-between gap-3 px-4 py-3">
+      <span className="text-xs text-muted-foreground">Пробный период</span>
+      <span className="text-xs font-medium tabular-nums">7 дней · 0 из 3 ГБ · 0 из 1</span>
+    </div>
+  )
+}
+
+function OnboardingPreview({ phase, withRings }: { phase: OnbPhase; withRings: boolean }) {
+  if (phase === 'done') return <DashboardCockpit />
+
+  return (
+    <div className="space-y-2.5">
+      {phase === 'offer' && <OnboardingOffer />}
+      {phase === 'blocked' && <OnboardingBlocked />}
+      {phase === 'setup' && (
+        <>
+          <OnboardingSetup />
+          {withRings ? <DashboardCockpit /> : <OnboardingSubStrip />}
+        </>
+      )}
+      {!(phase === 'setup' && withRings) && <QuickLinks />}
+    </div>
+  )
+}
+
 // ── Оболочка превью ─────────────────────────────────────────────────────────
 
-type Page = 'dashboard' | 'subscription'
+type Page = 'dashboard' | 'subscription' | 'onboarding'
 type Variant = 'a' | 'b'
 type Frame = 'mobile' | 'desktop'
 type DaysKey = '40' | '7' | '3' | '1' | 'expired'
@@ -1075,6 +1302,7 @@ const TRAFFIC_VALUE: Record<TrafficKey, number | null> = {
 const VARIANT_LABEL: Record<Page, Record<Variant, string>> = {
   dashboard: { a: 'A · Фокус', b: 'B · Приборная панель' },
   subscription: { a: 'A · Плотный', b: 'B · Устройства выше' },
+  onboarding: { a: '', b: '' },
 }
 
 const VARIANT_NOTE: Record<Page, Record<Variant, string>> = {
@@ -1086,6 +1314,24 @@ const VARIANT_NOTE: Record<Page, Record<Variant, string>> = {
     a: 'Вариант выбран: подписка → ссылка → лояльность → докупка → устройства.',
     b: '',
   },
+  onboarding: { a: '', b: '' },
+}
+
+const ONB_LABEL: Record<OnbPhase, string> = {
+  offer: '1 · Оффер',
+  blocked: '1б · Триал недоступен',
+  setup: '2 · Дорожка',
+  done: '3 · Обычная главная',
+}
+
+const ONB_NOTE: Record<OnbPhase, string> = {
+  offer:
+    'Подписки нет, триал доступен. Выгода словами вместо голых цифр, одно действие и обещание, что будет дальше.',
+  blocked:
+    'Триал уже использован или выключен. Сейчас здесь тупик с погасшей кнопкой — экран должен вести к тарифам.',
+  setup:
+    'Подписка есть, устройств ноль. Место сегодняшнего обрыва: активировал — и попал на панель с нулями.',
+  done: 'Первое устройство подключено, дальше кабинет обычный. Онбординг больше не показывается.',
 }
 
 export default function RedesignPreviewPage() {
@@ -1100,6 +1346,9 @@ export default function RedesignPreviewPage() {
   const [links, setLinks] = useState<LinksLayout>('two-tier')
   const [unlimitedBar, setUnlimitedBar] = useState<UnlimitedBar>('none')
   const [shell, setShell] = useState<'prod' | 'bare'>('prod')
+  const [onbPhase, setOnbPhase] = useState<OnbPhase>('offer')
+  /** Открытый вопрос: держать ли кольца рядом с дорожкой или убрать до конца настройки. */
+  const [onbRings, setOnbRings] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true)
   const queryClient = useQueryClient()
 
@@ -1127,10 +1376,14 @@ export default function RedesignPreviewPage() {
   }, [theme])
 
   const pageContent =
-    page === 'dashboard'
-      ? { a: <DashboardFocus />, b: <DashboardCockpit /> }[variant]
-      : // Страница подписки: вариант выбран, сравнивать больше нечего.
-        <SubscriptionDense />
+    page === 'onboarding' ? (
+      <OnboardingPreview phase={onbPhase} withRings={onbRings} />
+    ) : page === 'dashboard' ? (
+      { a: <DashboardFocus />, b: <DashboardCockpit /> }[variant]
+    ) : (
+      // Страница подписки: вариант выбран, сравнивать больше нечего.
+      <SubscriptionDense />
+    )
 
   const content = (
     <>
@@ -1166,6 +1419,7 @@ export default function RedesignPreviewPage() {
               options={[
                 { value: 'dashboard', label: 'Главная' },
                 { value: 'subscription', label: 'Подписка' },
+                { value: 'onboarding', label: 'Новый юзер' },
               ]}
             />
             {page === 'dashboard' && (
@@ -1176,6 +1430,26 @@ export default function RedesignPreviewPage() {
                   value: v,
                   label: VARIANT_LABEL.dashboard[v],
                 }))}
+              />
+            )}
+            {page === 'onboarding' && (
+              <Segmented
+                value={onbPhase}
+                onChange={setOnbPhase}
+                options={(['offer', 'blocked', 'setup', 'done'] as OnbPhase[]).map((p) => ({
+                  value: p,
+                  label: ONB_LABEL[p],
+                }))}
+              />
+            )}
+            {page === 'onboarding' && onbPhase === 'setup' && (
+              <Segmented
+                value={onbRings ? 'rings' : 'strip'}
+                onChange={(next) => setOnbRings(next === 'rings')}
+                options={[
+                  { value: 'strip', label: 'Только дорожка' },
+                  { value: 'rings', label: 'Дорожка + кольца' },
+                ]}
               />
             )}
             <Segmented
@@ -1292,7 +1566,7 @@ export default function RedesignPreviewPage() {
           )}
 
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            {VARIANT_NOTE[page][variant]}
+            {page === 'onboarding' ? ONB_NOTE[onbPhase] : VARIANT_NOTE[page][variant]}
             {shell === 'prod' && ' Оболочка настоящая — для мобильного вида включите эмуляцию устройства в devtools.'}
           </p>
         </div>
