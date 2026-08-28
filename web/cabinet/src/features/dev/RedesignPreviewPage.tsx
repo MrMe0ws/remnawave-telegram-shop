@@ -1118,6 +1118,8 @@ type OfferStat = { icon: LucideIcon; value: ReactNode; unit: string }
 type OfferContent = {
   icon: LucideIcon
   pill: string
+  /** Приставка перед выделенной частью: «От» у цены, у триала не нужна. */
+  prefix?: string
   /** Выделенная часть заголовка: цифра или цена. */
   lead: string
   rest: string
@@ -1158,6 +1160,7 @@ const TRIAL_OFFER: OfferContent = {
 const TARIFFS_OFFER: OfferContent = {
   icon: Zap,
   pill: 'Тарифы',
+  prefix: 'От',
   lead: '110 ₽',
   rest: 'в месяц',
   subtitle: 'Пробный период уже использован — дальше платные тарифы',
@@ -1192,6 +1195,7 @@ function OfferPlain({ content }: { content: OfferContent }) {
       </span>
 
       <h1 className="mt-4 font-heading text-2xl font-bold leading-tight">
+        {content.prefix ? `${content.prefix} ` : ''}
         {content.lead} {content.rest}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">{content.subtitle}</p>
@@ -1229,6 +1233,7 @@ function OfferTiles({ content }: { content: OfferContent }) {
         </div>
 
         <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] sm:text-4xl">
+          {content.prefix ? `${content.prefix} ` : ''}
           <span className="cab-gradient-text">{content.lead}</span> {content.rest}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">{content.subtitle}</p>
@@ -1258,6 +1263,7 @@ function OfferPath({ content }: { content: OfferContent }) {
     <div className="cab-card p-5 sm:p-6">
       <Pill>{content.pill}</Pill>
       <h1 className="mt-3 font-heading text-2xl font-bold leading-tight sm:text-3xl">
+        {content.prefix ? `${content.prefix} ` : ''}
         <span className="cab-gradient-text">{content.lead}</span> {content.rest}
       </h1>
       <p className="mt-1.5 text-sm text-muted-foreground">{content.subtitle}</p>
@@ -1302,7 +1308,18 @@ function OfferHero({ content }: { content: OfferContent }) {
       <div className="relative">
         <Pill>{content.pill}</Pill>
 
-        <div className="mt-4 font-heading text-6xl font-bold leading-none sm:text-7xl">
+        {/* «от» отдельной строкой: внутри крупной цифры оно ломало ритм. */}
+        {content.prefix && (
+          <div className="mt-4 text-sm font-medium lowercase text-muted-foreground">
+            {content.prefix}
+          </div>
+        )}
+        <div
+          className={cn(
+            'font-heading text-6xl font-bold leading-none sm:text-7xl',
+            content.prefix ? 'mt-1' : 'mt-4',
+          )}
+        >
           <span className="cab-gradient-text">{content.hero.value}</span>
         </div>
         <div className="mt-2 font-heading text-xl font-bold">{content.hero.caption}</div>
