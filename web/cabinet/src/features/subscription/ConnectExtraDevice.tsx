@@ -91,6 +91,31 @@ export function AddDeviceSlot({ onOpen }: { onOpen: () => void }) {
 /** Длительность появления и ухода модалки; из неё же считается задержка размонтирования. */
 const MODAL_ANIM_MS = 250
 
+/**
+ * Телефон или планшет — то есть место, где системный шит «Поделиться» полезен.
+ *
+ * Одного `pointer: coarse` мало: медиазапрос описывает точность указателя, а не
+ * платформу, и промахивается в обе стороны. Ноутбук с тачскрином и Telegram
+ * Desktop в режиме планшета отдают coarse, хотя шит там пустой; наоборот,
+ * мобильный WebView с подключённой мышью или включённым desktop-режимом
+ * отдаёт fine — и кнопка пропадала там, где работала нормально.
+ *
+ * Поэтому спрашиваем платформу напрямую: `userAgentData.mobile` там, где он
+ * есть (Chromium), иначе UA. Последняя ветка — iPadOS Safari, который
+ * представляется Macintosh и отличается только наличием тача.
+ */
+function isMobilePlatform(): boolean {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
+  const uaData = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData
+  if (typeof uaData?.mobile === 'boolean') return uaData.mobile
+  if (/Android|iPhone|iPod|iPad|Mobile|Silk|Kindle/i.test(navigator.userAgent)) return true
+  return (
+    /Macintosh/i.test(navigator.userAgent) &&
+    (navigator.maxTouchPoints ?? 0) > 1 &&
+    window.matchMedia?.('(pointer: coarse)').matches === true
+  )
+}
+
 export function ConnectInviteModal({
   open,
   subscriptionLink,
@@ -144,16 +169,12 @@ export function ConnectInviteModal({
 
   const inviteUrl = data?.url || ''
   const shareText = t('connectInvite.shareText', { url: inviteUrl })
-  // Системный шит показываем только на сенсорных устройствах. На Windows
+  // Системный шит показываем только на телефонах и планшетах. На десктопе
   // navigator.share тоже есть, но в шит попадают лишь приложения,
   // зарегистрированные как share target, — Telegram Desktop туда не входит, и
   // кнопка вела в список, где нечего выбрать. На телефоне шит наоборот
   // основной путь: там все мессенджеры на месте.
-  const canShare =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.share === 'function' &&
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(pointer: coarse)').matches === true
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && isMobilePlatform()
 
   async function share() {
     if (!inviteUrl) return
@@ -295,8 +316,10 @@ export function ConnectInviteModal({
 
         {/* Сырая ссылка подписки — для ручной вставки в приложение, когда гайд
             не помог. Свёрнута: рядовому пользователю она ничего не говорит. */}
+        {/* pb-2 снизу: раскрывашка — последний элемент листа, и на одном
+            padding модалки текстовая строка прилипала к нижнему краю. */}
         {subscriptionLink && (
-          <div className="mt-4 border-t border-border pt-3">
+          <div className="mt-4 border-t border-border pb-2 pt-3">
             <button
               type="button"
               onClick={() => setManualOpen((v) => !v)}
