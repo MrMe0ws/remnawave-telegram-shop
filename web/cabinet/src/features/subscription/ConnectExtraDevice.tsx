@@ -88,25 +88,47 @@ export function AddDeviceSlot({ onOpen }: { onOpen: () => void }) {
   )
 }
 
+/** Длительность появления и ухода модалки; из неё же считается задержка размонтирования. */
+const MODAL_ANIM_MS = 250
+
 export function ConnectInviteModal({
+  open,
   subscriptionLink,
   onClose,
 }: {
+  open: boolean
   subscriptionLink: string
   onClose: () => void
 }) {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const [manualOpen, setManualOpen] = useState(false)
-  // Появление: первый кадр рисуем в скрытом состоянии и только со следующего
-  // включаем переход — иначе браузер схлопнет оба состояния в одно и анимации
-  // не будет. Закрытие не анимируем: модалка размонтируется родителем.
+  // Два состояния вместо одного: mounted держит разметку в DOM, пока идёт уход,
+  // visible переключает классы перехода. Без первого закрытие было бы мгновенным
+  // (родитель просто снимает модалку), без второго браузер схлопнул бы начальное
+  // и конечное состояние в один кадр и анимации не случилось бы вовсе.
+  const [mounted, setMounted] = useState(open)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => setVisible(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
+    if (open) {
+      setMounted(true)
+      const id = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(id)
+    }
+    setVisible(false)
+    // Снимаем по таймеру, а не по transitionend: событие не приходит, когда
+    // переходы отключены системной настройкой «уменьшить движение», и модалка
+    // осталась бы в DOM навсегда.
+    const id = window.setTimeout(() => setMounted(false), MODAL_ANIM_MS + 30)
+    return () => window.clearTimeout(id)
+  }, [open])
+
+  // Раскрывашка возвращается в свёрнутое состояние к следующему открытию:
+  // иначе модалка открывалась бы сразу с развёрнутой ручной настройкой.
+  useEffect(() => {
+    if (!open) setManualOpen(false)
+  }, [open])
 
   const { state: inviteCopyState, copy: copyInvite } = useCopyToClipboard()
   const { state: linkCopyState, copy: copyLink } = useCopyToClipboard()
@@ -122,7 +144,16 @@ export function ConnectInviteModal({
 
   const inviteUrl = data?.url || ''
   const shareText = t('connectInvite.shareText', { url: inviteUrl })
-  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+  // Системный шит показываем только на сенсорных устройствах. На Windows
+  // navigator.share тоже есть, но в шит попадают лишь приложения,
+  // зарегистрированные как share target, — Telegram Desktop туда не входит, и
+  // кнопка вела в список, где нечего выбрать. На телефоне шит наоборот
+  // основной путь: там все мессенджеры на месте.
+  const canShare =
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(pointer: coarse)').matches === true
 
   async function share() {
     if (!inviteUrl) return
@@ -147,7 +178,7 @@ export function ConnectInviteModal({
 
   const noSubscription = error instanceof ApiError && error.status === 409
 
-  if (typeof document === 'undefined') return null
+  if (typeof document === 'undefined' || !mounted) return null
 
   return createPortal(
     // На узком экране — лист снизу: до верхнего края окна большим пальцем не
@@ -155,7 +186,7 @@ export function ConnectInviteModal({
     // sm+ остаётся обычный центрированный диалог.
     <div
       className={cn(
-        'fixed inset-0 z-[2000] flex items-end justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-200 ease-out sm:items-center sm:p-4',
+        'fixed inset-0 z-[2000] flex items-end justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-[250ms] ease-out sm:items-center sm:p-4',
         visible ? 'opacity-100' : 'opacity-0',
       )}
       onClick={onClose}
@@ -166,12 +197,12 @@ export function ConnectInviteModal({
         aria-label={t('connectInvite.cardTitle')}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm transition-[opacity,transform] duration-200 ease-out sm:max-h-[90vh] sm:rounded-2xl sm:p-5 sm:pb-5',
+          'max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-background/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm transition-[opacity,transform] duration-[250ms] ease-out sm:max-h-[90vh] sm:rounded-2xl sm:p-5 sm:pb-5',
           // На мобиле лист выезжает снизу, на десктопе диалог подрастает из
           // центра — движение совпадает с тем, откуда элемент появляется.
           visible
             ? 'translate-y-0 opacity-100 sm:scale-100'
-            : 'translate-y-4 opacity-0 sm:translate-y-0 sm:scale-[0.97]',
+            : 'translate-y-full opacity-0 sm:translate-y-0 sm:scale-[0.97]',
         )}
       >
         {/* Полоска-ручка: на мобиле она объясняет, что это лист, а не экран. */}
@@ -275,40 +306,50 @@ export function ConnectInviteModal({
               {t('connectInvite.manualToggle')}
               <ChevronDown size={14} className={cn('transition-transform', manualOpen && 'rotate-180')} />
             </button>
-            {manualOpen && (
-              <div className="mt-2.5">
-                <p className="mb-2 text-[11px] leading-4 text-muted-foreground">
-                  {t('connectInvite.manualHint')}
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1 select-all truncate rounded-lg bg-muted/70 px-3 py-2 font-mono text-xs text-muted-foreground">
-                    {subscriptionLink}
+            {/* Раскрытие через grid-template-rows 0fr↔1fr — тот же приём, что у
+                подпанелей докупки устройств: высоту не приходится измерять, и
+                блок плавно раскрывается под любое содержимое. */}
+            <div
+              className={cn(
+                'grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out',
+                manualOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+              )}
+            >
+              <div className="min-h-0">
+                <div className="mt-2.5">
+                  <p className="mb-2 text-[11px] leading-4 text-muted-foreground">
+                    {t('connectInvite.manualHint')}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1 select-all truncate rounded-lg bg-muted/70 px-3 py-2 font-mono text-xs text-muted-foreground">
+                      {subscriptionLink}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 gap-1.5"
+                      onClick={() => void copyLink(subscriptionLink)}
+                    >
+                      {linkCopyState === 'done' ? (
+                        <>
+                          <Check size={14} className="text-primary" />
+                          {t('subscriptionPage.copied')}
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          {t('subscriptionPage.copyLink')}
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 gap-1.5"
-                    onClick={() => void copyLink(subscriptionLink)}
-                  >
-                    {linkCopyState === 'done' ? (
-                      <>
-                        <Check size={14} className="text-primary" />
-                        {t('subscriptionPage.copied')}
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={14} />
-                        {t('subscriptionPage.copyLink')}
-                      </>
-                    )}
-                  </Button>
+                  {linkCopyState === 'failed' && (
+                    <p className="mt-2 text-xs text-destructive">{t('common.copyFailed')}</p>
+                  )}
                 </div>
-                {linkCopyState === 'failed' && (
-                  <p className="mt-2 text-xs text-destructive">{t('common.copyFailed')}</p>
-                )}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

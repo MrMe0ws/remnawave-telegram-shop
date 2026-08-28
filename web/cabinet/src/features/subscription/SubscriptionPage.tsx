@@ -161,7 +161,7 @@ export default function SubscriptionPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
                   <div className="min-w-0">
                     <span className="inline-flex items-center rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                      {t('dashboard.subscriptionLabel')}
+                      {t('subscriptionPage.tariff')}
                     </span>
                     <p className="mt-2 font-heading text-2xl font-bold">{subscriptionTariffLabel(sub, t)}</p>
                   </div>
@@ -315,8 +315,12 @@ export default function SubscriptionPage() {
             </Card>
             </RevealItem>
 
-            {connectOpen && sub?.subscription_link && (
+            {/* Модалка смонтирована постоянно и сама решает, когда исчезнуть:
+                при снятии по connectOpen анимация ухода не успевала бы
+                проиграться. */}
+            {sub?.subscription_link && (
               <ConnectInviteModal
+                open={connectOpen}
                 subscriptionLink={sub.subscription_link}
                 onClose={() => setConnectOpen(false)}
               />
