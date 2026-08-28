@@ -261,8 +261,9 @@ export function TariffsOfferCard({ trialEnabled }: { trialEnabled: boolean }) {
 export function BackupLoginRow() {
   const { t } = useTranslation()
   return (
+    /* Сразу в «Привязанные аккаунты», а не в профиль: оттуда пришлось бы искать нужный раздел. */
     <Link
-      to="/profile"
+      to="/accounts"
       className="subscription-feature-card cabinet-accent-emerald cabinet-row flex items-center gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
