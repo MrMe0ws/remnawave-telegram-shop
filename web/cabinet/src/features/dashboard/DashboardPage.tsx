@@ -1,4 +1,4 @@
-﻿import { Link, useNavigate } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
@@ -49,7 +49,6 @@ export default function DashboardPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const qc = useQueryClient()
-  const navigate = useNavigate()
   const toast = useToast()
 
   const { data: sub, isPending: subPending } = useQuery({
@@ -121,7 +120,14 @@ export default function DashboardPage() {
         qc.refetchQueries({ queryKey: ['subscription'] }),
         qc.refetchQueries({ queryKey: ['trial-info'] }),
       ])
-      navigate('/subscription', { replace: true })
+      /*
+       * Остаёмся на главной, а не уходим на страницу подписки.
+       *
+       * Карточка предложения на месте сменяется приборной панелью, и поверх
+       * неё появляется подсказка «куда нажать, чтобы подключить». Переход на
+       * другую страницу разрывал этот момент: человек нажимал кнопку и
+       * оказывался в незнакомом разделе, не поняв, что произошло.
+       */
     },
     // Без этого при ошибке кнопка просто разблокировалась, и пользователь
     // не понимал, активировался триал или нет.
