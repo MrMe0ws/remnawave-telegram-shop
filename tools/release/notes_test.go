@@ -136,3 +136,52 @@ func TestFormatTelegramHTML(t *testing.T) {
 		t.Fatalf("expected blank line between telegram bullets, got:\n%s", techBlock)
 	}
 }
+
+func TestFormatTelegramHTML_collapsesLongSecondarySections(t *testing.T) {
+	n := &ReleaseNotes{
+		Version:    "9.9.9",
+		ReleaseURL: "https://example.test/releases/tag/9.9.9",
+		TGSections: []TGSection{
+			{Header: "🚀 Новое", Items: []string{"a", "b", "c", "d"}},
+			{Header: "🐛 Исправления", Items: []string{"x", "y", "z"}},
+			{Header: "✨ Улучшения", Items: []string{"p", "q"}},
+		},
+	}
+	got := FormatTelegramHTML(n, TelegramFooter{})
+
+	if strings.Count(got, "<blockquote expandable>") != 1 {
+		t.Fatalf("ожидалась ровно одна свёрнутая цитата, получено:\n%s", got)
+	}
+	if strings.Count(got, "</blockquote>") != 1 {
+		t.Errorf("незакрытая цитата:\n%s", got)
+	}
+	// «Новое» не сворачивается даже при четырёх пунктах.
+	newIdx := strings.Index(got, "🚀 Новое")
+	quoteIdx := strings.Index(got, "<blockquote expandable>")
+	fixIdx := strings.Index(got, "🐛 Исправления")
+	if !(newIdx < fixIdx && fixIdx < quoteIdx) {
+		t.Errorf("цитата должна открываться после заголовка «Исправления»:\n%s", got)
+	}
+	// Два пункта в «Улучшениях» остаются без цитаты.
+	if strings.Contains(got[strings.Index(got, "✨ Улучшения"):], "<blockquote") {
+		t.Errorf("секция из двух пунктов не должна сворачиваться:\n%s", got)
+	}
+	// Внутри цитаты первый пункт идёт сразу, без пустой строки.
+	if !strings.Contains(got, "<blockquote expandable>• x") {
+		t.Errorf("первый пункт цитаты не должен начинаться с пустой строки:\n%s", got)
+	}
+}
+
+func TestCollapsibleSection_threshold(t *testing.T) {
+	two := TGSection{Header: "🐛 Исправления", Items: []string{"a", "b"}}
+	three := TGSection{Header: "🐛 Исправления", Items: []string{"a", "b", "c"}}
+	if collapsibleSection(two) {
+		t.Error("два пункта сворачиваться не должны")
+	}
+	if !collapsibleSection(three) {
+		t.Error("три пункта должны сворачиваться")
+	}
+	if collapsibleSection(TGSection{Header: "🚀 Новое", Items: []string{"a", "b", "c", "d"}}) {
+		t.Error("«Новое» не сворачивается")
+	}
+}

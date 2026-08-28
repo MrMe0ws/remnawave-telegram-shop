@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronRight, ChevronDown, Copy, MonitorSmartphone, Plus, Send, X } from 'lucide-react'
+import { Check, ChevronRight, ChevronDown, Copy, MonitorSmartphone, Plus, X } from 'lucide-react'
 
 import { QrCode } from '@/components/QrCode'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
-import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { api, ApiError } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
@@ -92,9 +91,6 @@ export function AddDeviceSlot({ onOpen }: { onOpen: () => void }) {
 /** Длительность появления и ухода модалки; из неё же считается задержка размонтирования. */
 const MODAL_ANIM_MS = 250
 
-/** Есть ли в браузере системный шит «Поделиться». */
-const hasNativeShare = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function'
-
 export function ConnectInviteModal({
   open,
   subscriptionLink,
@@ -148,41 +144,20 @@ export function ConnectInviteModal({
 
   const inviteUrl = data?.url || ''
   const shareText = t('connectInvite.shareText', { url: inviteUrl })
-  // Кнопку «Отправить» показываем по мобильному разрешению — и только по нему.
+  // Отдельной кнопки «Поделиться» здесь намеренно нет.
   //
-  // Две предыдущие попытки были умнее и обе промахивались. `pointer: coarse`
-  // описывает точность указателя, а не платформу: ноутбук с тачскрином отдаёт
-  // coarse, мобильный WebView с мышью — fine. Определение платформы по
-  // `userAgentData.mobile` / UA было точнее, но кнопка всё равно пропадала в
-  // мини-аппе, потому что видимость дополнительно требовала `navigator.share`,
-  // а в Android WebView его нет вовсе.
+  // Web Share API (`navigator.share`) не реализован в Android WebView, а
+  // Telegram открывает мини-апп именно в нём: в основном для нас окружении
+  // системный шит недостижим в принципе. На десктопе он есть, но показывает
+  // только приложения, зарегистрированные как share target, — Telegram туда не
+  // входит, и список оказывался пустым. Остаётся мобильный браузер, ради
+  // которого держать отдельное правило видимости и вторую кнопку не стоит:
+  // копирование работает всюду одинаково, а рядом есть QR.
   //
-  // Правило по ширине окна проще, предсказуемо и совпадает с тем, как
-  // пользователь видит кабинет: узкий экран — телефон в руках. Наличие
-  // системного шита проверяется уже при нажатии; если его нет, приглашение
-  // копируется в буфер.
-  const showShare = useIsMobile()
-
-  async function share() {
-    if (!inviteUrl) return
-    if (hasNativeShare()) {
-      try {
-        await navigator.share({ text: shareText })
-        return
-      } catch (e) {
-        // Закрытый системный шит — это отказ, а не сбой: копировать в ответ на
-        // него нельзя, иначе отмена превращается в «скопировано».
-        if (e instanceof DOMException && e.name === 'AbortError') return
-        // Остальное (share запрещён политикой, нет обработчика) — падаем в
-        // копирование. Но только если фокус вернулся к странице: пока открыт
-        // системный шит, navigator.clipboard отказывает, а запасной
-        // execCommand в расфокусированном документе возвращает true, ничего не
-        // скопировав, — и пользователь получал галочку при пустом буфере.
-        if (!document.hasFocus()) return
-      }
-    }
-    void copyInvite(shareText)
-  }
+  // Если понадобится «поделиться» именно внутри Telegram, правильный путь не
+  // navigator.share, а WebApp API: openTelegramLink('https://t.me/share/url?...')
+  // открывает родной выбор чата (см. CheckoutPage — там уже используется
+  // window.Telegram.WebApp.openLink).
 
   const noSubscription = error instanceof ApiError && error.status === 409
 
@@ -270,15 +245,8 @@ export function ConnectInviteModal({
                 зарегистрированные как share target, и Telegram в этот список не
                 попадает — там копирование остаётся единственным рабочим путём. */}
             <div className="mt-3 space-y-2">
-              {showShare && (
-                <Button type="button" className="w-full gap-2" onClick={() => void share()}>
-                  <Send size={15} />
-                  {t('connectInvite.share')}
-                </Button>
-              )}
               <Button
                 type="button"
-                variant={showShare ? 'outline' : 'default'}
                 className="w-full gap-2"
                 onClick={() => void copyInvite(shareText)}
               >

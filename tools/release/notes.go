@@ -150,8 +150,37 @@ type TelegramFooter struct {
 	CustomEmojiAlt string // fallback unicode emoji inside the tag (required by API)
 }
 
+// collapsibleHeaders — секции, которые сворачиваются в раскрывающуюся цитату.
+//
+// «Новое» намеренно не сворачивается: это то, ради чего пост и читают, и
+// прятать его под кат бессмысленно. Остальные разделы длинные, но
+// второстепенные — в лениво прокручиваемом канале они забивают собой всё.
+var collapsibleHeaders = []string{"Улучшения", "Исправления", "При обновлении", "Технические изменения", "Breaking changes"}
+
+// collapsibleMinItems — порог: сворачиваем только то, что реально занимает
+// место. Один-два пункта под катом лишь добавляют лишний тап.
+const collapsibleMinItems = 3
+
+// collapsibleSection решает, прятать ли пункты секции в <blockquote expandable>.
+// Заголовок приходит с эмодзи («🐛 Исправления»), поэтому сверяем по вхождению.
+func collapsibleSection(sec TGSection) bool {
+	if len(sec.Items) < collapsibleMinItems {
+		return false
+	}
+	for _, name := range collapsibleHeaders {
+		if strings.Contains(sec.Header, name) {
+			return true
+		}
+	}
+	return false
+}
+
 // FormatTelegramHTML builds HTML for Telegram Bot API (parse_mode=HTML).
 // Version is a clickable link; section headers are bold; footer is optional custom emoji + link.
+//
+// Длинные второстепенные секции уходят в <blockquote expandable> — см.
+// collapsibleSection. На лимит 4096 это не влияет: Telegram считает символы
+// текста, а не разметку, поэтому сворачивание не заменяет сокращение текста.
 func FormatTelegramHTML(n *ReleaseNotes, footer TelegramFooter) string {
 	var b strings.Builder
 	b.WriteString(`<a href="`)
@@ -171,10 +200,30 @@ func FormatTelegramHTML(n *ReleaseNotes, footer TelegramFooter) string {
 		b.WriteString("<b>")
 		b.WriteString(escapeHTML(sec.Header))
 		b.WriteString("</b>")
-		for _, item := range sec.Items {
-			// Пустая строка после заголовка и между пунктами.
-			b.WriteString("\n\n• ")
+
+		collapse := collapsibleSection(sec)
+		if collapse {
+			// Пустая строка отделяет заголовок от цитаты; внутри блока
+			// Telegram сам показывает первые строки и кнопку разворота.
+			b.WriteString("\n\n<blockquote expandable>")
+		}
+		for i, item := range sec.Items {
+			if collapse {
+				// Внутри цитаты пустая строка перед первым пунктом добавила бы
+				// пустую строку в свёрнутом виде — она съедает и без того
+				// короткое превью.
+				if i > 0 {
+					b.WriteString("\n\n")
+				}
+				b.WriteString("• ")
+			} else {
+				// Пустая строка после заголовка и между пунктами.
+				b.WriteString("\n\n• ")
+			}
 			b.WriteString(escapeHTML(item))
+		}
+		if collapse {
+			b.WriteString("</blockquote>")
 		}
 	}
 
