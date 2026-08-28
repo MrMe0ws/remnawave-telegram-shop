@@ -137,7 +137,7 @@ export default function SubscriptionPage() {
           <RevealItem>
           <Card className="max-w-lg mx-auto">
             <CardContent
-              id="cabinet-onboarding-step1-target"
+             
               className="flex flex-col items-center gap-4 px-8 py-12 text-center"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-muted">
@@ -158,7 +158,7 @@ export default function SubscriptionPage() {
             <RevealItem>
             <Card className="subscription-feature-card">
               <CardContent className="space-y-4 p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3" id="cabinet-onboarding-step1-target">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <span className="inline-flex items-center rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
                       {t('subscriptionPage.tariff')}
@@ -201,7 +201,7 @@ export default function SubscriptionPage() {
                   days={isExpired ? 0 : days}
                   devicesUsed={connectedDevices}
                   devicesLimit={deviceLimit}
-                  connectId="cabinet-onboarding-step2-target"
+                  connectId="cabinet-onboarding-connect-target"
                 />
               </CardContent>
             </Card>

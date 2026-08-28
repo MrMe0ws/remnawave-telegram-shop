@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
-  Sparkles,
   Users,
   Zap,
   ChevronRight,
@@ -23,12 +22,13 @@ import { TrafficUsageChart } from '@/components/TrafficUsageChart'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { Button } from '@/components/ui/button'
 import { api, SUBSCRIPTION_STALE_MS, type SubscriptionResponse } from '@/lib/api'
 import { cn, daysUntil, formatDate, trafficUsagePercent } from '@/lib/utils'
 import { daysTone, devicesTone, trafficTone } from '@/lib/subscriptionTone'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+import { useAuthStore } from '@/store/auth'
+import { BackupLoginRow, TariffsOfferCard, TrialOfferCard } from './TrialOffer'
 
 /**
  * Главная — «приборная панель».
@@ -128,12 +128,15 @@ export default function DashboardPage() {
     onError: () => toast.error(t('dashboard.trialActivateFailed')),
   })
 
-  const trialButtonLabel = (() => {
-    if (activateTrial.isPending) return t('dashboard.activatingTrial')
-    if (!trial?.enabled) return t('dashboard.trialUnavailable')
-    if (trial.can_activate) return t('dashboard.activateTrial')
-    return t('dashboard.trialUnavailable')
-  })()
+  const trialOfferAvailable = Boolean(trial?.enabled && trial?.can_activate)
+
+  /*
+   * Один способ входа — потерял его, потерял аккаунт. Строка исчезает сама,
+   * как только привязан второй. Тот же порог, что подсвечивает CTA
+   * «Привязанные аккаунты» в профиле.
+   */
+  const user = useAuthStore((s) => s.user)
+  const needsBackupLogin = (user?.providers?.length ?? 0) < 2
 
   return (
     <AppLayout>
@@ -161,7 +164,7 @@ export default function DashboardPage() {
             </RevealItem>
 
             <RevealItem>
-              <div className="grid grid-cols-3 gap-2.5" id="cabinet-onboarding-step1-target">
+              <div className="grid grid-cols-3 gap-2.5">
                 <Card className="cabinet-elevated-card">
                   <CardContent className="flex items-center justify-center px-2 py-4">
                     <StatRing
@@ -221,7 +224,7 @@ export default function DashboardPage() {
                 days={effectiveDays}
                 devicesUsed={connectedDevices}
                 devicesLimit={deviceLimit}
-                connectId="cabinet-onboarding-step2-target"
+                connectId="cabinet-onboarding-connect-target"
               />
             </RevealItem>
 
@@ -231,58 +234,43 @@ export default function DashboardPage() {
           </>
         ) : (
           <RevealItem>
-            <Card className="subscription-feature-card">
-              <CardContent className="space-y-5 px-6 py-7">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
-                  <Sparkles size={18} className="text-primary" />
-                </div>
-
-                <div className="text-center" id="cabinet-onboarding-step1-target">
-                  <h2 className="font-heading text-2xl font-bold">{t('dashboard.trialTitle')}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.trialSubtitle')}</p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <TrialStat value={trial?.days ?? 0} label={t('dashboard.days')} />
-                  <TrialStat value={trial?.traffic_gb ?? 0} label={t('dashboard.gigabytes')} />
-                  <TrialStat value={trial?.device_limit ?? 0} label={t('dashboard.devices')} />
-                </div>
-
-                {/*
-                  Блик здесь постоянный, в отличие от подключения устройства:
-                  это первый и единственный шаг нового пользователя, и кнопку
-                  нужно заметить сразу. Когда триал недоступен, кнопка неактивна —
-                  привлекать к ней внимание уже незачем.
-                */}
-                <div id="cabinet-onboarding-step2-target">
-                  {trial?.enabled && trial?.can_activate && !activateTrial.isPending ? (
-                    <span className="cabinet-attn-sheen block">
-                      <Button className="h-11 w-full" onClick={() => activateTrial.mutate()}>
-                        {trialButtonLabel}
-                      </Button>
-                    </span>
-                  ) : (
-                    <Button
-                      className="h-11 w-full"
-                      onClick={() => activateTrial.mutate()}
-                      disabled={!trial?.enabled || !trial?.can_activate || activateTrial.isPending}
-                    >
-                      {trialButtonLabel}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/*
+              Пробный доступен — предлагаем его; недоступен — витрину тарифов.
+              Раньше во втором случае кнопка просто гасла с подписью
+              «Пробный период недоступен», и человеку было некуда идти.
+            */}
+            {trialOfferAvailable ? (
+              <TrialOfferCard
+                trial={trial}
+                onActivate={() => activateTrial.mutate()}
+                activating={activateTrial.isPending}
+              />
+            ) : (
+              <TariffsOfferCard trialEnabled={Boolean(trial?.enabled)} />
+            )}
           </RevealItem>
         )}
 
-        <RevealItem>
-          <QuickLinks
-            newsUrl={newsUrl}
-            feedbackUrl={feedbackUrl}
-            bootstrapPending={bootstrapPending}
-          />
-        </RevealItem>
+        {hasSubscription && needsBackupLogin && (
+          <RevealItem>
+            <BackupLoginRow />
+          </RevealItem>
+        )}
+
+        {/*
+          Разделы прячем, пока подписки нет: тарифы, рефералы и промокоды
+          уводят от единственной задачи — довести человека до работающего VPN.
+          Кто пришёл покупать, уходит по ссылке под кнопкой предложения.
+        */}
+        {(mainCardLoading || hasSubscription) && (
+          <RevealItem>
+            <QuickLinks
+              newsUrl={newsUrl}
+              feedbackUrl={feedbackUrl}
+              bootstrapPending={bootstrapPending}
+            />
+          </RevealItem>
+        )}
       </PageReveal>
     </AppLayout>
   )
@@ -494,13 +482,4 @@ function hasSubscriptionData(sub?: SubscriptionResponse | null): boolean {
   if (sub.subscription_link && String(sub.subscription_link).trim() !== '') return true
   if (sub.expire_at && String(sub.expire_at).trim() !== '') return true
   return false
-}
-
-function TrialStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div>
-      <div className="font-heading text-3xl font-bold leading-none">{value}</div>
-      <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-    </div>
-  )
 }

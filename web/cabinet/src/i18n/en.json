@@ -118,7 +118,7 @@
       "classicTariffFallback": "Base plan",
       "trialTariffLabel": "Trial",
       "trialTitle": "Free trial period",
-      "trialSubtitle": "Try our VPN for free - no commitments",
+      "trialSubtitle": "Try it free — no strings attached",
       "activateTrial": "Activate for free",
       "activatingTrial": "Activating...",
       "trialUnavailable": "Trial is unavailable",
@@ -149,7 +149,28 @@
       "untilDate": "until {{date}}",
       "tariffsCardHint": "Renew or switch",
       "referralsCardHint": "Days for invites",
-      "promocodesCardHint": "Redeem a code"
+      "promocodesCardHint": "Redeem a code",
+      "trialOfferPill": "Free trial",
+      "trialOfferCaption_one": "day free",
+      "trialOfferCaption_other": "days free",
+      "trialStatTraffic": "{{n}} GB",
+      "trialStatDevices_one": "{{count}} device",
+      "trialStatDevices_other": "{{count}} devices",
+      "trialSkipToTariffs": "Skip the trial — go to plans",
+      "tariffsOfferPill": "Plans",
+      "tariffsOfferPrefix": "From",
+      "tariffsOfferSuffix": "per month",
+      "tariffsOfferFallbackTitle": "Choose a plan",
+      "tariffsOfferSubtitleUsed": "The free trial is already used — paid plans from here",
+      "tariffsOfferSubtitleOff": "The free trial is unavailable — pick a paid plan",
+      "tariffsStatDevices": "devices up to",
+      "tariffsStatTraffic": "traffic",
+      "tariffsStatTrafficGb": "GB up to",
+      "tariffsStatSaving_one": "on {{count}} month",
+      "tariffsStatSaving_other": "on {{count}} months",
+      "tariffsOfferCta": "See plans",
+      "backupLoginTitle": "Add a backup sign-in method",
+      "backupLoginHint": "So you never lose the account!"
     },
     "subscriptionPage": {
       "title": "Subscription",
@@ -263,20 +284,10 @@
     },
     "onboarding": {
       "skip": "Skip",
-      "next": "Next",
-      "back": "Back",
-      "done": "Done",
-      "step1": {
-        "title": "Welcome!",
-        "body": "This is your personal account area. Here you can manage your subscription, pay for plans, and connect your devices."
-      },
-      "step2": {
-        "title": "Connect your devices",
-        "body": "Tap this button to open step-by-step instructions for connecting VPN on your devices."
-      },
-      "step3": {
-        "title": "Add backup sign-in methods",
-        "body": "To avoid losing access to your account, link Telegram and at least one additional sign-in method in the “Profile” section."
+      "gotIt": "Got it",
+      "connect": {
+        "title": "Connect a device",
+        "body": "Tap this button — we will pick the app for your system and add the subscription."
       }
     },
     "supportPage": {

@@ -118,7 +118,7 @@
       "classicTariffFallback": "Базовый",
       "trialTariffLabel": "Триал",
       "trialTitle": "Бесплатный пробный период",
-      "trialSubtitle": "Попробуйте наш VPN бесплатно - без обязательств",
+      "trialSubtitle": "Попробуйте бесплатно — без обязательств",
       "activateTrial": "Активировать бесплатно",
       "activatingTrial": "Активация...",
       "trialUnavailable": "Пробный период недоступен",
@@ -149,7 +149,34 @@
       "untilDate": "до {{date}}",
       "tariffsCardHint": "Продлить или сменить",
       "referralsCardHint": "Дни за приглашения",
-      "promocodesCardHint": "Активировать код"
+      "promocodesCardHint": "Активировать код",
+      "trialOfferPill": "Пробный период",
+      "trialOfferCaption_one": "день бесплатно",
+      "trialOfferCaption_few": "дня бесплатно",
+      "trialOfferCaption_many": "дней бесплатно",
+      "trialOfferCaption_other": "дней бесплатно",
+      "trialStatTraffic": "{{n}} ГБ",
+      "trialStatDevices_one": "{{count}} устройство",
+      "trialStatDevices_few": "{{count}} устройства",
+      "trialStatDevices_many": "{{count}} устройств",
+      "trialStatDevices_other": "{{count}} устройств",
+      "trialSkipToTariffs": "Не нужен пробный — сразу к тарифам",
+      "tariffsOfferPill": "Тарифы",
+      "tariffsOfferPrefix": "От",
+      "tariffsOfferSuffix": "в месяц",
+      "tariffsOfferFallbackTitle": "Выберите тариф",
+      "tariffsOfferSubtitleUsed": "Пробный период уже использован — дальше платные тарифы",
+      "tariffsOfferSubtitleOff": "Пробный период недоступен — выберите платный тариф",
+      "tariffsStatDevices": "до устройств",
+      "tariffsStatTraffic": "трафик",
+      "tariffsStatTrafficGb": "до ГБ",
+      "tariffsStatSaving_one": "на {{count}} месяц",
+      "tariffsStatSaving_few": "на {{count}} месяца",
+      "tariffsStatSaving_many": "на {{count}} месяцев",
+      "tariffsStatSaving_other": "на {{count}} месяцев",
+      "tariffsOfferCta": "Смотреть тарифы",
+      "backupLoginTitle": "Добавьте резервный способ входа",
+      "backupLoginHint": "Чтобы не потерять аккаунт!"
     },
     "subscriptionPage": {
       "title": "Подписка",
@@ -377,20 +404,10 @@
     },
     "onboarding": {
       "skip": "Пропустить",
-      "next": "Далее",
-      "back": "Назад",
-      "done": "Готово",
-      "step1": {
-        "title": "Добро пожаловать!",
-        "body": "Это ваш личный кабинет. Здесь вы можете управлять подпиской, оплачивать тариф и подключать устройства."
-      },
-      "step2": {
-        "title": "Подключите устройства",
-        "body": "Нажмите эту кнопку, чтобы получить инструкции по подключению VPN на ваших устройствах."
-      },
-      "step3": {
-        "title": "Добавьте резервные способы входа",
-        "body": "Чтобы не потерять доступ к аккаунту, привяжите в разделе «Профиль» Telegram и ещё один дополнительный способ входа."
+      "gotIt": "Понятно",
+      "connect": {
+        "title": "Подключите устройство",
+        "body": "Нажмите эту кнопку — подберём приложение под вашу систему и добавим подписку."
       }
     },
     "supportPage": {
