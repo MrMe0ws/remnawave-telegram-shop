@@ -262,7 +262,9 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      {/* Дефолт CardContent — p-6; здесь нужен 1rem, как у CardHeader выше,
+          иначе строки оказываются вложены глубже заголовка карточки. */}
+      <CardContent className="space-y-3 px-4 pb-4">
         {inactive && (
           <p className="text-sm text-muted-foreground">{t('subscriptionPage.unavailableWhileInactive')}</p>
         )}
