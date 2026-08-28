@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { api, ApiError } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
@@ -91,30 +92,8 @@ export function AddDeviceSlot({ onOpen }: { onOpen: () => void }) {
 /** Длительность появления и ухода модалки; из неё же считается задержка размонтирования. */
 const MODAL_ANIM_MS = 250
 
-/**
- * Телефон или планшет — то есть место, где системный шит «Поделиться» полезен.
- *
- * Одного `pointer: coarse` мало: медиазапрос описывает точность указателя, а не
- * платформу, и промахивается в обе стороны. Ноутбук с тачскрином и Telegram
- * Desktop в режиме планшета отдают coarse, хотя шит там пустой; наоборот,
- * мобильный WebView с подключённой мышью или включённым desktop-режимом
- * отдаёт fine — и кнопка пропадала там, где работала нормально.
- *
- * Поэтому спрашиваем платформу напрямую: `userAgentData.mobile` там, где он
- * есть (Chromium), иначе UA. Последняя ветка — iPadOS Safari, который
- * представляется Macintosh и отличается только наличием тача.
- */
-function isMobilePlatform(): boolean {
-  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
-  const uaData = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData
-  if (typeof uaData?.mobile === 'boolean') return uaData.mobile
-  if (/Android|iPhone|iPod|iPad|Mobile|Silk|Kindle/i.test(navigator.userAgent)) return true
-  return (
-    /Macintosh/i.test(navigator.userAgent) &&
-    (navigator.maxTouchPoints ?? 0) > 1 &&
-    window.matchMedia?.('(pointer: coarse)').matches === true
-  )
-}
+/** Есть ли в браузере системный шит «Поделиться». */
+const hasNativeShare = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
 export function ConnectInviteModal({
   open,
@@ -169,16 +148,24 @@ export function ConnectInviteModal({
 
   const inviteUrl = data?.url || ''
   const shareText = t('connectInvite.shareText', { url: inviteUrl })
-  // Системный шит показываем только на телефонах и планшетах. На десктопе
-  // navigator.share тоже есть, но в шит попадают лишь приложения,
-  // зарегистрированные как share target, — Telegram Desktop туда не входит, и
-  // кнопка вела в список, где нечего выбрать. На телефоне шит наоборот
-  // основной путь: там все мессенджеры на месте.
-  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && isMobilePlatform()
+  // Кнопку «Отправить» показываем по мобильному разрешению — и только по нему.
+  //
+  // Две предыдущие попытки были умнее и обе промахивались. `pointer: coarse`
+  // описывает точность указателя, а не платформу: ноутбук с тачскрином отдаёт
+  // coarse, мобильный WebView с мышью — fine. Определение платформы по
+  // `userAgentData.mobile` / UA было точнее, но кнопка всё равно пропадала в
+  // мини-аппе, потому что видимость дополнительно требовала `navigator.share`,
+  // а в Android WebView его нет вовсе.
+  //
+  // Правило по ширине окна проще, предсказуемо и совпадает с тем, как
+  // пользователь видит кабинет: узкий экран — телефон в руках. Наличие
+  // системного шита проверяется уже при нажатии; если его нет, приглашение
+  // копируется в буфер.
+  const showShare = useIsMobile()
 
   async function share() {
     if (!inviteUrl) return
-    if (canShare) {
+    if (hasNativeShare()) {
       try {
         await navigator.share({ text: shareText })
         return
@@ -283,7 +270,7 @@ export function ConnectInviteModal({
                 зарегистрированные как share target, и Telegram в этот список не
                 попадает — там копирование остаётся единственным рабочим путём. */}
             <div className="mt-3 space-y-2">
-              {canShare && (
+              {showShare && (
                 <Button type="button" className="w-full gap-2" onClick={() => void share()}>
                   <Send size={15} />
                   {t('connectInvite.share')}
@@ -291,7 +278,7 @@ export function ConnectInviteModal({
               )}
               <Button
                 type="button"
-                variant={canShare ? 'outline' : 'default'}
+                variant={showShare ? 'outline' : 'default'}
                 className="w-full gap-2"
                 onClick={() => void copyInvite(shareText)}
               >
