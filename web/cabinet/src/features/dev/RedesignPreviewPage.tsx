@@ -17,6 +17,7 @@ import {
   Newspaper,
   Plus,
   Smartphone,
+  Sparkles,
   Star,
   Ticket,
   Trash2,
@@ -1072,64 +1073,79 @@ function SubscriptionDense() {
 
 type OnbPhase = 'offer' | 'blocked' | 'setup' | 'done'
 
-/** Строка выгоды: что это даёт словами, а не голая цифра под подписью. */
-function OfferRow({ icon: Icon, title, hint }: { icon: LucideIcon; title: string; hint: string }) {
+/** Плитка выгоды: цифра крупно, единица под ней. Заменяет строку текста. */
+function StatTile({ icon: Icon, value, unit }: { icon: LucideIcon; value: ReactNode; unit: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
-        <Icon size={15} />
+    <div className="cab-stat-tile px-1.5 py-3">
+      <span className="mx-auto mb-1.5 inline-flex size-7 items-center justify-center rounded-lg bg-[hsl(var(--cab-accent)/0.14)] text-[hsl(var(--cab-accent))]">
+        <Icon size={14} />
       </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-medium">{title}</span>
-        <span className="block text-xs text-muted-foreground">{hint}</span>
-      </span>
+      <div className="font-heading text-2xl font-bold leading-none tabular-nums">{value}</div>
+      <div className="mt-1 text-[10px] uppercase leading-tight tracking-wide text-muted-foreground">
+        {unit}
+      </div>
+    </div>
+  )
+}
+
+/** Уход к тарифам мимо пробного: не акцент, но и не потерянная подпись. */
+function SkipToTariffs({ label }: { label: string }) {
+  return (
+    <div className="mt-5 border-t border-border/70 pt-4">
+      <button
+        type="button"
+        className="cab-btn-quiet cab-row flex h-10 w-full items-center justify-center gap-1.5 rounded-xl text-xs font-medium"
+      >
+        {label}
+        <ChevronRight className="cab-row-chevron size-4 text-muted-foreground" />
+      </button>
     </div>
   )
 }
 
 function OnboardingOffer() {
   return (
-    <div className="cab-card p-5 sm:p-6">
-      <Pill>Пробный период</Pill>
-      <h1 className="mt-3 font-heading text-2xl font-bold leading-tight sm:text-3xl">
-        7 дней бесплатно
-      </h1>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        Карта не нужна, ничего не спишется. Подписка не продлевается сама.
-      </p>
+    <div className="cab-card relative overflow-hidden p-5 sm:p-6">
+      <span className="cab-onb-aurora" aria-hidden />
 
-      <div className="mt-5 space-y-3">
-        <OfferRow icon={Calendar} title="7 дней доступа" hint="Отсчёт пойдёт с момента активации" />
-        <OfferRow
-          icon={Gauge}
-          title="3 ГБ трафика"
-          hint="Хватит на неделю мессенджеров, почты и карт"
-        />
-        <OfferRow
-          icon={Smartphone}
-          title="1 устройство"
-          hint="Телефон, ноутбук или телевизор — на выбор"
-        />
-      </div>
+      <div className="relative">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[hsl(var(--cab-accent)/0.35)] bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
+            <Sparkles size={20} />
+          </span>
+          <Pill>Пробный период</Pill>
+        </div>
 
-      <div className="mt-5">
+        <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] sm:text-4xl">
+          <span className="cab-gradient-text">7 дней</span> бесплатно
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Карта не нужна, ничего не спишется. Подписка не продлевается сама.
+        </p>
+
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <StatTile icon={Calendar} value="7" unit="дней" />
+          <StatTile icon={Gauge} value="3" unit="ГБ" />
+          <StatTile icon={Smartphone} value="1" unit="устройство" />
+        </div>
+
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          Трёх гигабайт хватит на неделю мессенджеров, почты и карт. Устройство любое — телефон,
+          ноутбук или телевизор.
+        </p>
+
         {/* Блик постоянный: это единственное действие на экране. */}
-        <span className="cab-attn-sheen block">
-          <button type="button" className="cab-cta h-11 w-full rounded-xl text-sm font-semibold">
+        <span className="cab-attn-sheen mt-5 block">
+          <button type="button" className="cab-cta h-12 w-full rounded-xl text-sm font-semibold">
             Активировать бесплатно
           </button>
         </span>
         <p className="mt-2 text-center text-xs text-muted-foreground">
           Дальше покажем, как подключить — это пара минут
         </p>
-      </div>
 
-      <button
-        type="button"
-        className="mt-4 w-full text-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-      >
-        Не нужен пробный — сразу к тарифам
-      </button>
+        <SkipToTariffs label="Не нужен пробный — сразу к тарифам" />
+      </div>
     </div>
   )
 }
@@ -1142,28 +1158,42 @@ function OnboardingOffer() {
  */
 function OnboardingBlocked() {
   return (
-    <div className="cab-card p-5 sm:p-6">
-      <Pill>Подписка</Pill>
-      <h1 className="mt-3 font-heading text-2xl font-bold leading-tight sm:text-3xl">
-        Выберите тариф
-      </h1>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        Пробный период уже использован. Дальше — платные тарифы.
-      </p>
+    <div className="cab-card cab-accent-violet relative overflow-hidden p-5 sm:p-6">
+      <span className="cab-onb-aurora" aria-hidden />
 
-      <div className="mt-5 space-y-3">
-        <OfferRow icon={Zap} title="От 110 ₽ в месяц" hint="На год выгоднее почти на треть" />
-        <OfferRow
-          icon={Gauge}
-          title="Без ограничения скорости"
-          hint="Видео в высоком качестве и загрузки"
-        />
-        <OfferRow icon={MonitorSmartphone} title="До 5 устройств" hint="Вся семья на одной подписке" />
+      <div className="relative">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[hsl(var(--cab-accent)/0.35)] bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
+            <Zap size={20} />
+          </span>
+          <Pill>Тарифы</Pill>
+        </div>
+
+        <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] sm:text-4xl">
+          От <span className="cab-gradient-text">110 ₽</span> в месяц
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Пробный период уже использован — дальше платные тарифы.
+        </p>
+
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <StatTile icon={MonitorSmartphone} value="5" unit="устройств" />
+          <StatTile icon={Gauge} value={<InfinityIcon size={22} className="mx-auto" />} unit="скорость" />
+          <StatTile icon={Calendar} value="−31%" unit="на год" />
+        </div>
+
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          Одна подписка на всю семью, скорость не режется, а на годовом тарифе месяц выходит почти
+          втрое дешевле.
+        </p>
+
+        <button type="button" className="cab-cta mt-5 h-12 w-full rounded-xl text-sm font-semibold">
+          Смотреть тарифы
+        </button>
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Оплата картой, СБП или звёздами Telegram
+        </p>
       </div>
-
-      <button type="button" className="cab-cta mt-5 h-11 w-full rounded-xl text-sm font-semibold">
-        Смотреть тарифы
-      </button>
     </div>
   )
 }
@@ -1208,13 +1238,16 @@ function SetupStep({
           <span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span>
         )}
         {cta && state === 'current' && (
-          <button
-            type="button"
-            className="cab-cta mt-3 inline-flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-semibold"
-          >
-            <Download size={14} />
-            {cta}
-          </button>
+          /* Блик как у активации: на каждом шаге ровно одно ожидаемое действие. */
+          <span className="cab-attn-sheen mt-3 inline-block rounded-lg">
+            <button
+              type="button"
+              className="cab-cta inline-flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-semibold"
+            >
+              <Download size={14} />
+              {cta}
+            </button>
+          </span>
         )}
       </span>
     </div>
@@ -1253,16 +1286,68 @@ function OnboardingSetup() {
   )
 }
 
-/** Узкая сводка на время дорожки: кольца рядом с ней перетягивали бы внимание. */
-function OnboardingSubStrip() {
+/*
+ * Сводка подписки под дорожкой — плитками, а не строкой текста.
+ *
+ * Те же .cab-stat-tile, что в оффере: человек уже видел эту раскладку минуту
+ * назад, только теперь у чисел появился расход. Графика здесь нет и быть не
+ * может — истории у только что активированного триала нет.
+ */
+function OnboardingSubSummary() {
   return (
-    <div className="cab-card flex items-center justify-between gap-3 px-4 py-3">
-      <span className="text-xs text-muted-foreground">Пробный период</span>
-      <span className="text-xs font-medium tabular-nums">7 дней · 0 из 3 ГБ · 0 из 1</span>
+    <div className="cab-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">Пробный период</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">до 4 сентября 2026 г.</p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+          <span className="size-1.5 rounded-full bg-emerald-500" />
+          Активна
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <StatTile icon={Calendar} value="7" unit="дней" />
+        <StatTile icon={Gauge} value="0 / 3" unit="ГБ" />
+        <StatTile icon={Smartphone} value="0 / 1" unit="устройств" />
+      </div>
     </div>
   )
 }
 
+/** Тот же блок кольцами: без графика расхода, его на этом этапе не бывает. */
+function OnboardingSubRings() {
+  return (
+    <div className="cab-card p-4">
+      <p className="text-sm font-semibold">Пробный период</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">до 4 сентября 2026 г.</p>
+
+      <div className="mt-4 grid grid-cols-3 justify-items-center gap-2">
+        <Ring value={100} size={76}>
+          <div className="font-heading text-xl font-bold">7</div>
+          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">дней</div>
+        </Ring>
+        <Ring value={0} size={76}>
+          <div className="font-heading text-xl font-bold">0%</div>
+          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">трафик</div>
+        </Ring>
+        <Ring value={0} size={76}>
+          <div className="font-heading text-xl font-bold">0/1</div>
+          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">устройств</div>
+        </Ring>
+      </div>
+    </div>
+  )
+}
+
+/*
+ * Разделов на этапе настройки нет намеренно.
+ *
+ * Тарифы, рефералы и промокоды уводят от единственной задачи — довести
+ * человека до рабочего VPN. Кто пришёл покупать, уходит по «сразу к тарифам»
+ * из оффера; остальным они понадобятся уже на обычной главной.
+ */
 function OnboardingPreview({ phase, withRings }: { phase: OnbPhase; withRings: boolean }) {
   if (phase === 'done') return <DashboardCockpit />
 
@@ -1273,10 +1358,9 @@ function OnboardingPreview({ phase, withRings }: { phase: OnbPhase; withRings: b
       {phase === 'setup' && (
         <>
           <OnboardingSetup />
-          {withRings ? <DashboardCockpit /> : <OnboardingSubStrip />}
+          {withRings ? <OnboardingSubRings /> : <OnboardingSubSummary />}
         </>
       )}
-      {!(phase === 'setup' && withRings) && <QuickLinks />}
     </div>
   )
 }
@@ -1330,7 +1414,7 @@ const ONB_NOTE: Record<OnbPhase, string> = {
   blocked:
     'Триал уже использован или выключен. Сейчас здесь тупик с погасшей кнопкой — экран должен вести к тарифам.',
   setup:
-    'Подписка есть, устройств ноль. Место сегодняшнего обрыва: активировал — и попал на панель с нулями.',
+    'Подписка есть, устройств ноль. Место сегодняшнего обрыва: активировал — и попал на панель с нулями. Разделов тут нет намеренно: они уводят от единственной задачи.',
   done: 'Первое устройство подключено, дальше кабинет обычный. Онбординг больше не показывается.',
 }
 
@@ -1447,8 +1531,8 @@ export default function RedesignPreviewPage() {
                 value={onbRings ? 'rings' : 'strip'}
                 onChange={(next) => setOnbRings(next === 'rings')}
                 options={[
-                  { value: 'strip', label: 'Только дорожка' },
-                  { value: 'rings', label: 'Дорожка + кольца' },
+                  { value: 'strip', label: 'Сводка плитками' },
+                  { value: 'rings', label: 'Сводка кольцами' },
                 ]}
               />
             )}

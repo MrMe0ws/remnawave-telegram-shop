@@ -544,3 +544,48 @@
     transform: none;
   }
 }
+
+/* ─── Онбординг нового пользователя ──────────────────────────── */
+
+/*
+ * Сияние по верху карточки предложения.
+ *
+ * Без него оффер читался как форма: ровный фон, сплошной текст, никакой
+ * иерархии. Полоса задаёт верх карточки и связывает её с лендингом, откуда
+ * взят весь остальной язык. Лежит первым ребёнком и не перехватывает клики.
+ */
+.cab-onb-aurora {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 12rem;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 100% at 10% 0%, hsl(var(--cab-cyan) / 0.2), transparent 72%),
+    radial-gradient(52% 100% at 90% 0%, hsl(var(--cab-violet) / 0.17), transparent 72%);
+}
+
+/* Единственное место с градиентным текстом: заголовок предложения. */
+.cab-gradient-text {
+  background-image: linear-gradient(
+    100deg,
+    hsl(var(--cab-cyan)) 0%,
+    hsl(210 90% 62%) 45%,
+    hsl(var(--cab-violet)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Плитка выгоды: цифра крупно, единица под ней. Заменяет строку текста. */
+.cab-stat-tile {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border) / 0.7);
+  background-color: hsl(var(--card) / 0.5);
+  text-align: center;
+}
+
+.dark .cab-stat-tile {
+  background-color: hsl(var(--secondary) / 0.35);
+}
