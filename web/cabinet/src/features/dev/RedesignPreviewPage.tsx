@@ -1071,7 +1071,7 @@ function SubscriptionDense() {
  * Здесь герой меняется по фазе: оффер → дорожка подключения → обычная главная.
  */
 
-type OnbPhase = 'offer' | 'blocked' | 'setup' | 'done'
+type OnbPhase = 'offer' | 'blocked' | 'activated' | 'done'
 
 /** Плитка выгоды: цифра крупно, единица под ней. Заменяет строку текста. */
 function StatTile({ icon: Icon, value, unit }: { icon: LucideIcon; value: ReactNode; unit: string }) {
@@ -1124,7 +1124,7 @@ type OfferContent = {
   subtitle: string
   stats: OfferStat[]
   /** Для варианта D: одна цифра крупно и всё остальное строкой под ней. */
-  hero: { value: string; caption: string; line: string }
+  hero: { value: string; caption: string }
   cta: string
   skip?: string
   accent?: string
@@ -1141,7 +1141,7 @@ const TRIAL_OFFER: OfferContent = {
     { icon: Gauge, value: '3', unit: 'ГБ' },
     { icon: Smartphone, value: '1', unit: 'устройство' },
   ],
-  hero: { value: '7', caption: 'дней бесплатно', line: '3 ГБ · 1 устройство' },
+  hero: { value: '7', caption: 'дней бесплатно' },
   cta: 'Активировать бесплатно',
   skip: 'Не нужен пробный — сразу к тарифам',
 }
@@ -1166,7 +1166,7 @@ const TARIFFS_OFFER: OfferContent = {
     { icon: Gauge, value: <InfinityIcon size={22} className="mx-auto" />, unit: 'трафик' },
     { icon: Calendar, value: '−31%', unit: 'на год' },
   ],
-  hero: { value: '110 ₽', caption: 'в месяц', line: 'до 5 устройств · безлимитный трафик' },
+  hero: { value: '110 ₽', caption: 'в месяц' },
   cta: 'Смотреть тарифы',
   accent: 'cab-accent-violet',
 }
@@ -1308,7 +1308,20 @@ function OfferHero({ content }: { content: OfferContent }) {
         <div className="mt-2 font-heading text-xl font-bold">{content.hero.caption}</div>
         <p className="mt-1.5 text-sm text-muted-foreground">{content.subtitle}</p>
 
-        <p className="mt-4 text-sm font-medium">{content.hero.line}</p>
+        {/* Остальные цифры — строкой с иконками: без них строка читалась как подпись. */}
+        <div className="mt-4 flex items-center justify-center gap-4">
+          {content.stats.slice(1).map((s) => {
+            const Icon = s.icon
+            return (
+              <span key={s.unit} className="inline-flex items-center gap-1.5 text-sm font-medium">
+                <span className="inline-flex size-6 items-center justify-center rounded-md bg-[hsl(var(--cab-accent)/0.14)] text-[hsl(var(--cab-accent))]">
+                  <Icon size={13} />
+                </span>
+                {s.value} {s.unit}
+              </span>
+            )
+          })}
+        </div>
 
         <OfferCta label={content.cta} />
         {content.skip && <SkipToTariffs label={content.skip} />}
@@ -1326,180 +1339,46 @@ function OfferCard({ style, content }: { style: OfferStyle; content: OfferConten
   return <OfferTiles content={content} />
 }
 
-function SetupStep({
-  state,
-  n,
-  title,
-  hint,
-  cta,
-}: {
-  state: 'done' | 'current' | 'todo'
-  n: number
-  title: string
-  hint?: string
-  cta?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'flex items-start gap-3 rounded-xl px-3 py-3',
-        state === 'current' && 'bg-[hsl(var(--cab-accent)/0.07)]',
-      )}
-    >
-      <span
-        className={cn(
-          'mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-          state === 'done' && 'bg-[hsl(var(--cab-emerald)/0.16)] text-[hsl(var(--cab-emerald))]',
-          state === 'current' && 'bg-[hsl(var(--cab-accent))] text-white',
-          state === 'todo' && 'border border-border text-muted-foreground',
-        )}
-      >
-        {state === 'done' ? <Check size={14} /> : n}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span
-          className={cn('block text-sm font-medium', state !== 'current' && 'text-muted-foreground')}
-        >
-          {title}
-        </span>
-        {hint && state === 'current' && (
-          <span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span>
-        )}
-        {cta && state === 'current' && (
-          /* Блик как у активации: на каждом шаге ровно одно ожидаемое действие. */
-          <span className="cab-attn-sheen mt-3 inline-block rounded-lg">
-            <button
-              type="button"
-              className="cab-cta inline-flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-semibold"
-            >
-              <Download size={14} />
-              {cta}
-            </button>
-          </span>
-        )}
-      </span>
-    </div>
-  )
-}
-
 /*
- * Фаза 2: подписка уже есть, устройств ноль.
+ * Мок тура сразу после активации.
  *
- * Место, где сейчас обрыв: человек активировал триал и попал на обычную
- * панель с нулями, хотя приложение ещё не установлено.
+ * Текст не тот, что в проде: там первый шаг здоровается, а второй обещает
+ * инструкции по подключению, подсвечивая кнопку активации. Здесь тур
+ * появляется уже после активации и говорит ровно то, ради чего нужен —
+ * куда нажать, чтобы подключить.
  */
-function OnboardingSetup() {
-  return (
-    <div className="cab-card p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-heading text-lg font-bold leading-tight">Осталось подключить</h2>
-        </div>
-        <Pill className="shrink-0">Шаг 2 из 3</Pill>
-      </div>
-
-      <div className="mt-3 space-y-1">
-        <SetupStep state="done" n={1} title="Пробный период активирован" />
-        <SetupStep
-          state="current"
-          n={2}
-          title="Установите приложение"
-          hint="Подберём под вашу систему — займёт минуту"
-          cta="Выбрать приложение"
-        />
-        <SetupStep state="todo" n={3} title="Добавьте подписку в приложение" />
-      </div>
-    </div>
-  )
-}
-
-/*
- * Сводка подписки под дорожкой — плитками, а не строкой текста.
- *
- * Те же .cab-stat-tile, что в оффере: человек уже видел эту раскладку минуту
- * назад, только теперь у чисел появился расход. Графика здесь нет и быть не
- * может — истории у только что активированного триала нет.
- */
-function OnboardingSubSummary() {
-  return (
-    <div className="cab-card p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">Пробный период</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">до 4 сентября 2026 г.</p>
-        </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-          <span className="size-1.5 rounded-full bg-emerald-500" />
-          Активна
-        </span>
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <StatTile icon={Calendar} value="7" unit="дней" />
-        <StatTile icon={Gauge} value="0 / 3" unit="ГБ" />
-        <StatTile icon={Smartphone} value="0 / 1" unit="устройств" />
-      </div>
-    </div>
-  )
-}
-
-/** Тот же блок кольцами: без графика расхода, его на этом этапе не бывает. */
-function OnboardingSubRings() {
-  return (
-    <div className="cab-card p-4">
-      <p className="text-sm font-semibold">Пробный период</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">до 4 сентября 2026 г.</p>
-
-      <div className="mt-4 grid grid-cols-3 justify-items-center gap-2">
-        <Ring value={100} size={76}>
-          <div className="font-heading text-xl font-bold">7</div>
-          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">дней</div>
-        </Ring>
-        <Ring value={0} size={76}>
-          <div className="font-heading text-xl font-bold">0%</div>
-          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">трафик</div>
-        </Ring>
-        <Ring value={0} size={76}>
-          <div className="font-heading text-xl font-bold">0/1</div>
-          <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">устройств</div>
-        </Ring>
-      </div>
-    </div>
-  )
-}
-
-/*
- * Разделов на этапе настройки нет намеренно.
- *
- * Тарифы, рефералы и промокоды уводят от единственной задачи — довести
- * человека до рабочего VPN. Кто пришёл покупать, уходит по «сразу к тарифам»
- * из оффера; остальным они понадобятся уже на обычной главной.
- */
-/*
- * Что показывать сразу после дорожки — открытый вопрос.
- *
- * Тур: человек только что прошёл три шага подряд, и четвёртый экран с
- * затемнением может раздражать. Тихо: напоминание про резервный вход живёт
- * строкой в профиле и никого не останавливает.
- */
-type AfterSetup = 'tour' | 'quiet'
-
-/** Мок тура: та же геометрия, что у CabinetOnboarding, но без замеров. */
 function TourMock() {
   return (
     <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl bg-black/35">
-      <div className="absolute left-1/2 top-24 w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-border bg-card p-4 shadow-2xl">
-        <p className="text-sm font-semibold">Добро пожаловать!</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          Это ваш личный кабинет. Здесь вы управляете подпиской, оплачиваете тариф и подключаете
-          устройства.
+      <div className="absolute left-1/2 top-32 w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-border bg-card p-4 shadow-2xl">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[hsl(var(--cab-accent)/0.14)] text-[hsl(var(--cab-accent))]">
+            <Download size={14} />
+          </span>
+          <p className="text-sm font-semibold">Подключите устройство</p>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          Нажмите эту кнопку — подберём приложение под вашу систему и добавим подписку.
         </p>
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">Пропустить</span>
-          <span className="cab-cta rounded-lg px-3 py-1.5 text-xs font-semibold">Далее</span>
+          <span className="cab-cta rounded-lg px-3 py-1.5 text-xs font-semibold">Понятно</span>
         </div>
       </div>
     </div>
+  )
+}
+
+/** Главная сразу после активации: 7 дней, ноль трафика, ноль устройств. */
+function FreshDashboard({ children }: { children?: ReactNode }) {
+  const base = usePreviewOptions()
+  return (
+    <PreviewOptionsContext.Provider value={{ ...base, days: 7, trafficPct: 0, devices: 0 }}>
+      <div className="relative">
+        <DashboardCockpit />
+        {children}
+      </div>
+    </PreviewOptionsContext.Provider>
   )
 }
 
@@ -1530,37 +1409,34 @@ function QuietReminder() {
  */
 function OnboardingPreview({
   phase,
-  style,
-  withRings,
-  afterSetup,
+  offerStyle,
+  blockedStyle,
 }: {
   phase: OnbPhase
-  style: OfferStyle
-  withRings: boolean
-  afterSetup: AfterSetup
+  offerStyle: OfferStyle
+  blockedStyle: OfferStyle
 }) {
+  if (phase === 'activated') {
+    return (
+      <FreshDashboard>
+        <TourMock />
+      </FreshDashboard>
+    )
+  }
+
   if (phase === 'done') {
     return (
-      <div className="relative">
-        <div className="space-y-2.5">
-          <DashboardCockpit />
-          {afterSetup === 'quiet' && <QuietReminder />}
-        </div>
-        {afterSetup === 'tour' && <TourMock />}
+      <div className="space-y-2.5">
+        <DashboardCockpit />
+        <QuietReminder />
       </div>
     )
   }
 
   return (
     <div className="space-y-2.5">
-      {phase === 'offer' && <OfferCard style={style} content={TRIAL_OFFER} />}
-      {phase === 'blocked' && <OfferCard style={style} content={TARIFFS_OFFER} />}
-      {phase === 'setup' && (
-        <>
-          <OnboardingSetup />
-          {withRings ? <OnboardingSubRings /> : <OnboardingSubSummary />}
-        </>
-      )}
+      {phase === 'offer' && <OfferCard style={offerStyle} content={TRIAL_OFFER} />}
+      {phase === 'blocked' && <OfferCard style={blockedStyle} content={TARIFFS_OFFER} />}
     </div>
   )
 }
@@ -1604,18 +1480,18 @@ const VARIANT_NOTE: Record<Page, Record<Variant, string>> = {
 const ONB_LABEL: Record<OnbPhase, string> = {
   offer: '1 · Оффер',
   blocked: '1б · Триал недоступен',
-  setup: '2 · Дорожка',
-  done: '3 · Обычная главная',
+  activated: '2 · Сразу после активации',
+  done: '3 · Подключено',
 }
 
 const ONB_NOTE: Record<OnbPhase, string> = {
   offer:
-    'Подписки нет, триал доступен. Выгода словами вместо голых цифр, одно действие и обещание, что будет дальше.',
+    'Подписки нет, триал доступен. Одна цифра, две рядом строкой, одно действие. Ничего не объясняем заранее.',
   blocked:
-    'Триал уже использован или выключен. Сейчас здесь тупик с погасшей кнопкой — экран должен вести к тарифам.',
-  setup:
-    'Подписка есть, устройств ноль. Место сегодняшнего обрыва: активировал — и попал на панель с нулями. Разделов тут нет намеренно: они уводят от единственной задачи.',
-  done: 'Первое устройство подключено, дальше кабинет обычный. Переключатель — что показать сразу после дорожки: тур поверх экрана или тихую строку про резервный вход.',
+    'Триал уже использован или выключен. Сейчас здесь тупик с погасшей кнопкой — экран ведёт к тарифам. Всё выводится из витрины тарифов, ничего не зашито.',
+  activated:
+    'Дорожки нет: человек попадает на обычную главную с нулями, и путь показывает тур. Он же закрывает дыру «что теперь нажать» — без него после активации подсказки не остаётся.',
+  done: 'Устройство подключено, тур пройден. Напоминание про резервный вход живёт тихой строкой внизу и никого не останавливает.',
 }
 
 export default function RedesignPreviewPage() {
@@ -1631,10 +1507,10 @@ export default function RedesignPreviewPage() {
   const [unlimitedBar, setUnlimitedBar] = useState<UnlimitedBar>('none')
   const [shell, setShell] = useState<'prod' | 'bare'>('prod')
   const [onbPhase, setOnbPhase] = useState<OnbPhase>('offer')
-  const [onbStyle, setOnbStyle] = useState<OfferStyle>('plain')
-  /** Открытый вопрос: держать ли кольца рядом с дорожкой или убрать до конца настройки. */
-  const [onbRings, setOnbRings] = useState(false)
-  const [afterSetup, setAfterSetup] = useState<AfterSetup>('quiet')
+  /* Утверждено: оффер — одна цифра, заглушка — плитки. Переключатели оставлены,
+     чтобы можно было вернуться к сравнению, не пересобирая превью. */
+  const [offerStyle, setOfferStyle] = useState<OfferStyle>('hero')
+  const [blockedStyle, setBlockedStyle] = useState<OfferStyle>('tiles')
   const [panelOpen, setPanelOpen] = useState(true)
   const queryClient = useQueryClient()
 
@@ -1663,12 +1539,7 @@ export default function RedesignPreviewPage() {
 
   const pageContent =
     page === 'onboarding' ? (
-      <OnboardingPreview
-        phase={onbPhase}
-        style={onbStyle}
-        withRings={onbRings}
-        afterSetup={afterSetup}
-      />
+      <OnboardingPreview phase={onbPhase} offerStyle={offerStyle} blockedStyle={blockedStyle} />
     ) : page === 'dashboard' ? (
       { a: <DashboardFocus />, b: <DashboardCockpit /> }[variant]
     ) : (
@@ -1735,33 +1606,13 @@ export default function RedesignPreviewPage() {
             )}
             {page === 'onboarding' && (onbPhase === 'offer' || onbPhase === 'blocked') && (
               <Segmented
-                value={onbStyle}
-                onChange={setOnbStyle}
+                value={onbPhase === 'offer' ? offerStyle : blockedStyle}
+                onChange={onbPhase === 'offer' ? setOfferStyle : setBlockedStyle}
                 options={[
                   { value: 'plain', label: 'A · Как на проде' },
                   { value: 'tiles', label: 'B · Плитки' },
                   { value: 'path', label: 'C · Путь' },
                   { value: 'hero', label: 'D · Одна цифра' },
-                ]}
-              />
-            )}
-            {page === 'onboarding' && onbPhase === 'setup' && (
-              <Segmented
-                value={onbRings ? 'rings' : 'strip'}
-                onChange={(next) => setOnbRings(next === 'rings')}
-                options={[
-                  { value: 'strip', label: 'Сводка плитками' },
-                  { value: 'rings', label: 'Сводка кольцами' },
-                ]}
-              />
-            )}
-            {page === 'onboarding' && onbPhase === 'done' && (
-              <Segmented
-                value={afterSetup}
-                onChange={setAfterSetup}
-                options={[
-                  { value: 'quiet', label: 'Тихо' },
-                  { value: 'tour', label: 'Тур' },
                 ]}
               />
             )}
