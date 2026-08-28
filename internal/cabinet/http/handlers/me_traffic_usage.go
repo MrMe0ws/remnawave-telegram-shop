@@ -65,6 +65,9 @@ func (h *MeHandler) GetTrafficUsage(w http.ResponseWriter, r *http.Request) {
 
 	link, err := h.bootstrap.EnsureForAccount(r.Context(), claims.AccountID, "")
 	if err != nil || link == nil {
+		if handleAccountGone(w, err, "me.traffic_usage", claims.AccountID) {
+			return
+		}
 		writeJSON(w, http.StatusOK, emptyTrafficUsage(false))
 		return
 	}

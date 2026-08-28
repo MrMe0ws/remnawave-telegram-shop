@@ -32,6 +32,9 @@ func (h *FortuneHandler) Status(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.Status(r.Context(), claims.AccountID)
 	if err != nil {
+		if handleAccountGone(w, err, "fortune.status", claims.AccountID) {
+			return
+		}
 		slog.Error("fortune status", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -76,6 +79,9 @@ func (h *FortuneHandler) Spin(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.Spin(r.Context(), claims.AccountID)
 	if err != nil {
+		if handleAccountGone(w, err, "fortune.spin", claims.AccountID) {
+			return
+		}
 		if code, msg, ok := cabsvc.FortuneClientErrorCode(err); ok {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)

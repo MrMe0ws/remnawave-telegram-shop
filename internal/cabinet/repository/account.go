@@ -19,6 +19,12 @@ import (
 // не зависели от pgx напрямую.
 var ErrNotFound = errors.New("repository: not found")
 
+// ErrAccountMissing — строки cabinet_account с таким id нет, хотя вызывающий код
+// считал аккаунт существующим (типично: живой access-JWT удалённого аккаунта).
+// Отличается от ErrNotFound тем, что это не «ещё не создано», а «уже удалено»:
+// повторять операцию бессмысленно, нужно разлогинить клиента.
+var ErrAccountMissing = errors.New("repository: cabinet_account does not exist")
+
 // AccountStatus — enum колонки cabinet_account.status.
 const (
 	AccountStatusActive  = "active"
@@ -110,6 +116,18 @@ func (r *AccountRepo) Create(ctx context.Context, email, passwordHash, language 
 func (r *AccountRepo) FindByID(ctx context.Context, id int64) (*Account, error) {
 	const q = `SELECT ` + accountSelectCols + ` FROM cabinet_account WHERE id = $1`
 	return scanAccount(r.pool.QueryRow(ctx, q, id))
+}
+
+// Exists — дешёвая проверка существования аккаунта по PK, без чтения полей.
+// Нужна bootstrap'у: убедиться, что аккаунт жив, ДО создания web-only customer,
+// иначе при удалённом аккаунте в customer остаётся строка-сирота.
+func (r *AccountRepo) Exists(ctx context.Context, id int64) (bool, error) {
+	const q = `SELECT EXISTS (SELECT 1 FROM cabinet_account WHERE id = $1)`
+	var ok bool
+	if err := r.pool.QueryRow(ctx, q, id).Scan(&ok); err != nil {
+		return false, fmt.Errorf("account exists: %w", err)
+	}
+	return ok, nil
 }
 
 // FindByEmail ищет аккаунт по email (case-insensitive). ErrNotFound, если нет.

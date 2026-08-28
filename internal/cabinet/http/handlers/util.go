@@ -9,6 +9,7 @@ import (
 
 	"remnawave-tg-shop-bot/internal/cabinet/auth/csrf"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/service"
+	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 )
 
 // decodeJSON парсит тело запроса в dst. При ошибке пишет 400 и возвращает false.
@@ -51,6 +52,23 @@ func writeServiceErr(w http.ResponseWriter, err error, op string) {
 		slog.Error("cabinet handler error", "op", op, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
+}
+
+// handleAccountGone отвечает 401, если err — bootstrap.ErrAccountGone: аккаунт
+// удалён, а access-JWT ещё не истёк. Возвращает true, если ответ уже записан.
+//
+// 401 здесь важнее «честного» 404/410: фронт (web/cabinet/src/lib/api.ts) на 401
+// пробует refresh, тот падает (cabinet_session удалён каскадом) и вызывает
+// logout — вкладка разлогинивается сразу, а не досиживает до конца TTL,
+// продолжая дёргать API от имени несуществующего аккаунта.
+func handleAccountGone(w http.ResponseWriter, err error, op string, accountID int64) bool {
+	if !errors.Is(err, bootstrap.ErrAccountGone) {
+		return false
+	}
+	slog.Info("cabinet: request from deleted account", "op", op, "account_id", accountID)
+	w.Header().Set("WWW-Authenticate", `Bearer realm="cabinet", error="invalid_token"`)
+	http.Error(w, "unauthorized", http.StatusUnauthorized)
+	return true
 }
 
 func nowUnix() int64 {

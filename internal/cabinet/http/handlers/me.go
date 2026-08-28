@@ -136,7 +136,11 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 	acc, err := h.accounts.FindByID(r.Context(), claims.AccountID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			http.Error(w, "account not found", http.StatusNotFound)
+			// Токен валиден, а аккаунта нет — он удалён. 404 фронт не считает
+			// причиной разлогина и вкладка продолжает жить до конца TTL, поэтому
+			// отвечаем 401: refresh упадёт (cabinet_session удалён каскадом) и
+			// клиент выйдет из сессии сразу.
+			handleAccountGone(w, bootstrap.ErrAccountGone, "me.get", claims.AccountID)
 			return
 		}
 		slog.Error("me: find account failed", "error", err.Error())
@@ -188,6 +192,9 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 			if link2, err2 := h.bootstrap.EnsureForAccount(r.Context(), acc.ID, acc.Language); err2 == nil {
 				id := link2.CustomerID
 				customerID = &id
+			} else if handleAccountGone(w, err2, "me.get", acc.ID) {
+				// Аккаунт удалён между FindByID и bootstrap'ом — ответ уже записан.
+				return
 			} else {
 				slog.Warn("me: bootstrap failed", "account_id", acc.ID, "error", err2)
 			}
@@ -716,6 +723,9 @@ func (h *MeHandler) GetDevices(w http.ResponseWriter, r *http.Request) {
 	}
 	link, err := h.bootstrap.EnsureForAccount(r.Context(), claims.AccountID, "")
 	if err != nil || link == nil {
+		if handleAccountGone(w, err, "me.devices", claims.AccountID) {
+			return
+		}
 		writeJSON(w, http.StatusOK, meDevicesResp{Enabled: false, Devices: []meDeviceItem{}})
 		return
 	}
@@ -790,6 +800,9 @@ func (h *MeHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	link, err := h.bootstrap.EnsureForAccount(r.Context(), claims.AccountID, "")
 	if err != nil || link == nil {
+		if handleAccountGone(w, err, "me.delete_device", claims.AccountID) {
+			return
+		}
 		http.Error(w, "subscription not found", http.StatusNotFound)
 		return
 	}
@@ -842,6 +855,9 @@ func (h *MeHandler) PostHwidExtraApply(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	link, err := h.bootstrap.EnsureForAccount(ctx, claims.AccountID, "")
 	if err != nil || link == nil {
+		if handleAccountGone(w, err, "me.hwid_extra_apply", claims.AccountID) {
+			return
+		}
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}

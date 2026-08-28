@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -60,15 +61,48 @@ func scanLink(row pgx.Row) (*AccountCustomerLink, error) {
 
 // Create вставляет новую связь. UNIQUE (account_id) гарантирует, что у одного
 // аккаунта не может быть двух customer'ов. При конфликте — ErrConflict.
+//
+// Вставка идёт через SELECT ... WHERE EXISTS, а не VALUES: если аккаунт уже
+// удалён (живой access-JWT удалённого аккаунта), строк не вставится и мы вернём
+// ErrAccountMissing вместо того, чтобы уронить FK и засорить лог PostgreSQL
+// ошибками cabinet_account_customer_link_account_id_fkey.
 func (r *AccountCustomerLinkRepo) Create(ctx context.Context, accountID, customerID int64, status string) (*AccountCustomerLink, error) {
 	if status == "" {
 		status = LinkStatusLinked
 	}
 	const q = `
 		INSERT INTO cabinet_account_customer_link (account_id, customer_id, link_status)
-		VALUES ($1, $2, $3)
+		SELECT $1, $2, $3
+		WHERE EXISTS (SELECT 1 FROM cabinet_account WHERE id = $1)
 		RETURNING ` + linkSelectCols
-	return scanLink(r.pool.QueryRow(ctx, q, accountID, customerID, status))
+	link, err := scanLink(r.pool.QueryRow(ctx, q, accountID, customerID, status))
+	if err != nil {
+		// Нет вставленных строк = EXISTS не прошёл, аккаунта нет.
+		if errors.Is(err, ErrNotFound) {
+			return nil, ErrAccountMissing
+		}
+		// Гонка: аккаунт удалён между снимком EXISTS и коммитом вставки.
+		if isAccountFKViolation(err) {
+			return nil, ErrAccountMissing
+		}
+		return nil, err
+	}
+	return link, nil
+}
+
+// isAccountFKViolation — нарушение FK именно по account_id (23503).
+// Проверка по тексту, как isUniqueViolation в merge_audit.go: pgconn у нас
+// indirect-зависимость, и городить типизированную распаковку ради одного места
+// не хочется.
+func isAccountFKViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "23503") && !strings.Contains(msg, "foreign key constraint") {
+		return false
+	}
+	return strings.Contains(msg, "cabinet_account_customer_link_account_id_fkey")
 }
 
 // FindByAccountID — основной lookup. ErrNotFound, если связи ещё нет (аккаунт

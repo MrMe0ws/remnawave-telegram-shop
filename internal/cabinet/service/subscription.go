@@ -158,6 +158,11 @@ func (s *Subscription) Get(ctx context.Context, accountID int64) (*SubscriptionR
 		}
 		link, err = s.bootstrap.EnsureForAccount(ctx, accountID, "")
 		if err != nil {
+			// Аккаунт удалён, а токен ещё жив — пустой 200 обманет клиента и он
+			// продолжит опрашивать API до конца TTL. Отдаём ошибку, handler → 401.
+			if errors.Is(err, bootstrap.ErrAccountGone) {
+				return nil, err
+			}
 			slog.Warn("subscription: bootstrap failed", "account_id", accountID, "error", err)
 			return &SubscriptionResponse{}, nil
 		}
@@ -336,6 +341,9 @@ func (s *Subscription) LoyaltyHistory(ctx context.Context, accountID int64, limi
 		}
 		link, err = s.bootstrap.EnsureForAccount(ctx, accountID, "")
 		if err != nil {
+			if errors.Is(err, bootstrap.ErrAccountGone) {
+				return nil, err
+			}
 			slog.Warn("subscription loyalty history: bootstrap failed", "account_id", accountID, "error", err)
 			return &LoyaltyHistoryResponse{Items: []LoyaltyHistoryItem{}}, nil
 		}

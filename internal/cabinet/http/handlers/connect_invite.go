@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/cabinet/connectinvite"
 	"remnawave-tg-shop-bot/internal/cabinet/deeplink"
@@ -75,6 +76,9 @@ func (h *ConnectInviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// об этом сразу.
 	resp, err := h.svc.Get(r.Context(), claims.AccountID)
 	if err != nil {
+		if handleAccountGone(w, err, "connect_invite.issue", claims.AccountID) {
+			return
+		}
 		slog.Error("connect-invite: get subscription failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -146,6 +150,12 @@ func (h *ConnectInviteHandler) Resolve(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.svc.Get(r.Context(), accountID)
 	if err != nil {
+		// Аккаунт-владелец удалён — приглашение мертво. Гостю здесь не нужен
+		// 401 (сессии у него нет): отвечаем так же, как на битый токен.
+		if errors.Is(err, bootstrap.ErrAccountGone) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "invite_invalid"})
+			return
+		}
 		slog.Error("connect-invite: resolve failed", "account_id", accountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

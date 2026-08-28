@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	cabmetrics "remnawave-tg-shop-bot/internal/cabinet/metrics"
 	"remnawave-tg-shop-bot/internal/cabinet/payments"
@@ -241,6 +242,9 @@ func parsePaymentStatusID(path string) (int64, error) {
 // логируется и превращается в 500 без деталей.
 func writePaymentsErr(w http.ResponseWriter, err error, op string) {
 	switch {
+	case errors.Is(err, bootstrap.ErrAccountGone):
+		// Аккаунт удалён, а access-JWT ещё жив: 401 заставит фронт разлогиниться.
+		handleAccountGone(w, err, op, 0)
 	case errors.Is(err, payments.ErrInvalidInput),
 		errors.Is(err, payments.ErrProviderDisabled):
 		http.Error(w, err.Error(), http.StatusBadRequest)

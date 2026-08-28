@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -61,6 +62,9 @@ func (s *Subscription) LoyaltyDashboard(ctx context.Context, accountID int64) (*
 			}
 			link, err = s.bootstrap.EnsureForAccount(ctx, accountID, "")
 			if err != nil || link == nil {
+				if errors.Is(err, bootstrap.ErrAccountGone) {
+					return err
+				}
 				return nil
 			}
 		}

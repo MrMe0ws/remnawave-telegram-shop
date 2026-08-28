@@ -24,12 +24,42 @@ import (
 type CustomerBootstrap struct {
 	customerRepo *database.CustomerRepository
 	linkRepo     *repository.AccountCustomerLinkRepo
+	accountRepo  *repository.AccountRepo      // опционально: предпроверка «аккаунт жив»
 	referralRepo *database.ReferralRepository // опционально: регистрация по ?ref=
 }
 
 // NewCustomerBootstrap — конструктор. referralRepo может быть nil — тогда AttachReferralAfterWebRegister не создаёт строки.
-func NewCustomerBootstrap(customerRepo *database.CustomerRepository, linkRepo *repository.AccountCustomerLinkRepo, referralRepo *database.ReferralRepository) *CustomerBootstrap {
-	return &CustomerBootstrap{customerRepo: customerRepo, linkRepo: linkRepo, referralRepo: referralRepo}
+// accountRepo тоже может быть nil: тогда удалённый аккаунт отловится не предпроверкой,
+// а guarded-insert'ом в linkRepo.Create — ценой одной строки-сироты в customer.
+func NewCustomerBootstrap(customerRepo *database.CustomerRepository, linkRepo *repository.AccountCustomerLinkRepo, accountRepo *repository.AccountRepo, referralRepo *database.ReferralRepository) *CustomerBootstrap {
+	return &CustomerBootstrap{customerRepo: customerRepo, linkRepo: linkRepo, accountRepo: accountRepo, referralRepo: referralRepo}
+}
+
+// ensureAccountAlive — предпроверка перед созданием customer'а. Возвращает
+// ErrAccountGone, если строки cabinet_account уже нет. Ошибки самой проверки не
+// фатальны: пропускаем дальше, guarded-insert в linkRepo.Create поймает удаление.
+func (b *CustomerBootstrap) ensureAccountAlive(ctx context.Context, accountID int64) error {
+	if b.accountRepo == nil {
+		return nil
+	}
+	alive, err := b.accountRepo.Exists(ctx, accountID)
+	if err != nil {
+		slog.Warn("bootstrap: account exists check failed", "account_id", accountID, "error", err)
+		return nil
+	}
+	if !alive {
+		return ErrAccountGone
+	}
+	return nil
+}
+
+// mapLinkCreateErr переводит ErrAccountMissing из репозитория в ErrAccountGone,
+// чтобы HTTP-слой отличал «аккаунт удалён» от прочих сбоев вставки.
+func mapLinkCreateErr(err error) error {
+	if errors.Is(err, repository.ErrAccountMissing) {
+		return ErrAccountGone
+	}
+	return err
 }
 
 // EnsureForAccount гарантирует, что у данного cabinet_account есть link на
@@ -56,6 +86,10 @@ func (b *CustomerBootstrap) EnsureForAccount(ctx context.Context, accountID int6
 		return nil, fmt.Errorf("bootstrap: find link: %w", err)
 	}
 
+	if err := b.ensureAccountAlive(ctx, accountID); err != nil {
+		return nil, err
+	}
+
 	telegramID := utils.SyntheticTelegramID(accountID)
 	customer, err := b.customerRepo.CreateWebOnly(ctx, telegramID, language)
 	if err != nil {
@@ -66,6 +100,9 @@ func (b *CustomerBootstrap) EnsureForAccount(ctx context.Context, accountID int6
 	if err != nil {
 		if link2, err2 := b.linkRepo.FindByAccountID(ctx, accountID); err2 == nil {
 			return link2, nil
+		}
+		if mapped := mapLinkCreateErr(err); errors.Is(mapped, ErrAccountGone) {
+			return nil, mapped
 		}
 		return nil, fmt.Errorf("bootstrap: create link: %w", err)
 	}
@@ -99,6 +136,10 @@ func (b *CustomerBootstrap) EnsureForAccountTelegram(ctx context.Context, accoun
 		return b.reconcileTelegramLink(ctx, accountID, telegramUserID, link)
 	}
 
+	if err := b.ensureAccountAlive(ctx, accountID); err != nil {
+		return nil, err
+	}
+
 	// Нет link: попробовать привязать существующего ботового customer.
 	botCust, err := b.customerRepo.FindByTelegramId(ctx, telegramUserID)
 	if err != nil {
@@ -118,6 +159,9 @@ func (b *CustomerBootstrap) EnsureForAccountTelegram(ctx context.Context, accoun
 		if err != nil {
 			if link2, err2 := b.linkRepo.FindByAccountID(ctx, accountID); err2 == nil {
 				return link2, nil
+			}
+			if mapped := mapLinkCreateErr(err); errors.Is(mapped, ErrAccountGone) {
+				return nil, mapped
 			}
 			return nil, fmt.Errorf("bootstrap: create link to telegram customer: %w", err)
 		}
@@ -143,6 +187,9 @@ func (b *CustomerBootstrap) EnsureForAccountTelegram(ctx context.Context, accoun
 	if err != nil {
 		if link2, err2 := b.linkRepo.FindByAccountID(ctx, accountID); err2 == nil {
 			return link2, nil
+		}
+		if mapped := mapLinkCreateErr(err); errors.Is(mapped, ErrAccountGone) {
+			return nil, mapped
 		}
 		return nil, fmt.Errorf("bootstrap: create link to bot customer: %w", err)
 	}

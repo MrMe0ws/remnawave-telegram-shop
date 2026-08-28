@@ -86,7 +86,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// auth/service — так тот же сервис переиспользуется будущим merge-сервисом.
 	customerRepo := database.NewCustomerRepository(pool)
 	referralRepo := database.NewReferralRepository(pool)
-	customerBootstrap := bootstrap.NewCustomerBootstrap(customerRepo, linkRepo, referralRepo)
+	customerBootstrap := bootstrap.NewCustomerBootstrap(customerRepo, linkRepo, accountRepo, referralRepo)
 
 	// TariffRepository — только для tariffs-режима; в classic-режиме catalog
 	// ходит только в env. Создаём всегда и отдаём catalog'у: он сам выбирает

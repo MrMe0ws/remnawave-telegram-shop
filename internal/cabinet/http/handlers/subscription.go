@@ -43,6 +43,9 @@ func (h *SubscriptionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.Get(r.Context(), claims.AccountID)
 	if err != nil {
+		if handleAccountGone(w, err, "subscription.get", claims.AccountID) {
+			return
+		}
 		slog.Error("subscription: get failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -88,6 +91,9 @@ func (h *SubscriptionHandler) Deeplink(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.svc.Get(r.Context(), claims.AccountID)
 	if err != nil {
+		if handleAccountGone(w, err, "subscription.deeplink", claims.AccountID) {
+			return
+		}
 		slog.Error("deeplink: get subscription failed", "account_id", claims.AccountID, "app", app, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -130,6 +136,9 @@ func (h *SubscriptionHandler) Loyalty(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.LoyaltyDashboard(r.Context(), claims.AccountID)
 	if err != nil {
+		if handleAccountGone(w, err, "subscription.loyalty", claims.AccountID) {
+			return
+		}
 		slog.Error("subscription: loyalty failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -164,6 +173,9 @@ func (h *SubscriptionHandler) LoyaltyHistory(w http.ResponseWriter, r *http.Requ
 	}
 	resp, err := h.svc.LoyaltyHistory(r.Context(), claims.AccountID, limit, offset)
 	if err != nil {
+		if handleAccountGone(w, err, "subscription.loyalty_history", claims.AccountID) {
+			return
+		}
 		slog.Error("subscription: loyalty history failed", "account_id", claims.AccountID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

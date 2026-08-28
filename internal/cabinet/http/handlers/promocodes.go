@@ -99,6 +99,9 @@ func (h *PromoCodesHandler) GetState(w http.ResponseWriter, r *http.Request) {
 	}
 	customer, err := h.loadCustomer(r.Context(), claims.AccountID)
 	if err != nil || customer == nil {
+		if handleAccountGone(w, err, "promocodes.state", claims.AccountID) {
+			return
+		}
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -146,6 +149,9 @@ func (h *PromoCodesHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	}
 	customer, err := h.loadCustomer(r.Context(), claims.AccountID)
 	if err != nil || customer == nil {
+		if handleAccountGone(w, err, "promocodes.activate", claims.AccountID) {
+			return
+		}
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
