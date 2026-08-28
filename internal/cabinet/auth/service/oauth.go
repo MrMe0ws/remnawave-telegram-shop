@@ -973,9 +973,32 @@ func (s *Service) linkTelegramIdentity(ctx context.Context, accountID, tgID int6
 		}
 		return nil
 	}
-	// If current account already has a different customer and Telegram resolves to another customer,
-	// create merge-claim immediately (even if second customer is not linked to another cabinet account).
-	if s.lookupCustomers != nil && s.lookupLinks != nil && s.saveMergeTelegramClaim != nil {
+	// Порядок проверок здесь принципиален.
+	//
+	// Сначала выясняем, не принадлежит ли этот Telegram ДРУГОМУ кабинет-аккаунту:
+	// такой аккаунт нужно поглотить, а для этого merge должен получить claim с
+	// PeerAccountID. Раньше первой стояла ветка «просто telegram-claim», она
+	// перехватывала почти все случаи, peer в claim не попадал — и после merge
+	// второй аккаунт оставался жить рядом с тем же customer (или терял link
+	// вместе с подпиской), а его telegram-привязку забирал текущий аккаунт.
+	linkedAcc := s.findAccountLinkedToTelegramCustomer(ctx, tgID)
+	if linkedAcc == nil && s.lookupLinks != nil {
+		pid := strconv.FormatInt(tgID, 10)
+		if resolved, rerr := s.ResolveIdentity(ctx, accountID, repository.ProviderTelegram, pid); rerr == nil &&
+			resolved.Status == IdentityLinkedToOther && resolved.AccountID > 0 {
+			// Peer годится в merge, только если у него есть свой customer:
+			// иначе поглощать нечего, а claim без link merge не примет.
+			if _, lerr := s.lookupLinks.FindByAccountID(ctx, resolved.AccountID); lerr == nil {
+				if acc, aerr := s.accounts.FindByID(ctx, resolved.AccountID); aerr == nil && acc != nil {
+					linkedAcc = acc
+				}
+			}
+		}
+	}
+
+	// Telegram свободен, но у текущего аккаунта уже другой customer —
+	// сливаем клиентов без поглощения аккаунта (второго аккаунта просто нет).
+	if linkedAcc == nil && s.lookupCustomers != nil && s.lookupLinks != nil && s.saveMergeTelegramClaim != nil {
 		curLink := ensureCurrentLink()
 		if curLink != nil {
 			tgCust, cerr := s.lookupCustomers.FindByTelegramId(ctx, tgID)
@@ -993,7 +1016,6 @@ func (s *Service) linkTelegramIdentity(ctx context.Context, accountID, tgID int6
 			}
 		}
 	}
-	linkedAcc := s.findAccountLinkedToTelegramCustomer(ctx, tgID)
 	if linkedAcc != nil && linkedAcc.ID != accountID {
 		if s.saveMergeEmailPeerClaim != nil {
 			if err := s.saveMergeEmailPeerClaim(ctx, accountID, linkedAcc.ID); err != nil {

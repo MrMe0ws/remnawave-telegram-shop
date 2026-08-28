@@ -30,10 +30,6 @@ var (
 	// ErrNoClaimFound — /merge/preview|confirm без claim: нужен /link/telegram/confirm или привязка email с merge (пароль «чужого» аккаунта).
 	ErrNoClaimFound = errors.New("linking: no merge claim; confirm Telegram or complete email link with merge")
 
-	// ErrDangerousConflict — merge опасен (две активные подписки с разными ссылками).
-	// Требует force=true.
-	ErrDangerousConflict = errors.New("linking: dangerous merge conflict; pass force=true to proceed")
-
 	// ErrMergeAlreadyDone — Idempotency-Key уже был использован, merge выполнен ранее.
 	ErrMergeAlreadyDone = errors.New("linking: merge already completed (idempotency key reuse)")
 
@@ -78,8 +74,11 @@ type MergePreview struct {
 	PurchasesMoved  int               // кол-во переносимых purchase
 	ReferralsMoved  int               // кол-во переnosимых referral
 	IsNoop          bool              // customer_web == customer_tg
-	IsDangerous     bool              // устарело: для UI слияния используйте RequiresSubscriptionChoice
-	DangerReason    string
+	// IsDangerous / DangerReason — устаревшие поля ответа: всегда false/"".
+	// Оставлены только ради совместимости JSON-контракта с уже выкаченным
+	// фронтендом; решение о слиянии принимает RequiresSubscriptionChoice.
+	IsDangerous  bool
+	DangerReason string
 	// RequiresSubscriptionChoice — оба профиля имеют expire_at; нужен явный выбор подписки (web|tg).
 	RequiresSubscriptionChoice bool
 	// UISwapSides — подсказка UI: при merge с peer по email при привязанном Telegram
@@ -276,62 +275,65 @@ func (s *MergeService) SaveEmailPeerClaim(ctx context.Context, currentAccountID,
 		}
 		return fmt.Errorf("linking: peer link: %w", err)
 	}
-	cust, err := s.customers.FindById(ctx, linkPeer.CustomerID)
+	peerCustomer, err := s.customers.FindById(ctx, linkPeer.CustomerID)
 	if err != nil {
 		return fmt.Errorf("linking: peer customer: %w", err)
 	}
-	if cust == nil {
+	if peerCustomer == nil {
 		return fmt.Errorf("linking: peer customer not found")
 	}
-	linkCur, errCur := s.links.FindByAccountID(ctx, currentAccountID)
-	if errCur == nil && linkCur != nil && linkCur.CustomerID == linkPeer.CustomerID {
-		return fmt.Errorf("linking: peer customer same as current")
-	}
 
-	tgUser := ""
-	if cust.TelegramUsername != nil {
-		tgUser = strings.TrimSpace(*cust.TelegramUsername)
-	}
-	peerTelegramID, peerHasRealTelegram := s.telegramIDFromIdentity(ctx, peerAccountID)
-	if !peerHasRealTelegram && !utils.IsSyntheticTelegramID(cust.TelegramID) && cust.TelegramID > 0 {
-		peerTelegramID = cust.TelegramID
-		peerHasRealTelegram = true
-	}
-
-	claimTelegramID := cust.TelegramID
-	cid := cust.ID
-	// Если peer-email аккаунт не содержит реального Telegram, пробуем взять его
-	// у текущего аккаунта, чтобы merge не «потерял» bot-facing привязку.
-	if !peerHasRealTelegram {
-		if linkCur, err := s.links.FindByAccountID(ctx, currentAccountID); err == nil && linkCur != nil {
-			if curCust, cerr := s.customers.FindById(ctx, linkCur.CustomerID); cerr == nil && curCust != nil {
-				if curTelegramID, curHasRealTelegram := s.telegramIDFromIdentity(ctx, currentAccountID); curHasRealTelegram {
-					claimTelegramID = curTelegramID
-					cid = curCust.ID
-					if curCust.TelegramUsername != nil && strings.TrimSpace(*curCust.TelegramUsername) != "" {
-						tgUser = strings.TrimSpace(*curCust.TelegramUsername)
-					}
-				} else if !utils.IsSyntheticTelegramID(curCust.TelegramID) && curCust.TelegramID > 0 {
-					claimTelegramID = curCust.TelegramID
-					cid = curCust.ID
-					if curCust.TelegramUsername != nil && strings.TrimSpace(*curCust.TelegramUsername) != "" {
-						tgUser = strings.TrimSpace(*curCust.TelegramUsername)
-					}
-				}
-			}
+	var currentCustomer *database.Customer
+	if linkCur, errCur := s.links.FindByAccountID(ctx, currentAccountID); errCur == nil && linkCur != nil {
+		if linkCur.CustomerID == linkPeer.CustomerID {
+			return fmt.Errorf("linking: peer customer same as current")
 		}
-	} else {
-		claimTelegramID = peerTelegramID
+		if c, cerr := s.customers.FindById(ctx, linkCur.CustomerID); cerr == nil {
+			currentCustomer = c
+		}
 	}
 
-	claim := TelegramClaim{
+	// Реальный Telegram для claim. Приоритет у Telegram ТЕКУЩЕГО аккаунта: бот
+	// адресует клиента по telegram_id, и подменять «свой» Telegram чужим при
+	// слиянии нельзя. Если настоящего Telegram нет ни у одной стороны, в claim
+	// уходит 0: синтетический id web-only клиента Telegram'ом не является и
+	// привязкой стать не должен.
+	currentIdentityTG, _ := s.telegramIDFromIdentity(ctx, currentAccountID)
+	peerIdentityTG, _ := s.telegramIDFromIdentity(ctx, peerAccountID)
+	claimTelegramID := firstRealTelegramID(
+		currentIdentityTG,
+		telegramIDOf(currentCustomer),
+		peerIdentityTG,
+		telegramIDOf(peerCustomer),
+	)
+
+	tgUser := trimmedTelegramUsername(peerCustomer)
+	if tgUser == "" {
+		tgUser = trimmedTelegramUsername(currentCustomer)
+	}
+
+	cid := peerCustomer.ID
+	s.claims.Save(currentAccountID, TelegramClaim{
 		TelegramID:       claimTelegramID,
 		TelegramUsername: tgUser,
 		CustomerTgID:     &cid,
 		PeerAccountID:    peerAccountID,
-	}
-	s.claims.Save(currentAccountID, claim)
+	})
+	slog.Info("claim_saved",
+		"source", "email_peer",
+		"kind", "email_peer",
+		"account_id", currentAccountID,
+		"peer_account_id", peerAccountID,
+		"has_real_telegram", claimTelegramID > 0,
+	)
 	return nil
+}
+
+func trimmedTelegramUsername(c *database.Customer) string {
+	if c == nil || c.TelegramUsername == nil {
+		return ""
+	}
+	return strings.TrimSpace(*c.TelegramUsername)
 }
 
 // telegramIDFromIdentity возвращает real Telegram ID из cabinet_identity(account, provider=telegram).
@@ -352,10 +354,14 @@ func (s *MergeService) telegramIDFromIdentity(ctx context.Context, accountID int
 		return 0, false
 	}
 	parsed, perr := strconv.ParseInt(strings.TrimSpace(providerUID), 10, 64)
-	if perr != nil || parsed <= 0 {
+	if perr != nil {
 		return 0, false
 	}
-	return parsed, true
+	// Синтетический id — не Telegram, см. realTelegramID.
+	if real := realTelegramID(parsed); real > 0 {
+		return real, true
+	}
+	return 0, false
 }
 
 // SaveTelegramOIDCClaim сохраняет merge-claim после Telegram OIDC link/start callback.
@@ -452,19 +458,175 @@ func (s *MergeService) Merge(ctx context.Context, accountID int64, idempotencyKe
 // Ядро merge (используется и в dry-run, и в реальном merge)
 // ============================================================================
 
-// mergePreservesTelegramCustomerRow — инвариант «Telegram-first»: при привязанном
-// Telegram к cabinet-аккаунту строка customer с реальным telegram_id не удаляется
-// merge'ом в пользу другого customer; keep=web означает только перенос полей
-// подписки с web-customer на telegram-customer (см. mergeWinner/mergeLoser ниже).
-// keep — нормализованное "web" | "tg" (после логики reqChoice).
-func mergePreservesTelegramCustomerRow(keep string, accountHasTelegramIdentity bool) bool {
-	k := strings.TrimSpace(strings.ToLower(keep))
-	return k == "tg" || accountHasTelegramIdentity
+// keepWeb / keepTg — значения keep_subscription.
+const (
+	keepWeb = "web"
+	keepTg  = "tg"
+)
+
+// mergeSides — обе стороны слияния после разбора claim.
+type mergeSides struct {
+	web *database.Customer
+	tg  *database.Customer
+	// uiSwap — см. MergePreview.UISwapSides.
+	uiSwap bool
+	// finalTelegramID — реальный Telegram, который обязан оказаться у выжившего.
+	// 0 означает «реального Telegram в слиянии нет» (два web-аккаунта).
+	finalTelegramID int64
+	// absorb — кабинет-аккаунты, которые обязаны исчезнуть в пользу текущего:
+	// peer из claim и владельцы участвующих customer. Без этого после merge
+	// на одном customer остались бы два аккаунта, либо второй аккаунт остался
+	// бы жив, но без подписки.
+	absorb []int64
+}
+
+// mergePlan — форма конкретного слияния.
+type mergePlan struct {
+	result          string // repository.MergeResult*
+	reason          string
+	finalCustomerID int64
+	purchasesMoved  int
+	referralsMoved  int
+	isNoop          bool
+
+	// rwWinner/rwLoser — стороны с точки зрения ПОДПИСКИ, а не строки customer.
+	// Профиль панели проигравшей стороны удаляется, профиль выигравшей
+	// переезжает на выжившего клиента вместе с remnawave_user_id.
+	rwWinner *database.Customer
+	rwLoser  *database.Customer
+}
+
+// resolveSides блокирует и раскладывает участников merge по сторонам.
+func (s *MergeService) resolveSides(ctx context.Context, tx pgx.Tx, accountID int64, claim *TelegramClaim) (mergeSides, error) {
+	var sides mergeSides
+
+	// customer текущего аккаунта.
+	curCustomerID, hasLink, err := lockLinkedCustomerID(ctx, tx, accountID)
+	if err != nil {
+		return sides, fmt.Errorf("linking: read current link: %w", err)
+	}
+	if hasLink {
+		sides.web, err = lockCustomerByID(ctx, tx, curCustomerID)
+		if err != nil {
+			if !errors.Is(err, repository.ErrNotFound) {
+				return sides, fmt.Errorf("linking: lock customer_web: %w", err)
+			}
+			sides.web = nil
+		}
+	}
+	currentOwnCustomer := sides.web
+
+	// customer со стороны Telegram.
+	if claim.CustomerTgID != nil {
+		sides.tg, err = lockCustomerByID(ctx, tx, *claim.CustomerTgID)
+		if err != nil {
+			if !errors.Is(err, repository.ErrNotFound) {
+				return sides, fmt.Errorf("linking: lock customer_tg: %w", err)
+			}
+			// Протухший in-memory claim: id мог исчезнуть после admin/sync.
+			sides.tg = nil
+		}
+	}
+	if sides.tg == nil && realTelegramID(claim.TelegramID) > 0 {
+		sides.tg, err = lockCustomerByTelegramID(ctx, tx, claim.TelegramID)
+		if err != nil {
+			if !errors.Is(err, repository.ErrNotFound) {
+				return sides, fmt.Errorf("linking: lock customer_tg by telegram_id: %w", err)
+			}
+			sides.tg = nil
+		}
+	}
+
+	// Инвариант Telegram-first: если у аккаунта уже есть telegram identity,
+	// каноническая tg-сторона — customer именно с этим реальным telegram_id.
+	currentTelegramID, currentHasTelegram := s.telegramIDFromIdentityTx(ctx, tx, accountID)
+	if currentHasTelegram {
+		canonical, terr := lockCustomerByTelegramID(ctx, tx, currentTelegramID)
+		if terr != nil && !errors.Is(terr, repository.ErrNotFound) {
+			return sides, fmt.Errorf("linking: lock current telegram customer: %w", terr)
+		}
+		if terr == nil && canonical != nil {
+			sides.tg = canonical
+			claim.TelegramID = currentTelegramID
+		}
+	}
+
+	// Merge по email/OAuth: вторая сторона — customer peer-аккаунта.
+	if claim.PeerAccountID > 0 && claim.PeerAccountID != accountID {
+		peerCustomerID, peerHasLink, perr := lockLinkedCustomerID(ctx, tx, claim.PeerAccountID)
+		if perr != nil {
+			return sides, fmt.Errorf("linking: peer link lookup: %w", perr)
+		}
+		if peerHasLink {
+			peerCustomer, lockErr := lockCustomerByID(ctx, tx, peerCustomerID)
+			if lockErr != nil && !errors.Is(lockErr, repository.ErrNotFound) {
+				return sides, fmt.Errorf("linking: lock peer customer: %w", lockErr)
+			}
+			if lockErr == nil && peerCustomer != nil {
+				switch {
+				case sides.tg != nil && sides.tg.ID != peerCustomer.ID:
+					// tg-сторона занята каноническим Telegram-клиентом:
+					// peer встаёт web-стороной, карточки в UI меняются местами.
+					sides.web = peerCustomer
+					sides.uiSwap = currentOwnCustomer == nil || currentOwnCustomer.ID != peerCustomer.ID
+				case sides.tg == nil:
+					sides.tg = peerCustomer
+				}
+			}
+		}
+		sides.absorb = appendUnique(sides.absorb, claim.PeerAccountID)
+	}
+
+	// Собственный customer текущего аккаунта может не попасть ни в одну из
+	// сторон: так бывает, если у аккаунта есть telegram identity, но link ведёт
+	// на третьего клиента. Слить троих за один проход мы не умеем — фиксируем
+	// это в логе, иначе строка молча осталась бы без владельца.
+	if currentOwnCustomer != nil &&
+		(sides.web == nil || sides.web.ID != currentOwnCustomer.ID) &&
+		(sides.tg == nil || sides.tg.ID != currentOwnCustomer.ID) {
+		slog.Warn("linking: current account customer is not part of the merge; it will be left unlinked",
+			"account_id", accountID, "customer_id", currentOwnCustomer.ID)
+	}
+
+	// Реальный Telegram выжившего. Приоритет у Telegram ТЕКУЩЕГО аккаунта:
+	// бот адресует клиента по telegram_id, и подменять «свой» Telegram чужим
+	// при слиянии нельзя.
+	sides.finalTelegramID = firstRealTelegramID(
+		currentTelegramID,
+		telegramIDOf(currentOwnCustomer),
+		claim.TelegramID,
+		telegramIDOf(sides.tg),
+		telegramIDOf(sides.web),
+	)
+
+	// Любой второй аккаунт, висящий на участвующих customer, поглощается.
+	for _, c := range []*database.Customer{sides.web, sides.tg} {
+		if c == nil {
+			continue
+		}
+		owners, oerr := accountsLinkedToCustomer(ctx, tx, c.ID)
+		if oerr != nil {
+			return sides, fmt.Errorf("linking: owners of customer %d: %w", c.ID, oerr)
+		}
+		for _, owner := range owners {
+			if owner != accountID {
+				sides.absorb = appendUnique(sides.absorb, owner)
+			}
+		}
+	}
+
+	return sides, nil
 }
 
 // doMerge выполняет merge-транзакцию.
 // dryRun=true → ROLLBACK в конце, preview заполнен, mergeResult=nil.
 // dryRun=false → COMMIT, mergeResult заполнен.
+//
+// Устройство: сначала раскладываем стороны и считаем preview, затем одна
+// ветка мутаций по форме merge, затем ОБЩИЙ хвост (link, поглощение вторых
+// аккаунтов, identity, аудит, commit). Общий хвост принципиален: раньше
+// ветки noop/linked выходили до него, и привязки email/соцсетей второго
+// аккаунта молча терялись, а merge при этом рапортовал успех.
 func (s *MergeService) doMerge(
 	ctx context.Context,
 	accountID int64,
@@ -487,76 +649,14 @@ func (s *MergeService) doMerge(
 		}
 	}()
 
-	// Читаем customer_web (текущий link аккаунта).
-	link, linkErr := s.links.FindByAccountID(ctx, accountID)
-	var custWeb *database.Customer
-	if linkErr == nil {
-		custWeb, err = lockCustomerByID(ctx, tx, link.CustomerID)
-		if err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: lock customer_web: %w", err)
-		}
+	sides, err := s.resolveSides(ctx, tx, accountID, &claim)
+	if err != nil {
+		return nil, nil, auditIn, err
 	}
+	custWeb, custTg := sides.web, sides.tg
+	finalTelegramID := sides.finalTelegramID
 
-	// Читаем customer_tg по telegram_id из claim.
-	var custTg *database.Customer
-	if claim.CustomerTgID != nil {
-		custTg, err = lockCustomerByID(ctx, tx, *claim.CustomerTgID)
-		if err != nil && !errors.Is(err, repository.ErrNotFound) {
-			return nil, nil, auditIn, fmt.Errorf("linking: lock customer_tg: %w", err)
-		}
-		if errors.Is(err, repository.ErrNotFound) {
-			// Stale in-memory claim: customer id from claim may disappear after admin/sync actions.
-			// Fallback to current customer row by real telegram_id to avoid false 500 on confirm.
-			custTg, err = lockCustomerByTelegramID(ctx, tx, claim.TelegramID)
-			if err != nil && !errors.Is(err, repository.ErrNotFound) {
-				return nil, nil, auditIn, fmt.Errorf("linking: lock customer_tg by telegram_id: %w", err)
-			}
-			if errors.Is(err, repository.ErrNotFound) {
-				custTg = nil
-			}
-		}
-	}
-	// Инвариант Telegram-first: если у текущего cabinet-аккаунта уже есть
-	// telegram identity, каноническим TG-customer должен быть именно customer
-	// с этим реальным telegram_id (а не peer из email/oauth merge-flow).
-	currentTelegramID, currentHasTelegram := s.telegramIDFromIdentity(ctx, accountID)
-	if currentHasTelegram {
-		tgCanonical, tgErr := lockCustomerByTelegramID(ctx, tx, currentTelegramID)
-		if tgErr != nil && !errors.Is(tgErr, repository.ErrNotFound) {
-			return nil, nil, auditIn, fmt.Errorf("linking: lock current telegram customer: %w", tgErr)
-		}
-		if tgErr == nil && tgCanonical != nil {
-			custTg = tgCanonical
-			claim.TelegramID = currentTelegramID
-		}
-	}
-	// Email-driven merge uses peer account as the second side. After Telegram-first
-	// override above custTg may point to current canonical customer; keep peer
-	// customer in custWeb so conflict detection and subscription choice remain valid.
-	previewUISwap := false
-	if claim.PeerAccountID > 0 {
-		peerLink, peerErr := s.links.FindByAccountID(ctx, claim.PeerAccountID)
-		if peerErr != nil && !errors.Is(peerErr, repository.ErrNotFound) {
-			return nil, nil, auditIn, fmt.Errorf("linking: peer link lookup: %w", peerErr)
-		}
-		if peerErr == nil && peerLink != nil {
-			peerCustomer, lockErr := lockCustomerByID(ctx, tx, peerLink.CustomerID)
-			if lockErr != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: lock peer customer: %w", lockErr)
-			}
-			if currentHasTelegram {
-				// Telegram-first mode: current TG customer stays in custTg, peer becomes web-side.
-				custWeb = peerCustomer
-				previewUISwap = true
-			} else if custTg == nil {
-				// Legacy mode without bound telegram identity.
-				custTg = peerCustomer
-			}
-		}
-	}
-
-	preview = &MergePreview{}
-	preview.UISwapSides = previewUISwap
+	preview = &MergePreview{UISwapSides: sides.uiSwap}
 	if custWeb != nil {
 		preview.CustomerWeb = snapshotCustomer(custWeb)
 	}
@@ -564,284 +664,277 @@ func (s *MergeService) doMerge(
 		preview.CustomerTg = snapshotCustomer(custTg)
 	}
 
-	// ─────────────────────────────────────────────────────────────
-	// No-op cases
-	// ─────────────────────────────────────────────────────────────
-	if custTg == nil && custWeb == nil {
-		// Оба отсутствуют — нечего делать в рамках MVP.
-		preview.IsNoop = true
-		result = &MergeResult{Result: "noop"}
-		if !dryRun {
-			auditIn = auditInput(accountID, nil, nil, repository.MergeResultLinked, "no customers to merge", idempotencyKey, dryRun)
-			_, _ = s.auditRepo.Create(ctx, tx, auditIn)
-			if err := tx.Commit(ctx); err != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: commit noop: %w", err)
-			}
-			committed = true
-		}
-		return preview, result, auditIn, nil
-	}
-
-	if custTg == nil {
-		// Telegram claim не привязан к существующему customer в боте.
-		// Просто обновляем customer_web: is_web_only=false, telegram_id=claim.TelegramID.
-		preview.IsNoop = false
-		if !dryRun {
-			if err := promoteWebCustomer(ctx, tx, custWeb.ID, custWeb.TelegramID, claim.TelegramID); err != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: promote web customer: %w", err)
-			}
-			auditIn = auditInput(accountID, &custWeb.ID, &custWeb.ID, repository.MergeResultLinked, "telegram linked to web customer", idempotencyKey, false)
-			_, _ = s.auditRepo.Create(ctx, tx, auditIn)
-			if err := tx.Commit(ctx); err != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: commit promote: %w", err)
-			}
-			committed = true
-		}
-		result = &MergeResult{Result: "linked", CustomerID: custWeb.ID}
-		return preview, result, auditIn, nil
-	}
-
-	if custWeb != nil && custWeb.ID == custTg.ID {
-		// Уже один и тот же customer.
-		preview.IsNoop = true
-		result = &MergeResult{Result: "noop", CustomerID: custTg.ID}
-		if !dryRun {
-			auditIn = auditInput(accountID, &custWeb.ID, &custTg.ID, repository.MergeResultLinked, "noop: same customer", idempotencyKey, false)
-			_, _ = s.auditRepo.Create(ctx, tx, auditIn)
-			_ = tx.Commit(ctx)
-			committed = true
-		}
-		return preview, result, auditIn, nil
-	}
-
-	if custWeb == nil {
-		// Нет web-customer, есть TG-customer → просто переключаем link.
-		preview.IsNoop = false
-		if !dryRun {
-			if err := s.links.UpdateCustomerID(ctx, accountID, custTg.ID); err != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: update link: %w", err)
-			}
-			auditIn = auditInput(accountID, nil, &custTg.ID, repository.MergeResultLinked, "link to existing tg customer", idempotencyKey, false)
-			_, _ = s.auditRepo.Create(ctx, tx, auditIn)
-			if err := tx.Commit(ctx); err != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: commit link: %w", err)
-			}
-			committed = true
-		}
-		result = &MergeResult{Result: "linked", CustomerID: custTg.ID}
-		return preview, result, auditIn, nil
-	}
+	fullMerge := custWeb != nil && custTg != nil && custWeb.ID != custTg.ID
+	preview.IsNoop = (custWeb == nil && custTg == nil) ||
+		(custWeb != nil && custTg != nil && custWeb.ID == custTg.ID)
 
 	// ─────────────────────────────────────────────────────────────
-	// Полный MERGE: custWeb != nil, custTg != nil, custWeb.ID != custTg.ID
+	// Preview: подписка, накопления, необходимость выбора
 	// ─────────────────────────────────────────────────────────────
-
-	purchaseCount, err := countPurchases(ctx, tx, custWeb.ID)
-	if err != nil {
-		return nil, nil, auditIn, fmt.Errorf("linking: count purchases: %w", err)
-	}
-	referralCount, err := countReferrals(ctx, tx, custWeb.TelegramID)
-	if err != nil {
-		return nil, nil, auditIn, fmt.Errorf("linking: count referrals: %w", err)
-	}
-	preview.PurchasesMoved = purchaseCount
-	preview.ReferralsMoved = referralCount
-
-	mergedXP := custWeb.LoyaltyXP + custTg.LoyaltyXP
-	mergedExtraHwid := maxInt(custWeb.ExtraHwid, custTg.ExtraHwid)
-	preview.MergedLoyaltyXP = mergedXP
-	preview.MergedExtraHwid = mergedExtraHwid
-
-	reqChoice := subscriptionChoiceRequired(custWeb, custTg)
-	preview.RequiresSubscriptionChoice = reqChoice
-	preview.IsDangerous = false
-	preview.DangerReason = ""
-
 	keep := strings.TrimSpace(strings.ToLower(keepSubscription))
-	if !reqChoice {
-		if custWeb.ExpireAt != nil && custTg.ExpireAt == nil {
-			keep = "web"
-		} else {
-			keep = "tg"
+	mergedXP := int64(0)
+	mergedExtraHwid := 0
+
+	if fullMerge {
+		preview.PurchasesMoved, err = countPurchases(ctx, tx, custWeb.ID)
+		if err != nil {
+			return nil, nil, auditIn, fmt.Errorf("linking: count purchases: %w", err)
 		}
-	}
-	if reqChoice {
-		if keep != "web" && keep != "tg" && force {
-			keep = "tg"
+		preview.ReferralsMoved, err = countReferrals(ctx, tx, custWeb.TelegramID)
+		if err != nil {
+			return nil, nil, auditIn, fmt.Errorf("linking: count referrals: %w", err)
 		}
-		if keep != "web" && keep != "tg" {
-			if dryRun {
+
+		mergedXP = custWeb.LoyaltyXP + custTg.LoyaltyXP
+		mergedExtraHwid = maxInt(custWeb.ExtraHwid, custTg.ExtraHwid)
+		preview.MergedLoyaltyXP = mergedXP
+		preview.MergedExtraHwid = mergedExtraHwid
+
+		reqChoice := subscriptionChoiceRequired(custWeb, custTg)
+		preview.RequiresSubscriptionChoice = reqChoice
+
+		if keep != keepWeb && keep != keepTg {
+			switch {
+			case !reqChoice:
+				keep = defaultKeepSide(custWeb, custTg)
+			case force:
+				// Легаси-обходной путь: без явного выбора берём Telegram-сторону.
+				keep = keepTg
+			case dryRun:
 				preview.MergedExpireAt = nil
 				auditIn = auditInput(accountID, &custWeb.ID, &custTg.ID, repository.MergeResultDryRun, "dry_run", idempotencyKey, true)
 				_, _ = s.auditRepo.Create(ctx, tx, auditIn)
 				return preview, nil, auditIn, nil
+			default:
+				return preview, nil, auditIn, ErrSubscriptionChoiceRequired
 			}
-			return preview, nil, auditIn, ErrSubscriptionChoiceRequired
 		}
+		if keep == keepWeb {
+			preview.MergedExpireAt = custWeb.ExpireAt
+		} else {
+			preview.MergedExpireAt = custTg.ExpireAt
+		}
+	} else if alive := firstNonNilCustomer(custTg, custWeb); alive != nil {
+		preview.MergedExpireAt = alive.ExpireAt
+		preview.MergedLoyaltyXP = alive.LoyaltyXP
+		preview.MergedExtraHwid = alive.ExtraHwid
 	}
-	if keep == "web" {
-		preview.MergedExpireAt = custWeb.ExpireAt
-	} else {
-		preview.MergedExpireAt = custTg.ExpireAt
-	}
-	slog.Info("merge_decision",
-		"stage", "pre_commit",
-		"account_id", accountID,
-		"keep_subscription", keep,
-		"requires_choice", reqChoice,
-		"customer_web_id", custWeb.ID,
-		"customer_web_tg_id", custWeb.TelegramID,
-		"customer_web_has_sub", custWeb.ExpireAt != nil,
-		"customer_tg_id", custTg.ID,
-		"customer_tg_tg_id", custTg.TelegramID,
-		"customer_tg_has_sub", custTg.ExpireAt != nil,
-	)
 
 	if dryRun {
-		auditIn = auditInput(accountID, &custWeb.ID, &custTg.ID, repository.MergeResultDryRun, "dry_run", idempotencyKey, true)
+		auditIn = auditInput(accountID, optionalCustomerID(custWeb), optionalCustomerID(custTg),
+			repository.MergeResultDryRun, "dry_run", idempotencyKey, true)
 		_, _ = s.auditRepo.Create(ctx, tx, auditIn)
 		return preview, nil, auditIn, nil
 	}
 
-	var finalCustomerID int64
-	var loserForRemnawave *database.Customer
-	var winnerForRemnawave *database.Customer
-	// Если у текущего аккаунта есть telegram identity, customer c telegram_id
-	// должен выживать всегда. keep=web в таком случае означает только выбор
-	// стороны подписки/плана, но не смену канонического customer.
-	if mergePreservesTelegramCustomerRow(keep, currentHasTelegram) {
-		finalTelegramID := claim.TelegramID
-		if finalTelegramID <= 0 {
-			finalTelegramID = custTg.TelegramID
-		}
-		// If loser currently holds real Telegram ID, temporarily detach it to satisfy UNIQUE(customer.telegram_id)
-		// before rebinding winner to the same ID.
-		if custWeb.TelegramID == finalTelegramID && custTg.TelegramID != finalTelegramID {
-			tempTG := mergeTempTelegramID(custWeb.ID)
-			if _, err := tx.Exec(ctx, `UPDATE customer SET telegram_id = $2 WHERE id = $1`, custWeb.ID, tempTG); err != nil {
-				return nil, nil, auditIn, fmt.Errorf("linking: detach web telegram_id: %w", err)
+	// ─────────────────────────────────────────────────────────────
+	// Мутации по форме merge
+	// ─────────────────────────────────────────────────────────────
+	var plan mergePlan
+	switch {
+	case custWeb == nil && custTg == nil:
+		plan = mergePlan{result: repository.MergeResultLinked, reason: "no customers to merge", isNoop: true}
+
+	case custTg == nil:
+		// Telegram не имеет клиента в боте: поднимаем web-клиента на реальный id.
+		if finalTelegramID > 0 {
+			if err := promoteWebCustomer(ctx, tx, custWeb.ID, custWeb.TelegramID, finalTelegramID); err != nil {
+				return nil, nil, auditIn, fmt.Errorf("linking: promote web customer: %w", err)
 			}
 		}
-		if err := movePurchases(ctx, tx, custWeb.ID, custTg.ID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: move purchases: %w", err)
+		plan = mergePlan{
+			result: repository.MergeResultLinked, reason: "telegram linked to web customer",
+			finalCustomerID: custWeb.ID, rwWinner: custWeb,
 		}
-		if err := rebindCustomerTelegram(ctx, tx, custTg.ID, custTg.TelegramID, finalTelegramID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: rebind winner telegram_id: %w", err)
+
+	case custWeb == nil:
+		plan = mergePlan{
+			result: repository.MergeResultLinked, reason: "link to existing tg customer",
+			finalCustomerID: custTg.ID, rwWinner: custTg,
 		}
-		if err := moveReferrals(ctx, tx, custWeb.TelegramID, finalTelegramID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: move referrals: %w", err)
+
+	case custWeb.ID == custTg.ID:
+		plan = mergePlan{
+			result: repository.MergeResultLinked, reason: "noop: same customer",
+			finalCustomerID: custTg.ID, rwWinner: custTg, isNoop: true,
 		}
-		// По умолчанию поля подписки берём с tg-side; при keep=web переносим
-		// подписочные поля с web-side в telegram-customer.
-		mergeWinner := custTg
-		mergeLoser := custWeb
-		if keep == "web" {
-			mergeWinner = custWeb
-			mergeLoser = custTg
+
+	default:
+		plan, err = s.executeFullMerge(ctx, tx, fullMergeInput{
+			custWeb:         custWeb,
+			custTg:          custTg,
+			keep:            keep,
+			finalTelegramID: finalTelegramID,
+			mergedXP:        mergedXP,
+			mergedExtraHwid: mergedExtraHwid,
+			purchasesMoved:  preview.PurchasesMoved,
+			referralsMoved:  preview.ReferralsMoved,
+		})
+		if err != nil {
+			return nil, nil, auditIn, err
 		}
-		if err := applyWinnerMergedFields(ctx, tx, custTg.ID, mergeWinner, mergeLoser, mergedXP, mergedExtraHwid); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: apply merge fields: %w", err)
-		}
-		loserForRemnawave = custWeb
-		winnerForRemnawave = custTg
-		if _, err := tx.Exec(ctx,
-			`UPDATE cabinet_account_customer_link SET customer_id = $2, link_status = 'linked', updated_at = NOW() WHERE account_id = $1`,
-			accountID, custTg.ID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: update link: %w", err)
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM customer WHERE id = $1`, custWeb.ID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: delete customer_web: %w", err)
-		}
-		finalCustomerID = custTg.ID
-	} else {
-		if err := movePurchases(ctx, tx, custTg.ID, custWeb.ID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: move purchases: %w", err)
-		}
-		// Освобождаем реальный telegram_id у customer_tg (UNIQUE), чтобы web мог занять T.
-		tempTG := mergeTempTelegramID(custTg.ID)
-		if _, err := tx.Exec(ctx, `UPDATE customer SET telegram_id = $2 WHERE id = $1`, custTg.ID, tempTG); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: detach tg telegram_id: %w", err)
-		}
-		if err := promoteWebCustomer(ctx, tx, custWeb.ID, custWeb.TelegramID, claim.TelegramID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: promote web customer: %w", err)
-		}
-		if err := applyWinnerMergedFields(ctx, tx, custWeb.ID, custWeb, custTg, mergedXP, mergedExtraHwid); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: apply merge fields (keep web): %w", err)
-		}
-		// keep=web: loser is customer_tg, cleanup in RW only after successful DB commit.
-		loserForRemnawave = custTg
-		winnerForRemnawave = custWeb
-		if _, err := tx.Exec(ctx, `DELETE FROM customer WHERE id = $1`, custTg.ID); err != nil {
-			return nil, nil, auditIn, fmt.Errorf("linking: delete customer_tg: %w", err)
-		}
-		finalCustomerID = custWeb.ID
 	}
 
-	auditReason := "merged_keep_" + keep
-	if force && reqChoice {
-		auditReason += "_legacy_force"
+	// ─────────────────────────────────────────────────────────────
+	// Общий хвост: одинаков для всех форм merge
+	// ─────────────────────────────────────────────────────────────
+	if plan.finalCustomerID > 0 {
+		if err := upsertAccountLink(ctx, tx, accountID, plan.finalCustomerID); err != nil {
+			return nil, nil, auditIn, fmt.Errorf("linking: upsert link: %w", err)
+		}
 	}
-	auditIn = auditInput(accountID, &custWeb.ID, &custTg.ID, repository.MergeResultMerged, auditReason, idempotencyKey, false)
+
+	for _, peerID := range sides.absorb {
+		if err := s.absorbAccountTx(ctx, tx, accountID, peerID); err != nil {
+			return nil, nil, auditIn, err
+		}
+	}
+	if len(sides.absorb) > 0 {
+		if err := s.ensureCabinetEmailIdentityTx(ctx, tx, accountID); err != nil {
+			return nil, nil, auditIn, err
+		}
+	}
+	if finalTelegramID > 0 {
+		if err := s.ensureCabinetTelegramIdentityTx(ctx, tx, accountID, finalTelegramID); err != nil {
+			return nil, nil, auditIn, err
+		}
+	}
+
+	auditIn = auditInput(accountID, optionalCustomerID(custWeb), optionalCustomerID(custTg),
+		plan.result, plan.reason, idempotencyKey, false)
 	if _, err := s.auditRepo.Create(ctx, tx, auditIn); err != nil {
 		if !errors.Is(err, repository.ErrMergeAuditConflict) {
 			return nil, nil, auditIn, fmt.Errorf("linking: write audit: %w", err)
 		}
 	}
 
-	if claim.PeerAccountID > 0 {
-		if err := s.absorbEmailPeerAccountTx(ctx, tx, accountID, claim.PeerAccountID); err != nil {
-			return nil, nil, auditIn, err
-		}
-		if err := s.ensureCabinetEmailIdentityTx(ctx, tx, accountID); err != nil {
-			return nil, nil, auditIn, err
-		}
-	}
-	if claim.TelegramID > 0 {
-		if err := s.ensureCabinetTelegramIdentityTx(ctx, tx, accountID, claim.TelegramID); err != nil {
-			return nil, nil, auditIn, err
-		}
-	}
+	slog.Info("merge_decision",
+		"stage", "pre_commit",
+		"account_id", accountID,
+		"keep_subscription", keep,
+		"requires_choice", preview.RequiresSubscriptionChoice,
+		"final_customer_id", plan.finalCustomerID,
+		"final_telegram_id", finalTelegramID,
+		"absorbed_accounts", len(sides.absorb),
+	)
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, auditIn, fmt.Errorf("linking: commit merge: %w", err)
 	}
 	committed = true
-	if s.remnawave != nil && loserForRemnawave != nil {
-		// Critical ordering: RW cleanup must run only after DB merge is committed.
-		// Otherwise user may lose RW profile even when merge transaction fails.
-		s.updateRemnawaveForMerge(ctx, loserForRemnawave, finalCustomerID, claim.TelegramID)
-	}
-	if s.remnawave != nil && winnerForRemnawave != nil && claim.TelegramID > 0 {
-		// After loser cleanup, ensure winner profile in panel is bound to real telegram_id.
-		// This prevents "user not found" in bot/cabinet after keep=web merges.
-		s.syncRemnawaveWinnerAfterMerge(ctx, winnerForRemnawave, claim.TelegramID, claim.TelegramUsername)
+
+	// Панель трогаем только после успешного коммита: иначе упавшая транзакция
+	// оставила бы клиента без профиля в Remnawave.
+	s.remnawaveAfterMerge(ctx, plan.rwLoser, plan.rwWinner, plan.finalCustomerID, finalTelegramID, claim.TelegramUsername)
+
+	resultKind := "merged"
+	switch {
+	case plan.isNoop:
+		resultKind = "noop"
+	case plan.result != repository.MergeResultMerged:
+		resultKind = "linked"
 	}
 	slog.Info("merge_decision",
 		"stage", "post_commit",
 		"account_id", accountID,
-		"keep_subscription", keep,
-		"final_customer_id", finalCustomerID,
-		"loser_customer_id", func() int64 {
-			if loserForRemnawave == nil {
-				return 0
-			}
-			return loserForRemnawave.ID
-		}(),
-		"loser_customer_tg_id", func() int64 {
-			if loserForRemnawave == nil {
-				return 0
-			}
-			return loserForRemnawave.TelegramID
-		}(),
+		"result", resultKind,
+		"final_customer_id", plan.finalCustomerID,
 	)
+	return preview, &MergeResult{
+		Result:         resultKind,
+		CustomerID:     plan.finalCustomerID,
+		PurchasesMoved: plan.purchasesMoved,
+		ReferralsMoved: plan.referralsMoved,
+	}, auditIn, nil
+}
 
-	result = &MergeResult{
-		Result:         "merged",
-		CustomerID:     finalCustomerID,
-		PurchasesMoved: purchaseCount,
-		ReferralsMoved: referralCount,
+// fullMergeInput — параметры слияния двух разных customer.
+type fullMergeInput struct {
+	custWeb         *database.Customer
+	custTg          *database.Customer
+	keep            string
+	finalTelegramID int64
+	mergedXP        int64
+	mergedExtraHwid int
+	purchasesMoved  int
+	referralsMoved  int
+}
+
+// executeFullMerge сливает две разные строки customer в одну.
+//
+// Здесь две НЕЗАВИСИМЫЕ оси, которые раньше путались между собой:
+//   - какая СТРОКА customer выживает — см. survivingCustomerRow;
+//   - чья ПОДПИСКА выживает — определяется keep.
+//
+// При keep=web с привязанным Telegram выживает tg-строка, но забирает поля
+// подписки И профиль панели с web-стороны. Раньше профиль панели всегда брали
+// с tg-стороны, а web-профиль удаляли — то есть выбранная пользователем
+// подписка оставалась в БД ссылкой на удалённый профиль.
+func (s *MergeService) executeFullMerge(ctx context.Context, tx pgx.Tx, in fullMergeInput) (mergePlan, error) {
+	var plan mergePlan
+	custWeb, custTg := in.custWeb, in.custTg
+
+	fieldWinner, fieldLoser := custTg, custWeb
+	if in.keep == keepWeb {
+		fieldWinner, fieldLoser = custWeb, custTg
 	}
-	return preview, result, auditIn, nil
+	survivor, doomed := survivingCustomerRow(custWeb, custTg, in.finalTelegramID)
+
+	// Всё, что привязано к обречённой СТРОКЕ, переезжает на выжившую.
+	if err := movePurchases(ctx, tx, doomed.ID, survivor.ID); err != nil {
+		return plan, fmt.Errorf("linking: move purchases: %w", err)
+	}
+	if err := movePerCustomerRecords(ctx, tx, doomed.ID, survivor.ID); err != nil {
+		return plan, fmt.Errorf("linking: move per-customer records: %w", err)
+	}
+
+	// UNIQUE(customer.telegram_id): снимаем id с обречённой строки до того,
+	// как выживший его займёт.
+	if in.finalTelegramID > 0 && doomed.TelegramID == in.finalTelegramID {
+		if _, err := tx.Exec(ctx, `UPDATE customer SET telegram_id = $2 WHERE id = $1`,
+			doomed.ID, mergeTempTelegramID(doomed.ID)); err != nil {
+			return plan, fmt.Errorf("linking: detach doomed telegram_id: %w", err)
+		}
+	}
+	// Частичный UNIQUE(remnawave_user_id): освобождаем привязку панели, чтобы
+	// выживший мог забрать профиль победителя подписки.
+	if _, err := tx.Exec(ctx,
+		`UPDATE customer SET remnawave_user_id = NULL, remnawave_short_uuid = NULL WHERE id = $1`,
+		doomed.ID); err != nil {
+		return plan, fmt.Errorf("linking: detach doomed panel id: %w", err)
+	}
+
+	targetTelegramID := in.finalTelegramID
+	if targetTelegramID == 0 {
+		// Реального Telegram в слиянии нет — выживший остаётся на своём
+		// синтетическом id и остаётся web-only.
+		targetTelegramID = survivor.TelegramID
+	}
+	if err := rebindCustomerTelegram(ctx, tx, survivor.ID, survivor.TelegramID, targetTelegramID, in.finalTelegramID > 0); err != nil {
+		return plan, fmt.Errorf("linking: rebind survivor telegram_id: %w", err)
+	}
+	if err := moveReferrals(ctx, tx, doomed.TelegramID, targetTelegramID); err != nil {
+		return plan, fmt.Errorf("linking: move referrals: %w", err)
+	}
+
+	if err := applyWinnerMergedFields(ctx, tx, survivor.ID, fieldWinner, fieldLoser,
+		in.mergedXP, in.mergedExtraHwid, in.finalTelegramID > 0); err != nil {
+		return plan, fmt.Errorf("linking: apply merge fields: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM customer WHERE id = $1`, doomed.ID); err != nil {
+		return plan, fmt.Errorf("linking: delete merged customer: %w", err)
+	}
+
+	return mergePlan{
+		result:          repository.MergeResultMerged,
+		reason:          "merged_keep_" + in.keep,
+		finalCustomerID: survivor.ID,
+		purchasesMoved:  in.purchasesMoved,
+		referralsMoved:  in.referralsMoved,
+		rwWinner:        fieldWinner,
+		rwLoser:         fieldLoser,
+	}, nil
 }
 
 // ============================================================================
@@ -851,7 +944,8 @@ func (s *MergeService) doMerge(
 func lockCustomerByID(ctx context.Context, tx pgx.Tx, id int64) (*database.Customer, error) {
 	const q = `SELECT id, telegram_id, expire_at, created_at, subscription_link, language,
 		extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start,
-		subscription_period_months, loyalty_xp, telegram_username, is_web_only
+		subscription_period_months, loyalty_xp, telegram_username, is_web_only,
+		remnawave_user_id, remnawave_short_uuid
 		FROM customer WHERE id = $1 FOR UPDATE`
 	row := tx.QueryRow(ctx, q, id)
 	var c database.Customer
@@ -859,6 +953,7 @@ func lockCustomerByID(ctx context.Context, tx pgx.Tx, id int64) (*database.Custo
 		&c.ID, &c.TelegramID, &c.ExpireAt, &c.CreatedAt, &c.SubscriptionLink, &c.Language,
 		&c.ExtraHwid, &c.ExtraHwidExpiresAt, &c.CurrentTariffID, &c.SubscriptionPeriodStart,
 		&c.SubscriptionPeriodMonths, &c.LoyaltyXP, &c.TelegramUsername, &c.IsWebOnly,
+		&c.RemnawaveUserID, &c.RemnawaveShortUUID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -872,7 +967,8 @@ func lockCustomerByID(ctx context.Context, tx pgx.Tx, id int64) (*database.Custo
 func lockCustomerByTelegramID(ctx context.Context, tx pgx.Tx, telegramID int64) (*database.Customer, error) {
 	const q = `SELECT id, telegram_id, expire_at, created_at, subscription_link, language,
 		extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start,
-		subscription_period_months, loyalty_xp, telegram_username, is_web_only
+		subscription_period_months, loyalty_xp, telegram_username, is_web_only,
+		remnawave_user_id, remnawave_short_uuid
 		FROM customer WHERE telegram_id = $1 FOR UPDATE`
 	row := tx.QueryRow(ctx, q, telegramID)
 	var c database.Customer
@@ -880,6 +976,7 @@ func lockCustomerByTelegramID(ctx context.Context, tx pgx.Tx, telegramID int64) 
 		&c.ID, &c.TelegramID, &c.ExpireAt, &c.CreatedAt, &c.SubscriptionLink, &c.Language,
 		&c.ExtraHwid, &c.ExtraHwidExpiresAt, &c.CurrentTariffID, &c.SubscriptionPeriodStart,
 		&c.SubscriptionPeriodMonths, &c.LoyaltyXP, &c.TelegramUsername, &c.IsWebOnly,
+		&c.RemnawaveUserID, &c.RemnawaveShortUUID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -922,7 +1019,16 @@ func moveReferrals(ctx context.Context, tx pgx.Tx, fromTgID, toTgID int64) error
 	return err
 }
 
-func applyWinnerMergedFields(ctx context.Context, tx pgx.Tx, targetID int64, winner, loser *database.Customer, mergedXP int64, mergedExtra int) error {
+// applyWinnerMergedFields переносит на выжившую строку поля выбранной стороны.
+//
+// hasRealTelegram определяет is_web_only: клиент web-only ровно тогда, когда у
+// него нет настоящего Telegram. Раньше флаг снимался безусловно, и после
+// слияния двух web-аккаунтов клиент с синтетическим id переставал считаться
+// web-only.
+//
+// remnawave_user_id/short_uuid тоже переезжают с победителя: иначе выживший
+// ссылался бы на профиль панели проигравшей стороны, который merge удаляет.
+func applyWinnerMergedFields(ctx context.Context, tx pgx.Tx, targetID int64, winner, loser *database.Customer, mergedXP int64, mergedExtra int, hasRealTelegram bool) error {
 	extraExp := winner.ExtraHwidExpiresAt
 	if loser.ExtraHwidExpiresAt != nil {
 		if extraExp == nil || loser.ExtraHwidExpiresAt.After(*extraExp) {
@@ -944,7 +1050,9 @@ func applyWinnerMergedFields(ctx context.Context, tx pgx.Tx, targetID int64, win
 			current_tariff_id             = $7,
 			subscription_period_start     = $8,
 			subscription_period_months    = $9,
-			is_web_only                   = FALSE,
+			is_web_only                   = $11,
+			remnawave_user_id             = $12,
+			remnawave_short_uuid          = $13,
 			telegram_username             = COALESCE(telegram_username, $10)
 		WHERE id = $1`,
 		targetID,
@@ -957,6 +1065,9 @@ func applyWinnerMergedFields(ctx context.Context, tx pgx.Tx, targetID int64, win
 		winner.SubscriptionPeriodStart,
 		winner.SubscriptionPeriodMonths,
 		unameArg,
+		!hasRealTelegram,
+		winner.RemnawaveUserID,
+		winner.RemnawaveShortUUID,
 	)
 	return err
 }
@@ -977,13 +1088,6 @@ func mergeTempTelegramID(customerID int64) int64 {
 	return -(100_000_000_000_000 + customerID)
 }
 
-func subscriptionChoiceRequired(web, tg *database.Customer) bool {
-	if web == nil || tg == nil {
-		return false
-	}
-	return web.ExpireAt != nil && tg.ExpireAt != nil
-}
-
 // promoteWebCustomer переводит web-only customer на реальный telegram_id и переносит
 // строки referral с synthetic id (требуются DEFERRABLE FK на referral).
 func promoteWebCustomer(ctx context.Context, tx pgx.Tx, customerID, oldTelegramID, newTelegramID int64) error {
@@ -997,164 +1101,22 @@ func promoteWebCustomer(ctx context.Context, tx pgx.Tx, customerID, oldTelegramI
 
 // rebindCustomerTelegram ensures the winner customer is attached to a real telegram_id
 // and moves referral rows from old telegram_id to the new one.
-func rebindCustomerTelegram(ctx context.Context, tx pgx.Tx, customerID, oldTelegramID, newTelegramID int64) error {
+func rebindCustomerTelegram(ctx context.Context, tx pgx.Tx, customerID, oldTelegramID, newTelegramID int64, hasRealTelegram bool) error {
 	if oldTelegramID == newTelegramID {
-		_, err := tx.Exec(ctx, `UPDATE customer SET is_web_only = FALSE WHERE id = $1`, customerID)
+		_, err := tx.Exec(ctx, `UPDATE customer SET is_web_only = $2 WHERE id = $1`, customerID, !hasRealTelegram)
 		return err
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE customer SET is_web_only = FALSE, telegram_id = $2 WHERE id = $1`,
-		customerID, newTelegramID); err != nil {
+		`UPDATE customer SET is_web_only = $3, telegram_id = $2 WHERE id = $1`,
+		customerID, newTelegramID, !hasRealTelegram); err != nil {
 		return err
 	}
 	return moveReferrals(ctx, tx, oldTelegramID, newTelegramID)
 }
 
-// updateRemnawaveForMerge удаляет Remnawave-пользователя проигравшего customer (best-effort).
-// Сначала lookup по устойчивым loser-маркерам (subscription_link / username "<loserID>_").
-// Fallback по telegram_id разрешён только если он не совпадает с финальным winner telegram_id.
-// Ошибки не фатальны: miss в RW не ломает консистентность БД merge.
-func (s *MergeService) updateRemnawaveForMerge(ctx context.Context, loser *database.Customer, winnerCustomerID, winnerTelegramID int64) {
-	if loser == nil {
-		return
-	}
-	_ = config.RemnawaveTag() // использует config, чтобы import не убрался линтером
-	users, listErr := s.remnawave.GetUsers(ctx)
-	if listErr != nil {
-		slog.Warn("linking: remnawave list users failed (non-fatal)", "customer_id", loser.ID, "error", listErr)
-		return
-	}
-
-	subURL := strings.TrimSpace(valOrEmpty(loser.SubscriptionLink))
-	namePrefix := strconv.FormatInt(loser.ID, 10) + "_"
-	winnerPrefix := strconv.FormatInt(winnerCustomerID, 10) + "_"
-	var user *remnawave.User
-	for i := range users {
-		u := &users[i]
-		if subURL != "" && strings.TrimSpace(u.SubscriptionUrl) == subURL {
-			user = u
-			break
-		}
-		if strings.HasPrefix(strings.TrimSpace(u.Username), namePrefix) {
-			user = u
-			break
-		}
-	}
-
-	// Telegram-id fallback can point to winner after keep=web (winner gets real tg id).
-	if user == nil && loser.TelegramID > 0 && loser.TelegramID != winnerTelegramID {
-		u, err := s.remnawave.GetUserTrafficInfo(ctx, loser.TelegramID)
-		if err != nil {
-			if !errors.Is(err, remnawave.ErrUserNotFound) {
-				slog.Warn("linking: remnawave get loser user failed (non-fatal)", "telegram_id", loser.TelegramID, "error", err)
-			}
-		} else if u != nil {
-			if strings.HasPrefix(strings.TrimSpace(u.Username), winnerPrefix) {
-				slog.Warn("linking: remnawave fallback resolved winner profile; skip delete",
-					"winner_customer_id", winnerCustomerID,
-					"telegram_id", loser.TelegramID,
-					"username", u.Username,
-				)
-			} else {
-				user = u
-			}
-		}
-	}
-
-	if user == nil {
-		slog.Info("linking: remnawave loser profile not found; skip delete",
-			"loser_customer_id", loser.ID,
-			"loser_telegram_id", loser.TelegramID,
-		)
-		return
-	}
-	if strings.HasPrefix(strings.TrimSpace(user.Username), winnerPrefix) {
-		slog.Warn("linking: skip remnawave delete, matched winner profile",
-			"winner_customer_id", winnerCustomerID,
-			"user_id", user.ID,
-			"username", user.Username,
-		)
-		return
-	}
-	if err := s.remnawave.DeleteUser(ctx, user.ID); err != nil {
-		slog.Warn("linking: remnawave delete loser user failed (non-fatal)", "user_id", user.ID, "error", err)
-		return
-	}
-	slog.Info("linking: remnawave loser user deleted",
-		"loser_customer_id", loser.ID,
-		"user_id", user.ID,
-		"username", user.Username,
-	)
-}
-
-// syncRemnawaveWinnerAfterMerge makes sure winner panel profile is rebound to real telegram_id
-// and carries Telegram description for bot-facing UX.
-func (s *MergeService) syncRemnawaveWinnerAfterMerge(ctx context.Context, winner *database.Customer, realTelegramID int64, telegramUsername string) {
-	if winner == nil || realTelegramID <= 0 || utils.IsSyntheticTelegramID(realTelegramID) {
-		return
-	}
-	users, err := s.remnawave.GetUsers(ctx)
-	if err != nil {
-		slog.Warn("linking: remnawave list users for winner sync failed (non-fatal)", "winner_customer_id", winner.ID, "error", err)
-		return
-	}
-	winnerPrefix := strconv.FormatInt(winner.ID, 10) + "_"
-	subURL := strings.TrimSpace(valOrEmpty(winner.SubscriptionLink))
-	var target *remnawave.User
-	for i := range users {
-		u := &users[i]
-		if strings.HasPrefix(strings.TrimSpace(u.Username), winnerPrefix) {
-			target = u
-			break
-		}
-		if subURL != "" && strings.TrimSpace(u.SubscriptionUrl) == subURL {
-			target = u
-			break
-		}
-	}
-	if target == nil {
-		slog.Info("linking: remnawave winner profile not found; skip winner sync", "winner_customer_id", winner.ID)
-		return
-	}
-
-	req := &remnawave.UpdateUserRequest{ID: &target.ID}
-	tid := realTelegramID
-	req.TelegramID = &tid
-	if name := strings.TrimSpace(telegramUsername); name != "" {
-		req.Description = &name
-	}
-	if _, err := s.remnawave.PatchUser(ctx, req); err != nil {
-		slog.Warn("linking: remnawave winner sync failed (non-fatal)",
-			"winner_customer_id", winner.ID,
-			"user_id", target.ID,
-			"telegram_id", realTelegramID,
-			"error", err,
-		)
-		return
-	}
-	slog.Info("linking: remnawave winner synced",
-		"winner_customer_id", winner.ID,
-		"user_id", target.ID,
-		"telegram_id", realTelegramID,
-	)
-}
-
 // ============================================================================
 // Merge helpers (правила 10.2)
 // ============================================================================
-
-func maxExpireAt(a, b *time.Time) *time.Time {
-	if a == nil {
-		return b
-	}
-	if b == nil {
-		return a
-	}
-	if a.After(*b) {
-		return a
-	}
-	return b
-}
 
 func maxInt(a, b int) int {
 	if a > b {
@@ -1163,47 +1125,11 @@ func maxInt(a, b int) int {
 	return b
 }
 
-// activeSubscriptionConflict — оба профиля сейчас с активной подпиской и разные
-// непустые subscription_link (merge изменит каноническую ссылку VPN).
-func activeSubscriptionConflict(web, tg *database.Customer) bool {
-	now := time.Now()
-	webActive := web.ExpireAt != nil && web.ExpireAt.After(now)
-	tgActive := tg.ExpireAt != nil && tg.ExpireAt.After(now)
-	if !webActive || !tgActive {
-		return false
-	}
-	webLink := strings.TrimSpace(valOrEmpty(web.SubscriptionLink))
-	tgLink := strings.TrimSpace(valOrEmpty(tg.SubscriptionLink))
-	return webLink != "" && tgLink != "" && webLink != tgLink
-}
-
 func valOrEmpty(p *string) string {
 	if p == nil {
 		return ""
 	}
 	return *p
-}
-
-// mergedSubscriptionLink — итоговая ссылка на каноническом customer_tg.
-// При конфликте двух активных подписок с разными ссылками приоритет у Telegram
-// (канонический профиль бота); иначе — как в ТЗ 10.2: у кого позже expire_at.
-func mergedSubscriptionLink(web, tg *database.Customer) *string {
-	if activeSubscriptionConflict(web, tg) {
-		return tg.SubscriptionLink
-	}
-	if web.ExpireAt != nil && (tg.ExpireAt == nil || web.ExpireAt.After(*tg.ExpireAt)) {
-		return web.SubscriptionLink
-	}
-	return tg.SubscriptionLink
-}
-
-// detectDanger — возвращает true если у обоих есть активная подписка и разные
-// subscription_link (пользователь рискует потерять одну из них).
-func detectDanger(web, tg *database.Customer) (bool, string) {
-	if !activeSubscriptionConflict(web, tg) {
-		return false, ""
-	}
-	return true, "both customers have active subscriptions with different links"
 }
 
 func snapshotCustomer(c *database.Customer) *CustomerSnapshot {
@@ -1236,56 +1162,15 @@ func auditInput(accountID int64, srcID, dstID *int64, result, reason, ikey strin
 // Misc helpers
 // ============================================================================
 
-func (s *MergeService) ensureCabinetEmailIdentity(ctx context.Context, accountID int64) error {
-	acc, err := s.accounts.FindByID(ctx, accountID)
-	if err != nil {
-		return err
-	}
-	if acc.Email == nil {
-		return nil
-	}
-	addr := strings.TrimSpace(*acc.Email)
-	if addr == "" {
-		return nil
-	}
-	pid := strconv.FormatInt(accountID, 10)
-	_, err = s.identities.FindByProvider(ctx, repository.ProviderEmail, pid)
-	if errors.Is(err, repository.ErrNotFound) {
-		_, err = s.identities.Create(ctx, accountID, repository.ProviderEmail, pid, addr, nil)
-		return err
-	}
-	return err
-}
-
-func (s *MergeService) ensureCabinetEmailIdentityTx(ctx context.Context, tx pgx.Tx, accountID int64) error {
-	var email *string
-	if err := tx.QueryRow(ctx, `SELECT email FROM cabinet_account WHERE id = $1`, accountID).Scan(&email); err != nil {
-		return fmt.Errorf("linking: ensure email identity tx: load account: %w", err)
-	}
-	if email == nil || strings.TrimSpace(*email) == "" {
-		return nil
-	}
-	pid := strconv.FormatInt(accountID, 10)
-	ident, err := s.identities.FindByProvider(ctx, repository.ProviderEmail, pid)
-	if err != nil && !errors.Is(err, repository.ErrNotFound) {
-		return fmt.Errorf("linking: ensure email identity tx: find identity: %w", err)
-	}
-	if ident != nil {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO cabinet_identity (account_id, provider, provider_user_id, provider_email, raw_profile_json)
-		VALUES ($1, $2, $3, $4, NULL)
-		ON CONFLICT (provider, provider_user_id) DO NOTHING`,
-		accountID, repository.ProviderEmail, pid, strings.TrimSpace(*email)); err != nil {
-		return fmt.Errorf("linking: ensure email identity tx: insert identity: %w", err)
-	}
-	return nil
-}
-
 func (s *MergeService) ensureCabinetTelegramIdentityTx(ctx context.Context, tx pgx.Tx, accountID, telegramID int64) error {
 	if accountID <= 0 || telegramID <= 0 {
 		return fmt.Errorf("linking: ensure telegram identity tx: invalid ids")
+	}
+	// Синтетический id web-only клиента — не Telegram. Такая привязка показала
+	// бы в кабинете «Telegram подключён» с несуществующим аккаунтом и навсегда
+	// закрыла бы возможность привязать настоящий.
+	if utils.IsSyntheticTelegramID(telegramID) {
+		return fmt.Errorf("linking: refusing to store synthetic telegram id as identity")
 	}
 	pid := strconv.FormatInt(telegramID, 10)
 	if _, err := tx.Exec(ctx, `
@@ -1295,66 +1180,6 @@ func (s *MergeService) ensureCabinetTelegramIdentityTx(ctx context.Context, tx p
 		DO UPDATE SET account_id = EXCLUDED.account_id`,
 		accountID, repository.ProviderTelegram, pid); err != nil {
 		return fmt.Errorf("linking: ensure telegram identity tx: upsert identity: %w", err)
-	}
-	return nil
-}
-
-func (s *MergeService) absorbEmailPeerAccountTx(ctx context.Context, tx pgx.Tx, survivorID, peerID int64) error {
-	if survivorID <= 0 || peerID <= 0 || survivorID == peerID {
-		return fmt.Errorf("linking: absorb email peer tx: invalid account ids")
-	}
-	var email *string
-	var pwd *string
-	var ev *time.Time
-	err := tx.QueryRow(ctx, `
-		SELECT email, password_hash, email_verified_at
-		  FROM cabinet_account WHERE id = $1 FOR UPDATE`, peerID).Scan(&email, &pwd, &ev)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		return fmt.Errorf("linking: absorb email peer tx: read peer: %w", err)
-	}
-	hasPeerEmail := email != nil && strings.TrimSpace(*email) != ""
-	if !hasPeerEmail {
-		// Peer без почты (типично web-only + только VK/Yandex без email): merge всё равно должен
-		// перенести соц-identities на survivor и удалить peer-аккаунт — иначе VK/Google «теряются».
-		slog.Info("linking: absorb peer without email: moving identities only",
-			"survivor_account_id", survivorID,
-			"peer_account_id", peerID,
-		)
-	}
-	// Переносим identity peer-аккаунта на survivor до удаления peer.
-	// Важно для кейса "привязал Google -> после merge в UI пропал Google".
-	// Дубликаты provider/provider_user_id пропускаем (unique-key), затем чистим хвосты peer.
-	if _, err := tx.Exec(ctx, `
-		UPDATE cabinet_identity AS ci
-		   SET account_id = $1
-		 WHERE ci.account_id = $2
-		   AND NOT EXISTS (
-		     SELECT 1
-		       FROM cabinet_identity s
-		      WHERE s.account_id = $1
-		        AND s.provider = ci.provider
-		        AND s.provider_user_id = ci.provider_user_id
-		   )`,
-		survivorID, peerID); err != nil {
-		return fmt.Errorf("linking: absorb email peer tx: move identities: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM cabinet_identity WHERE account_id = $1`, peerID); err != nil {
-		return fmt.Errorf("linking: absorb email peer tx: cleanup peer identities: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM cabinet_account WHERE id = $1`, peerID); err != nil {
-		return fmt.Errorf("linking: absorb email peer tx: delete peer: %w", err)
-	}
-	if hasPeerEmail {
-		if _, err := tx.Exec(ctx, `
-		UPDATE cabinet_account
-		   SET email = $2, password_hash = $3, email_verified_at = $4, updated_at = NOW()
-		 WHERE id = $1`,
-			survivorID, strings.TrimSpace(strings.ToLower(*email)), pwd, ev); err != nil {
-			return fmt.Errorf("linking: absorb email peer tx: update survivor: %w", err)
-		}
 	}
 	return nil
 }
@@ -1411,4 +1236,484 @@ func generateRandHex(n int) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", b), nil
+}
+
+// ============================================================================
+// Хелперы разбора сторон
+// ============================================================================
+
+// realTelegramID возвращает id, только если это НАСТОЯЩИЙ Telegram.
+// Синтетические id web-only клиентов — внутренний суррогат, а не Telegram:
+// превращать их в telegram-привязку нельзя (иначе в кабинете появится
+// «Telegram привязан» с несуществующим id, и настоящий уже не привяжешь).
+func realTelegramID(id int64) int64 {
+	if id <= 0 || utils.IsSyntheticTelegramID(id) {
+		return 0
+	}
+	return id
+}
+
+func telegramIDOf(c *database.Customer) int64 {
+	if c == nil {
+		return 0
+	}
+	return c.TelegramID
+}
+
+// firstRealTelegramID — первый настоящий Telegram из списка кандидатов.
+func firstRealTelegramID(candidates ...int64) int64 {
+	for _, c := range candidates {
+		if real := realTelegramID(c); real > 0 {
+			return real
+		}
+	}
+	return 0
+}
+
+func firstNonNilCustomer(cs ...*database.Customer) *database.Customer {
+	for _, c := range cs {
+		if c != nil {
+			return c
+		}
+	}
+	return nil
+}
+
+func optionalCustomerID(c *database.Customer) *int64 {
+	if c == nil {
+		return nil
+	}
+	id := c.ID
+	return &id
+}
+
+func appendUnique(dst []int64, v int64) []int64 {
+	if v <= 0 {
+		return dst
+	}
+	for _, existing := range dst {
+		if existing == v {
+			return dst
+		}
+	}
+	return append(dst, v)
+}
+
+// survivingCustomerRow — какая СТРОКА customer переживает слияние.
+//
+// Правило одно и намеренно простое: если в слиянии участвует реальный Telegram,
+// выживает строка, которая им уже владеет — её знает бот, на неё ссылается
+// история. Иначе выживает строка текущего кабинет-аккаунта (web-сторона).
+//
+// Обратите внимание: это НЕ то же самое, что выбор подписки. Выжившая строка
+// может забрать поля подписки у противоположной стороны (keep).
+func survivingCustomerRow(web, tg *database.Customer, finalTelegramID int64) (survivor, doomed *database.Customer) {
+	if finalTelegramID > 0 {
+		if tg != nil && tg.TelegramID == finalTelegramID {
+			return tg, web
+		}
+		if web != nil && web.TelegramID == finalTelegramID {
+			return web, tg
+		}
+	}
+	return web, tg
+}
+
+// isActiveAt — подписка живая на момент now.
+func isActiveAt(expireAt *time.Time, now time.Time) bool {
+	return expireAt != nil && expireAt.After(now)
+}
+
+// subscriptionChoiceRequired — спрашивать пользователя нужно, только когда
+// обе подписки СЕЙЧАС живые: выбор между живой и давно истёкшей — не выбор,
+// а лишний шанс случайно потерять активную подписку.
+func subscriptionChoiceRequired(web, tg *database.Customer) bool {
+	if web == nil || tg == nil {
+		return false
+	}
+	now := time.Now()
+	return isActiveAt(web.ExpireAt, now) && isActiveAt(tg.ExpireAt, now)
+}
+
+// defaultKeepSide — сторона, побеждающая без явного выбора пользователя:
+// живая подписка важнее истёкшей, среди равных — та, что заканчивается позже.
+func defaultKeepSide(web, tg *database.Customer) string {
+	now := time.Now()
+	webActive := isActiveAt(web.ExpireAt, now)
+	tgActive := isActiveAt(tg.ExpireAt, now)
+	switch {
+	case webActive && !tgActive:
+		return keepWeb
+	case tgActive && !webActive:
+		return keepTg
+	}
+	if web.ExpireAt != nil && (tg.ExpireAt == nil || web.ExpireAt.After(*tg.ExpireAt)) {
+		return keepWeb
+	}
+	return keepTg
+}
+
+// ============================================================================
+// SQL-хелперы связей и переноса данных
+// ============================================================================
+
+// lockLinkedCustomerID читает и блокирует link аккаунта ВНУТРИ транзакции.
+// Через пул читать нельзя: merge меняет эту же строку, и чтение мимо tx
+// давало бы решение по устаревшему снимку.
+func lockLinkedCustomerID(ctx context.Context, tx pgx.Tx, accountID int64) (int64, bool, error) {
+	var customerID int64
+	err := tx.QueryRow(ctx,
+		`SELECT customer_id FROM cabinet_account_customer_link WHERE account_id = $1 FOR UPDATE`,
+		accountID).Scan(&customerID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, false, nil
+		}
+		return 0, false, err
+	}
+	return customerID, true, nil
+}
+
+// accountsLinkedToCustomer — все кабинет-аккаунты, висящие на этом customer.
+func accountsLinkedToCustomer(ctx context.Context, tx pgx.Tx, customerID int64) ([]int64, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT account_id FROM cabinet_account_customer_link WHERE customer_id = $1 FOR UPDATE`,
+		customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+// upsertAccountLink гарантирует, что аккаунт указывает на выжившего customer.
+// Именно upsert, а не UPDATE: если bootstrap когда-то не доработал и строки
+// link нет, UPDATE молча затронул бы 0 строк, а merge отрапортовал бы успех,
+// оставив аккаунт вообще без клиента.
+func upsertAccountLink(ctx context.Context, tx pgx.Tx, accountID, customerID int64) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO cabinet_account_customer_link (account_id, customer_id, link_status)
+		VALUES ($1, $2, 'linked')
+		ON CONFLICT (account_id) DO UPDATE
+		   SET customer_id = EXCLUDED.customer_id,
+		       link_status = 'linked',
+		       updated_at  = NOW()`,
+		accountID, customerID)
+	return err
+}
+
+// movePerCustomerRecords переносит на выжившего всё, что привязано к customer_id
+// и влияет на будущие права клиента.
+//
+// Без этого DELETE FROM customer уносил такие строки каскадом: одноразовый
+// промокод становился доступен заново, отложенная скидка и история колеса
+// исчезали, а дедуп lifecycle-уведомлений сбрасывался (дубли писем).
+// Конфликтующие строки не переносим — они и так уже есть у выжившего.
+func movePerCustomerRecords(ctx context.Context, tx pgx.Tx, fromID, toID int64) error {
+	stmts := []string{
+		`UPDATE promo_redemption r SET customer_id = $2
+		  WHERE r.customer_id = $1
+		    AND NOT EXISTS (SELECT 1 FROM promo_redemption x
+		                     WHERE x.customer_id = $2 AND x.promo_code_id = r.promo_code_id)`,
+		`UPDATE fortune_spins SET customer_id = $2 WHERE customer_id = $1`,
+		`UPDATE customer_lifecycle_notify_sent n SET customer_id = $2
+		  WHERE n.customer_id = $1
+		    AND NOT EXISTS (SELECT 1 FROM customer_lifecycle_notify_sent x
+		                     WHERE x.customer_id = $2 AND x.kind = n.kind
+		                       AND x.reference_key = n.reference_key)`,
+		`UPDATE customer_pending_discount SET customer_id = $2
+		  WHERE customer_id = $1
+		    AND NOT EXISTS (SELECT 1 FROM customer_pending_discount x WHERE x.customer_id = $2)`,
+	}
+	for _, q := range stmts {
+		if _, err := tx.Exec(ctx, q, fromID, toID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ============================================================================
+// Remnawave: приведение панели в соответствие результату merge
+// ============================================================================
+
+// remnawaveAfterMerge удаляет профиль проигравшей стороны и переносит профиль
+// выигравшей на выжившего клиента. Best-effort: панель может быть недоступна,
+// но merge в БД уже закоммичен и откатываться из-за этого не должен.
+//
+// Порядок важен: сначала резолвим ОБА профиля, затем удаляем проигравшего и
+// только потом патчим победителя — иначе telegram_id остался бы занят
+// удаляемым профилем и PATCH упал бы с «telegramId already taken».
+func (s *MergeService) remnawaveAfterMerge(
+	ctx context.Context,
+	loser, winner *database.Customer,
+	finalCustomerID, finalTelegramID int64,
+	telegramUsername string,
+) {
+	if s.remnawave == nil || finalCustomerID <= 0 {
+		return
+	}
+	_ = config.RemnawaveTag() // config используется и в других ветках merge
+
+	users, listErr := s.remnawave.GetUsers(ctx)
+	if listErr != nil {
+		slog.Warn("linking: remnawave list users failed (non-fatal)",
+			"final_customer_id", finalCustomerID, "error", listErr)
+	}
+
+	winnerProfile := s.resolvePanelProfile(ctx, users, winner)
+	loserProfile := s.resolvePanelProfile(ctx, users, loser)
+
+	if loserProfile != nil && (winnerProfile == nil || loserProfile.ID != winnerProfile.ID) {
+		if err := s.remnawave.DeleteUser(ctx, loserProfile.ID); err != nil {
+			slog.Warn("linking: remnawave delete loser user failed (non-fatal)",
+				"user_id", loserProfile.ID, "error", err)
+		} else {
+			slog.Info("linking: remnawave loser user deleted",
+				"user_id", loserProfile.ID, "username", loserProfile.Username)
+		}
+	}
+
+	if winnerProfile == nil {
+		slog.Info("linking: remnawave winner profile not found; skip winner sync",
+			"final_customer_id", finalCustomerID)
+		return
+	}
+
+	// Профиль остаётся под старым именем "<староеCustomerID>_<старыйTelegramID>":
+	// Remnawave 3.3.2 молча игнорирует username в PATCH /api/users — запрос
+	// проходит с 200, а значение не меняется (зафиксировано контрактным тестом
+	// TestContractMergePanelHandover). Значит, поиск профиля по префиксу
+	// "<customerID>_" после merge неверен, и единственная надёжная привязка —
+	// remnawave_user_id, который мы фиксируем ниже.
+	patchOK := true
+	if finalTelegramID > 0 {
+		req := &remnawave.UpdateUserRequest{ID: &winnerProfile.ID}
+		tid := finalTelegramID
+		req.TelegramID = &tid
+		if name := strings.TrimSpace(telegramUsername); name != "" {
+			req.Description = &name
+		}
+		if _, err := s.remnawave.PatchUser(ctx, req); err != nil {
+			patchOK = false
+			// Именно Error: клиент в БД уже слит, но профиль в панели остался на
+			// прежнем telegram_id, и бот не найдёт его поиском по Telegram.
+			// Лечится повторной синхронизацией клиента из админки.
+			slog.Error("linking: remnawave winner rebind failed; panel is out of sync with merged customer",
+				"final_customer_id", finalCustomerID, "user_id", winnerProfile.ID,
+				"telegram_id", finalTelegramID, "error", err)
+		} else {
+			slog.Info("linking: remnawave winner synced",
+				"final_customer_id", finalCustomerID, "user_id", winnerProfile.ID,
+				"telegram_id", finalTelegramID)
+		}
+	}
+
+	// Привязка панели к выжившему: следующий резолв пойдёт коротким путём по id,
+	// а не по эвристикам вокруг устаревшего имени профиля.
+	if s.customers != nil && patchOK {
+		if err := s.customers.SetRemnawaveIdentity(ctx, finalCustomerID, winnerProfile.ID, winnerProfile.ShortUUID); err != nil {
+			slog.Warn("linking: persist remnawave identity after merge (non-fatal)",
+				"final_customer_id", finalCustomerID, "user_id", winnerProfile.ID, "error", err)
+		}
+	}
+}
+
+// resolvePanelProfile ищет профиль панели конкретного клиента.
+// Порядок: сохранённый remnawave_user_id → ссылка подписки → имя
+// "<customerID>_" → реальный telegram_id.
+//
+// Префикс имени стоит третьим не случайно: панель не даёт переименовывать
+// профиль (username в PATCH игнорируется), поэтому у уже слитого клиента имя
+// осталось от прежнего владельца. Надёжен только сохранённый id.
+func (s *MergeService) resolvePanelProfile(ctx context.Context, users []remnawave.User, c *database.Customer) *remnawave.User {
+	if c == nil {
+		return nil
+	}
+	if u := pickPanelProfile(users, c); u != nil {
+		return u
+	}
+	// Список не пришёл (панель недоступна или отдала ошибку) — пробуем точечно.
+	if len(users) == 0 && c.RemnawaveUserID != nil && *c.RemnawaveUserID > 0 {
+		if u, err := s.remnawave.GetUserByID(ctx, *c.RemnawaveUserID); err == nil && u != nil {
+			return u
+		}
+	}
+	if len(users) == 0 && realTelegramID(c.TelegramID) > 0 {
+		if u, err := s.remnawave.GetUserTrafficInfo(ctx, c.TelegramID); err == nil && u != nil {
+			return u
+		}
+	}
+	return nil
+}
+
+func pickPanelProfile(users []remnawave.User, c *database.Customer) *remnawave.User {
+	if c == nil || len(users) == 0 {
+		return nil
+	}
+	if c.RemnawaveUserID != nil && *c.RemnawaveUserID > 0 {
+		for i := range users {
+			if users[i].ID == *c.RemnawaveUserID {
+				return &users[i]
+			}
+		}
+	}
+	if sub := strings.TrimSpace(valOrEmpty(c.SubscriptionLink)); sub != "" {
+		for i := range users {
+			if strings.TrimSpace(users[i].SubscriptionUrl) == sub {
+				return &users[i]
+			}
+		}
+	}
+	prefix := strconv.FormatInt(c.ID, 10) + "_"
+	for i := range users {
+		if strings.HasPrefix(strings.TrimSpace(users[i].Username), prefix) {
+			return &users[i]
+		}
+	}
+	if tg := realTelegramID(c.TelegramID); tg > 0 {
+		for i := range users {
+			if users[i].TelegramID != nil && *users[i].TelegramID == tg {
+				return &users[i]
+			}
+		}
+	}
+	return nil
+}
+
+// telegramIDFromIdentityTx — как telegramIDFromIdentity, но внутри транзакции
+// merge: решение о канонической tg-стороне нельзя принимать по снимку мимо tx.
+func (s *MergeService) telegramIDFromIdentityTx(ctx context.Context, tx pgx.Tx, accountID int64) (int64, bool) {
+	if accountID <= 0 {
+		return 0, false
+	}
+	var providerUID string
+	err := tx.QueryRow(ctx, `
+		SELECT provider_user_id
+		  FROM cabinet_identity
+		 WHERE account_id = $1 AND provider = $2
+		 ORDER BY id DESC
+		 LIMIT 1`,
+		accountID, repository.ProviderTelegram,
+	).Scan(&providerUID)
+	if err != nil {
+		return 0, false
+	}
+	parsed, perr := strconv.ParseInt(strings.TrimSpace(providerUID), 10, 64)
+	if perr != nil {
+		return 0, false
+	}
+	if real := realTelegramID(parsed); real > 0 {
+		return real, true
+	}
+	return 0, false
+}
+
+// absorbAccountTx поглощает второй кабинет-аккаунт в выживший.
+//
+// Вызывается для КАЖДОГО аккаунта, участвовавшего в слиянии: и для peer из
+// claim, и для владельца customer с противоположной стороны. Иначе после merge
+// на одного клиента оставалось бы два аккаунта (второй продолжал бы видеть
+// чужую подписку), либо второй аккаунт оставался бы жив, но с удалённым link —
+// то есть без подписки и покупок.
+//
+// Правило по email: выживший сохраняет СВОЙ парольный логин, если он есть.
+// Забирать чужой email поверх своего нельзя — это молча отобрало бы у человека
+// способ входа. Email-identity поглощаемого не переносим вовсе: её
+// provider_user_id — это id удаляемого аккаунта, после удаления она мусор.
+func (s *MergeService) absorbAccountTx(ctx context.Context, tx pgx.Tx, survivorID, peerID int64) error {
+	if survivorID <= 0 || peerID <= 0 || survivorID == peerID {
+		return fmt.Errorf("linking: absorb account: invalid ids")
+	}
+
+	var peerEmail, peerPwd *string
+	var peerVerified *time.Time
+	err := tx.QueryRow(ctx, `
+		SELECT email, password_hash, email_verified_at
+		  FROM cabinet_account WHERE id = $1 FOR UPDATE`, peerID).
+		Scan(&peerEmail, &peerPwd, &peerVerified)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil // уже поглощён/удалён
+		}
+		return fmt.Errorf("linking: absorb account: read peer: %w", err)
+	}
+
+	var survivorPwd *string
+	if err := tx.QueryRow(ctx,
+		`SELECT password_hash FROM cabinet_account WHERE id = $1 FOR UPDATE`, survivorID).
+		Scan(&survivorPwd); err != nil {
+		return fmt.Errorf("linking: absorb account: read survivor: %w", err)
+	}
+
+	// Соц- и telegram-привязки переезжают; дубли (provider, provider_user_id)
+	// пропускаем — такой способ входа у выжившего уже есть.
+	if _, err := tx.Exec(ctx, `
+		UPDATE cabinet_identity AS ci
+		   SET account_id = $1
+		 WHERE ci.account_id = $2
+		   AND ci.provider <> $3
+		   AND NOT EXISTS (
+		     SELECT 1 FROM cabinet_identity s
+		      WHERE s.account_id = $1
+		        AND s.provider = ci.provider
+		        AND s.provider_user_id = ci.provider_user_id
+		   )`,
+		survivorID, peerID, repository.ProviderEmail); err != nil {
+		return fmt.Errorf("linking: absorb account: move identities: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM cabinet_identity WHERE account_id = $1`, peerID); err != nil {
+		return fmt.Errorf("linking: absorb account: cleanup peer identities: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM cabinet_account WHERE id = $1`, peerID); err != nil {
+		return fmt.Errorf("linking: absorb account: delete peer: %w", err)
+	}
+
+	peerHasEmailLogin := peerEmail != nil && strings.TrimSpace(*peerEmail) != ""
+	survivorHasEmailLogin := survivorPwd != nil && strings.TrimSpace(*survivorPwd) != ""
+	switch {
+	case peerHasEmailLogin && !survivorHasEmailLogin:
+		if _, err := tx.Exec(ctx, `
+			UPDATE cabinet_account
+			   SET email = $2, password_hash = $3, email_verified_at = $4, updated_at = NOW()
+			 WHERE id = $1`,
+			survivorID, strings.TrimSpace(strings.ToLower(*peerEmail)), peerPwd, peerVerified); err != nil {
+			return fmt.Errorf("linking: absorb account: move email login: %w", err)
+		}
+	case peerHasEmailLogin:
+		slog.Info("linking: absorb keeps survivor own email login",
+			"survivor_account_id", survivorID, "peer_account_id", peerID)
+	}
+	return nil
+}
+
+// ensureCabinetEmailIdentityTx создаёт identity для парольного логина выжившего.
+func (s *MergeService) ensureCabinetEmailIdentityTx(ctx context.Context, tx pgx.Tx, accountID int64) error {
+	var email *string
+	if err := tx.QueryRow(ctx, `SELECT email FROM cabinet_account WHERE id = $1`, accountID).Scan(&email); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("linking: ensure email identity tx: load account: %w", err)
+	}
+	if email == nil || strings.TrimSpace(*email) == "" {
+		return nil
+	}
+	pid := strconv.FormatInt(accountID, 10)
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO cabinet_identity (account_id, provider, provider_user_id, provider_email, raw_profile_json)
+		VALUES ($1, $2, $3, $4, NULL)
+		ON CONFLICT (provider, provider_user_id) DO NOTHING`,
+		accountID, repository.ProviderEmail, pid, strings.TrimSpace(*email)); err != nil {
+		return fmt.Errorf("linking: ensure email identity tx: insert identity: %w", err)
+	}
+	return nil
 }

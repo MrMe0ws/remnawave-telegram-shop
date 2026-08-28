@@ -157,6 +157,10 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 	providerSeen := make(map[string]struct{}, len(ids))
 	hasTelegram := false
 	var telegramUserID *int64
+	// После слияния двух аккаунтов с настоящими Telegram на выжившем может
+	// оказаться несколько telegram-привязок (вход работает через любую).
+	// Клиенту показываем ту, по которой его адресует бот, — см. ниже.
+	var telegramIdentityIDs []int64
 	for _, id := range ids {
 		if id.Provider == repository.ProviderEmail && acc.PasswordHash == nil {
 			// Email считается способом входа только при наличии парольного логина.
@@ -168,10 +172,11 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 		}
 		if id.Provider == repository.ProviderTelegram {
 			hasTelegram = true
-			if telegramUserID == nil {
-				s := strings.TrimSpace(id.ProviderUserID)
-				if s != "" {
-					if v, perr := strconv.ParseInt(s, 10, 64); perr == nil {
+			s := strings.TrimSpace(id.ProviderUserID)
+			if s != "" {
+				if v, perr := strconv.ParseInt(s, 10, 64); perr == nil {
+					telegramIdentityIDs = append(telegramIdentityIDs, v)
+					if telegramUserID == nil {
 						telegramUserID = &v
 					}
 				}
@@ -213,10 +218,21 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if telegramUserID == nil && linkedCustomer != nil && !linkedCustomer.IsWebOnly &&
+	if linkedCustomer != nil && !linkedCustomer.IsWebOnly &&
 		!utils.IsSyntheticTelegramID(linkedCustomer.TelegramID) {
 		v := linkedCustomer.TelegramID
-		telegramUserID = &v
+		// Источник истины для бота — customer.telegram_id. Если такая привязка
+		// у аккаунта есть, показываем именно её, а не первую попавшуюся.
+		if telegramUserID == nil {
+			telegramUserID = &v
+		} else if *telegramUserID != v {
+			for _, id := range telegramIdentityIDs {
+				if id == v {
+					telegramUserID = &v
+					break
+				}
+			}
+		}
 	}
 
 	if hasTelegram {
