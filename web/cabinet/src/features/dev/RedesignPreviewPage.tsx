@@ -1103,93 +1103,227 @@ function SkipToTariffs({ label }: { label: string }) {
   )
 }
 
-function OnboardingOffer() {
+/*
+ * Четыре подачи одного и того же предложения.
+ *
+ * Содержание везде одинаковое — меняется только оформление, чтобы можно было
+ * сравнить, а не спорить на словах. Оффер триала и заглушка «триал недоступен»
+ * идут через один и тот же рендер: это одна карточка с разным наполнением,
+ * и выглядеть они должны как родственники.
+ */
+type OfferStyle = 'plain' | 'tiles' | 'path' | 'hero'
+
+type OfferStat = { icon: LucideIcon; value: ReactNode; unit: string }
+
+type OfferContent = {
+  icon: LucideIcon
+  pill: string
+  /** Выделенная часть заголовка: цифра или цена. */
+  lead: string
+  rest: string
+  subtitle: string
+  stats: OfferStat[]
+  /** Для варианта D: одна цифра крупно и всё остальное строкой под ней. */
+  hero: { value: string; caption: string; line: string }
+  cta: string
+  skip?: string
+  accent?: string
+}
+
+const TRIAL_OFFER: OfferContent = {
+  icon: Sparkles,
+  pill: 'Пробный период',
+  lead: '7 дней',
+  rest: 'бесплатно',
+  subtitle: 'Попробуйте бесплатно — без обязательств',
+  stats: [
+    { icon: Calendar, value: '7', unit: 'дней' },
+    { icon: Gauge, value: '3', unit: 'ГБ' },
+    { icon: Smartphone, value: '1', unit: 'устройство' },
+  ],
+  hero: { value: '7', caption: 'дней бесплатно', line: '3 ГБ · 1 устройство' },
+  cta: 'Активировать бесплатно',
+  skip: 'Не нужен пробный — сразу к тарифам',
+}
+
+/*
+ * Заглушка «триал недоступен»: уже использован или выключен в настройках.
+ *
+ * Всё выводится из GET /tariffs, ничего не зашито: цена — минимальный
+ * monthly_base_rub по витрине, устройства — максимальный device_limit,
+ * трафик — ∞, если хоть у одного тарифа traffic_gb === null, иначе «до N ГБ»,
+ * выгода — разница цены самого длинного и самого короткого периода. Витрина
+ * пустая или тариф один — плитку просто не выводим.
+ */
+const TARIFFS_OFFER: OfferContent = {
+  icon: Zap,
+  pill: 'Тарифы',
+  lead: '110 ₽',
+  rest: 'в месяц',
+  subtitle: 'Пробный период уже использован — дальше платные тарифы',
+  stats: [
+    { icon: MonitorSmartphone, value: '5', unit: 'до устройств' },
+    { icon: Gauge, value: <InfinityIcon size={22} className="mx-auto" />, unit: 'трафик' },
+    { icon: Calendar, value: '−31%', unit: 'на год' },
+  ],
+  hero: { value: '110 ₽', caption: 'в месяц', line: 'до 5 устройств · безлимитный трафик' },
+  cta: 'Смотреть тарифы',
+  accent: 'cab-accent-violet',
+}
+
+/** Кнопка предложения: блик всегда, это единственное действие на экране. */
+function OfferCta({ label }: { label: string }) {
   return (
-    <div className="cab-card relative overflow-hidden p-5 sm:p-6">
+    <span className="cab-attn-sheen mt-5 block">
+      <button type="button" className="cab-cta h-12 w-full rounded-xl text-sm font-semibold">
+        {label}
+      </button>
+    </span>
+  )
+}
+
+/** A · как на проде: по центру, без рамок и градиентов. Меньше всего нового. */
+function OfferPlain({ content }: { content: OfferContent }) {
+  const Icon = content.icon
+  return (
+    <div className={cn('cab-card p-6 text-center', content.accent)}>
+      <span className="mx-auto flex size-12 items-center justify-center rounded-xl border border-[hsl(var(--cab-accent)/0.3)] bg-[hsl(var(--cab-accent)/0.1)] text-[hsl(var(--cab-accent))]">
+        <Icon size={20} />
+      </span>
+
+      <h1 className="mt-4 font-heading text-2xl font-bold leading-tight">
+        {content.lead} {content.rest}
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">{content.subtitle}</p>
+
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        {content.stats.map((s) => (
+          <div key={s.unit}>
+            <div className="font-heading text-3xl font-bold leading-none tabular-nums">{s.value}</div>
+            <div className="mt-1 text-[10px] uppercase leading-tight tracking-wide text-muted-foreground">
+              {s.unit}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <OfferCta label={content.cta} />
+      {content.skip && <SkipToTariffs label={content.skip} />}
+    </div>
+  )
+}
+
+/** B · плитки: сияние по верху, градиент в цифре, обводка у каждой цифры. */
+function OfferTiles({ content }: { content: OfferContent }) {
+  const Icon = content.icon
+  return (
+    <div className={cn('cab-card relative overflow-hidden p-5 sm:p-6', content.accent)}>
       <span className="cab-onb-aurora" aria-hidden />
 
       <div className="relative">
         <div className="flex items-center gap-3">
           <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[hsl(var(--cab-accent)/0.35)] bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
-            <Sparkles size={20} />
+            <Icon size={20} />
           </span>
-          <Pill>Пробный период</Pill>
+          <Pill>{content.pill}</Pill>
         </div>
 
         <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] sm:text-4xl">
-          <span className="cab-gradient-text">7 дней</span> бесплатно
+          <span className="cab-gradient-text">{content.lead}</span> {content.rest}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">Попробуйте бесплатно — без обязательств</p>
+        <p className="mt-2 text-sm text-muted-foreground">{content.subtitle}</p>
 
-        {/*
-          Цифры без подписей-объяснений: пояснительный текст под сеткой читался
-          как стена и отвлекал от единственной кнопки. Смысл несут сами плитки.
-        */}
         <div className="mt-5 grid grid-cols-3 gap-2">
-          <StatTile icon={Calendar} value="7" unit="дней" />
-          <StatTile icon={Gauge} value="3" unit="ГБ" />
-          <StatTile icon={Smartphone} value="1" unit="устройство" />
+          {content.stats.map((s) => (
+            <StatTile key={s.unit} icon={s.icon} value={s.value} unit={s.unit} />
+          ))}
         </div>
 
-        {/* Блик постоянный: это единственное действие на экране. */}
-        <span className="cab-attn-sheen mt-5 block">
-          <button type="button" className="cab-cta h-12 w-full rounded-xl text-sm font-semibold">
-            Активировать бесплатно
-          </button>
-        </span>
-
-        <SkipToTariffs label="Не нужен пробный — сразу к тарифам" />
+        <OfferCta label={content.cta} />
+        {content.skip && <SkipToTariffs label={content.skip} />}
       </div>
     </div>
   )
 }
 
 /*
- * Триал недоступен: уже использован или выключен в настройках.
+ * C · путь виден сразу.
  *
- * Сейчас здесь тупик — кнопка гаснет с подписью «Пробный период недоступен»,
- * и предложить человеку нечего. Экран должен вести к тарифам.
+ * Человек с первого экрана понимает, что шагов три, но инструкцию получает
+ * только на текущем. Сюрприза после активации нет: карточка не подменяется,
+ * а просто переезжает на следующий шаг.
  */
-function OnboardingBlocked() {
+function OfferPath({ content }: { content: OfferContent }) {
   return (
-    <div className="cab-card cab-accent-violet relative overflow-hidden p-5 sm:p-6">
+    <div className="cab-card p-5 sm:p-6">
+      <Pill>{content.pill}</Pill>
+      <h1 className="mt-3 font-heading text-2xl font-bold leading-tight sm:text-3xl">
+        <span className="cab-gradient-text">{content.lead}</span> {content.rest}
+      </h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{content.subtitle}</p>
+
+      <div className="mt-5 space-y-1">
+        <div className="rounded-xl bg-[hsl(var(--cab-accent)/0.07)] px-3 py-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--cab-accent))] text-xs font-semibold text-white">
+              1
+            </span>
+            <span className="text-sm font-medium">Активировать пробный период</span>
+          </div>
+          <p className="mt-1.5 pl-10 text-xs text-muted-foreground">
+            7 дней · 3 ГБ · 1 устройство
+          </p>
+          <div className="pl-10">
+            <OfferCta label={content.cta} />
+          </div>
+        </div>
+
+        {['Установить приложение', 'Подключиться'].map((title, i) => (
+          <div key={title} className="flex items-center gap-3 px-3 py-3">
+            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+              {i + 2}
+            </span>
+            <span className="text-sm font-medium text-muted-foreground">{title}</span>
+          </div>
+        ))}
+      </div>
+
+      {content.skip && <SkipToTariffs label={content.skip} />}
+    </div>
+  )
+}
+
+/** D · одна цифра: всё остальное уходит в строку под ней. Минимум элементов. */
+function OfferHero({ content }: { content: OfferContent }) {
+  return (
+    <div className={cn('cab-card relative overflow-hidden p-6 text-center', content.accent)}>
       <span className="cab-onb-aurora" aria-hidden />
 
       <div className="relative">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[hsl(var(--cab-accent)/0.35)] bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
-            <Zap size={20} />
-          </span>
-          <Pill>Тарифы</Pill>
+        <Pill>{content.pill}</Pill>
+
+        <div className="mt-4 font-heading text-6xl font-bold leading-none sm:text-7xl">
+          <span className="cab-gradient-text">{content.hero.value}</span>
         </div>
+        <div className="mt-2 font-heading text-xl font-bold">{content.hero.caption}</div>
+        <p className="mt-1.5 text-sm text-muted-foreground">{content.subtitle}</p>
 
-        <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] sm:text-4xl">
-          От <span className="cab-gradient-text">110 ₽</span> в месяц
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Пробный период уже использован — дальше платные тарифы.
-        </p>
+        <p className="mt-4 text-sm font-medium">{content.hero.line}</p>
 
-        {/*
-          Все три плитки выводятся из GET /tariffs, ничего не зашито:
-          цена в заголовке — минимальный monthly_base_rub по витрине,
-          устройства — максимальный device_limit,
-          трафик — ∞, если хоть у одного тарифа traffic_gb === null, иначе «до N ГБ»,
-          выгода — разница monthly_base_rub самого длинного и самого короткого периода.
-          Если витрина пустая или в ней один тариф, плитку просто не выводим.
-        */}
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          <StatTile icon={MonitorSmartphone} value="5" unit="до устройств" />
-          <StatTile icon={Gauge} value={<InfinityIcon size={22} className="mx-auto" />} unit="трафик" />
-          <StatTile icon={Calendar} value="−31%" unit="на год" />
-        </div>
-
-        <button type="button" className="cab-cta mt-5 h-12 w-full rounded-xl text-sm font-semibold">
-          Смотреть тарифы
-        </button>
+        <OfferCta label={content.cta} />
+        {content.skip && <SkipToTariffs label={content.skip} />}
       </div>
     </div>
   )
+}
+
+function OfferCard({ style, content }: { style: OfferStyle; content: OfferContent }) {
+  // Путь применим только к триалу: у тарифов шагов нет, там он вырождается в B.
+  if (style === 'path' && !content.skip) return <OfferTiles content={content} />
+  if (style === 'plain') return <OfferPlain content={content} />
+  if (style === 'path') return <OfferPath content={content} />
+  if (style === 'hero') return <OfferHero content={content} />
+  return <OfferTiles content={content} />
 }
 
 function SetupStep({
@@ -1341,13 +1475,86 @@ function OnboardingSubRings() {
  * человека до рабочего VPN. Кто пришёл покупать, уходит по «сразу к тарифам»
  * из оффера; остальным они понадобятся уже на обычной главной.
  */
-function OnboardingPreview({ phase, withRings }: { phase: OnbPhase; withRings: boolean }) {
-  if (phase === 'done') return <DashboardCockpit />
+/*
+ * Что показывать сразу после дорожки — открытый вопрос.
+ *
+ * Тур: человек только что прошёл три шага подряд, и четвёртый экран с
+ * затемнением может раздражать. Тихо: напоминание про резервный вход живёт
+ * строкой в профиле и никого не останавливает.
+ */
+type AfterSetup = 'tour' | 'quiet'
+
+/** Мок тура: та же геометрия, что у CabinetOnboarding, но без замеров. */
+function TourMock() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl bg-black/35">
+      <div className="absolute left-1/2 top-24 w-[min(20rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-border bg-card p-4 shadow-2xl">
+        <p className="text-sm font-semibold">Добро пожаловать!</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          Это ваш личный кабинет. Здесь вы управляете подпиской, оплачиваете тариф и подключаете
+          устройства.
+        </p>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground">Пропустить</span>
+          <span className="cab-cta rounded-lg px-3 py-1.5 text-xs font-semibold">Далее</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Тихая альтернатива туру: одна строка внизу, ничего не перекрывает. */
+function QuietReminder() {
+  return (
+    <div className="cab-card cab-row cab-accent-emerald flex items-center gap-3 px-4 py-3">
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--cab-accent)/0.12)] text-[hsl(var(--cab-accent))]">
+        <Check size={15} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">Добавьте резервный способ входа</span>
+        <span className="block text-xs text-muted-foreground">
+          Чтобы не потерять аккаунт — минута в профиле
+        </span>
+      </span>
+      <ChevronRight className="cab-row-chevron size-4 shrink-0 text-muted-foreground" />
+    </div>
+  )
+}
+
+/*
+ * Разделов на этапе настройки нет намеренно.
+ *
+ * Тарифы, рефералы и промокоды уводят от единственной задачи — довести
+ * человека до рабочего VPN. Кто пришёл покупать, уходит по «сразу к тарифам»
+ * из оффера; остальным они понадобятся уже на обычной главной.
+ */
+function OnboardingPreview({
+  phase,
+  style,
+  withRings,
+  afterSetup,
+}: {
+  phase: OnbPhase
+  style: OfferStyle
+  withRings: boolean
+  afterSetup: AfterSetup
+}) {
+  if (phase === 'done') {
+    return (
+      <div className="relative">
+        <div className="space-y-2.5">
+          <DashboardCockpit />
+          {afterSetup === 'quiet' && <QuietReminder />}
+        </div>
+        {afterSetup === 'tour' && <TourMock />}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2.5">
-      {phase === 'offer' && <OnboardingOffer />}
-      {phase === 'blocked' && <OnboardingBlocked />}
+      {phase === 'offer' && <OfferCard style={style} content={TRIAL_OFFER} />}
+      {phase === 'blocked' && <OfferCard style={style} content={TARIFFS_OFFER} />}
       {phase === 'setup' && (
         <>
           <OnboardingSetup />
@@ -1408,7 +1615,7 @@ const ONB_NOTE: Record<OnbPhase, string> = {
     'Триал уже использован или выключен. Сейчас здесь тупик с погасшей кнопкой — экран должен вести к тарифам.',
   setup:
     'Подписка есть, устройств ноль. Место сегодняшнего обрыва: активировал — и попал на панель с нулями. Разделов тут нет намеренно: они уводят от единственной задачи.',
-  done: 'Первое устройство подключено, дальше кабинет обычный. Онбординг больше не показывается.',
+  done: 'Первое устройство подключено, дальше кабинет обычный. Переключатель — что показать сразу после дорожки: тур поверх экрана или тихую строку про резервный вход.',
 }
 
 export default function RedesignPreviewPage() {
@@ -1424,8 +1631,10 @@ export default function RedesignPreviewPage() {
   const [unlimitedBar, setUnlimitedBar] = useState<UnlimitedBar>('none')
   const [shell, setShell] = useState<'prod' | 'bare'>('prod')
   const [onbPhase, setOnbPhase] = useState<OnbPhase>('offer')
+  const [onbStyle, setOnbStyle] = useState<OfferStyle>('plain')
   /** Открытый вопрос: держать ли кольца рядом с дорожкой или убрать до конца настройки. */
   const [onbRings, setOnbRings] = useState(false)
+  const [afterSetup, setAfterSetup] = useState<AfterSetup>('quiet')
   const [panelOpen, setPanelOpen] = useState(true)
   const queryClient = useQueryClient()
 
@@ -1454,7 +1663,12 @@ export default function RedesignPreviewPage() {
 
   const pageContent =
     page === 'onboarding' ? (
-      <OnboardingPreview phase={onbPhase} withRings={onbRings} />
+      <OnboardingPreview
+        phase={onbPhase}
+        style={onbStyle}
+        withRings={onbRings}
+        afterSetup={afterSetup}
+      />
     ) : page === 'dashboard' ? (
       { a: <DashboardFocus />, b: <DashboardCockpit /> }[variant]
     ) : (
@@ -1519,6 +1733,18 @@ export default function RedesignPreviewPage() {
                 }))}
               />
             )}
+            {page === 'onboarding' && (onbPhase === 'offer' || onbPhase === 'blocked') && (
+              <Segmented
+                value={onbStyle}
+                onChange={setOnbStyle}
+                options={[
+                  { value: 'plain', label: 'A · Как на проде' },
+                  { value: 'tiles', label: 'B · Плитки' },
+                  { value: 'path', label: 'C · Путь' },
+                  { value: 'hero', label: 'D · Одна цифра' },
+                ]}
+              />
+            )}
             {page === 'onboarding' && onbPhase === 'setup' && (
               <Segmented
                 value={onbRings ? 'rings' : 'strip'}
@@ -1526,6 +1752,16 @@ export default function RedesignPreviewPage() {
                 options={[
                   { value: 'strip', label: 'Сводка плитками' },
                   { value: 'rings', label: 'Сводка кольцами' },
+                ]}
+              />
+            )}
+            {page === 'onboarding' && onbPhase === 'done' && (
+              <Segmented
+                value={afterSetup}
+                onChange={setAfterSetup}
+                options={[
+                  { value: 'quiet', label: 'Тихо' },
+                  { value: 'tour', label: 'Тур' },
                 ]}
               />
             )}
