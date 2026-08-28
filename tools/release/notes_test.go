@@ -185,3 +185,29 @@ func TestCollapsibleSection_threshold(t *testing.T) {
 		t.Error("«Новое» не сворачивается")
 	}
 }
+
+// TestGitHubBodyHasNoTelegramMarkup закрепляет разделение вариантов: сворачивание
+// секций в раскрывающуюся цитату — приём Telegram, в GitHub Release уходит сырой
+// GFM-блок из файла. Тест страхует от попытки «улучшить» и GitHub тоже.
+func TestGitHubBodyHasNoTelegramMarkup(t *testing.T) {
+	n, err := ParseReleaseNotes(sampleNotes)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, forbidden := range []string{"<blockquote", "</blockquote>", "expandable", "<tg-emoji"} {
+		if strings.Contains(n.GitHubBody, forbidden) {
+			t.Errorf("GitHub-вариант содержит телеграм-разметку %q:\n%s", forbidden, n.GitHubBody)
+		}
+	}
+	// Пункты GitHub остаются обычным GFM-списком.
+	if !strings.Contains(n.GitHubBody, "\n- ") {
+		t.Errorf("ожидался GFM-список в GitHub-варианте:\n%s", n.GitHubBody)
+	}
+
+	// А в телеграм-варианте разметка появляется — на том же источнике.
+	tg := FormatTelegramHTML(n, TelegramFooter{})
+	if strings.Contains(n.GitHubBody, "<blockquote") == strings.Contains(tg, "<blockquote") &&
+		strings.Contains(tg, "<blockquote") {
+		t.Error("разметка утекла в оба варианта")
+	}
+}
