@@ -315,8 +315,8 @@ export function ConnectInviteModal({
                 manualOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
               )}
             >
-              <div className="min-h-0">
-                <div className="mt-2.5">
+              <div className="min-h-0 min-w-0">
+                <div className="mt-2.5 min-w-0">
                   <p className="mb-2 text-[11px] leading-4 text-muted-foreground">
                     {t('connectInvite.manualHint')}
                   </p>

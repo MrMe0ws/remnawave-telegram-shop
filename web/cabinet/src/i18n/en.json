@@ -219,7 +219,7 @@
     },
     "connectInvite": {
       "cardTitle": "Connect another device",
-      "cardSubtitle": "A second phone, computer or TV — where you cannot sign in",
+      "cardSubtitle": "A second phone, computer or TV",
       "modalTitle": "Connect another device",
       "qrAlt": "Connection link QR code",
       "qrHint": "Point the other phone's camera here — it opens the setup instructions",

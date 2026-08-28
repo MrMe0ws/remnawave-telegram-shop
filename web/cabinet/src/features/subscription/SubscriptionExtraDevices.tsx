@@ -271,11 +271,14 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
           <div className="flex flex-col gap-0">
             <div className={hwidSubpanelGridCls(panel === 'menu')}>
               <div className="min-h-0 overflow-hidden">
-                <div className="space-y-2.5">
+                {/* На широком экране две опции встают в ряд: каждая занимает
+                    половину, а когда доступна только одна — всю ширину, как и
+                    прежде. На мобиле остаётся столбик. */}
+                <div className="flex flex-col gap-2.5 sm:flex-row">
                   {hwid.can_increase && (
                     <button
                       type="button"
-                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-muted/25 p-2 text-left text-card-foreground hover:border-transparent"
+                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-muted/25 p-2 text-left text-card-foreground hover:border-transparent sm:w-auto sm:flex-1"
                       onClick={() => {
                         setBuyTarget(buyOptions[0] ?? hwid.current_limit + 1)
                         setProvider(firstHwidProvider)
@@ -296,7 +299,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                   {hwid.can_decrease && (
                     <button
                       type="button"
-                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-muted/25 p-2 text-left text-card-foreground hover:border-transparent"
+                      className="cabinet-row group flex w-full items-center gap-3 rounded-xl border border-border/70 bg-muted/25 p-2 text-left text-card-foreground hover:border-transparent sm:w-auto sm:flex-1"
                       onClick={() => {
                         const last = decOptions[decOptions.length - 1] ?? hwid.base_limit
                         setDecTarget(last)

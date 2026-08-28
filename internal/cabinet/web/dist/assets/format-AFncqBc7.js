@@ -1,0 +1,1 @@
+import{aS as a}from"./index-Cqu7mYgE.js";function n(){return a.language==="en"?"en-US":"ru-RU"}function o(t){return t.toLocaleString(n())}function e(t){return t.toLocaleString(n(),{maximumFractionDigits:0})}function u(t,r){return t.toLocaleString(n(),{minimumFractionDigits:r,maximumFractionDigits:r})}function m(t){return`${o(Math.round(t))} ₽`}export{u as a,o as b,m as c,e as f};
