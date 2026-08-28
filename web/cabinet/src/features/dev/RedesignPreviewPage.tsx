@@ -1119,20 +1119,17 @@ function OnboardingOffer() {
         <h1 className="mt-4 font-heading text-3xl font-bold leading-[1.1] sm:text-4xl">
           <span className="cab-gradient-text">7 дней</span> бесплатно
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Карта не нужна, ничего не спишется. Подписка не продлевается сама.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Попробуйте бесплатно — без обязательств</p>
 
+        {/*
+          Цифры без подписей-объяснений: пояснительный текст под сеткой читался
+          как стена и отвлекал от единственной кнопки. Смысл несут сами плитки.
+        */}
         <div className="mt-5 grid grid-cols-3 gap-2">
           <StatTile icon={Calendar} value="7" unit="дней" />
           <StatTile icon={Gauge} value="3" unit="ГБ" />
           <StatTile icon={Smartphone} value="1" unit="устройство" />
         </div>
-
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Трёх гигабайт хватит на неделю мессенджеров, почты и карт. Устройство любое — телефон,
-          ноутбук или телевизор.
-        </p>
 
         {/* Блик постоянный: это единственное действие на экране. */}
         <span className="cab-attn-sheen mt-5 block">
@@ -1140,9 +1137,6 @@ function OnboardingOffer() {
             Активировать бесплатно
           </button>
         </span>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          Дальше покажем, как подключить — это пара минут
-        </p>
 
         <SkipToTariffs label="Не нужен пробный — сразу к тарифам" />
       </div>
@@ -1176,23 +1170,23 @@ function OnboardingBlocked() {
           Пробный период уже использован — дальше платные тарифы.
         </p>
 
+        {/*
+          Все три плитки выводятся из GET /tariffs, ничего не зашито:
+          цена в заголовке — минимальный monthly_base_rub по витрине,
+          устройства — максимальный device_limit,
+          трафик — ∞, если хоть у одного тарифа traffic_gb === null, иначе «до N ГБ»,
+          выгода — разница monthly_base_rub самого длинного и самого короткого периода.
+          Если витрина пустая или в ней один тариф, плитку просто не выводим.
+        */}
         <div className="mt-5 grid grid-cols-3 gap-2">
-          <StatTile icon={MonitorSmartphone} value="5" unit="устройств" />
-          <StatTile icon={Gauge} value={<InfinityIcon size={22} className="mx-auto" />} unit="скорость" />
+          <StatTile icon={MonitorSmartphone} value="5" unit="до устройств" />
+          <StatTile icon={Gauge} value={<InfinityIcon size={22} className="mx-auto" />} unit="трафик" />
           <StatTile icon={Calendar} value="−31%" unit="на год" />
         </div>
-
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Одна подписка на всю семью, скорость не режется, а на годовом тарифе месяц выходит почти
-          втрое дешевле.
-        </p>
 
         <button type="button" className="cab-cta mt-5 h-12 w-full rounded-xl text-sm font-semibold">
           Смотреть тарифы
         </button>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          Оплата картой, СБП или звёздами Telegram
-        </p>
       </div>
     </div>
   )
@@ -1266,7 +1260,6 @@ function OnboardingSetup() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-heading text-lg font-bold leading-tight">Осталось подключить</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Пробный период активен · 7 дней</p>
         </div>
         <Pill className="shrink-0">Шаг 2 из 3</Pill>
       </div>
