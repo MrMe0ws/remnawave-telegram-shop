@@ -55,7 +55,18 @@ func LoadRuntimeOverrides(overrides map[string]string) error {
 			continue
 		}
 		if err := field.Apply(value); err != nil {
-			return fmt.Errorf("runtime settings: apply %q: %w", key, err)
+			// Сохранённое значение перестало быть допустимым — например, способ
+			// оплаты был включён из админки, а потом из .env убрали реквизиты.
+			// Это данные из прошлого, а не действие администратора прямо сейчас,
+			// и ронять из-за них старт нельзя: бот уходил бы в цикл перезапуска,
+			// причём чинить пришлось бы правкой БД. Пропускаем — значение
+			// останется тем, что дал .env, а админ увидит расхождение в админке.
+			//
+			// Живой PATCH из админки (ApplyRuntimePatch) ошибку по-прежнему
+			// возвращает: там она нужна, чтобы админ увидел причину отказа.
+			slog.Error("runtime settings: stored value rejected, keeping value from .env",
+				"key", key, "error", err)
+			continue
 		}
 		runtimeOverrides[key] = value
 		runtimeOverrideSet[key] = struct{}{}
