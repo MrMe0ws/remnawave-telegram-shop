@@ -834,13 +834,14 @@
         "menu": "Меню",
         "group": {
           "overview": "Обзор",
-          "clients": "Клиенты",
-          "commerce": "Коммерция",
+          "management": "Управление",
+          "marketing": "Маркетинг",
           "system": "Система"
         },
         "dashboard": "Обзор",
         "stats": "Статистика",
         "users": "Пользователи",
+        "payments": "Платежи",
         "promos": "Промокоды",
         "tariffs": "Тарифы",
         "loyalty": "Лояльность",
@@ -1247,6 +1248,45 @@
           "trafficPreset": "{{value}}"
         }
       },
+      "payments": {
+        "title": "Платежи",
+        "subtitle": "История транзакций и экспорт",
+        "totalCount": "{{count}} платежей",
+        "listEmpty": "Платежей пока нет",
+        "searchPlaceholder": "ID платежа, ID клиента, telegram ID, @username",
+        "scopeAll": "Все",
+        "statusLabel": "Статус",
+        "amount": "Сумма",
+        "provider": "Провайдер",
+        "providerTxnId": "ID у провайдера",
+        "description": "Описание",
+        "createdAt": "Дата создания",
+        "paidAt": "Дата оплаты",
+        "idempotencyKey": "Ключ идемпотентности",
+        "tariff": "Тариф",
+        "period": "Период",
+        "extraHwid": "Доп. устройства",
+        "extraHwidShort": "+{{count}} устр.",
+        "promoCode": "Промокод",
+        "earlyDowngrade": "Ранний даунгрейд",
+        "kindLabel": "Тип продажи",
+        "modalTitle": "Платёж #{{id}}",
+        "sectionUser": "Пользователь",
+        "sectionPayment": "Платёж",
+        "sectionProvider": "Провайдер",
+        "sectionPurchase": "Покупка",
+        "status": {
+          "paid": "Успешно",
+          "pending": "В обработке",
+          "new": "Создан",
+          "cancel": "Отменён"
+        },
+        "kind": {
+          "subscription": "Подписка",
+          "tariffUpgrade": "Улучшение тарифа",
+          "extraHwid": "Доп. устройства"
+        }
+      },
       "promos": {
         "title": "Промокоды",
         "subtitle": "Управление промокодами",
@@ -1352,8 +1392,11 @@
         "descriptionDetailPreviewEmpty": "Превью появится при вводе подробного описания",
         "empty": "Тарифов пока нет",
         "createFirst": "Создать первый тариф",
-        "sectionBasic": "Основное",
-        "sectionLimits": "Лимиты",
+        "tabBasic": "Основное",
+        "tabTraffic": "Трафик",
+        "tabServers": "Серверы",
+        "tabPrices": "Цены",
+        "tabDescription": "Описание",
         "strategies": {
           "noReset": "Без сброса",
           "day": "День",

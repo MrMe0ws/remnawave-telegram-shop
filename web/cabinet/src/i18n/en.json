@@ -820,13 +820,14 @@
         "menu": "Menu",
         "group": {
           "overview": "Overview",
-          "clients": "Clients",
-          "commerce": "Commerce",
+          "management": "Management",
+          "marketing": "Marketing",
           "system": "System"
         },
         "dashboard": "Overview",
         "stats": "Statistics",
         "users": "Users",
+        "payments": "Payments",
         "promos": "Promo codes",
         "tariffs": "Tariffs",
         "loyalty": "Loyalty",
@@ -1234,6 +1235,45 @@
           "trafficPreset": "{{value}} GB"
         }
       },
+      "payments": {
+        "title": "Payments",
+        "subtitle": "Transaction history and export",
+        "totalCount": "{{count}} payments",
+        "listEmpty": "No payments yet",
+        "searchPlaceholder": "Payment ID, customer ID, telegram ID, @username",
+        "scopeAll": "All",
+        "statusLabel": "Status",
+        "amount": "Amount",
+        "provider": "Provider",
+        "providerTxnId": "Provider ID",
+        "description": "Description",
+        "createdAt": "Created at",
+        "paidAt": "Paid at",
+        "idempotencyKey": "Idempotency key",
+        "tariff": "Tariff",
+        "period": "Period",
+        "extraHwid": "Extra devices",
+        "extraHwidShort": "+{{count}} dev.",
+        "promoCode": "Promo code",
+        "earlyDowngrade": "Early downgrade",
+        "kindLabel": "Sale type",
+        "modalTitle": "Payment #{{id}}",
+        "sectionUser": "Customer",
+        "sectionPayment": "Payment",
+        "sectionProvider": "Provider",
+        "sectionPurchase": "Purchase",
+        "status": {
+          "paid": "Succeeded",
+          "pending": "Processing",
+          "new": "Created",
+          "cancel": "Cancelled"
+        },
+        "kind": {
+          "subscription": "Subscription",
+          "tariffUpgrade": "Tariff upgrade",
+          "extraHwid": "Extra devices"
+        }
+      },
       "promos": {
         "title": "Promo codes",
         "subtitle": "Promo code management",
@@ -1339,8 +1379,11 @@
         "descriptionDetailPreviewEmpty": "Preview appears when you enter the detailed description",
         "empty": "No tariffs yet",
         "createFirst": "Create first tariff",
-        "sectionBasic": "Basic",
-        "sectionLimits": "Limits",
+        "tabBasic": "Basic",
+        "tabTraffic": "Traffic",
+        "tabServers": "Servers",
+        "tabPrices": "Prices",
+        "tabDescription": "Description",
         "strategies": {
           "noReset": "No reset",
           "day": "Day",

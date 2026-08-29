@@ -84,6 +84,67 @@ function TariffFieldLabel({ icon: Icon, children }: { icon?: LucideIcon; childre
   )
 }
 
+type TariffEditorTabId = 'basic' | 'traffic' | 'servers' | 'prices' | 'description'
+
+const TARIFF_EDITOR_TABS: {
+  id: TariffEditorTabId
+  labelKey: string
+  icon: LucideIcon
+  accent: AdminSectionIconAccent
+}[] = [
+  { id: 'basic', labelKey: 'admin.tariffs.tabBasic', icon: Settings, accent: 'slate' },
+  { id: 'traffic', labelKey: 'admin.tariffs.tabTraffic', icon: Gauge, accent: 'blue' },
+  { id: 'servers', labelKey: 'admin.tariffs.tabServers', icon: Server, accent: 'indigo' },
+  { id: 'prices', labelKey: 'admin.tariffs.tabPrices', icon: Coins, accent: 'amber' },
+  { id: 'description', labelKey: 'admin.tariffs.tabDescription', icon: FileText, accent: 'violet' },
+]
+
+function TariffEditorTabNav({
+  tabs,
+  activeId,
+  onSelect,
+}: {
+  tabs: typeof TARIFF_EDITOR_TABS
+  activeId: TariffEditorTabId
+  onSelect: (id: TariffEditorTabId) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div
+      role="tablist"
+      aria-label={t('admin.tariffs.editTitle')}
+      className="sticky top-0 z-10 border-b border-border/70 bg-muted/25 px-3 py-2 backdrop-blur-sm dark:bg-secondary/25 sm:px-5"
+    >
+      <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1">
+        <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeId === tab.id
+            const { boxClassName, iconClassName } = adminSectionIconAccentClassNames(tab.accent)
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => onSelect(tab.id)}
+                className={cn(
+                  'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-center text-xs font-medium transition-colors sm:flex-1',
+                  isActive ? cn(boxClassName, iconClassName) : 'text-foreground/80 hover:bg-accent hover:text-foreground',
+                )}
+              >
+                <Icon className={cn('size-3.5 shrink-0', isActive ? iconClassName : undefined)} aria-hidden />
+                <span className="truncate leading-tight">{t(tab.labelKey)}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export interface TariffFormData {
   slug: string
   name: string
@@ -179,9 +240,15 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
   const { data: squadsData } = useAdminSquads()
   const [form, setForm] = useState<TariffFormData>(() => tariffToForm(tariff))
   const isEdit = tariff != null
+  const hasSquads = Boolean(squadsData && squadsData.items.length > 0)
+  const tabs = hasSquads ? TARIFF_EDITOR_TABS : TARIFF_EDITOR_TABS.filter((tab) => tab.id !== 'servers')
+  const [activeTab, setActiveTab] = useState<TariffEditorTabId>('basic')
 
   useEffect(() => {
-    if (open) setForm(tariffToForm(tariff))
+    if (open) {
+      setForm(tariffToForm(tariff))
+      setActiveTab('basic')
+    }
   }, [open, tariff?.id])
 
   const set = <K extends keyof TariffFormData>(k: K, v: TariffFormData[K]) =>
@@ -228,63 +295,57 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
           </button>
         </div>
       }
+      bodyClassName="p-0"
     >
-        <div className="space-y-5">
-          {/* Basic */}
-          <section>
-            <TariffEditorSectionHeader icon={Settings} accent="slate">
-              {t('admin.tariffs.sectionBasic')}
-            </TariffEditorSectionHeader>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <TariffFieldLabel>{t('admin.tariffs.name')}</TariffFieldLabel>
-                <input className="admin-input w-full px-3 py-2" value={form.name} onChange={(e) => set('name', e.target.value)} />
-              </div>
-              <div className="sm:col-span-2">
-                <TariffFieldLabel icon={ListOrdered}>{t('admin.tariffs.sortOrder')}</TariffFieldLabel>
-                <input type="number" className="admin-input w-full max-w-xs px-3 py-2" value={form.sort_order} onChange={(e) => set('sort_order', Number(e.target.value))} />
-                <p className="mt-1 text-xs text-muted-foreground">{t('admin.tariffs.sortOrderHint')}</p>
-              </div>
-            </div>
-            <AdminCheckboxField
-              checked={form.is_active}
-              onChange={(v) => set('is_active', v)}
-              label={t('admin.tariffs.active')}
-              className="mt-3"
-            />
-          </section>
-
-          {/* Limits */}
-          <section>
-            <TariffEditorSectionHeader icon={Gauge} accent="blue">
-              {t('admin.tariffs.sectionLimits')}
-            </TariffEditorSectionHeader>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <TariffFieldLabel icon={Smartphone}>{t('admin.tariffs.devices')}</TariffFieldLabel>
-                <input type="number" min={1} className="admin-input w-full px-3 py-2" value={form.device_limit} onChange={(e) => set('device_limit', Number(e.target.value))} />
-              </div>
-              <div>
-                <TariffFieldLabel icon={HardDrive}>{t('admin.tariffs.traffic')}</TariffFieldLabel>
-                <input type="number" min={0} step={0.1} className="admin-input w-full px-3 py-2" value={form.traffic_gb} onChange={(e) => set('traffic_gb', Number(e.target.value))} />
-              </div>
-              <div>
-                <TariffFieldLabel icon={RotateCcw}>{t('admin.tariffs.strategy')}</TariffFieldLabel>
-                <select className="admin-input w-full px-3 py-2" value={form.traffic_limit_reset_strategy} onChange={(e) => set('traffic_limit_reset_strategy', e.target.value)}>
-                  {STRATEGIES.map((s) => (
-                    <option key={s} value={s}>{t(STRATEGY_I18N_KEYS[s] ?? s, { defaultValue: s })}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* Squads */}
-          {squadsData && squadsData.items.length > 0 && (
+        <TariffEditorTabNav tabs={tabs} activeId={activeTab} onSelect={setActiveTab} />
+        <div className="space-y-5 p-5">
+          {activeTab === 'basic' && (
             <section>
-              <TariffEditorSectionHeader icon={Server} accent="indigo">
-                {t('admin.tariffs.squads')}
-              </TariffEditorSectionHeader>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <TariffFieldLabel>{t('admin.tariffs.name')}</TariffFieldLabel>
+                  <input className="admin-input w-full px-3 py-2" value={form.name} onChange={(e) => set('name', e.target.value)} />
+                </div>
+                <div className="sm:col-span-2">
+                  <TariffFieldLabel icon={ListOrdered}>{t('admin.tariffs.sortOrder')}</TariffFieldLabel>
+                  <input type="number" className="admin-input w-full max-w-xs px-3 py-2" value={form.sort_order} onChange={(e) => set('sort_order', Number(e.target.value))} />
+                  <p className="mt-1 text-xs text-muted-foreground">{t('admin.tariffs.sortOrderHint')}</p>
+                </div>
+              </div>
+              <AdminCheckboxField
+                checked={form.is_active}
+                onChange={(v) => set('is_active', v)}
+                label={t('admin.tariffs.active')}
+                className="mt-3"
+              />
+            </section>
+          )}
+
+          {activeTab === 'traffic' && (
+            <section>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <TariffFieldLabel icon={Smartphone}>{t('admin.tariffs.devices')}</TariffFieldLabel>
+                  <input type="number" min={1} className="admin-input w-full px-3 py-2" value={form.device_limit} onChange={(e) => set('device_limit', Number(e.target.value))} />
+                </div>
+                <div>
+                  <TariffFieldLabel icon={HardDrive}>{t('admin.tariffs.traffic')}</TariffFieldLabel>
+                  <input type="number" min={0} step={0.1} className="admin-input w-full px-3 py-2" value={form.traffic_gb} onChange={(e) => set('traffic_gb', Number(e.target.value))} />
+                </div>
+                <div>
+                  <TariffFieldLabel icon={RotateCcw}>{t('admin.tariffs.strategy')}</TariffFieldLabel>
+                  <select className="admin-input w-full px-3 py-2" value={form.traffic_limit_reset_strategy} onChange={(e) => set('traffic_limit_reset_strategy', e.target.value)}>
+                    {STRATEGIES.map((s) => (
+                      <option key={s} value={s}>{t(STRATEGY_I18N_KEYS[s] ?? s, { defaultValue: s })}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'servers' && hasSquads && squadsData && (
+            <section>
               <div className="grid gap-2 sm:grid-cols-2">
                 {squadsData.items.map((sq) => (
                   <label key={sq.uuid} className={cn('flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm', form.squad_uuids.includes(sq.uuid) && 'border-primary/50 bg-primary/5')}>
@@ -301,133 +362,135 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
             </section>
           )}
 
-          {/* Prices */}
-          <section>
-            <TariffEditorSectionHeader icon={Coins} accent="amber">
-              {t('admin.tariffs.prices')}
-            </TariffEditorSectionHeader>
-            <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.pricesHint')}</p>
-            <div className="overflow-hidden rounded-xl border border-border/60">
-              <div className="hidden grid-cols-[minmax(5rem,1fr)_1fr_1fr] gap-3 border-b border-border/50 bg-muted/25 px-4 py-2 text-xs font-medium text-muted-foreground sm:grid">
-                <span>{t('admin.tariffs.pricePeriod')}</span>
-                <span>{t('admin.tariffs.priceRub')}</span>
-                <span>{t('admin.tariffs.priceStars')}</span>
-              </div>
-              <div className="divide-y divide-border/50">
-                {PERIOD_MONTHS.map((m, i) => (
-                  <div
-                    key={m}
-                    className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(5rem,1fr)_1fr_1fr] sm:items-center"
-                  >
-                    <span className="text-sm font-medium sm:pt-0">
-                      {t('admin.users.monthsShort', { count: m })}
-                    </span>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground sm:sr-only">
-                        {t('admin.tariffs.priceRub')}
-                      </label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                          ₽
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          className="admin-input w-full py-2 pl-7 pr-3 tabular-nums"
-                          value={form.rub[i] || ''}
-                          onChange={(e) => {
-                            const n = [...form.rub] as [number, number, number, number]
-                            n[i] = Number(e.target.value) || 0
-                            set('rub', n)
-                          }}
-                        />
+          {activeTab === 'prices' && (
+            <section>
+              <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.pricesHint')}</p>
+              <div className="overflow-hidden rounded-xl border border-border/60">
+                <div className="hidden grid-cols-[minmax(5rem,1fr)_1fr_1fr] gap-3 border-b border-border/50 bg-muted/25 px-4 py-2 text-xs font-medium text-muted-foreground sm:grid">
+                  <span>{t('admin.tariffs.pricePeriod')}</span>
+                  <span>{t('admin.tariffs.priceRub')}</span>
+                  <span>{t('admin.tariffs.priceStars')}</span>
+                </div>
+                <div className="divide-y divide-border/50">
+                  {PERIOD_MONTHS.map((m, i) => (
+                    <div
+                      key={m}
+                      className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(5rem,1fr)_1fr_1fr] sm:items-center"
+                    >
+                      <span className="text-sm font-medium sm:pt-0">
+                        {t('admin.users.monthsShort', { count: m })}
+                      </span>
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground sm:sr-only">
+                          {t('admin.tariffs.priceRub')}
+                        </label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            ₽
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            className="admin-input w-full py-2 pl-7 pr-3 tabular-nums"
+                            value={form.rub[i] || ''}
+                            onChange={(e) => {
+                              const n = [...form.rub] as [number, number, number, number]
+                              n[i] = Number(e.target.value) || 0
+                              set('rub', n)
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-muted-foreground sm:sr-only">
+                          {t('admin.tariffs.priceStars')}
+                        </label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            ⭐
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="—"
+                            className="admin-input w-full py-2 pl-8 pr-3 tabular-nums"
+                            value={form.stars[i] ?? ''}
+                            onChange={(e) => {
+                              const n = [...form.stars] as [number | null, number | null, number | null, number | null]
+                              n[i] = e.target.value ? Number(e.target.value) : null
+                              set('stars', n)
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-muted-foreground sm:sr-only">
-                        {t('admin.tariffs.priceStars')}
-                      </label>
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                          ⭐
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          placeholder="—"
-                          className="admin-input w-full py-2 pl-8 pr-3 tabular-nums"
-                          value={form.stars[i] ?? ''}
-                          onChange={(e) => {
-                            const n = [...form.stars] as [number | null, number | null, number | null, number | null]
-                            n[i] = e.target.value ? Number(e.target.value) : null
-                            set('stars', n)
-                          }}
-                        />
-                      </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {activeTab === 'description' && (
+            <>
+              {/* Description (short) */}
+              <section>
+                <TariffEditorSectionHeader icon={FileText} accent="slate">
+                  {t('admin.tariffs.description')}
+                </TariffEditorSectionHeader>
+                <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.descriptionHint')}</p>
+                <div className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
+                  <div className="flex min-h-[13.5rem] flex-col">
+                    <TariffFieldLabel>{t('admin.tariffs.descriptionSource')}</TariffFieldLabel>
+                    <textarea
+                      spellCheck={false}
+                      className="admin-input min-h-0 flex-1 w-full resize-none px-3 py-2 font-mono text-xs leading-relaxed"
+                      value={form.description}
+                      onChange={(e) => set('description', e.target.value)}
+                    />
+                  </div>
+                  <div className="flex min-h-[13.5rem] flex-col">
+                    <TariffFieldLabel>{t('admin.tariffs.descriptionPreview')}</TariffFieldLabel>
+                    <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
+                      {form.description.trim() ? (
+                        <TariffDescription text={form.description} className="text-sm" />
+                      ) : (
+                        <p className="text-xs italic text-muted-foreground">{t('admin.tariffs.descriptionPreviewEmpty')}</p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Description (short) */}
-          <section>
-            <TariffEditorSectionHeader icon={FileText} accent="slate">
-              {t('admin.tariffs.description')}
-            </TariffEditorSectionHeader>
-            <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.descriptionHint')}</p>
-            <div className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
-              <div className="flex min-h-[13.5rem] flex-col">
-                <TariffFieldLabel>{t('admin.tariffs.descriptionSource')}</TariffFieldLabel>
-                <textarea
-                  spellCheck={false}
-                  className="admin-input min-h-0 flex-1 w-full resize-none px-3 py-2 font-mono text-xs leading-relaxed"
-                  value={form.description}
-                  onChange={(e) => set('description', e.target.value)}
-                />
-              </div>
-              <div className="flex min-h-[13.5rem] flex-col">
-                <TariffFieldLabel>{t('admin.tariffs.descriptionPreview')}</TariffFieldLabel>
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
-                  {form.description.trim() ? (
-                    <TariffDescription text={form.description} className="text-sm" />
-                  ) : (
-                    <p className="text-xs italic text-muted-foreground">{t('admin.tariffs.descriptionPreviewEmpty')}</p>
-                  )}
                 </div>
-              </div>
-            </div>
-          </section>
+              </section>
 
-          {/* Description detail (plan page) */}
-          <section>
-            <TariffEditorSectionHeader icon={FileText} accent="blue">
-              {t('admin.tariffs.descriptionDetail')}
-            </TariffEditorSectionHeader>
-            <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.descriptionDetailHint')}</p>
-            <div className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
-              <div className="flex min-h-[13.5rem] flex-col">
-                <TariffFieldLabel>{t('admin.tariffs.descriptionSource')}</TariffFieldLabel>
-                <textarea
-                  spellCheck={false}
-                  className="admin-input min-h-0 flex-1 w-full resize-none px-3 py-2 font-mono text-xs leading-relaxed"
-                  value={form.description_detail}
-                  onChange={(e) => set('description_detail', e.target.value)}
-                />
-              </div>
-              <div className="flex min-h-[13.5rem] flex-col">
-                <TariffFieldLabel>{t('admin.tariffs.descriptionPreview')}</TariffFieldLabel>
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
-                  {form.description_detail.trim() ? (
-                    <TariffDescription text={form.description_detail} className="text-sm" />
-                  ) : (
-                    <p className="text-xs italic text-muted-foreground">{t('admin.tariffs.descriptionDetailPreviewEmpty')}</p>
-                  )}
+              {/* Description detail (plan page) */}
+              <section>
+                <TariffEditorSectionHeader icon={FileText} accent="blue">
+                  {t('admin.tariffs.descriptionDetail')}
+                </TariffEditorSectionHeader>
+                <p className="mb-3 text-xs text-muted-foreground">{t('admin.tariffs.descriptionDetailHint')}</p>
+                <div className="grid gap-3 lg:grid-cols-2 lg:items-stretch">
+                  <div className="flex min-h-[13.5rem] flex-col">
+                    <TariffFieldLabel>{t('admin.tariffs.descriptionSource')}</TariffFieldLabel>
+                    <textarea
+                      spellCheck={false}
+                      className="admin-input min-h-0 flex-1 w-full resize-none px-3 py-2 font-mono text-xs leading-relaxed"
+                      value={form.description_detail}
+                      onChange={(e) => set('description_detail', e.target.value)}
+                    />
+                  </div>
+                  <div className="flex min-h-[13.5rem] flex-col">
+                    <TariffFieldLabel>{t('admin.tariffs.descriptionPreview')}</TariffFieldLabel>
+                    <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
+                      {form.description_detail.trim() ? (
+                        <TariffDescription text={form.description_detail} className="text-sm" />
+                      ) : (
+                        <p className="text-xs italic text-muted-foreground">{t('admin.tariffs.descriptionDetailPreviewEmpty')}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </section>
+              </section>
+            </>
+          )}
         </div>
     </AdminModal>
   )
