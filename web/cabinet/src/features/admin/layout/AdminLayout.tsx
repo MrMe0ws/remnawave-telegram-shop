@@ -93,13 +93,15 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
       items: [
         { to: '/admin/promos', icon: TicketPercent, labelKey: 'admin.nav.promos' },
         { to: '/admin/broadcast', icon: Megaphone, labelKey: 'admin.nav.broadcast' },
-        { to: '/admin/tariffs', icon: Zap, labelKey: 'admin.nav.tariffs', condition: salesModeTariffs },
         { to: '/admin/loyalty', icon: Gem, labelKey: 'admin.nav.loyalty', condition: loyaltyEnabled },
       ],
     },
     {
       labelKey: 'admin.nav.group.system',
       items: [
+        // Без condition: под списком тарифов теперь живут настройки продукта
+        // (триал, HWID, курс звёзд), которые нужны в любом режиме продаж.
+        { to: '/admin/tariffs', icon: Zap, labelKey: 'admin.nav.tariffs' },
         { to: '/admin/settings', icon: SlidersHorizontal, labelKey: 'admin.nav.settings' },
         { to: '/admin/infra', icon: Server, labelKey: 'admin.nav.infra' },
         { to: '/admin/sync', icon: RefreshCw, labelKey: 'admin.nav.sync' },

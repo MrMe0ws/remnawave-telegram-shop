@@ -860,6 +860,8 @@
       },
       "prev": "Назад",
       "next": "Далее",
+      "copy": "Копировать",
+      "copied": "Скопировано",
       "actions": "Действия",
       "save": "Сохранить",
       "cancel": "Отмена",
@@ -1271,6 +1273,7 @@
         "earlyDowngrade": "Ранний даунгрейд",
         "kindLabel": "Тип продажи",
         "modalTitle": "Платёж #{{id}}",
+        "openUserCard": "Открыть карточку пользователя",
         "sectionUser": "Пользователь",
         "sectionPayment": "Платёж",
         "sectionProvider": "Провайдер",
@@ -1356,6 +1359,10 @@
         "devices": "Устройства",
         "trafficGB": "Трафик (ГБ)",
         "traffic": "Трафик (ГБ)",
+        "trafficShort": "Трафик",
+        "noPrices": "Цены не заданы",
+        "settingsTitle": "Настройки продукта",
+        "settingsSubtitle": "Триал, устройства, курс звёзд и отображение цен",
         "isActive": "Активен",
         "active": "Активен",
         "sortOrder": "Порядок",
@@ -1630,7 +1637,7 @@
           "links": "Ссылки в боте",
           "fortune": "Колесо фортуны",
           "cabinet": "Оформление кабинета",
-          "tariffs": "Тарифы"
+          "tariffs": "Витрина цен"
         },
         "fortune": {
           "basic": "Правила и лимиты",

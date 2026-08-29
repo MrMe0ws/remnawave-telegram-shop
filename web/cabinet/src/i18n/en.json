@@ -846,6 +846,8 @@
       },
       "prev": "Previous",
       "next": "Next",
+      "copy": "Copy",
+      "copied": "Copied",
       "actions": "Actions",
       "save": "Save",
       "cancel": "Cancel",
@@ -1258,6 +1260,7 @@
         "earlyDowngrade": "Early downgrade",
         "kindLabel": "Sale type",
         "modalTitle": "Payment #{{id}}",
+        "openUserCard": "Open customer card",
         "sectionUser": "Customer",
         "sectionPayment": "Payment",
         "sectionProvider": "Provider",
@@ -1343,6 +1346,10 @@
         "devices": "Devices",
         "trafficGB": "Traffic (GB)",
         "traffic": "Traffic (GB)",
+        "trafficShort": "Traffic",
+        "noPrices": "No prices set",
+        "settingsTitle": "Product settings",
+        "settingsSubtitle": "Trial, devices, star rate and price display",
         "isActive": "Active",
         "active": "Active",
         "sortOrder": "Sort order",
@@ -1617,7 +1624,7 @@
           "links": "Bot links",
           "fortune": "Fortune wheel",
           "cabinet": "Cabinet appearance",
-          "tariffs": "Tariffs"
+          "tariffs": "Price display"
         },
         "fortune": {
           "basic": "Rules & limits",

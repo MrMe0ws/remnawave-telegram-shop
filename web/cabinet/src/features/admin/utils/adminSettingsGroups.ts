@@ -11,7 +11,6 @@ import {
   ListFilter,
   Megaphone,
   MessageSquare,
-  Package,
   Percent,
   RefreshCw,
   Scale,
@@ -93,10 +92,19 @@ export function adminSettingsGroupIconStyle(id: string): AdminSettingsGroupIconS
   }
 }
 
+/**
+ * Продуктовые группы настроек: витрина цен, триал/трафик, HWID, курс звёзд.
+ *
+ * Живут не в «Настройках бота», а на странице «Тарифы» — под списком тарифов
+ * (см. AdminProductSettingsPanel). Логика простая: всё, что описывает «что и
+ * почём мы продаём», должно лежать рядом с прайсом тарифов, а не на другом
+ * экране. Поэтому в ADMIN_SETTINGS_CATEGORIES этих групп нет.
+ */
+export const ADMIN_PRODUCT_SETTINGS_GROUPS = ['tariffs', 'trial', 'hwid', 'stars'] as const
+
 /** Крупные категории на странице «Настройки бота». */
 export const ADMIN_SETTINGS_CATEGORY_ORDER = [
   'design',
-  'product',
   'marketing',
   'operations',
   'access',
@@ -121,13 +129,6 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     icon: Sparkles,
     groups: ['cabinet'],
     iconStyle: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
-  },
-  {
-    id: 'product',
-    titleKey: 'admin.settings.categories.product',
-    icon: Package,
-    groups: ['tariffs', 'trial', 'hwid', 'stars'],
-    iconStyle: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
   },
   {
     id: 'marketing',
@@ -159,9 +160,11 @@ const GROUP_TO_CATEGORY = new Map<AdminSettingsGroupId, AdminSettingsCategoryId>
 )
 
 if (import.meta.env.DEV) {
-  const categorized = new Set(GROUP_TO_CATEGORY.keys())
+  // Каждая группа должна быть либо в категории «Настроек бота», либо в
+  // продуктовом блоке страницы «Тарифы» — иначе она не отрендерится нигде.
+  const placed = new Set<string>([...GROUP_TO_CATEGORY.keys(), ...ADMIN_PRODUCT_SETTINGS_GROUPS])
   for (const groupId of ADMIN_SETTINGS_GROUP_ORDER) {
-    if (!categorized.has(groupId)) {
+    if (!placed.has(groupId)) {
       console.error(`[adminSettingsGroups] group "${groupId}" is not assigned to any category`)
     }
   }
