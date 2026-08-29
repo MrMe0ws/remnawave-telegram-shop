@@ -268,7 +268,16 @@ function tariffToForm(t?: AdminTariff | null): TariffFormData {
   }
 }
 
-function formToCreateInput(f: TariffFormData, tierLevel?: number | null): CreateTariffInput {
+/**
+ * tier_level всегда равен «Порядку».
+ *
+ * Отдельного поля «Уровень» в форме нет: это два почти всегда одинаковых числа.
+ * Раньше при редактировании уровень сохранялся из исходного тарифа и не следовал
+ * за изменением порядка — бейдж «Уровень N» и цвет карточки застревали на
+ * значении, которое было при создании. TG-админка давно пишет оба поля разом
+ * (см. tariff_admin.go, UpdateTariff с tier_level и sort_order), веб просто отстал.
+ */
+function formToCreateInput(f: TariffFormData): CreateTariffInput {
   const slug = f.slug.trim() || slugifyTariffName(f.name)
   return {
     slug,
@@ -279,7 +288,7 @@ function formToCreateInput(f: TariffFormData, tierLevel?: number | null): Create
     traffic_limit_bytes: Math.round(f.traffic_gb * GB),
     traffic_limit_reset_strategy: f.traffic_limit_reset_strategy,
     active_internal_squad_uuids: joinSquadUUIDs(f.squad_uuids),
-    tier_level: tierLevel ?? f.sort_order,
+    tier_level: f.sort_order,
     description: f.description.trim() || null,
     description_detail: f.description_detail.trim() || null,
     rub: f.rub,
@@ -287,8 +296,8 @@ function formToCreateInput(f: TariffFormData, tierLevel?: number | null): Create
   }
 }
 
-function formToUpdateFields(f: TariffFormData, original?: AdminTariff | null): Record<string, unknown> {
-  const input = formToCreateInput(f, original?.tier_level)
+function formToUpdateFields(f: TariffFormData): Record<string, unknown> {
+  const input = formToCreateInput(f)
   const fields: Record<string, unknown> = {
     name: input.name,
     sort_order: input.sort_order,
@@ -303,7 +312,9 @@ function formToUpdateFields(f: TariffFormData, original?: AdminTariff | null): R
     rub: input.rub,
     stars: input.stars,
   }
-  if (!original) fields.slug = input.slug
+  // slug намеренно не отправляем: он идентификатор тарифа и при редактировании
+  // не меняется (раньше это выражалось условием `if (!original)`, которое в
+  // пути редактирования никогда не выполнялось).
   return fields
 }
 
@@ -370,7 +381,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
   const handleSave = () => {
     if (hasErrors) return
     if (isEdit) {
-      onSave(formToUpdateFields(form, tariff), true)
+      onSave(formToUpdateFields(form), true)
     } else {
       onSave(formToCreateInput(form), false)
     }

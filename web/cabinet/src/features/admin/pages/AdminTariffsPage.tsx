@@ -99,7 +99,18 @@ function TariffPrices({ prices, locale }: { prices: AdminTariffPrice[]; locale: 
   )
 }
 
-function TariffCard({ tariff, onEdit, locale }: { tariff: AdminTariff; onEdit: () => void; locale: string }) {
+function TariffCard({
+  tariff,
+  onEdit,
+  locale,
+  position,
+}: {
+  tariff: AdminTariff
+  onEdit: () => void
+  locale: string
+  /** Позиция в отсортированном списке — она задаёт цвет карточки. */
+  position: number
+}) {
   const { t } = useTranslation()
   const update = useAdminTariffUpdate()
   const del = useAdminTariffDelete()
@@ -110,7 +121,7 @@ function TariffCard({ tariff, onEdit, locale }: { tariff: AdminTariff; onEdit: (
     : 0
 
   const title = tariff.name?.trim() || tariff.slug
-  const accent = tariffTierAccent(tariff.tier_level)
+  const accent = tariffTierAccent(position)
   const inactive = !tariff.is_active
 
   return (
@@ -335,11 +346,12 @@ export default function AdminTariffsPage() {
           </Card>
         ) : (
           <div className="grid items-stretch gap-4 lg:grid-cols-2">
-            {tariffs.map((tariff) => (
+            {tariffs.map((tariff, index) => (
               <TariffCard
                 key={tariff.id}
                 tariff={tariff}
                 locale={locale}
+                position={index}
                 onEdit={() => openEdit(tariff)}
               />
             ))}
