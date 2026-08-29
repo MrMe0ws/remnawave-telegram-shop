@@ -20,6 +20,10 @@ type adminBootstrapResp struct {
 	SalesMode      string `json:"sales_mode"`
 	LoyaltyEnabled bool   `json:"loyalty_enabled"`
 	FortuneEnabled bool   `json:"fortune_enabled"`
+	// Версия сборки — чтобы админ видел в шапке, что за образ поднят, и не
+	// искал это в логах контейнера.
+	Version string `json:"version"`
+	Commit  string `json:"commit"`
 }
 
 // Bootstrap — GET /cabinet/api/admin/bootstrap (RequireAdmin).
@@ -33,6 +37,8 @@ func (h *AdminBootstrapHandler) Bootstrap(w http.ResponseWriter, r *http.Request
 		SalesMode:      config.SalesMode(),
 		LoyaltyEnabled: config.LoyaltyEnabled(),
 		FortuneEnabled: fw.Enabled,
+		Version:        config.BuildVersion(),
+		Commit:         config.BuildCommit(),
 	}
 	writeJSON(w, http.StatusOK, resp)
 }

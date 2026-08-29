@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { LangToggle } from '@/components/LangToggle'
 import { cn } from '@/lib/utils'
 import { useAdminShell } from './AdminShellContext'
+import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import { CabinetDecorLayer } from '@/features/decor/CabinetDecorLayer'
 import { CabinetDecorHeader } from '@/features/decor/CabinetDecorHeader'
 
@@ -21,6 +22,8 @@ interface AdminChromeProps {
 export function AdminChrome({ children }: AdminChromeProps) {
   const { t } = useTranslation()
   const { openMobileNav, mobileHeaderVisible } = useAdminShell()
+  const { data: bootstrap } = useAdminBootstrap()
+  const buildVersion = bootstrap?.version?.trim()
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -59,7 +62,14 @@ export function AdminChrome({ children }: AdminChromeProps) {
               <ShieldCheck className="size-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-tight">{t('admin.dashboard.title')}</p>
+              <p className="truncate text-sm font-semibold leading-tight">
+                {t('admin.dashboard.title')}
+                {buildVersion && (
+                  <span className="ml-1.5 font-normal text-muted-foreground" title={buildVersion}>
+                    {buildVersion}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 

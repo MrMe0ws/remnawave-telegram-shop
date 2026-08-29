@@ -122,6 +122,11 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{t('admin.dashboard.title')}</p>
+          {bootstrap?.version && (
+            <p className="truncate text-xs text-muted-foreground" title={bootstrap.version}>
+              {bootstrap.version}
+            </p>
+          )}
         </div>
       </div>
 

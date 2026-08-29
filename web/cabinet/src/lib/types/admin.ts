@@ -7,6 +7,9 @@ export interface AdminBootstrapDTO {
   sales_mode: string
   loyalty_enabled: boolean
   fortune_enabled: boolean
+  /** Версия сборки: «5.3.0» для релиза, «dev-2fdc211» для main. */
+  version?: string
+  commit?: string
 }
 
 export interface AdminStatsDTO {

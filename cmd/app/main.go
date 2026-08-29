@@ -56,6 +56,10 @@ func main() {
 
 	// Инициализация конфигурации из переменных окружения
 	config.InitConfig()
+	// Версия нужна и админке кабинета — кладём в конфиг, чтобы не тащить
+	// параметром через конструкторы.
+	config.SetBuildInfo(Version, Commit, BuildDate)
+	printStartupBanner(Version, Commit, BuildDate)
 	slog.Info("Application starting", "version", Version, "commit", Commit, "buildDate", BuildDate)
 
 	// Клиент «Мой налог» собираем при наличии учётных данных, даже если сейчас
