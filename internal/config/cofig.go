@@ -489,21 +489,75 @@ func TrafficLimit() int {
 	return conf.trafficLimit * bytesInGigabyte
 }
 
+// placeholderCredentials — значения-заглушки из .env.sample. Тот, кто скопировал
+// пример и не заменил их, реквизитов на самом деле не задал: с CRYPTO_PAY_TOKEN=token
+// счёт не создастся, а клиент упрётся в ошибку уже на оплате.
+//
+// Сравнение точное (без вхождений и префиксов) — настоящий ключ никогда не равен
+// целиком слову «token», так что ложных срабатываний быть не может.
+var placeholderCredentials = map[string]bool{
+	"token":            true,
+	"key":              true,
+	"id":               true,
+	"secret":           true,
+	"password":         true,
+	"changeme":         true,
+	"change_me":        true,
+	"example@mail.com": true,
+	"your_token":       true,
+	"your-token":       true,
+}
+
+// credentialsPresent — все значения непусты. Заглушки из примера не отсеивает:
+// используется для проверки на старте, где строгость сломала бы обновление
+// инстансу, который до сих пор работал с такими значениями.
+func credentialsPresent(values ...string) bool {
+	for _, v := range values {
+		if strings.TrimSpace(v) == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// warnIfPlaceholders — громкое предупреждение о незаменённых заглушках.
+// Метод при этом остаётся включённым: молча отключить оплату хуже, чем
+// работать с шансом на ошибку у провайдера.
+func warnIfPlaceholders(method string, values ...string) {
+	for _, v := range values {
+		if placeholderCredentials[strings.ToLower(strings.TrimSpace(v))] {
+			slog.Warn("payment method is enabled with placeholder credentials from .env.sample — payments will fail at the provider",
+				"method", method)
+			return
+		}
+	}
+}
+
+// credentialsSet — все значения заданы и ни одно не осталось заглушкой из примера.
+func credentialsSet(values ...string) bool {
+	for _, v := range values {
+		v = strings.TrimSpace(v)
+		if v == "" || placeholderCredentials[strings.ToLower(v)] {
+			return false
+		}
+	}
+	return true
+}
+
 // CryptoPayHasCredentials — заданы ли реквизиты CryptoPay в .env.
 // Без них метод нельзя включить из админки: клиент не сможет создать счёт.
 func CryptoPayHasCredentials() bool {
-	return conf.cryptoPayURL != "" && conf.cryptoPayToken != ""
+	return credentialsSet(conf.cryptoPayURL, conf.cryptoPayToken)
 }
 
 // YookasaHasCredentials — заданы ли реквизиты ЮKassa в .env.
 func YookasaHasCredentials() bool {
-	return conf.yookasaURL != "" && conf.yookasaShopId != "" &&
-		conf.yookasaSecretKey != "" && conf.yookasaEmail != ""
+	return credentialsSet(conf.yookasaURL, conf.yookasaShopId, conf.yookasaSecretKey, conf.yookasaEmail)
 }
 
 // PlategaHasCredentials — заданы ли реквизиты Platega в .env.
 func PlategaHasCredentials() bool {
-	return conf.plategaMerchantID != "" && conf.plategaSecret != ""
+	return credentialsSet(conf.plategaMerchantID, conf.plategaSecret)
 }
 
 func IsCryptoPayEnabled() bool {
@@ -562,7 +616,7 @@ func MoynalogProxyURL() string {
 // MoynalogHasCredentials — заданы ли логин и пароль «Мой налог» в .env.
 // Без них клиент не собирается, а значит интеграцию нельзя включить из админки.
 func MoynalogHasCredentials() bool {
-	return conf.moynalogUsername != "" && conf.moynalogPassword != ""
+	return credentialsSet(conf.moynalogUsername, conf.moynalogPassword)
 }
 
 // MoynalogRetryCron — расписание воркера, переотправляющего застрявшие чеки.
@@ -874,8 +928,11 @@ func InitConfig() {
 	conf.isCryptoEnabled = envBool("CRYPTO_PAY_ENABLED")
 	conf.cryptoPayURL = strings.TrimSpace(os.Getenv("CRYPTO_PAY_URL"))
 	conf.cryptoPayToken = strings.TrimSpace(os.Getenv("CRYPTO_PAY_TOKEN"))
-	if conf.isCryptoEnabled && !CryptoPayHasCredentials() {
-		log.Panicf("CRYPTO_PAY_ENABLED=true requires CRYPTO_PAY_URL and CRYPTO_PAY_TOKEN")
+	if conf.isCryptoEnabled {
+		if !credentialsPresent(conf.cryptoPayURL, conf.cryptoPayToken) {
+			log.Panicf("CRYPTO_PAY_ENABLED=true requires CRYPTO_PAY_URL and CRYPTO_PAY_TOKEN")
+		}
+		warnIfPlaceholders("cryptopay", conf.cryptoPayURL, conf.cryptoPayToken)
 	}
 
 	conf.isYookasaEnabled = envBool("YOOKASA_ENABLED")
@@ -884,8 +941,11 @@ func InitConfig() {
 	conf.yookasaSecretKey = strings.TrimSpace(os.Getenv("YOOKASA_SECRET_KEY"))
 	conf.yookasaEmail = strings.TrimSpace(os.Getenv("YOOKASA_EMAIL"))
 	conf.yookasaWebhookURL = strings.TrimSpace(os.Getenv("YOOKASA_WEBHOOK_URL"))
-	if conf.isYookasaEnabled && !YookasaHasCredentials() {
-		log.Panicf("YOOKASA_ENABLED=true requires YOOKASA_URL, YOOKASA_SHOP_ID, YOOKASA_SECRET_KEY and YOOKASA_EMAIL")
+	if conf.isYookasaEnabled {
+		if !credentialsPresent(conf.yookasaURL, conf.yookasaShopId, conf.yookasaSecretKey, conf.yookasaEmail) {
+			log.Panicf("YOOKASA_ENABLED=true requires YOOKASA_URL, YOOKASA_SHOP_ID, YOOKASA_SECRET_KEY and YOOKASA_EMAIL")
+		}
+		warnIfPlaceholders("yookassa", conf.yookasaURL, conf.yookasaShopId, conf.yookasaSecretKey, conf.yookasaEmail)
 	}
 
 	conf.plategaMerchantID = strings.TrimSpace(os.Getenv("PLATEGA_MERCHANT_ID"))
@@ -894,9 +954,10 @@ func InitConfig() {
 	// PLATEGA_ENABLED — общий рубильник: при выключенном ни один подметод не
 	// поднимается, как и раньше.
 	if envBool("PLATEGA_ENABLED") {
-		if !PlategaHasCredentials() {
+		if !credentialsPresent(conf.plategaMerchantID, conf.plategaSecret) {
 			log.Panicf("PLATEGA_ENABLED=true requires PLATEGA_MERCHANT_ID and PLATEGA_SECRET")
 		}
+		warnIfPlaceholders("platega", conf.plategaMerchantID, conf.plategaSecret)
 		conf.isPlategaSBPEnabled = envBool("PLATEGA_SBP_ENABLED")
 		conf.isPlategaCardsEnabled = envBool("PLATEGA_CARDS_ENABLED")
 		conf.isPlategaAcquiringEnabled = envBool("PLATEGA_ACQUIRING_ENABLED")
@@ -1111,8 +1172,11 @@ func InitConfig() {
 	conf.moynalogProxyURL = envStringDefault("MOYNALOG_PROXY_URL", "")
 	conf.moynalogUsername = strings.TrimSpace(os.Getenv("MOYNALOG_USERNAME"))
 	conf.moynalogPassword = strings.TrimSpace(os.Getenv("MOYNALOG_PASSWORD"))
-	if conf.isMoynalogEnabled && (conf.moynalogUsername == "" || conf.moynalogPassword == "") {
-		log.Panicf("MOYNALOG_ENABLED=true requires MOYNALOG_USERNAME and MOYNALOG_PASSWORD")
+	if conf.isMoynalogEnabled {
+		if !credentialsPresent(conf.moynalogUsername, conf.moynalogPassword) {
+			log.Panicf("MOYNALOG_ENABLED=true requires MOYNALOG_USERNAME and MOYNALOG_PASSWORD")
+		}
+		warnIfPlaceholders("moynalog", conf.moynalogUsername, conf.moynalogPassword)
 	}
 	rawReceiptFor, hasReceiptFor := os.LookupEnv("MOYNALOG_RECEIPT_FOR")
 	parseMoynalogReceiptFor(rawReceiptFor, hasReceiptFor)

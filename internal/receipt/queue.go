@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/moynalog"
@@ -243,7 +244,11 @@ func (s *Service) sendAdminMessage(ctx context.Context, text string) {
 	if s.bot == nil || s.adminID == 0 {
 		return
 	}
-	if _, err := s.bot.SendMessage(ctx, &bot.SendMessageParams{ChatID: s.adminID, Text: text}); err != nil {
+	if _, err := s.bot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:    s.adminID,
+		Text:      text,
+		ParseMode: models.ParseModeHTML,
+	}); err != nil {
 		slog.Error("moynalog queue: failed to notify admin", "error", err)
 	}
 }
@@ -253,52 +258,28 @@ func (s *Service) notifyQueued(ctx context.Context, r database.MoynalogReceipt, 
 	if err != nil {
 		pending = 0
 	}
-
-	text := fmt.Sprintf(
-		"Чек в «Мой налог» не прошёл — поставлен в очередь.\n\n"+
-			"Покупка ID: %d\nСумма: %.2f\nОписание: %s\nОплата: %s\n\n"+
-			"Следующая попытка: %s\nВсего ждёт отправки: %d\n\n"+
-			"Ошибка: %v\n\n"+
-			"Повторы идут автоматически, отдельных сообщений по этому чеку больше не будет — "+
-			"сообщу, когда пройдёт.",
-		r.PurchaseID,
-		r.Amount,
-		r.Description,
-		r.OperationTime.Format("02.01.2006 15:04"),
-		next.Format("02.01.2006 15:04"),
-		pending,
-		sendErr,
-	)
-	s.sendAdminMessage(ctx, text)
+	s.sendAdminMessage(ctx, queuedMessage(
+		r.PurchaseID, r.Amount, r.Description,
+		r.OperationTime.Format(receiptTimeLayout),
+		next.Format(receiptTimeLayout),
+		pending, sendErr,
+	))
 }
 
 func (s *Service) notifyRecovered(ctx context.Context, r database.MoynalogReceipt, receiptID string) {
-	text := fmt.Sprintf(
-		"Чек в «Мой налог» проведён.\n\n"+
-			"Покупка ID: %d\nСумма: %.2f\nОплата: %s\nID чека: %s\nПопыток: %d\n\n"+
-			"Доход зарегистрирован датой оплаты.",
-		r.PurchaseID,
-		r.Amount,
-		r.OperationTime.Format("02.01.2006 15:04"),
-		receiptID,
-		r.Attempts+1,
-	)
-	s.sendAdminMessage(ctx, text)
+	s.sendAdminMessage(ctx, recoveredMessage(
+		r.PurchaseID, r.Amount,
+		r.OperationTime.Format(receiptTimeLayout),
+		receiptID, r.Attempts+1,
+	))
 }
 
 func (s *Service) notifyGaveUp(ctx context.Context, r database.MoynalogReceipt, sendErr error) {
-	text := fmt.Sprintf(
-		"Чек в «Мой налог» снят с повторов — истёк предельный срок.\n\n"+
-			"Покупка ID: %d\nСумма: %.2f\nОписание: %s\nОплата: %s\n\n"+
-			"Последняя ошибка: %v\n\n"+
-			"Этот доход нужно внести в приложении вручную.",
-		r.PurchaseID,
-		r.Amount,
-		r.Description,
-		r.OperationTime.Format("02.01.2006 15:04"),
+	s.sendAdminMessage(ctx, gaveUpMessage(
+		r.PurchaseID, r.Amount, r.Description,
+		r.OperationTime.Format(receiptTimeLayout),
 		sendErr,
-	)
-	s.sendAdminMessage(ctx, text)
+	))
 }
 
 // Компиляционные проверки: боевые реализации удовлетворяют интерфейсам очереди.
