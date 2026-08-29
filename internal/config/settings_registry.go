@@ -106,6 +106,51 @@ func RuntimeSettingsRegistry() []SettingField {
 			},
 		},
 
+		// --- moynalog ---
+		//
+		// Выведены только те настройки, что действительно применяются без
+		// рестарта. MOYNALOG_RETRY_CRON сюда не входит: расписание читается
+		// один раз при старте (receiptRetryChecker), и переключатель в админке
+		// молча ничего бы не менял. Логин и пароль — тоже: это секреты, им
+		// место в .env.
+		{
+			Key: "MOYNALOG_ENABLED", Group: "moynalog", Type: SettingBool, Instant: true,
+			Apply: func(value string) error {
+				v := strings.TrimSpace(strings.ToLower(value))
+				if v != "true" && v != "false" {
+					return fmt.Errorf("must be true or false")
+				}
+				// Без учётных данных клиент не собран, и включение было бы
+				// молчаливым бездействием — честнее отказать с объяснением.
+				if v == "true" && !MoynalogHasCredentials() {
+					return fmt.Errorf("set MOYNALOG_USERNAME and MOYNALOG_PASSWORD in .env first")
+				}
+				conf.isMoynalogEnabled = v == "true"
+				return nil
+			},
+			Current: func() string { return boolStr(conf.isMoynalogEnabled) },
+		},
+		{
+			Key: "MOYNALOG_RECEIPT_FOR", Group: "moynalog", Type: SettingCSV,
+			Apply: func(value string) error {
+				parseMoynalogReceiptFor(value, true)
+				return nil
+			},
+			Current: moynalogReceiptForCurrent,
+		},
+		{
+			Key: "MOYNALOG_RETRY_MAX_AGE_HOURS", Group: "moynalog", Type: SettingInt,
+			MinInt: intPtr(1),
+			Apply: applyIntField(func(v int) error {
+				if v < 1 {
+					return fmt.Errorf("must be >= 1")
+				}
+				conf.moynalogRetryMaxAgeHours = v
+				return nil
+			}),
+			Current: func() string { return strconv.Itoa(conf.moynalogRetryMaxAgeHours) },
+		},
+
 		// --- payments_notify ---
 		{
 			Key: "PAYMENTS_NOTIFY_ENABLED", Group: "payments_notify", Type: SettingBool, Instant: true,
@@ -565,6 +610,22 @@ func paymentsNotifyEventsCurrent() string {
 	}
 	if conf.paymentsNotifySendCancel {
 		parts = append(parts, "cancel")
+	}
+	return strings.Join(parts, ",")
+}
+
+// moynalogReceiptForCurrent — текущий MOYNALOG_RECEIPT_FOR в каноничном виде.
+// Токены совпадают с теми, что понимает parseMoynalogReceiptFor.
+func moynalogReceiptForCurrent() string {
+	var parts []string
+	if conf.moynalogReceiptYookasa {
+		parts = append(parts, "yookassa")
+	}
+	if conf.moynalogReceiptPlatega {
+		parts = append(parts, "platega")
+	}
+	if conf.moynalogReceiptCrypto {
+		parts = append(parts, "crypto")
 	}
 	return strings.Join(parts, ",")
 }

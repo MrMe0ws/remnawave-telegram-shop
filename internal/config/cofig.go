@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -30,6 +31,8 @@ type config struct {
 	isPlategaCryptoEnabled                                                       bool
 	moynalogURL, moynalogUsername, moynalogPassword                              string
 	moynalogProxyURL                                                             string
+	moynalogRetryCron                                                            string
+	moynalogRetryMaxAgeHours                                                     int
 	telegramProxyURL                                                             string
 	yookasaProxyURL                                                              string
 	trafficLimit, trialTrafficLimit                                              int
@@ -537,6 +540,22 @@ func MoynalogPassword() string {
 
 func MoynalogProxyURL() string {
 	return conf.moynalogProxyURL
+}
+
+// MoynalogHasCredentials — заданы ли логин и пароль «Мой налог» в .env.
+// Без них клиент не собирается, а значит интеграцию нельзя включить из админки.
+func MoynalogHasCredentials() bool {
+	return conf.moynalogUsername != "" && conf.moynalogPassword != ""
+}
+
+// MoynalogRetryCron — расписание воркера, переотправляющего застрявшие чеки.
+func MoynalogRetryCron() string {
+	return conf.moynalogRetryCron
+}
+
+// MoynalogRetryMaxAge — предельный возраст чека в очереди (от времени оплаты).
+func MoynalogRetryMaxAge() time.Duration {
+	return time.Duration(conf.moynalogRetryMaxAgeHours) * time.Hour
 }
 
 func TelegramProxyURL() string {
@@ -1054,14 +1073,28 @@ func InitConfig() {
 		return map[string]string{}
 	}()
 
+	// MOYNALOG_ENABLED переключается из админки без рестарта, поэтому остальные
+	// параметры читаем всегда: клиент собирается на старте и должен быть готов
+	// к моменту включения. Учётные данные при этом не обязательны — без них
+	// интеграцию просто нельзя включить (см. проверку ниже).
 	conf.isMoynalogEnabled = envBool("MOYNALOG_ENABLED")
-	if conf.isMoynalogEnabled {
-		conf.moynalogURL = envStringDefault("MOYNALOG_URL", "https://moynalog.ru/api/v1")
-		conf.moynalogProxyURL = envStringDefault("MOYNALOG_PROXY_URL", "")
-		conf.moynalogUsername = mustEnv("MOYNALOG_USERNAME")
-		conf.moynalogPassword = mustEnv("MOYNALOG_PASSWORD")
-		rawReceiptFor, hasReceiptFor := os.LookupEnv("MOYNALOG_RECEIPT_FOR")
-		parseMoynalogReceiptFor(rawReceiptFor, hasReceiptFor)
+	conf.moynalogURL = envStringDefault("MOYNALOG_URL", "https://moynalog.ru/api/v1")
+	conf.moynalogProxyURL = envStringDefault("MOYNALOG_PROXY_URL", "")
+	conf.moynalogUsername = strings.TrimSpace(os.Getenv("MOYNALOG_USERNAME"))
+	conf.moynalogPassword = strings.TrimSpace(os.Getenv("MOYNALOG_PASSWORD"))
+	if conf.isMoynalogEnabled && (conf.moynalogUsername == "" || conf.moynalogPassword == "") {
+		log.Panicf("MOYNALOG_ENABLED=true requires MOYNALOG_USERNAME and MOYNALOG_PASSWORD")
+	}
+	rawReceiptFor, hasReceiptFor := os.LookupEnv("MOYNALOG_RECEIPT_FOR")
+	parseMoynalogReceiptFor(rawReceiptFor, hasReceiptFor)
+
+	conf.moynalogRetryCron = envStringDefault("MOYNALOG_RETRY_CRON", "*/10 * * * *")
+	// Предельный возраст чека в очереди. Простой ФНС измеряется днями, так что
+	// запас должен быть большим: раньше срока сдаваться нельзя, иначе доход
+	// придётся вносить руками.
+	conf.moynalogRetryMaxAgeHours = envIntDefault("MOYNALOG_RETRY_MAX_AGE_HOURS", 720)
+	if conf.moynalogRetryMaxAgeHours < 1 {
+		conf.moynalogRetryMaxAgeHours = 1
 	}
 
 	conf.telegramProxyURL = envStringDefault("TELEGRAM_PROXY_URL", "")

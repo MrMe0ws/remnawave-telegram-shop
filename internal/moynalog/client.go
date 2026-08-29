@@ -225,15 +225,18 @@ func isRetryableError(err error) bool {
 	return errors.Is(err, ErrRetryable) || errors.Is(err, ErrAuth)
 }
 
-// CreateIncome создает чек о доходе
-func (c *Client) CreateIncome(ctx context.Context, amount float64, description string) error {
+// CreateIncome создает чек о доходе и возвращает присвоенный ФНС идентификатор.
+//
+// operationTime — время самой оплаты (purchase.paid_at), а НЕ время вызова.
+// Это принципиально для очереди повторов: чек, отправленный после многодневного
+// простоя ФНС, должен зарегистрироваться днём оплаты, иначе доход уедет в другой
+// день, а на стыке месяцев — в другой налоговый период.
+func (c *Client) CreateIncome(ctx context.Context, amount float64, description string, operationTime time.Time) (string, error) {
 	if err := c.ensureAuthenticated(ctx); err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
+		return "", fmt.Errorf("authentication failed: %w", err)
 	}
 
 	incomeURL := fmt.Sprintf("%s/income", c.baseURL)
-
-	now := time.Now()
 
 	service := Service{
 		Name:     description,
@@ -249,8 +252,8 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 	}
 
 	incomeRequest := CreateIncomeRequest{
-		OperationTime:                   now,
-		RequestTime:                     now,
+		OperationTime:                   operationTime,
+		RequestTime:                     time.Now(),
 		Services:                        []Service{service},
 		TotalAmount:                     fmt.Sprintf("%.2f", amount),
 		Client:                          client,
@@ -260,7 +263,7 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 
 	reqBody, err := json.Marshal(incomeRequest)
 	if err != nil {
-		return fmt.Errorf("failed to marshal income request: %w", err)
+		return "", fmt.Errorf("failed to marshal income request: %w", err)
 	}
 
 	const (
@@ -278,13 +281,13 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		// Проверяем отмену контекста
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return "", ctx.Err()
 		default:
 		}
 
-		err := c.sendIncomeRequest(ctx, incomeURL, reqBody, amount)
+		receiptID, err := c.sendIncomeRequest(ctx, incomeURL, reqBody, amount)
 		if err == nil {
-			return nil
+			return receiptID, nil
 		}
 
 		lastErr = err
@@ -293,7 +296,7 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 		// Если это ошибка авторизации, очищаем токен и пытаемся переавторизоваться
 		if errors.Is(err, ErrAuth) {
 			if authRetries >= maxAuthRetries {
-				return fmt.Errorf("max authentication retries exceeded: %w", err)
+				return "", fmt.Errorf("max authentication retries exceeded: %w", err)
 			}
 
 			slog.Info("Authentication error detected, clearing token and reauthenticating", "attempt", attempt, "authRetries", authRetries+1)
@@ -301,7 +304,7 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 			c.token.Store("")
 			// Принудительно выполняем переаутентификацию
 			if authErr := c.authenticate(ctx, true); authErr != nil {
-				return fmt.Errorf("reauthentication failed: %w", authErr)
+				return "", fmt.Errorf("reauthentication failed: %w", authErr)
 			}
 
 			authRetries++
@@ -312,32 +315,32 @@ func (c *Client) CreateIncome(ctx context.Context, amount float64, description s
 
 		// Если это не retryable ошибка, возвращаем ошибку сразу
 		if !isRetryableError(err) {
-			return fmt.Errorf("non-retryable error: %w", err)
+			return "", fmt.Errorf("non-retryable error: %w", err)
 		}
 
 		// Задержка перед следующей попыткой (если не последняя попытка)
 		if attempt < maxRetries {
 			select {
 			case <-ctx.Done():
-				return ctx.Err()
+				return "", ctx.Err()
 			case <-time.After(baseDelay * time.Duration(1<<(attempt-1))):
 			}
 		}
 	}
 
-	return fmt.Errorf("failed to create income after %d attempts: %w", maxRetries, lastErr)
+	return "", fmt.Errorf("failed to create income after %d attempts: %w", maxRetries, lastErr)
 }
 
-// sendIncomeRequest отправляет запрос на создание чека
-func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBody []byte, amount float64) error {
+// sendIncomeRequest отправляет запрос на создание чека и возвращает его ID.
+func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBody []byte, amount float64) (string, error) {
 	token := c.token.Load()
 	if token == nil {
-		return fmt.Errorf("%w: token is empty", ErrAuth)
+		return "", fmt.Errorf("%w: token is empty", ErrAuth)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", incomeURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -352,11 +355,11 @@ func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBod
 		if errors.As(err, &netErr) {
 			if netErr.Timeout() || netErr.Temporary() {
 				slog.Warn("Network error (retryable)", "error", err, "timeout", netErr.Timeout(), "temporary", netErr.Temporary())
-				return fmt.Errorf("%w: %w", ErrRetryable, err)
+				return "", fmt.Errorf("%w: %w", ErrRetryable, err)
 			}
 		}
 		slog.Error("Network error (non-retryable)", "error", err)
-		return fmt.Errorf("failed to send request: %w", err)
+		return "", fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -364,24 +367,24 @@ func (c *Client) sendIncomeRequest(ctx context.Context, incomeURL string, reqBod
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		b, _ := io.ReadAll(resp.Body)
 		slog.Warn("Authentication error from moynalog", "status", resp.StatusCode, "body", string(b))
-		return fmt.Errorf("%w: status %d: %s", ErrAuth, resp.StatusCode, b)
+		return "", fmt.Errorf("%w: status %d: %s", ErrAuth, resp.StatusCode, b)
 
 	case resp.StatusCode >= 500:
 		b, _ := io.ReadAll(resp.Body)
 		slog.Warn("Server error from moynalog", "status", resp.StatusCode, "body", string(b))
-		return fmt.Errorf("%w: status %d: %s", ErrRetryable, resp.StatusCode, b)
+		return "", fmt.Errorf("%w: status %d: %s", ErrRetryable, resp.StatusCode, b)
 
 	case resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated:
 		b, _ := io.ReadAll(resp.Body)
 		slog.Error("Client error from moynalog", "status", resp.StatusCode, "body", string(b))
-		return fmt.Errorf("%w: status %d: %s", ErrClient, resp.StatusCode, b)
+		return "", fmt.Errorf("%w: status %d: %s", ErrClient, resp.StatusCode, b)
 	}
 
 	var incomeResp CreateIncomeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&incomeResp); err != nil {
-		return err
+		return "", err
 	}
 
 	slog.Info("Income receipt created successfully", "id", incomeResp.ID, "amount", amount)
-	return nil
+	return incomeResp.ID, nil
 }

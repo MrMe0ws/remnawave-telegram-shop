@@ -12,6 +12,7 @@ import {
   Megaphone,
   MessageSquare,
   Percent,
+  Receipt,
   RefreshCw,
   Scale,
   ScrollText,
@@ -39,6 +40,7 @@ export const ADMIN_SETTINGS_GROUP_ORDER = [
   'stars',
   'loyalty',
   'payments_notify',
+  'moynalog',
   'access',
   'links',
   'tags',
@@ -56,6 +58,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   stars: Star,
   loyalty: Gem,
   payments_notify: Bell,
+  moynalog: Receipt,
   access: Shield,
   links: Link2,
   tags: Tag,
@@ -77,6 +80,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   stars: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
   loyalty: { box: 'bg-teal-500/10 dark:bg-teal-500/20', icon: 'text-teal-500' },
   payments_notify: { box: 'bg-rose-500/10 dark:bg-rose-500/20', icon: 'text-rose-500' },
+  moynalog: { box: 'bg-green-500/10 dark:bg-green-500/20', icon: 'text-green-600 dark:text-green-400' },
   access: { box: 'bg-blue-500/10 dark:bg-blue-500/20', icon: 'text-blue-500' },
   links: { box: 'bg-indigo-500/10 dark:bg-indigo-500/20', icon: 'text-indigo-500' },
   tags: { box: 'bg-orange-500/10 dark:bg-orange-500/20', icon: 'text-orange-500' },
@@ -106,6 +110,7 @@ export const ADMIN_PRODUCT_SETTINGS_GROUPS = ['tariffs', 'trial', 'hwid', 'stars
 export const ADMIN_SETTINGS_CATEGORY_ORDER = [
   'design',
   'marketing',
+  'finance',
   'operations',
   'access',
 ] as const
@@ -138,10 +143,20 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     iconStyle: { box: 'bg-violet-500/10 dark:bg-violet-500/20', icon: 'text-violet-500' },
   },
   {
+    // Всё, что происходит с деньгами после оплаты: кому сообщить и как
+    // отчитаться перед ФНС. Раньше уведомления жили в «Операциях» вместе со
+    // ссылками и тегами — темы несвязанные, разнесли.
+    id: 'finance',
+    titleKey: 'admin.settings.categories.finance',
+    icon: Wallet,
+    groups: ['payments_notify', 'moynalog'],
+    iconStyle: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
+  },
+  {
     id: 'operations',
     titleKey: 'admin.settings.categories.operations',
-    icon: Bell,
-    groups: ['payments_notify', 'links', 'tags'],
+    icon: Link2,
+    groups: ['links', 'tags'],
     iconStyle: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
   },
   {
@@ -265,6 +280,20 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       titleKey: 'admin.settings.subsections.payments_notify.delivery',
       icon: Send,
       keys: ['PAYMENTS_NOTIFY_CHAT_ID', 'PAYMENTS_NOTIFY_MESSAGE_THREAD_ID', 'PAYMENTS_NOTIFY_EVENTS'],
+    },
+  ],
+  moynalog: [
+    {
+      id: 'toggle',
+      titleKey: 'admin.settings.subsections.moynalog.toggle',
+      icon: Receipt,
+      keys: ['MOYNALOG_ENABLED', 'MOYNALOG_RECEIPT_FOR'],
+    },
+    {
+      id: 'retry',
+      titleKey: 'admin.settings.subsections.moynalog.retry',
+      icon: RefreshCw,
+      keys: ['MOYNALOG_RETRY_MAX_AGE_HOURS'],
     },
   ],
   access: [

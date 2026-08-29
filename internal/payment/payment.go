@@ -12,9 +12,9 @@ import (
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/loyalty"
-	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/promo"
+	"remnawave-tg-shop-bot/internal/receipt"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
@@ -107,7 +107,7 @@ type PaymentService struct {
 	plategaClient         *platega.Client
 	referralRepository    *database.ReferralRepository
 	cache                 *cache.Cache
-	moynalogClient        *moynalog.Client
+	receiptQueue          *receipt.Service
 	promoService          *promo.Service
 	loyaltyTierRepository *database.LoyaltyTierRepository
 }
@@ -130,7 +130,7 @@ func NewPaymentService(
 	plategaClient *platega.Client,
 	referralRepository *database.ReferralRepository,
 	cache *cache.Cache,
-	moynalogClient *moynalog.Client,
+	receiptQueue *receipt.Service,
 	promoService *promo.Service,
 	loyaltyTierRepository *database.LoyaltyTierRepository,
 ) *PaymentService {
@@ -146,7 +146,7 @@ func NewPaymentService(
 		plategaClient:         plategaClient,
 		referralRepository:    referralRepository,
 		cache:                 cache,
-		moynalogClient:        moynalogClient,
+		receiptQueue:          receiptQueue,
 		promoService:          promoService,
 		loyaltyTierRepository: loyaltyTierRepository,
 	}
@@ -389,13 +389,11 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 		return err
 	}
 
-	if s.moynalogClient != nil && invoiceUsesMoynalogReceipt(purchase) {
+	if s.receiptQueue.Enabled() && invoiceUsesMoynalogReceipt(purchase) {
 		description := buildRubReceiptDescription(0, purchase.ExtraHwid, nil, purchase.InvoiceType)
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
-		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
-			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
-			notifyAdminMoynalogFailure(ctx, s.telegramBot, config.GetAdminTelegramId(), purchase, err, description)
-		}
+		// Очередь сама сообщит админу и переотправит, если ФНС недоступна.
+		s.receiptQueue.Submit(ctx, purchase, description)
 	}
 
 	if updatedUser != nil {
@@ -626,7 +624,7 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	expireBefore := customer.ExpireAt
 
 	// Отправка дохода в «Мой налог» для способов из MOYNALOG_RECEIPT_FOR (сразу после подтверждения оплаты).
-	if s.moynalogClient != nil && invoiceUsesMoynalogReceipt(purchase) {
+	if s.receiptQueue.Enabled() && invoiceUsesMoynalogReceipt(purchase) {
 		slog.Debug("Attempting to send moynalog receipt", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 
 		rcExtras := &TariffPurchaseExtras{Kind: purchase.PurchaseKind, IsEarlyDowngrade: purchase.IsEarlyDowngrade}
@@ -634,16 +632,12 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 
 		slog.Info("Sending receipt to moynalog", "purchase_id", utils.MaskHalfInt64(purchase.ID), "amount", purchase.Amount, "description", description)
 
-		if err := s.moynalogClient.CreateIncome(ctx, purchase.Amount, description); err != nil {
-			slog.Error("Failed to send receipt to moynalog", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
-			notifyAdminMoynalogFailure(ctx, s.telegramBot, config.GetAdminTelegramId(), purchase, err, description)
-			// Не прерываем обработку покупки при ошибке отправки чека
-		} else {
-			slog.Info("Receipt sent to moynalog successfully", "purchase_id", utils.MaskHalfInt64(purchase.ID))
-		}
+		// Чек ставится в очередь до отправки: при недоступности ФНС он не теряется,
+		// а переотправляется воркером датой оплаты. Обработку покупки не прерываем.
+		s.receiptQueue.Submit(ctx, purchase, description)
 	} else {
-		if s.moynalogClient == nil {
-			slog.Debug("Moynalog client not available, skipping receipt", "purchase_id", utils.MaskHalfInt64(purchase.ID))
+		if !s.receiptQueue.Enabled() {
+			slog.Debug("Moynalog receipt queue not available, skipping receipt", "purchase_id", utils.MaskHalfInt64(purchase.ID))
 		} else if !invoiceUsesMoynalogReceipt(purchase) {
 			slog.Debug("Invoice type skips moynalog receipt (config or currency)", "invoice_type", purchase.InvoiceType, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 		}
@@ -1499,27 +1493,4 @@ func (s PaymentService) createTributeInvoice(ctx context.Context, amount float64
 	}
 
 	return "", purchaseId, nil
-}
-
-// notifyAdminMoynalogFailure отправляет админу уведомление о неуспешной отправке чека в МойНалог
-func notifyAdminMoynalogFailure(ctx context.Context, b *bot.Bot, adminID int64, purchase *database.Purchase, sendErr error, description string) {
-	if b == nil || adminID == 0 || purchase == nil {
-		return
-	}
-
-	msg := fmt.Sprintf(
-		"Не удалось создать чек в Мой Налог.\nПокупка ID: %d\nСумма: %.2f\nОписание: %s\nТип счета: %s\nОшибка: %v",
-		purchase.ID,
-		purchase.Amount,
-		description,
-		purchase.InvoiceType,
-		sendErr,
-	)
-
-	if _, err := b.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: adminID,
-		Text:   msg,
-	}); err != nil {
-		slog.Error("Failed to notify admin about moynalog receipt failure", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
-	}
 }

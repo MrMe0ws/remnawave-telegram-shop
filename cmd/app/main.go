@@ -24,6 +24,7 @@ import (
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/promo"
+	"remnawave-tg-shop-bot/internal/receipt"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/remnawavewebhook"
 	"remnawave-tg-shop-bot/internal/sync"
@@ -57,18 +58,20 @@ func main() {
 	config.InitConfig()
 	slog.Info("Application starting", "version", Version, "commit", Commit, "buildDate", BuildDate)
 
-	// Инициализация клиента МойНалог (опционально, если включен)
+	// Клиент «Мой налог» собираем при наличии учётных данных, даже если сейчас
+	// интеграция выключена: MOYNALOG_ENABLED переключается из админки без
+	// рестарта, и к моменту включения клиент должен быть готов.
 	var moynalogClient *moynalog.Client
-	if config.IsMoynalogEnabled() {
+	if config.MoynalogHasCredentials() {
 		moynalogClient = moynalog.NewClient(
 			config.MoynalogUrl(),
 			config.MoynalogUsername(),
 			config.MoynalogPassword(),
 			config.MoynalogProxyURL(),
 		)
-		slog.Info("Moynalog client initialized")
+		slog.Info("Moynalog client initialized", "enabled", config.IsMoynalogEnabled())
 	} else {
-		slog.Info("Moynalog integration disabled")
+		slog.Info("Moynalog credentials not set — receipts unavailable")
 	}
 
 	// Инициализация системы переводов (поддержка русского и английского языков)
@@ -150,8 +153,23 @@ func main() {
 
 	promoService := promo.NewService(promoRepository, customerRepository, purchaseRepository, remnawaveClient)
 
+	// Очередь чеков «Мой налог»: чек пишется в БД до отправки и переотправляется
+	// воркером, если ФНС недоступна. Без включённой интеграции остаётся nil —
+	// методы сервиса это переживают (см. receipt.Service.Enabled).
+	var receiptQueue *receipt.Service
+	if moynalogClient != nil {
+		receiptQueue = receipt.NewService(
+			database.NewMoynalogReceiptRepository(pool),
+			moynalogClient,
+			b,
+			config.GetAdminTelegramId(),
+			config.IsMoynalogEnabled,
+			config.MoynalogRetryMaxAge,
+		)
+	}
+
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, referralRepository, cache, moynalogClient, promoService, loyaltyTierRepository)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, referralRepository, cache, receiptQueue, promoService, loyaltyTierRepository)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// CryptoPay; YooKassa и Platega — поллинг только если не задан соответствующий WEBHOOK_URL.
@@ -189,6 +207,15 @@ func main() {
 		slog.Info("Lifecycle notifications cron started", "schedule", config.LifecycleCron())
 	}
 	defer subscriptionNotificationCronScheduler.Stop()
+
+	// Воркер переотправки чеков «Мой налог».
+	if receiptQueue.Enabled() {
+		receiptCronScheduler := receiptRetryChecker(receiptQueue)
+		receiptCronScheduler.Start()
+		defer receiptCronScheduler.Stop()
+		slog.Info("Moynalog receipt retry cron started",
+			"schedule", config.MoynalogRetryCron(), "maxAge", config.MoynalogRetryMaxAge())
+	}
 
 	// Инициализация сервиса синхронизации с Remnawave
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
@@ -919,6 +946,27 @@ func lifecycleChecker(lifecycleService *notification.LifecycleService) *cron.Cro
 
 	if err != nil {
 		panic(fmt.Sprintf("Failed to add lifecycle cron job: %v", err))
+	}
+	return c
+}
+
+// receiptRetryChecker - cron переотправки чеков «Мой налог», застрявших из-за
+// недоступности ФНС или протухшей авторизации. Расписание — MOYNALOG_RETRY_CRON.
+func receiptRetryChecker(receiptQueue *receipt.Service) *cron.Cron {
+	c := cron.New()
+
+	_, err := c.AddFunc(config.MoynalogRetryCron(), func() {
+		// Своя граница по времени: тик не должен висеть вечно, если ФНС
+		// отвечает медленно, иначе следующий запуск наложится на текущий.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		if err := receiptQueue.ProcessDue(ctx); err != nil {
+			slog.Error("Error processing moynalog receipt queue", "error", err)
+		}
+	})
+
+	if err != nil {
+		panic(fmt.Sprintf("Failed to add moynalog receipt retry cron job: %v", err))
 	}
 	return c
 }
