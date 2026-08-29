@@ -144,10 +144,15 @@ func (h *AdminSettingsHandler) Patch(w http.ResponseWriter, r *http.Request) {
 
 func buildAdminSettingsResponse() adminSettingsGetResp {
 	// Порядок групп: сверху важнее для ежедневной работы.
+	//
+	// Это ещё и белый список: группа, которой здесь нет, в ответ не попадёт и
+	// в админке просто не появится — молча. Добавляя группу в
+	// RuntimeSettingsRegistry, добавьте её и сюда (ниже есть проверка,
+	// которая ругнётся в лог, если про это забыли).
 	order := []string{
 		"cabinet", "tariffs",
 		"trial", "hwid", "referral", "stars", "loyalty",
-		"payments_notify", "access", "links", "tags",
+		"payments_notify", "moynalog", "access", "links", "tags",
 		"lifecycle", "fortune",
 	}
 	groupFields := make(map[string][]adminSettingFieldDTO)
@@ -169,12 +174,21 @@ func buildAdminSettingsResponse() adminSettingsGetResp {
 		groupFields[f.Group] = append(groupFields[f.Group], dto)
 	}
 	groups := make([]adminSettingGroupDTO, 0, len(order))
+	known := make(map[string]bool, len(order))
 	for _, id := range order {
+		known[id] = true
 		fields, ok := groupFields[id]
 		if !ok || len(fields) == 0 {
 			continue
 		}
 		groups = append(groups, adminSettingGroupDTO{ID: id, Fields: fields})
+	}
+	// Группа есть в реестре, но забыта в order — её настройки недоступны из
+	// админки, и без этого сигнала понять это можно только по пустому экрану.
+	for id := range groupFields {
+		if !known[id] {
+			slog.Error("admin settings: group is missing from the display order and will not be shown", "group", id)
+		}
 	}
 	return adminSettingsGetResp{Groups: groups}
 }
