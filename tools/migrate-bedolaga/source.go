@@ -362,13 +362,14 @@ func pickPrimarySub(subs []bedolagaSub) (*bedolagaSub, int) {
 
 func (c sourceCaps) WarningLines() []string {
 	var out []string
-	out = append(out, "Meows bot targets Remnawave 2.8.* — point remnawave.* in migrate.yaml at that same panel.")
+	out = append(out, "Meows bot 5.x targets Remnawave 3.3.*-3.4.* — point remnawave.* in migrate.yaml at that same panel.")
 	switch c.HintGeneration {
 	case "bedolaga_4x_rw3":
 		out = append(out, "Source looks like Bedolaga 4.x (column users.remnawave_id). That generation usually sits on Remnawave 3.0+.")
-		out = append(out, "If your live panel is Remnawave 3.0+, Meows 2.8.* API calls may fail — migrate shop DB data, but RW reconcile/extend needs a 2.8.* panel.")
+		out = append(out, "Good match for Meows 5.x: if that panel is 3.3.*-3.4.*, this is the plain same-panel case.")
 	case "bedolaga_3x_rw2":
-		out = append(out, "Source looks like Bedolaga 3.x (e.g. 3.60) without users.remnawave_id — typical for Remnawave 2.x panels. Good match for Meows.")
+		out = append(out, "Source looks like Bedolaga 3.x (e.g. 3.60) without users.remnawave_id — typical for Remnawave 2.x panels.")
+		out = append(out, "Shop DB data migrates fine, but Meows 5.x cannot drive a 2.x panel: it needs Remnawave 3.3.*-3.4.*, so this is a panel switch, not a same-panel move.")
 	default:
 		out = append(out, "Could not detect Bedolaga 3.x vs 4.x generation from schema; check problems.csv after dry-run.")
 	}

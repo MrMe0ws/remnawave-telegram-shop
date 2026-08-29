@@ -8,7 +8,7 @@
 #
 set -euo pipefail
 
-SCRIPT_VERSION="1.0.1"
+SCRIPT_VERSION="1.1.0"
 TEMP_PG_NAME="${MEOWS_BEDOLAGA_PG_NAME:-meows-bedolaga-restore}"
 TEMP_PG_PORT="${MEOWS_BEDOLAGA_PG_PORT:-5433}"
 TEMP_PG_PASS="${MEOWS_BEDOLAGA_PG_PASS:-migrator}"
@@ -245,7 +245,7 @@ prepare_source() {
   header "Целевая БД нашего бота + Remnawave"
   compat_confirm
   ask TARGET_DSN "Наш DATABASE_URL" "${TARGET_DSN}"
-  ask RW_URL "Remnawave URL (2.8.*)" "${RW_URL}"
+  ask RW_URL "Remnawave URL (3.3.*-3.4.*)" "${RW_URL}"
   ask RW_TOKEN "Remnawave API token" "${RW_TOKEN}"
   ask RW_MODE "Remnawave mode (local/remote)" "${RW_MODE}"
   ask REPORT_DIR "Папка отчётов" "${REPORT_DIR}"
@@ -256,23 +256,24 @@ prepare_source() {
 print_banner() {
   header "Meows ← Bedolaga migrate  v${SCRIPT_VERSION}"
   meta "Repo: ${REPO_ROOT}"
-  meta "Цель: Meows + Remnawave 2.8.* (см. documentation/compatibility.md)"
-  warn "Bedolaga 3.x (напр. 3.60) = панель Remnawave 2.x — обычно ок для Meows."
-  warn "Bedolaga 4.0+ = панель Remnawave 3.0+ — данные в нашу БД перенесём,"
-  warn "но API Meows рассчитан на RW 2.8.*; reconcile/extend к RW 3.0 может не работать."
-  meta "Версия Bedolaga сама по себе не важна — важна корректность данных и панель 2.8.*"
+  meta "Цель: Meows + Remnawave 3.3.*-3.4.* (см. documentation/compatibility.md)"
+  warn "Bedolaga 4.0+ = панель Remnawave 3.0+ — обычный кейс same-panel, если это 3.3.*-3.4.*"
+  warn "Bedolaga 3.x (напр. 3.60) = панель Remnawave 2.x — данные в нашу БД перенесём,"
+  warn "но саму панель 2.x бот 5.x не поддерживает: Meows нужно подключать к RW 3.3.*-3.4.*"
+  meta "Версия Bedolaga сама по себе не важна — важна корректность данных и панель 3.3.*-3.4.*"
   meta "Same-panel: только чтение + опциональный extend expire; сквады не трогаем"
 }
 
 compat_confirm() {
   header "Совместимость Remnawave"
-  info "Укажите URL/token панели Remnawave 2.8.*, с которой работает Meows."
+  info "Укажите URL/token панели Remnawave 3.3.*-3.4.*, с которой работает Meows."
   info "Источник Bedolaga может быть 3.60 или 4.x — движок подстраивается под схему."
-  ask_yn ans "Панель Remnawave для Meows — ветка 2.8.* (не 3.0+)?" Y
+  ask_yn ans "Панель Remnawave для Meows — ветка 3.3.* или 3.4.* (не 2.8)?" Y
   if [[ "$ans" != "y" ]]; then
-    warn "Продолжать на RW 3.0+ не рекомендуется: dry-run покажет compat_warning / ошибки API."
+    warn "Бот 5.x умеет только Remnawave 3.x: в 3.0.0 у пользователя панели удалён uuid"
+    warn "и убран GET /api/users/by-telegram-id/{id} — на панели 2.8 движок не найдёт клиентов."
     ask_yn ans2 "Всё равно продолжить настройку?" N
-    [[ "$ans2" == "y" ]] || die "Остановлено: нужна панель Remnawave 2.8.* под Meows"
+    [[ "$ans2" == "y" ]] || die "Остановлено: под Meows 5.x нужна панель Remnawave 3.3.*-3.4.*"
   fi
 }
 

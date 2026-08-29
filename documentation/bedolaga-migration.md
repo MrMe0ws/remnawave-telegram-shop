@@ -6,21 +6,21 @@
 
 | | |
 |--|--|
-| **Цель миграции** | Meows-бот + панель **Remnawave 3.3.\*** ([compatibility.md](./compatibility.md)) |
+| **Цель миграции** | Meows-бот + панель **Remnawave 3.3.\*–3.4.\*** ([compatibility.md](./compatibility.md)) |
 | **Источник Bedolaga** | И **3.x** (напр. 3.60), и **4.0+** — версия бота Bedolaga сама по себе не блокер |
 
 Разница поколений Bedolaga:
 
 | Bedolaga | Обычно панель Remnawave | Для Meows |
 |----------|-------------------------|-----------|
-| **3.x** (напр. 3.60) | до 3.0 (ветка 2.x) | Данные переносим; сама панель 2.x боту 5.x уже не подходит — Meows нужно подключать к RW **3.3.\*** |
-| **4.0+** | **3.0+** | Нормальный кейс: same-panel **3.3.\*** |
+| **3.x** (напр. 3.60) | до 3.0 (ветка 2.x) | Данные переносим; сама панель 2.x боту 5.x уже не подходит — Meows нужно подключать к RW **3.3.\*–3.4.\*** |
+| **4.0+** | **3.0+** | Нормальный кейс: same-panel **3.3.\*–3.4.\*** |
 
 Мигратор:
 
 - читает схему источника гибко (опциональные колонки 3.x / 4.x);
 - в dry-run пишет `compat_warning` и `bedolaga_generation_hint` в `summary.json`;
-- wizard спрашивает подтверждение, что Remnawave для Meows — **3.3.\***.
+- wizard спрашивает подтверждение, что Remnawave для Meows — **3.3.\*–3.4.\***.
 
 Главное — корректный перенос данных. Если админ сидел на Bedolaga 3 + RW 2.x, а Meows
 подключается к RW 3.3 — это уже смена панели (не «тихий» same-panel).
@@ -40,7 +40,7 @@
 | Баланс (кошелёк) | Срок подписки | Дни = `баланс_₽ × 30 / цена_1м_тарифа_юзера`; итог `max(дни_RW, дни_баланса)` |
 | Реф.граф | `referral` | По telegram_id |
 
-**Remnawave (same-panel 3.3.\*):** по умолчанию только чтение. На шаге balance — только удлинение `expireAt`, если он короче целевого. Сквады, трафик, теги не меняются. Новые VPN-юзеры не создаются.
+**Remnawave (same-panel 3.3.\*–3.4.\*):** по умолчанию только чтение. На шаге balance — только удлинение `expireAt`, если он короче целевого. Сквады, трафик, теги не меняются. Новые VPN-юзеры не создаются.
 
 **Не переносится:** wallet как сущность, autopay, daily-биллинг, история платежей, withdrawals.
 
@@ -57,7 +57,7 @@ chmod +x scripts/meows-bedolaga-migrate.sh
 Меню проведёт по шагам:
 
 1. Источник (файл `pg_dump` → temp Postgres, или готовый DSN)
-2. Подтверждение Remnawave **3.3.\*** + запись `migrate.yaml`
+2. Подтверждение Remnawave **3.3.\*–3.4.\*** + запись `migrate.yaml`
 3. Dry-run → CSV в `migrate-out/` (смотрите `compat_warning`)
 4. Apply: тарифы → клиенты → баланс (RW) → рефералы
 
@@ -84,7 +84,7 @@ docker compose exec -T postgres pg_dump -U bedolaga -d bedolaga --no-owner \
 
 ```bash
 cp tools/migrate-bedolaga/migrate.yaml.example migrate.yaml
-# отредактируйте DSN / Remnawave token (панель 3.3.*)
+# отредактируйте DSN / Remnawave token (панель 3.3.* - 3.4.*)
 
 go run ./tools/migrate-bedolaga -config migrate.yaml -dry-run -step all
 go run ./tools/migrate-bedolaga -config migrate.yaml -apply -step tariffs
@@ -111,5 +111,5 @@ go run ./tools/migrate-bedolaga -config migrate.yaml -apply -step referrals
 
 - Схема БД актуальна (миграции при старте бота)
 - Желательно `SALES_MODE=tariffs`
-- Remnawave **3.3.\*** (та же панель, к которой ходит Meows)
+- Remnawave **3.3.\*–3.4.\*** (та же панель, к которой ходит Meows)
 - Перед apply лучше остановить бота Bedolaga, чтобы не плодить новые оплаты в старую БД
