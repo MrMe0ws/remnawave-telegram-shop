@@ -1605,6 +1605,10 @@
             "toggle": "Enable",
             "delivery": "Delivery target"
           },
+          "payments": {
+            "providers": "Payment methods",
+            "platega": "Platega"
+          },
           "moynalog": {
             "toggle": "Receipt sending",
             "retry": "Retries on failure"
@@ -1634,6 +1638,7 @@
         "groups": {
           "loyalty": "Loyalty",
           "stars": "Telegram Stars",
+          "payments": "Payment methods",
           "payments_notify": "Payment notifications",
           "moynalog": "Moy Nalog",
           "trial": "Trial & traffic",
@@ -1713,6 +1718,38 @@
           "PAYMENTS_NOTIFY_EVENTS": {
             "label": "Events",
             "hint": "paid, cancel comma-separated"
+          },
+          "YOOKASA_ENABLED": {
+            "label": "YooKassa",
+            "hint": "Cards. Keys are set in .env"
+          },
+          "CRYPTO_PAY_ENABLED": {
+            "label": "CryptoPay",
+            "hint": "Crypto via Crypto Bot"
+          },
+          "TELEGRAM_STARS_ENABLED": {
+            "label": "Telegram Stars",
+            "hint": "Paid with Stars through the bot itself"
+          },
+          "PLATEGA_SBP_ENABLED": {
+            "label": "SBP",
+            "hint": "Russian instant payments"
+          },
+          "PLATEGA_CARDS_ENABLED": {
+            "label": "Cards",
+            "hint": "Cards via Platega"
+          },
+          "PLATEGA_ACQUIRING_ENABLED": {
+            "label": "Acquiring",
+            "hint": ""
+          },
+          "PLATEGA_WORLDWIDE_ENABLED": {
+            "label": "International cards",
+            "hint": ""
+          },
+          "PLATEGA_CRYPTO_ENABLED": {
+            "label": "Crypto",
+            "hint": "Crypto via Platega"
           },
           "MOYNALOG_ENABLED": {
             "label": "Send income to Moy Nalog",

@@ -489,6 +489,23 @@ func TrafficLimit() int {
 	return conf.trafficLimit * bytesInGigabyte
 }
 
+// CryptoPayHasCredentials — заданы ли реквизиты CryptoPay в .env.
+// Без них метод нельзя включить из админки: клиент не сможет создать счёт.
+func CryptoPayHasCredentials() bool {
+	return conf.cryptoPayURL != "" && conf.cryptoPayToken != ""
+}
+
+// YookasaHasCredentials — заданы ли реквизиты ЮKassa в .env.
+func YookasaHasCredentials() bool {
+	return conf.yookasaURL != "" && conf.yookasaShopId != "" &&
+		conf.yookasaSecretKey != "" && conf.yookasaEmail != ""
+}
+
+// PlategaHasCredentials — заданы ли реквизиты Platega в .env.
+func PlategaHasCredentials() bool {
+	return conf.plategaMerchantID != "" && conf.plategaSecret != ""
+}
+
 func IsCryptoPayEnabled() bool {
 	return conf.isCryptoEnabled
 }
@@ -849,25 +866,37 @@ func InitConfig() {
 
 	conf.databaseURL = mustEnv("DATABASE_URL")
 
+	// Способы оплаты переключаются из админки без рестарта, поэтому реквизиты
+	// читаем всегда — клиент должен быть готов к моменту включения. Пустые
+	// реквизиты не ошибка: без них метод просто нельзя включить (проверки ниже
+	// и в settings_registry). А вот «включено, но реквизитов нет» — ошибка
+	// конфигурации, и она по-прежнему валит старт.
 	conf.isCryptoEnabled = envBool("CRYPTO_PAY_ENABLED")
-	if conf.isCryptoEnabled {
-		conf.cryptoPayURL = mustEnv("CRYPTO_PAY_URL")
-		conf.cryptoPayToken = mustEnv("CRYPTO_PAY_TOKEN")
+	conf.cryptoPayURL = strings.TrimSpace(os.Getenv("CRYPTO_PAY_URL"))
+	conf.cryptoPayToken = strings.TrimSpace(os.Getenv("CRYPTO_PAY_TOKEN"))
+	if conf.isCryptoEnabled && !CryptoPayHasCredentials() {
+		log.Panicf("CRYPTO_PAY_ENABLED=true requires CRYPTO_PAY_URL and CRYPTO_PAY_TOKEN")
 	}
 
 	conf.isYookasaEnabled = envBool("YOOKASA_ENABLED")
-	if conf.isYookasaEnabled {
-		conf.yookasaURL = mustEnv("YOOKASA_URL")
-		conf.yookasaShopId = mustEnv("YOOKASA_SHOP_ID")
-		conf.yookasaSecretKey = mustEnv("YOOKASA_SECRET_KEY")
-		conf.yookasaEmail = mustEnv("YOOKASA_EMAIL")
-		conf.yookasaWebhookURL = strings.TrimSpace(os.Getenv("YOOKASA_WEBHOOK_URL"))
+	conf.yookasaURL = strings.TrimSpace(os.Getenv("YOOKASA_URL"))
+	conf.yookasaShopId = strings.TrimSpace(os.Getenv("YOOKASA_SHOP_ID"))
+	conf.yookasaSecretKey = strings.TrimSpace(os.Getenv("YOOKASA_SECRET_KEY"))
+	conf.yookasaEmail = strings.TrimSpace(os.Getenv("YOOKASA_EMAIL"))
+	conf.yookasaWebhookURL = strings.TrimSpace(os.Getenv("YOOKASA_WEBHOOK_URL"))
+	if conf.isYookasaEnabled && !YookasaHasCredentials() {
+		log.Panicf("YOOKASA_ENABLED=true requires YOOKASA_URL, YOOKASA_SHOP_ID, YOOKASA_SECRET_KEY and YOOKASA_EMAIL")
 	}
 
+	conf.plategaMerchantID = strings.TrimSpace(os.Getenv("PLATEGA_MERCHANT_ID"))
+	conf.plategaSecret = strings.TrimSpace(os.Getenv("PLATEGA_SECRET"))
+	conf.plategaWebhookURL = strings.TrimSpace(os.Getenv("PLATEGA_WEBHOOK_URL"))
+	// PLATEGA_ENABLED — общий рубильник: при выключенном ни один подметод не
+	// поднимается, как и раньше.
 	if envBool("PLATEGA_ENABLED") {
-		conf.plategaMerchantID = mustEnv("PLATEGA_MERCHANT_ID")
-		conf.plategaSecret = mustEnv("PLATEGA_SECRET")
-		conf.plategaWebhookURL = strings.TrimSpace(os.Getenv("PLATEGA_WEBHOOK_URL"))
+		if !PlategaHasCredentials() {
+			log.Panicf("PLATEGA_ENABLED=true requires PLATEGA_MERCHANT_ID and PLATEGA_SECRET")
+		}
 		conf.isPlategaSBPEnabled = envBool("PLATEGA_SBP_ENABLED")
 		conf.isPlategaCardsEnabled = envBool("PLATEGA_CARDS_ENABLED")
 		conf.isPlategaAcquiringEnabled = envBool("PLATEGA_ACQUIRING_ENABLED")

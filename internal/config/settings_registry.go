@@ -106,6 +106,62 @@ func RuntimeSettingsRegistry() []SettingField {
 			},
 		},
 
+		// --- payments ---
+		//
+		// Включение метода без реквизитов было бы молчаливым бездействием:
+		// клиент не смог бы создать счёт. Поэтому каждый переключатель
+		// проверяет наличие ключей в .env и отказывает с объяснением.
+		{
+			Key: "YOOKASA_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(YookasaHasCredentials,
+				"set YOOKASA_URL, YOOKASA_SHOP_ID, YOOKASA_SECRET_KEY and YOOKASA_EMAIL in .env first",
+				func(v bool) { conf.isYookasaEnabled = v }),
+			Current: func() string { return boolStr(conf.isYookasaEnabled) },
+		},
+		{
+			Key: "CRYPTO_PAY_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(CryptoPayHasCredentials,
+				"set CRYPTO_PAY_URL and CRYPTO_PAY_TOKEN in .env first",
+				func(v bool) { conf.isCryptoEnabled = v }),
+			Current: func() string { return boolStr(conf.isCryptoEnabled) },
+		},
+		{
+			// Stars оплачиваются через токен самого бота — отдельных реквизитов нет.
+			Key: "TELEGRAM_STARS_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.isTelegramStarsEnabled = v }),
+			Current: func() string { return boolStr(conf.isTelegramStarsEnabled) },
+		},
+		{
+			Key: "PLATEGA_SBP_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
+				func(v bool) { conf.isPlategaSBPEnabled = v }),
+			Current: func() string { return boolStr(conf.isPlategaSBPEnabled) },
+		},
+		{
+			Key: "PLATEGA_CARDS_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
+				func(v bool) { conf.isPlategaCardsEnabled = v }),
+			Current: func() string { return boolStr(conf.isPlategaCardsEnabled) },
+		},
+		{
+			Key: "PLATEGA_ACQUIRING_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
+				func(v bool) { conf.isPlategaAcquiringEnabled = v }),
+			Current: func() string { return boolStr(conf.isPlategaAcquiringEnabled) },
+		},
+		{
+			Key: "PLATEGA_WORLDWIDE_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
+				func(v bool) { conf.isPlategaWorldwideEnabled = v }),
+			Current: func() string { return boolStr(conf.isPlategaWorldwideEnabled) },
+		},
+		{
+			Key: "PLATEGA_CRYPTO_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
+				func(v bool) { conf.isPlategaCryptoEnabled = v }),
+			Current: func() string { return boolStr(conf.isPlategaCryptoEnabled) },
+		},
+
 		// --- moynalog ---
 		//
 		// Выведены только те настройки, что действительно применяются без
@@ -487,6 +543,25 @@ func boolStr(v bool) string {
 }
 
 func intPtr(v int) *int { return &v }
+
+const plategaCredentialsHint = "set PLATEGA_MERCHANT_ID and PLATEGA_SECRET in .env first"
+
+// applyPaymentToggle — переключатель способа оплаты, который нельзя включить
+// без реквизитов. Выключить можно всегда: если ключи из .env убрали, метод
+// должен оставаться отключаемым.
+func applyPaymentToggle(hasCredentials func() bool, hint string, set func(bool)) func(string) error {
+	return func(value string) error {
+		v := strings.TrimSpace(strings.ToLower(value))
+		if v != "true" && v != "false" {
+			return fmt.Errorf("must be true or false")
+		}
+		if v == "true" && !hasCredentials() {
+			return fmt.Errorf("%s", hint)
+		}
+		set(v == "true")
+		return nil
+	}
+}
 
 func applyBoolField(set func(bool)) func(string) error {
 	return func(value string) error {

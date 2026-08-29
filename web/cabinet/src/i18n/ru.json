@@ -1618,6 +1618,10 @@
             "toggle": "Включение",
             "delivery": "Куда и что слать"
           },
+          "payments": {
+            "providers": "Способы оплаты",
+            "platega": "Platega"
+          },
           "moynalog": {
             "toggle": "Отправка чеков",
             "retry": "Повторы при сбоях"
@@ -1647,6 +1651,7 @@
         "groups": {
           "loyalty": "Лояльность",
           "stars": "Telegram Stars",
+          "payments": "Способы оплаты",
           "payments_notify": "Уведомления о платежах",
           "moynalog": "Мой налог",
           "trial": "Trial и трафик",
@@ -1726,6 +1731,38 @@
           "PAYMENTS_NOTIFY_EVENTS": {
             "label": "События",
             "hint": "paid, cancel через запятую"
+          },
+          "YOOKASA_ENABLED": {
+            "label": "ЮKassa",
+            "hint": "Карты. Ключи задаются в .env"
+          },
+          "CRYPTO_PAY_ENABLED": {
+            "label": "CryptoPay",
+            "hint": "Криптовалюта через Crypto Bot"
+          },
+          "TELEGRAM_STARS_ENABLED": {
+            "label": "Telegram Stars",
+            "hint": "Оплата звёздами через самого бота"
+          },
+          "PLATEGA_SBP_ENABLED": {
+            "label": "СБП",
+            "hint": "Система быстрых платежей"
+          },
+          "PLATEGA_CARDS_ENABLED": {
+            "label": "Карты",
+            "hint": "Карты через Platega"
+          },
+          "PLATEGA_ACQUIRING_ENABLED": {
+            "label": "Эквайринг",
+            "hint": ""
+          },
+          "PLATEGA_WORLDWIDE_ENABLED": {
+            "label": "Зарубежные карты",
+            "hint": ""
+          },
+          "PLATEGA_CRYPTO_ENABLED": {
+            "label": "Криптовалюта",
+            "hint": "Крипта через Platega"
           },
           "MOYNALOG_ENABLED": {
             "label": "Отправлять доход в «Мой налог»",

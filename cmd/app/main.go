@@ -996,16 +996,23 @@ func setupInvoiceChecker(
 	yookasaClient *yookasa.Client,
 	plategaClient *platega.Client,
 ) *cron.Cron {
-	yookPoll := config.IsYookasaEnabled() && strings.TrimSpace(config.GetYookasaWebHookURL()) == ""
-	plategaPoll := config.IsPlategaEnabled() && strings.TrimSpace(config.GetPlategaWebHookURL()) == ""
-	if !config.IsCryptoPayEnabled() && !yookPoll && !plategaPoll {
+	// Задачи регистрируем по наличию реквизитов, а включённость проверяем внутри
+	// самой задачи. Способы оплаты переключаются из админки без рестарта: если
+	// решать здесь, то метод, включённый после старта, создавал бы счета,
+	// которые никто не проверяет, — оплата зависала бы навсегда.
+	yookPoll := config.YookasaHasCredentials() && strings.TrimSpace(config.GetYookasaWebHookURL()) == ""
+	plategaPoll := config.PlategaHasCredentials() && strings.TrimSpace(config.GetPlategaWebHookURL()) == ""
+	if !config.CryptoPayHasCredentials() && !yookPoll && !plategaPoll {
 		return nil
 	}
 	c := cron.New(cron.WithSeconds()) // Включаем поддержку секунд в расписании
 
 	// Задача для проверки счетов CryptoPay (каждые 5 секунд)
-	if config.IsCryptoPayEnabled() {
+	if config.CryptoPayHasCredentials() {
 		_, err := c.AddFunc("*/5 * * * * *", func() {
+			if !config.IsCryptoPayEnabled() {
+				return
+			}
 			ctx := context.Background()
 			checkCryptoPayInvoice(ctx, purchaseRepository, cryptoPayClient, paymentService)
 		})
@@ -1018,6 +1025,9 @@ func setupInvoiceChecker(
 	// Задача для проверки счетов YooKassa (каждые 5 секунд), если нет вебхука
 	if yookPoll {
 		_, err := c.AddFunc("*/5 * * * * *", func() {
+			if !config.IsYookasaEnabled() {
+				return
+			}
 			ctx := context.Background()
 			checkYookasaInvoice(ctx, purchaseRepository, yookasaClient, paymentService)
 		})
@@ -1029,6 +1039,9 @@ func setupInvoiceChecker(
 
 	if plategaPoll && plategaClient != nil && plategaClient.IsConfigured() {
 		_, err := c.AddFunc("*/5 * * * * *", func() {
+			if !config.IsPlategaEnabled() {
+				return
+			}
 			ctx := context.Background()
 			checkPlategaInvoice(ctx, purchaseRepository, plategaClient, paymentService)
 		})
