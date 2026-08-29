@@ -60,7 +60,6 @@ export function AdminChrome({ children }: AdminChromeProps) {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-tight">{t('admin.dashboard.title')}</p>
-              <p className="hidden truncate text-xs text-muted-foreground sm:block">{t('admin.dashboard.subtitle')}</p>
             </div>
           </div>
 

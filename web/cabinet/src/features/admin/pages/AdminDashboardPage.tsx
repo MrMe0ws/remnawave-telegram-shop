@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   BarChart3,
   Users,
+  CreditCard,
   TicketPercent,
   Zap,
   Gem,
@@ -64,6 +65,15 @@ export default function AdminDashboardPage() {
       bg: 'from-violet-500/12 via-purple-500/6 to-card',
       iconBg: 'bg-violet-500/12 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
       accent: { from: '139 92 246', to: '168 85 247', glow: '139 92 246' },
+    },
+    {
+      to: '/admin/payments',
+      icon: CreditCard,
+      titleKey: 'admin.nav.payments',
+      descKey: 'admin.dashboard.linkPayments',
+      bg: 'from-emerald-500/12 via-green-500/6 to-card',
+      iconBg: 'bg-emerald-500/12 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+      accent: { from: '16 185 129', to: '34 197 94', glow: '16 185 129' },
     },
     {
       to: '/admin/promos',
@@ -137,11 +147,7 @@ export default function AdminDashboardPage() {
   return (
     <AdminLayout>
       <div className="space-y-8">
-        <AdminPageHeader
-          icon={ShieldCheck}
-          title={t('admin.dashboard.title')}
-          subtitle={t('admin.dashboard.subtitle')}
-        />
+        <AdminPageHeader icon={ShieldCheck} title={t('admin.dashboard.title')} />
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((link) => {

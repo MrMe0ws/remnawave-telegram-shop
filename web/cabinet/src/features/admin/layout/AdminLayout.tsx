@@ -122,7 +122,6 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{t('admin.dashboard.title')}</p>
-          <p className="truncate text-xs text-muted-foreground">{t('admin.dashboard.subtitle')}</p>
         </div>
       </div>
 

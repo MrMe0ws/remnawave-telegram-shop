@@ -892,10 +892,10 @@
       },
       "dashboard": {
         "title": "Admin panel",
-        "subtitle": "Service management",
         "placeholder": "Sections will appear as they are implemented. Use the navigation above.",
         "linkStats": "Metrics, revenue and referrals",
         "linkUsers": "Subscriptions, payments and actions",
+        "linkPayments": "Transaction history and export",
         "linkPromos": "Create and manage promo codes",
         "linkTariffs": "Plans, limits and pricing",
         "linkLoyalty": "XP tiers and recalculation",
@@ -1585,6 +1585,7 @@
           "design": "Appearance",
           "product": "Product",
           "marketing": "Marketing",
+          "finance": "Finance",
           "operations": "Operations",
           "access": "Access"
         },
@@ -1603,6 +1604,10 @@
           "payments_notify": {
             "toggle": "Enable",
             "delivery": "Delivery target"
+          },
+          "moynalog": {
+            "toggle": "Receipt sending",
+            "retry": "Retries on failure"
           },
           "access": {
             "moderation": "Moderation",
@@ -1630,6 +1635,7 @@
           "loyalty": "Loyalty",
           "stars": "Telegram Stars",
           "payments_notify": "Payment notifications",
+          "moynalog": "Moy Nalog",
           "trial": "Trial & traffic",
           "tags": "Remnawave tags",
           "hwid": "HWID / devices",
@@ -1707,6 +1713,18 @@
           "PAYMENTS_NOTIFY_EVENTS": {
             "label": "Events",
             "hint": "paid, cancel comma-separated"
+          },
+          "MOYNALOG_ENABLED": {
+            "label": "Send income to Moy Nalog",
+            "hint": "Login and password live in .env only — the toggle needs them"
+          },
+          "MOYNALOG_RECEIPT_FOR": {
+            "label": "Payment methods to report",
+            "hint": "yookassa, platega, crypto comma-separated. Empty — no receipts are sent"
+          },
+          "MOYNALOG_RETRY_MAX_AGE_HOURS": {
+            "label": "Retry window, hours",
+            "hint": "Counted from payment time. After it expires the receipt is dropped and must be entered manually. 720 = 30 days"
           },
           "TRIAL_DAYS": {
             "label": "Trial days",
