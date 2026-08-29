@@ -16,6 +16,9 @@ interface AdminShellContextValue {
   mobileNavDragging: boolean
   openMobileNav: () => void
   closeMobileNav: () => void
+  toggleMobileNav: () => void
+  /** Шторка видна пользователю (панель выдвинута), а не «помечена открытой». */
+  mobileNavExpanded: boolean
   setMobileNavDrag: (offsetPx: number) => void
   commitMobileNavDrag: (offsetPx: number) => void
   mobileHeaderVisible: boolean
@@ -45,6 +48,18 @@ export function AdminShellProvider({ children }: { children: ReactNode }) {
       requestAnimationFrame(() => setMobileNavOffsetPx(width))
     })
   }, [])
+
+  // Кнопка в шапке должна и закрывать шторку, а не только открывать.
+  // Условие — по смещению панели, а не по mobileNavOpen: во время анимации
+  // закрытия флаг ещё true, хотя панель уже уехала, и повторный тап тогда
+  // «закрывал» бы уже закрытое вместо того, чтобы открыть заново.
+  const toggleMobileNav = useCallback(() => {
+    if (mobileNavOffsetPx > 0) {
+      closeMobileNav()
+      return
+    }
+    openMobileNav()
+  }, [mobileNavOffsetPx, closeMobileNav, openMobileNav])
 
   const setMobileNavDrag = useCallback((offsetPx: number) => {
     const width = getAdminMobileNavWidthPx()
@@ -77,6 +92,8 @@ export function AdminShellProvider({ children }: { children: ReactNode }) {
         mobileNavDragging,
         openMobileNav,
         closeMobileNav,
+        toggleMobileNav,
+        mobileNavExpanded: mobileNavOffsetPx > 0,
         setMobileNavDrag,
         commitMobileNavDrag,
         mobileHeaderVisible,
