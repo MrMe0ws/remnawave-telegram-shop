@@ -93,6 +93,7 @@ const (
 	BroadcastAudienceInactivePaid  = "inactive_paid"
 	BroadcastAudienceInactiveTrial = "inactive_trial"
 	BroadcastAudienceInactiveAll   = "inactive_all"
+	BroadcastAudienceTestBroadcast = "test_broadcast"
 )
 
 func (cr *CustomerRepository) FindByExpirationRange(ctx context.Context, startDate, endDate time.Time) (*[]Customer, error) {
@@ -812,6 +813,9 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 		buildSelect = buildSelect.Where(ip)
 	case BroadcastAudienceInactiveTrial:
 		buildSelect = buildSelect.Where(sq.And{inactiveVPN, noPaidSubscription})
+	case BroadcastAudienceTestBroadcast:
+		// Test broadcast: send only to users with ID 1 (for testing purposes)
+		buildSelect = buildSelect.Where(sq.Eq{"id": 1})
 	default:
 		return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
 	}

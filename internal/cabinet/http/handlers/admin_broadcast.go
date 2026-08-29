@@ -71,6 +71,7 @@ type broadcastAudienceResp struct {
 
 var broadcastAudienceValues = []string{
 	database.BroadcastAudienceAll,
+	database.BroadcastAudienceTestBroadcast,
 	database.BroadcastAudienceActiveAll,
 	database.BroadcastAudienceActivePaid,
 	database.BroadcastAudienceActiveTrial,

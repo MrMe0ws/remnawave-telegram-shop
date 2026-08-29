@@ -1480,12 +1480,27 @@
         "recipients": "получателей",
         "audience": {
           "all": "Все",
+          "testBroadcast": "Тест рассылки",
           "activeAll": "Все активные",
           "activePaid": "Активные оплатившие",
           "activeTrial": "Активные триал",
           "inactiveAll": "Все неактивные",
           "inactivePaid": "Неактивные оплатившие",
           "inactiveTrial": "Неактивные триал"
+        },
+        "audienceGroup": {
+          "active": "Активные",
+          "inactive": "Неактивные",
+          "other": "Остальное"
+        },
+        "editor": {
+          "bold": "Жирный",
+          "italic": "Курсив",
+          "code": "Код",
+          "quote": "Цитата",
+          "link": "Ссылка",
+          "enterUrl": "Введите URL",
+          "telegramHTML": "Поддерживается HTML-разметка Telegram: <b>жирный</b>, <i>курсив</i>, <code>код</code>, <blockquote>цитата</blockquote>, <a href=\"url\">ссылка</a>"
         },
         "filterTariff": "Фильтр по тарифу",
         "allTariffs": "Все тарифы",

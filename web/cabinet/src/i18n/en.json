@@ -1467,12 +1467,27 @@
         "recipients": "recipients",
         "audience": {
           "all": "All",
+          "testBroadcast": "Test broadcast",
           "activeAll": "All active",
           "activePaid": "Active paid",
           "activeTrial": "Active trial",
           "inactiveAll": "All inactive",
           "inactivePaid": "Inactive paid",
           "inactiveTrial": "Inactive trial"
+        },
+        "audienceGroup": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "other": "Other"
+        },
+        "editor": {
+          "bold": "Bold",
+          "italic": "Italic",
+          "code": "Code",
+          "quote": "Quote",
+          "link": "Link",
+          "enterUrl": "Enter URL",
+          "telegramHTML": "Supports Telegram HTML markup: <b>bold</b>, <i>italic</i>, <code>code</code>, <blockquote>quote</blockquote>, <a href=\"url\">link</a>"
         },
         "filterTariff": "Filter by tariff",
         "allTariffs": "All tariffs",

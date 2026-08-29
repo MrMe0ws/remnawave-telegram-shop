@@ -10,6 +10,8 @@ import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminBroadcastMessagePreview } from '../components/AdminBroadcastMessagePreview'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { AdminSelect } from '../components/AdminSelect'
+import { BroadcastTextEditor } from '../components/BroadcastTextEditor'
+import { BroadcastAudienceSelector } from '../components/BroadcastAudienceSelector'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
 
@@ -147,6 +149,7 @@ export default function AdminBroadcastPage() {
 
   const audienceLabels: Record<string, string> = {
     all: t('admin.broadcast.audience.all'),
+    test_broadcast: t('admin.broadcast.audience.testBroadcast', 'Test Broadcast'),
     active_all: t('admin.broadcast.audience.activeAll'),
     active_paid: t('admin.broadcast.audience.activePaid'),
     active_trial: t('admin.broadcast.audience.activeTrial'),
@@ -209,34 +212,17 @@ export default function AdminBroadcastPage() {
             {t('admin.broadcast.audienceTitle')}
           </h3>
 
-          {isLoading ? (
-            <div className="flex justify-center py-4">
-              <span className="size-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            </div>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {data?.audiences?.map((aud) => (
-                <button
-                  key={aud.audience}
-                  onClick={() => {
-                    setSelectedAudience(aud.audience)
-                    invalidatePreview()
-                    setSendSuccess(null)
-                  }}
-                  className={`rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                    selectedAudience === aud.audience
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border/50 hover:border-border hover:bg-accent'
-                  }`}
-                >
-                  <div className="font-medium">{audienceLabels[aud.audience] ?? aud.audience}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {aud.count} {t('admin.broadcast.recipients')}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <BroadcastAudienceSelector
+            audiences={data?.audiences ?? []}
+            isLoading={isLoading}
+            selectedAudience={selectedAudience}
+            onSelectAudience={(audience) => {
+              setSelectedAudience(audience)
+              invalidatePreview()
+              setSendSuccess(null)
+            }}
+            audienceLabels={audienceLabels}
+          />
 
           {isTariffsMode && (selectedAudience === 'active_paid' || selectedAudience === 'inactive_paid') && (
             <div className="mt-3">
@@ -266,16 +252,14 @@ export default function AdminBroadcastPage() {
             <MessageSquare className="size-4" />
             {t('admin.broadcast.compose')}
           </h3>
-          <textarea
-            className="w-full resize-y rounded-md border border-border bg-background p-3 text-sm focus:border-primary focus:outline-none"
-            rows={5}
-            placeholder={t('admin.broadcast.placeholder')}
+          <BroadcastTextEditor
             value={text}
-            onChange={(e) => {
-              setText(e.target.value)
+            onChange={(value) => {
+              setText(value)
               setPreviewError(null)
               setSendSuccess(null)
             }}
+            placeholder={t('admin.broadcast.placeholder')}
           />
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
