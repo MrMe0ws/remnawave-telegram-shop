@@ -22,6 +22,8 @@ import type {
   AdminLoyaltyTierDTO,
   AdminOkDTO,
   AdminPaymentsDTO,
+  AdminPaymentsListDTO,
+  AdminPaymentDetailDTO,
   AdminPromoCodeDTO,
   AdminPromoGetDTO,
   AdminPromoRedemptionsListDTO,
@@ -1101,6 +1103,53 @@ export const api = {
     request<AdminOkDTO>('POST', `/admin/users/${id}/extra-hwid`, { delta }),
 
   adminSquads: () => request<{ items: { uuid: string; name: string }[] }>('GET', '/admin/squads'),
+
+  adminPayments: (params?: { status?: string; q?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.set('status', params.status)
+    if (params?.q) q.set('q', params.q)
+    if (params?.page != null) q.set('page', String(params.page))
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<AdminPaymentsListDTO>('GET', `/admin/payments${suffix}`)
+  },
+  adminPayment: (id: number) => request<AdminPaymentDetailDTO>('GET', `/admin/payments/${id}`),
+  /** Скачивает CSV с учётом текущего фильтра и триггерит сохранение файла в браузере. */
+  adminPaymentsExportCsv: async (params?: { status?: string; q?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.set('status', params.status)
+    if (params?.q) q.set('q', params.q)
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+
+    const headers: Record<string, string> = {}
+    const csrf = readCsrfCookie()
+    if (csrf) headers['X-CSRF-Token'] = csrf
+    const token = _authRef?.getAccessToken()
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const res = await fetch(`${BASE}/admin/payments/export${suffix}`, {
+      method: 'GET',
+      headers,
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new ApiError(res.status, text)
+    }
+    const blob = await res.blob()
+    const disposition = res.headers.get('Content-Disposition') ?? ''
+    const match = /filename="?([^"]+)"?/.exec(disposition)
+    const filename = match?.[1] ?? 'payments.csv'
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
 
   adminPromos: (params?: { page?: number; limit?: number }) => {
     const q = new URLSearchParams()

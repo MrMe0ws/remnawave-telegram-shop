@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -531,6 +532,137 @@ func (pr *PurchaseRepository) HasPaidSubscription(ctx context.Context, customerI
 		return false, fmt.Errorf("failed to check paid subscription: %w", err)
 	}
 	return true, nil
+}
+
+// --- Admin listing (раздел «Платежи» в веб-админке) -------------------------
+
+// AdminPurchaseFilter — фильтр списка платежей в админке.
+type AdminPurchaseFilter struct {
+	Status PurchaseStatus // "" = любой статус
+	Search string         // ID платежа / ID клиента / telegram_id / @username (подстрока)
+}
+
+// AdminPurchaseRow — Purchase + краткие данные клиента одним JOIN-запросом
+// (без N+1) для списка и карточки платежа в админке.
+type AdminPurchaseRow struct {
+	Purchase
+	CustomerTelegramID       int64
+	CustomerTelegramUsername *string
+	CustomerIsWebOnly        bool
+}
+
+// adminPurchaseSelectCols — порядок должен совпадать с purchaseScanArgs + 3 доп. поля клиента.
+const adminPurchaseSelectCols = `p.id, p.amount, p.customer_id, p.created_at, p.month,
+	p.paid_at, p.currency, p.expire_at, p.status, p.invoice_type,
+	p.crypto_invoice_id, p.crypto_invoice_url, p.yookasa_url, p.yookasa_id,
+	p.extra_hwid,
+	p.promo_code_id, p.discount_percent_applied,
+	p.tariff_id, p.purchase_kind, p.is_early_downgrade,
+	p.platega_id, p.platega_url,
+	c.telegram_id, c.telegram_username, c.is_web_only`
+
+func scanAdminPurchaseRow(row pgx.Row) (*AdminPurchaseRow, error) {
+	var r AdminPurchaseRow
+	args := append(purchaseScanArgs(&r.Purchase), &r.CustomerTelegramID, &r.CustomerTelegramUsername, &r.CustomerIsWebOnly)
+	if err := row.Scan(args...); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func adminPurchaseWhereClause(filter AdminPurchaseFilter) sq.Sqlizer {
+	var and sq.And
+	if filter.Status != "" {
+		and = append(and, sq.Eq{"p.status": filter.Status})
+	}
+	if needle := strings.TrimSpace(strings.TrimPrefix(filter.Search, "@")); needle != "" {
+		pattern := "%" + escapeSQLLikePattern(needle) + "%"
+		and = append(and, sq.Or{
+			sq.Expr("c.telegram_username ILIKE ?", pattern),
+			sq.Expr("CAST(p.id AS TEXT) LIKE ?", pattern),
+			sq.Expr("CAST(p.customer_id AS TEXT) LIKE ?", pattern),
+			sq.Expr("CAST(c.telegram_id AS TEXT) LIKE ?", pattern),
+		})
+	}
+	if len(and) == 0 {
+		return sq.Expr("TRUE")
+	}
+	return and
+}
+
+// ListForAdmin — страница платежей для админки, отсортирована по дате создания (новые сверху).
+// limit также используется для CSV-экспорта (caller передаёт большой limit и offset=0).
+func (pr *PurchaseRepository) ListForAdmin(ctx context.Context, filter AdminPurchaseFilter, limit, offset int) ([]AdminPurchaseRow, error) {
+	sqlStr, args, err := sq.Select(adminPurchaseSelectCols).
+		From("purchase p").
+		Join("customer c ON c.id = p.customer_id").
+		Where(adminPurchaseWhereClause(filter)).
+		OrderBy("p.created_at DESC").
+		Limit(uint64(limit)).
+		Offset(uint64(offset)).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build admin purchases query: %w", err)
+	}
+
+	rows, err := pr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query admin purchases: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]AdminPurchaseRow, 0, limit)
+	for rows.Next() {
+		row, err := scanAdminPurchaseRow(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan admin purchase: %w", err)
+		}
+		out = append(out, *row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate admin purchases: %w", err)
+	}
+	return out, nil
+}
+
+// CountForAdmin — общее число платежей под тем же фильтром, что ListForAdmin (для пагинации).
+func (pr *PurchaseRepository) CountForAdmin(ctx context.Context, filter AdminPurchaseFilter) (int64, error) {
+	sqlStr, args, err := sq.Select("COUNT(*)").
+		From("purchase p").
+		Join("customer c ON c.id = p.customer_id").
+		Where(adminPurchaseWhereClause(filter)).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("build admin purchases count: %w", err)
+	}
+	var n int64
+	if err := pr.pool.QueryRow(ctx, sqlStr, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count admin purchases: %w", err)
+	}
+	return n, nil
+}
+
+// GetForAdmin — один платёж с данными клиента, для модалки «Платёж #ID» в админке.
+func (pr *PurchaseRepository) GetForAdmin(ctx context.Context, id int64) (*AdminPurchaseRow, error) {
+	sqlStr, args, err := sq.Select(adminPurchaseSelectCols).
+		From("purchase p").
+		Join("customer c ON c.id = p.customer_id").
+		Where(sq.Eq{"p.id": id}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("build admin purchase query: %w", err)
+	}
+	row, err := scanAdminPurchaseRow(pr.pool.QueryRow(ctx, sqlStr, args...))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("query admin purchase: %w", err)
+	}
+	return row, nil
 }
 
 func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(

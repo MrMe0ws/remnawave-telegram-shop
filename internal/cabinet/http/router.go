@@ -21,8 +21,8 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/jackc/pgx/v4/pgxpool"
 
-	adminauth "remnawave-tg-shop-bot/internal/cabinet/admin/auth"
 	"remnawave-tg-shop-bot/internal/broadcast"
+	adminauth "remnawave-tg-shop-bot/internal/cabinet/admin/auth"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/jwt"
 	googleoauth "remnawave-tg-shop-bot/internal/cabinet/auth/oauth"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/password"
@@ -353,6 +353,10 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 
 	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo)
 	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw)
+	// CheckoutRepo — только на чтение (ключ идемпотентности/провайдер в модалке платежа);
+	// не зависит от того, собран ли checkoutSvc (PaymentService может быть nil).
+	adminPaymentsCheckoutRepo := repository.NewCheckoutRepo(pool)
+	adminPaymentsHandler := handlers.NewAdminPayments(purchaseRepo, tariffRepo, promoRepo, adminPaymentsCheckoutRepo, customerRepo)
 	adminPromosHandler := handlers.NewAdminPromos(promoRepo)
 	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
@@ -366,7 +370,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	}
 
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
-		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
+		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
@@ -462,6 +466,7 @@ func registerAPIRoutes(
 	adminBootstrap *handlers.AdminBootstrapHandler,
 	adminStats *handlers.AdminStatsHandler,
 	adminUsers *handlers.AdminUsersHandler,
+	adminPayments *handlers.AdminPaymentsHandler,
 	adminPromos *handlers.AdminPromosHandler,
 	adminTariffs *handlers.AdminTariffsHandler,
 	adminLoyalty *handlers.AdminLoyaltyHandler,
@@ -1263,6 +1268,28 @@ func registerAPIRoutes(
 			middleware.CSRF(),
 			middleware.RateLimit(adminAcctLim, accountKey("admin_users_byid")),
 		),
+	)
+
+	// Admin Payments (только чтение: список / карточка / CSV-экспорт).
+	api.Handle("/cabinet/api/admin/payments",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminPayments.List),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_payments")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/payments/",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminPayments.HandleByID),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_payments_byid")),
+			),
+		}),
 	)
 
 	// Admin Promos

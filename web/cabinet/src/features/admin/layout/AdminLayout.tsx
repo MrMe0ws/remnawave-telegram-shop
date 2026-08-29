@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   BarChart3,
   Users,
+  CreditCard,
   TicketPercent,
   Zap,
   Gem,
@@ -81,16 +82,17 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
       ],
     },
     {
-      labelKey: 'admin.nav.group.clients',
+      labelKey: 'admin.nav.group.management',
       items: [
         { to: '/admin/users', icon: Users, labelKey: 'admin.nav.users' },
-        { to: '/admin/promos', icon: TicketPercent, labelKey: 'admin.nav.promos' },
-        { to: '/admin/broadcast', icon: Megaphone, labelKey: 'admin.nav.broadcast' },
+        { to: '/admin/payments', icon: CreditCard, labelKey: 'admin.nav.payments' },
       ],
     },
     {
-      labelKey: 'admin.nav.group.commerce',
+      labelKey: 'admin.nav.group.marketing',
       items: [
+        { to: '/admin/promos', icon: TicketPercent, labelKey: 'admin.nav.promos' },
+        { to: '/admin/broadcast', icon: Megaphone, labelKey: 'admin.nav.broadcast' },
         { to: '/admin/tariffs', icon: Zap, labelKey: 'admin.nav.tariffs', condition: salesModeTariffs },
         { to: '/admin/loyalty', icon: Gem, labelKey: 'admin.nav.loyalty', condition: loyaltyEnabled },
       ],

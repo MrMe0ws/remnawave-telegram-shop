@@ -217,6 +217,50 @@ export interface AdminPaymentsDTO {
   stars_rub_equiv: number
 }
 
+/** Раздел «Платежи» в админке — все покупки (все статусы), см. GET /admin/payments. */
+export interface AdminPaymentListItemDTO {
+  id: number
+  customer_id: number
+  telegram_id: string
+  telegram_username?: string | null
+  panel_login?: string | null
+  amount: number
+  currency: string
+  month: number
+  extra_hwid: number
+  invoice_type: string
+  purchase_kind: string
+  status: 'new' | 'pending' | 'paid' | 'cancel'
+  created_at: string
+  paid_at?: string | null
+  tariff_id?: number | null
+  tariff_name?: string | null
+  promo_code_id?: number | null
+  promo_code?: string | null
+}
+
+export interface AdminPaymentsListDTO {
+  items: AdminPaymentListItemDTO[]
+  total: number
+  page: number
+  limit: number
+}
+
+export interface AdminPaymentDetailDTO extends AdminPaymentListItemDTO {
+  discount_percent?: number | null
+  is_early_downgrade: boolean
+  expire_at?: string | null
+  crypto_invoice_id?: number | null
+  crypto_invoice_url?: string | null
+  yookasa_id?: string | null
+  yookasa_url?: string | null
+  platega_id?: string | null
+  platega_url?: string | null
+  provider_txn_id?: string | null
+  idempotency_key?: string | null
+  checkout_provider?: string | null
+}
+
 export interface AdminPromoCodeDTO {
   id: number
   code: string

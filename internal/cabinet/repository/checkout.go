@@ -120,6 +120,15 @@ func (r *CheckoutRepo) FindByID(ctx context.Context, id int64) (*Checkout, error
 	return scanCheckout(r.pool.QueryRow(ctx, q, id))
 }
 
+// FindByPurchaseID ищет checkout, привязанный к данному purchase_id — используется
+// в админ-модалке платежа, чтобы показать провайдера/ключ идемпотентности оплаты,
+// созданной через web-кабинет. Возвращает ErrNotFound, если платёж создан
+// не через кабинет (например, из Telegram-бота) — это штатный случай, а не ошибка.
+func (r *CheckoutRepo) FindByPurchaseID(ctx context.Context, purchaseID int64) (*Checkout, error) {
+	const q = `SELECT ` + checkoutSelectCols + ` FROM cabinet_checkout WHERE purchase_id = $1 ORDER BY created_at DESC LIMIT 1`
+	return scanCheckout(r.pool.QueryRow(ctx, q, purchaseID))
+}
+
 // AttachPurchase привязывает созданный в PaymentService purchase_id к checkout'у
 // и переводит статус 'new' → 'pending'. Также сохраняет return_url, чтобы
 // последующие поллы /status могли отдать пользователю корректную ссылку.
