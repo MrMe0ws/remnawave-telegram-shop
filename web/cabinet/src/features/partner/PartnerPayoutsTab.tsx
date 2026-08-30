@@ -16,7 +16,7 @@ import { api, ApiError, type PartnerAccountDTO } from '@/lib/api'
 
 import { PARTNER_STATE_KEY } from './PartnerProgramPage'
 import { formatMoney, formatDayMonth, formatDayShort } from './format'
-import { PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './layout'
+import { PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE, PARTNER_INPUT } from './layout'
 
 /**
  * Тело отказа приходит JSON'ом со слагом ошибки и подробностями: минимальной
@@ -157,6 +157,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   disabled={!canRequest}
+                  className={PARTNER_INPUT}
                 />
               </div>
 
@@ -221,6 +222,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   }}
                   maxLength={64}
                   placeholder={t('partnerPage.payouts.methodPlaceholder')}
+                  className={PARTNER_INPUT}
                 />
               </div>
               <div className="space-y-1.5">
@@ -234,6 +236,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   }}
                   maxLength={512}
                   placeholder={t('partnerPage.payouts.detailsPlaceholder')}
+                  className={PARTNER_INPUT}
                 />
               </div>
 
@@ -303,7 +306,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
 
             {history.hasNextPage ? (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="mt-3 w-full"
                 disabled={history.isFetchingNextPage}

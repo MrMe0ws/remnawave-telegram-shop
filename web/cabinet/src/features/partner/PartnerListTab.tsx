@@ -89,7 +89,7 @@ export function PartnerCustomersTab() {
 
           {hasNextPage ? (
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="mt-3 w-full"
               disabled={isFetchingNextPage}
@@ -179,7 +179,7 @@ export function PartnerEarningsTab() {
 
           {hasNextPage ? (
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="mt-3 w-full"
               disabled={isFetchingNextPage}

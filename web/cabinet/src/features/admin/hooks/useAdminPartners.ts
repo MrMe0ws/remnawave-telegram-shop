@@ -32,12 +32,36 @@ function useInvalidatePartners() {
   }
 }
 
-export function useAdminPartners(status?: string) {
-  return useQuery({
-    queryKey: [...PARTNERS_KEY, status ?? 'all'],
-    queryFn: () => api.adminPartners({ status, limit: 100 }),
+/**
+ * Размер страницы списков раздела.
+ *
+ * Раньше здесь стоял фиксированный limit без продолжения: сто первый партнёр
+ * в список уже не попадал, и понять это по экрану было нельзя — список просто
+ * заканчивался.
+ */
+const LIST_PAGE_SIZE = 50
+
+function useAdminPartnerList<T>(
+  key: string,
+  scope: string,
+  fetchPage: (params: { limit: number; offset: number }) => Promise<{ items: T[]; total: number }>,
+) {
+  return useInfiniteQuery({
+    queryKey: [key, scope],
+    queryFn: ({ pageParam }) => fetchPage({ limit: LIST_PAGE_SIZE, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0)
+      return loaded < lastPage.total ? loaded : undefined
+    },
     staleTime: 15_000,
   })
+}
+
+export function useAdminPartners(status?: string) {
+  return useAdminPartnerList(PARTNERS_KEY[0], status ?? 'all', (params) =>
+    api.adminPartners({ status, ...params }),
+  )
 }
 
 export function useAdminPartnerPending() {
@@ -97,11 +121,9 @@ export function useAdminPartnerPayoutHistory(id: number | null, enabled: boolean
 }
 
 export function useAdminPartnerPayouts(status?: string) {
-  return useQuery<{ items: AdminPartnerPayoutDTO[]; total: number }>({
-    queryKey: [...PAYOUTS_KEY, status ?? 'all'],
-    queryFn: () => api.adminPartnerPayouts({ status, limit: 100 }),
-    staleTime: 15_000,
-  })
+  return useAdminPartnerList<AdminPartnerPayoutDTO>(PAYOUTS_KEY[0], status ?? 'all', (params) =>
+    api.adminPartnerPayouts({ status, ...params }),
+  )
 }
 
 export function useAdminPartnerApprove() {

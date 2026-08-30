@@ -15,6 +15,7 @@ import { api, ApiError, type PartnerAccountDTO, type PartnerLinkDTO } from '@/li
 
 import { PARTNER_STATE_KEY } from './PartnerProgramPage'
 import { formatMoney } from './format'
+import { PARTNER_INPUT } from './layout'
 
 export function PartnerLinksTab({ partner }: { partner: PartnerAccountDTO }) {
   const { t } = useTranslation()
@@ -141,6 +142,7 @@ export function PartnerLinksTab({ partner }: { partner: PartnerAccountDTO }) {
                 maxLength={64}
                 placeholder={t('partnerPage.links.namePlaceholder')}
                 disabled={limitReached}
+                className={PARTNER_INPUT}
               />
               <Button type="submit" disabled={create.isPending || limitReached} className="shrink-0">
                 {t('partnerPage.links.create')}
@@ -222,12 +224,18 @@ function StreamCard({
         <div className="flex items-start justify-between gap-2">
           {isEditing ? (
             <div className="flex w-full flex-col gap-2 sm:flex-row">
-              <Input value={editingName} onChange={(e) => onEditChange(e.target.value)} maxLength={64} autoFocus />
+              <Input
+                value={editingName}
+                onChange={(e) => onEditChange(e.target.value)}
+                maxLength={64}
+                autoFocus
+                className={PARTNER_INPUT}
+              />
               <div className="flex gap-2">
                 <Button size="sm" onClick={onEditSave} disabled={busy || !editingName.trim()}>
                   {t('partnerPage.links.save')}
                 </Button>
-                <Button size="sm" variant="outline" onClick={onEditCancel}>
+                <Button size="sm" variant="secondary" onClick={onEditCancel}>
                   {t('partnerPage.links.cancel')}
                 </Button>
               </div>
@@ -267,21 +275,26 @@ function StreamCard({
 
         {!isEditing ? (
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" className="gap-1" onClick={onEditStart} disabled={busy}>
+            <Button size="sm" variant="secondary" className="gap-1" onClick={onEditStart} disabled={busy}>
               <Pencil size={14} />
               {t('partnerPage.links.rename')}
             </Button>
             {link.can_archive ? (
-              <Button size="sm" variant="outline" className="gap-1" onClick={onArchive} disabled={busy}>
+              <Button size="sm" variant="secondary" className="gap-1" onClick={onArchive} disabled={busy}>
                 {link.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
                 {link.archived ? t('partnerPage.links.restore') : t('partnerPage.links.archive')}
               </Button>
             ) : null}
+            {/*
+              Вариант secondary, а не outline: у outline заливка задана ещё и
+              под dark:, и тёмная тема перебивала бы красный фон обратно на
+              нейтральный — правило с модификатором сильнее безусловного.
+            */}
             {link.can_delete ? (
               <Button
                 size="sm"
-                variant="outline"
-                className="gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                variant="secondary"
+                className="gap-1 border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20"
                 onClick={onDelete}
                 disabled={busy}
               >

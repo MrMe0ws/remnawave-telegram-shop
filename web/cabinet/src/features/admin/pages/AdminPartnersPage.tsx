@@ -32,6 +32,8 @@ export default function AdminPartnersPage() {
   const pending = useAdminPartnerPending()
   const applications = useAdminPartners('pending')
   const partners = useAdminPartners()
+  const applicationItems = applications.data?.pages.flatMap((p) => p.items) ?? []
+  const partnerItems = partners.data?.pages.flatMap((p) => p.items) ?? []
 
   // Заявки и выплаты — несделанная работа, их счётчики подсвечены. Число
   // партнёров — просто справка, и выделять его незачем.
@@ -47,7 +49,7 @@ export default function AdminPartnersPage() {
       {
         id: 'partners' as const,
         label: t('admin.partners.tabs.partners'),
-        count: partners.data?.total,
+        count: partners.data?.pages[0]?.total,
         icon: Users,
         urgent: false,
       },
@@ -59,7 +61,7 @@ export default function AdminPartnersPage() {
         urgent: true,
       },
     ],
-    [t, pending.data, partners.data?.total],
+    [t, pending.data, partners.data],
   )
 
   return (
@@ -96,10 +98,15 @@ export default function AdminPartnersPage() {
         </div>
 
         {tab === 'applications' ? (
-          <ApplicationsTab items={applications.data?.items ?? []} loading={applications.isLoading} />
+          <ApplicationsTab items={applicationItems} loading={applications.isLoading} more={applications} />
         ) : null}
         {tab === 'partners' ? (
-          <PartnersTab items={partners.data?.items ?? []} loading={partners.isLoading} onOpen={setOpenPartner} />
+          <PartnersTab
+            items={partnerItems}
+            loading={partners.isLoading}
+            onOpen={setOpenPartner}
+            more={partners}
+          />
         ) : null}
         {tab === 'payouts' ? <PayoutsTab onOpenPartner={setOpenPartner} /> : null}
 
@@ -159,7 +166,15 @@ function TabButton({
 }
 
 /** Заявки: проценты задаются прямо здесь, до одобрения. */
-function ApplicationsTab({ items, loading }: { items: AdminPartnerDTO[]; loading: boolean }) {
+function ApplicationsTab({
+  items,
+  loading,
+  more,
+}: {
+  items: AdminPartnerDTO[]
+  loading: boolean
+  more: PageQuery
+}) {
   const { t } = useTranslation()
   if (loading) return <LoadingBlock />
   if (items.length === 0) return <EmptyBlock text={t('admin.partners.applications.empty')} />
@@ -169,7 +184,30 @@ function ApplicationsTab({ items, loading }: { items: AdminPartnerDTO[]; loading
       {items.map((row) => (
         <ApplicationCard key={row.id} partner={row} />
       ))}
+      <ShowMoreButton query={more} />
     </div>
+  )
+}
+
+/** Постраничный запрос: нужны только эти три поля, форма источника неважна. */
+interface PageQuery {
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  fetchNextPage: () => unknown
+}
+
+function ShowMoreButton({ query }: { query: PageQuery }) {
+  const { t } = useTranslation()
+  if (!query.hasNextPage) return null
+  return (
+    <button
+      type="button"
+      disabled={query.isFetchingNextPage}
+      onClick={() => void query.fetchNextPage()}
+      className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium transition-colors hover:bg-border disabled:opacity-60"
+    >
+      {query.isFetchingNextPage ? t('admin.partners.detail.loading') : t('admin.partners.detail.showMore')}
+    </button>
   )
 }
 
@@ -254,7 +292,7 @@ function ApplicationCard({ partner }: { partner: AdminPartnerDTO }) {
               type="button"
               disabled={busy}
               onClick={() => reject.mutate({ id: partner.id, comment })}
-              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-medium disabled:opacity-60"
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium transition-colors hover:bg-border disabled:opacity-60"
             >
               <X className="size-3.5" />
               {t('admin.partners.applications.reject')}
@@ -271,10 +309,12 @@ function PartnersTab({
   items,
   loading,
   onOpen,
+  more,
 }: {
   items: AdminPartnerDTO[]
   loading: boolean
   onOpen: (id: number) => void
+  more: PageQuery
 }) {
   const { t } = useTranslation()
   const [grantOpen, setGrantOpen] = useState(false)
@@ -285,7 +325,7 @@ function PartnersTab({
         <button
           type="button"
           onClick={() => setGrantOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium transition-colors hover:bg-border"
         >
           <UserPlus className="size-3.5" />
           {t('admin.partners.grant.open')}
@@ -415,6 +455,8 @@ function PartnersTab({
         </div>
       ) : null}
 
+      <ShowMoreButton query={more} />
+
       <GrantModal open={grantOpen} onClose={() => setGrantOpen(false)} />
     </div>
   )
@@ -502,7 +544,7 @@ function PayoutsTab({ onOpenPartner }: { onOpenPartner: (id: number) => void }) 
   const { t } = useTranslation()
   const [scope, setScope] = useState<'open' | 'all'>('open')
   const payouts = useAdminPartnerPayouts(scope === 'open' ? 'open' : undefined)
-  const items = payouts.data?.items ?? []
+  const items = payouts.data?.pages.flatMap((p) => p.items) ?? []
 
   // Заявка в работе — это задача, обработанная — запись в архиве. Вёрстка у
   // них разная, поэтому список делится здесь, а не внутри карточки.
@@ -551,6 +593,8 @@ function PayoutsTab({ onOpenPartner }: { onOpenPartner: (id: number) => void }) 
           <ProcessedPayoutsTable items={closed} onOpenPartner={onOpenPartner} />
         </>
       ) : null}
+
+      <ShowMoreButton query={payouts} />
     </div>
   )
 }
@@ -772,7 +816,7 @@ function PayoutCard({
               type="button"
               disabled={action.isPending}
               onClick={() => action.mutate({ id: payout.id, action: 'reject', comment })}
-              className="flex-1 rounded-lg border border-border px-3 py-2 text-xs font-medium disabled:opacity-60"
+              className="flex-1 rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium transition-colors hover:bg-border disabled:opacity-60"
             >
               {t('admin.partners.payouts.reject')}
             </button>

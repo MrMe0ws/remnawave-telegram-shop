@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PARTNER_INPUT } from './layout'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -135,7 +136,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     <p className="text-sm text-muted-foreground">{t('partnerPage.rejectedNoComment')}</p>
                   )}
                   {state.applications_enabled && !formOpen ? (
-                    <Button variant="outline" size="sm" className="mt-2 gap-1.5" onClick={() => setFormOpen(true)}>
+                    <Button variant="secondary" size="sm" className="mt-2 gap-1.5" onClick={() => setFormOpen(true)}>
                       <RefreshCw size={14} />
                       {t('partnerPage.form.titleAgain')}
                     </Button>
@@ -202,7 +203,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     onChange={(e) => setAbout(e.target.value)}
                     rows={3}
                     maxLength={2000}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm focus:border-primary focus:outline-none"
                     placeholder={t('partnerPage.form.aboutPlaceholder')}
                   />
                 </div>
@@ -216,6 +217,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     onChange={(e) => setChannels(e.target.value)}
                     maxLength={1000}
                     placeholder={t('partnerPage.form.channelsPlaceholder')}
+                    className={PARTNER_INPUT}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -228,6 +230,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     onChange={(e) => setExpected(e.target.value)}
                     maxLength={200}
                     placeholder={t('partnerPage.form.expectedPlaceholder')}
+                    className={PARTNER_INPUT}
                   />
                 </div>
 

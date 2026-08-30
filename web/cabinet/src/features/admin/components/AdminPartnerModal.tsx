@@ -499,7 +499,7 @@ function ShowMore({
       type="button"
       disabled={query.isFetchingNextPage}
       onClick={() => void query.fetchNextPage()}
-      className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-60"
+      className="mt-3 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium transition-colors hover:bg-border disabled:opacity-60"
     >
       {query.isFetchingNextPage ? t('admin.partners.detail.loading') : t('admin.partners.detail.showMore')}
     </button>
@@ -627,7 +627,7 @@ function ActionButton({
   tone?: 'outline' | 'primary' | 'danger'
 }) {
   const tones: Record<string, string> = {
-    outline: 'border-border hover:bg-accent',
+    outline: 'border-border bg-secondary hover:bg-border',
     primary: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90',
     danger: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90',
   }
