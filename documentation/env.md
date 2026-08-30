@@ -197,6 +197,8 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 Все переменные ниже редактируются из админки без перезапуска бота.
 
+Как программа работает целиком — [partner-program.md](./partner-program.md).
+
 | Переменная | Описание |
 |------------|----------|
 | `PARTNER_PROGRAM_ENABLED` | Общий рубильник. `false` — раздел скрыт, начисления не идут; уже начисленное остаётся |

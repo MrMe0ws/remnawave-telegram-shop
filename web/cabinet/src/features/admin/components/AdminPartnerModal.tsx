@@ -1,6 +1,28 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Handshake, Pause, Play, Ban, Scale, SlidersHorizontal, Loader2, Copy, Check } from 'lucide-react'
+import {
+  Handshake,
+  Pause,
+  Play,
+  Ban,
+  Scale,
+  SlidersHorizontal,
+  Loader2,
+  Copy,
+  Check,
+  LayoutGrid,
+  Link2,
+  Users,
+  ArrowLeftRight,
+  Banknote,
+  Coins,
+  Wallet,
+  Sparkles,
+  RefreshCw,
+  CreditCard,
+  FileText,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { AdminModal } from './AdminModal'
 import {
@@ -37,12 +59,22 @@ export function AdminPartnerModal({
   const setStatus = useAdminPartnerSetStatus()
   const partner = data?.partner
 
-  const tabs: { id: TabId; label: string; count?: number }[] = [
-    { id: 'overview', label: t('admin.partners.detail.tabOverview') },
-    { id: 'links', label: t('admin.partners.detail.linksTitle'), count: data?.links.length },
-    { id: 'customers', label: t('admin.partners.detail.tabCustomers'), count: data?.customers.length },
-    { id: 'operations', label: t('admin.partners.detail.operationsTitle'), count: data?.operations.length },
-    { id: 'payouts', label: t('admin.partners.tabs.payouts'), count: data?.payouts.length },
+  const tabs: { id: TabId; label: string; icon: LucideIcon; count?: number }[] = [
+    { id: 'overview', label: t('admin.partners.detail.tabOverview'), icon: LayoutGrid },
+    { id: 'links', label: t('admin.partners.detail.linksTitle'), icon: Link2, count: data?.links.length },
+    {
+      id: 'customers',
+      label: t('admin.partners.detail.tabCustomers'),
+      icon: Users,
+      count: data?.customers.length,
+    },
+    {
+      id: 'operations',
+      label: t('admin.partners.detail.operationsTitle'),
+      icon: ArrowLeftRight,
+      count: data?.operations.length,
+    },
+    { id: 'payouts', label: t('admin.partners.tabs.payouts'), icon: Banknote, count: data?.payouts.length },
   ]
 
   return (
@@ -51,7 +83,13 @@ export function AdminPartnerModal({
       onClose={onClose}
       title={partner?.label ?? t('admin.partners.title')}
       icon={Handshake}
-      panelClassName="max-w-5xl"
+      /*
+       * Ширину задаём с тем же брейкпоинтом, что и дефолт AdminModal
+       * (sm:max-w-md): без префикса twMerge считает классы разными
+       * группами, оба доезжают до разметки, и медиазапрос перебивает
+       * безусловный max-w-5xl — модалка оставалась узкой.
+       */
+      panelClassName="sm:max-w-3xl lg:max-w-5xl"
     >
       {isLoading || !partner ? (
         <div className="flex justify-center py-10">
@@ -78,6 +116,7 @@ export function AdminPartnerModal({
                 icon={Pause}
                 label={t('admin.partners.detail.suspend')}
                 busy={setStatus.isPending}
+                tone="primary"
                 onClick={() => setStatus.mutate({ id: partner.id, status: 'suspended' })}
               />
             ) : null}
@@ -86,6 +125,7 @@ export function AdminPartnerModal({
                 icon={Play}
                 label={t('admin.partners.detail.resume')}
                 busy={setStatus.isPending}
+                tone="primary"
                 onClick={() => setStatus.mutate({ id: partner.id, status: 'active' })}
               />
             ) : null}
@@ -94,7 +134,7 @@ export function AdminPartnerModal({
                 icon={Ban}
                 label={t('admin.partners.detail.revoke')}
                 busy={setStatus.isPending}
-                danger
+                tone="danger"
                 onClick={() => setStatus.mutate({ id: partner.id, status: 'rejected' })}
               />
             ) : null}
@@ -103,6 +143,7 @@ export function AdminPartnerModal({
                 icon={Play}
                 label={t('admin.partners.detail.restore')}
                 busy={setStatus.isPending}
+                tone="primary"
                 onClick={() => setStatus.mutate({ id: partner.id, status: 'active' })}
               />
             ) : null}
@@ -117,10 +158,11 @@ export function AdminPartnerModal({
                 aria-selected={tab === item.id}
                 onClick={() => setTab(item.id)}
                 className={cn(
-                  'flex-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                  'flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
                   tab === item.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
+                <item.icon className={cn('size-3.5 shrink-0', tab === item.id && 'text-primary')} />
                 {item.label}
                 {item.count ? ` · ${item.count}` : ''}
               </button>
@@ -147,11 +189,13 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
     <div className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-3 lg:gap-3">
         <Metric
+          icon={Coins}
           label={t('admin.partners.detail.earnedTotal')}
           value={formatMoney(partner.total_earned)}
           sub={t('admin.partners.detail.paidTotal', { amount: formatMoney(partner.total_paid) })}
         />
         <Metric
+          icon={Wallet}
           label={t('admin.partners.detail.available')}
           value={formatMoney(partner.balance)}
           sub={t('admin.partners.detail.holdReserved', {
@@ -160,6 +204,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
           })}
         />
         <Metric
+          icon={Users}
           label={t('admin.partners.detail.customers')}
           value={String(partner.customers)}
           sub={t('admin.partners.detail.paying', { n: partner.paying_customers })}
@@ -168,6 +213,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
 
       <dl className="divide-y divide-border rounded-lg border border-border text-sm">
         <Row
+          icon={Sparkles}
           label={t('admin.partners.terms.first')}
           value={
             <>
@@ -179,6 +225,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
           }
         />
         <Row
+          icon={RefreshCw}
           label={t('admin.partners.terms.renewal')}
           value={
             <>
@@ -192,10 +239,12 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
           }
         />
         <Row
+          icon={Link2}
           label={t('admin.partners.terms.linksLimit')}
           value={partner.links_limit ?? t('admin.partners.terms.global')}
         />
         <Row
+          icon={CreditCard}
           label={t('admin.partners.detail.payoutDetails')}
           value={<CopyValue value={partner.payout_details || ''} />}
         />
@@ -203,7 +252,8 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
 
       {partner.app_about ? (
         <div className="rounded-lg border border-border p-3 text-sm">
-          <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+          <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+            <FileText className="size-3.5 shrink-0 text-primary" />
             {t('admin.partners.detail.application')}
           </p>
           <p>{partner.app_about}</p>
@@ -310,10 +360,19 @@ function OperationsTab({ operations }: { operations: { at: string; kind: string;
                   : t(`admin.partners.detail.opEarning.${op.detail || 'renewal'}`)}
               </td>
               <td className="px-2 py-2 text-xs text-muted-foreground">{op.ref || op.note || '—'}</td>
+              {/*
+                Минус здесь — это выплата партнёру, а не авария, поэтому
+                красным он не красится. Отменённое начисление гасим
+                зачёркиванием: сумма в баланс не попала.
+              */}
               <td
                 className={cn(
                   'px-2 py-2 text-right font-medium tabular-nums',
-                  op.amount < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400',
+                  op.status === 'cancelled'
+                    ? 'text-muted-foreground line-through'
+                    : op.amount < 0
+                      ? 'text-foreground'
+                      : 'text-emerald-600 dark:text-emerald-400',
                 )}
               >
                 {op.amount < 0 ? '−' : '+'}
@@ -430,27 +489,39 @@ function StatusChip({ status }: { status: string }) {
   )
 }
 
+/**
+ * Кнопка действия над партнёром.
+ *
+ * Смена статуса меняет доступ к деньгам, поэтому такие кнопки
+ * залиты цветом, а вспомогательные (условия, корректировка)
+ * остаются контурными: так в ряду видно, что здесь главное.
+ */
 function ActionButton({
   icon: Icon,
   label,
   onClick,
   busy,
-  danger,
+  tone = 'outline',
 }: {
-  icon: typeof Pause
+  icon: LucideIcon
   label: string
   onClick: () => void
   busy: boolean
-  danger?: boolean
+  tone?: 'outline' | 'primary' | 'danger'
 }) {
+  const tones: Record<string, string> = {
+    outline: 'border-border hover:bg-accent',
+    primary: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90',
+    danger: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  }
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={busy}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium disabled:opacity-60',
-        danger ? 'border-destructive/40 text-destructive hover:bg-destructive/10' : 'border-border hover:bg-accent',
+        'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors disabled:opacity-60',
+        tones[tone],
       )}
     >
       <Icon className="size-3.5" />
@@ -459,20 +530,44 @@ function ActionButton({
   )
 }
 
-function Metric({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  sub: string
+}) {
   return (
     <div className="rounded-lg border border-border p-3">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <Icon className="size-3.5 shrink-0 text-primary" />
+        {label}
+      </p>
       <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
       <p className="text-xs text-muted-foreground">{sub}</p>
     </div>
   )
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon
+  label: string
+  value: React.ReactNode
+}) {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-      <dt className="text-muted-foreground">{label}</dt>
+      <dt className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="size-4 shrink-0" />
+        {label}
+      </dt>
       <dd className="text-right font-medium">{value}</dd>
     </div>
   )

@@ -22,6 +22,7 @@
 | [payments.md](./payments.md) | Платёжные системы, вебхуки и поллинг |
 | [notifications.md](./notifications.md) | Уведомления: истечение, lifecycle, torrent blocker (Remnawave webhook) |
 | [squads.md](./squads.md) | Squads Remnawave (платные и триал) |
+| [partner-program.md](./partner-program.md) | Партнёрская программа: проценты, потоки, холд, выплаты |
 | [customization.md](./customization.md) | Тексты бота/кабинета, кнопки, emoji |
 | [backup.md](./backup.md) | Резервное копирование и восстановление |
 | [moynalog-proxy.md](./moynalog-proxy.md) | «Мой налог» через прокси вне РФ |
