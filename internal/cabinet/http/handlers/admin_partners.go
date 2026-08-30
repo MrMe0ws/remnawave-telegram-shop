@@ -35,16 +35,19 @@ type adminPartnerDTO struct {
 	Status string `json:"status"`
 	Label  string `json:"label"`
 
-	FirstPercent    *float64 `json:"first_percent,omitempty"`
-	RenewalPercent  *float64 `json:"renewal_percent,omitempty"`
-	EffectiveFirst  float64  `json:"effective_first_percent"`
-	EffectiveRenew  float64  `json:"effective_renewal_percent"`
-	LinksLimit      *int     `json:"links_limit,omitempty"`
-	Balance         float64  `json:"balance"`
-	HoldBalance     float64  `json:"hold_balance"`
-	ReservedBalance float64  `json:"reserved_balance"`
-	TotalEarned     float64  `json:"total_earned"`
-	TotalPaid       float64  `json:"total_paid"`
+	FirstPercent   *float64 `json:"first_percent,omitempty"`
+	RenewalPercent *float64 `json:"renewal_percent,omitempty"`
+	EffectiveFirst float64  `json:"effective_first_percent"`
+	EffectiveRenew float64  `json:"effective_renewal_percent"`
+	LinksLimit     *int     `json:"links_limit,omitempty"`
+	// Действующее значение с уже подставленным глобальным дефолтом: в карточке
+	// «как у всех» без числа не отвечает на вопрос «а сколько это».
+	EffectiveLinks  int     `json:"effective_links_limit"`
+	Balance         float64 `json:"balance"`
+	HoldBalance     float64 `json:"hold_balance"`
+	ReservedBalance float64 `json:"reserved_balance"`
+	TotalEarned     float64 `json:"total_earned"`
+	TotalPaid       float64 `json:"total_paid"`
 
 	Customers       int `json:"customers"`
 	PayingCustomers int `json:"paying_customers"`
@@ -95,15 +98,31 @@ type adminPartnerOperationDTO struct {
 	Note   string  `json:"note,omitempty"`
 }
 
+// Карточка отдаёт партнёра, его потоки и размеры трёх журналов. Сами журналы
+// приходят постранично из отдельных ручек: у активного партнёра там сотни
+// строк, и грузить их все ради счётчика на вкладке незачем.
 type adminPartnerDetailResp struct {
-	Partner    adminPartnerDTO            `json:"partner"`
-	Links      []partnerLinkDTO           `json:"links"`
-	Operations []adminPartnerOperationDTO `json:"operations"`
-	Customers  []partnerCustomerDTO       `json:"customers"`
-	Payouts    []adminPartnerPayoutDTO    `json:"payouts"`
+	Partner adminPartnerDTO       `json:"partner"`
+	Links   []partnerLinkDTO      `json:"links"`
+	Counts  adminPartnerCountsDTO `json:"counts"`
+}
+
+type adminPartnerCountsDTO struct {
+	Customers  int `json:"customers"`
+	Operations int `json:"operations"`
+	Payouts    int `json:"payouts"`
 }
 
 // --- маппинг ---
+
+// effectiveLinksLimit — сколько потоков партнёру доступно на самом деле.
+// NULL в базе означает «как у всех», и подставляется общая настройка.
+func effectiveLinksLimit(individual *int) int {
+	if individual != nil && *individual > 0 {
+		return *individual
+	}
+	return config.PartnerMaxLinks()
+}
 
 func adminPartnerToDTO(row database.PartnerAdminRow) adminPartnerDTO {
 	return adminPartnerDTO{
@@ -116,6 +135,7 @@ func adminPartnerToDTO(row database.PartnerAdminRow) adminPartnerDTO {
 		EffectiveFirst:    effectivePercent(row.FirstPercent, config.PartnerFirstPercent()),
 		EffectiveRenew:    effectivePercent(row.RenewalPercent, config.PartnerRenewalPercent()),
 		LinksLimit:        row.LinksLimit,
+		EffectiveLinks:    effectiveLinksLimit(row.LinksLimit),
 		Balance:           row.Balance,
 		HoldBalance:       row.HoldBalance,
 		ReservedBalance:   row.ReservedBalance,
@@ -233,6 +253,12 @@ func (h *AdminPartnersHandler) partnerAction(w http.ResponseWriter, r *http.Requ
 		h.detail(w, r, partnerID)
 	case route.Action == "" && r.Method == http.MethodPatch:
 		h.updateTerms(w, r, partnerID)
+	case route.Action == "customers" && r.Method == http.MethodGet:
+		h.partnerCustomers(w, r, partnerID)
+	case route.Action == "operations" && r.Method == http.MethodGet:
+		h.partnerOperations(w, r, partnerID)
+	case route.Action == "payouts" && r.Method == http.MethodGet:
+		h.partnerPayouts(w, r, partnerID)
 	case route.Action == "approve" && r.Method == http.MethodPost:
 		h.approve(w, r, partnerID)
 	case route.Action == "reject" && r.Method == http.MethodPost:
@@ -359,56 +385,34 @@ func (h *AdminPartnersHandler) detail(w http.ResponseWriter, r *http.Request, pa
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	ops, err := h.partners.ListOperations(r.Context(), partnerID, 50)
+	// Только размеры журналов: содержимое каждой вкладки грузится своей ручкой.
+	_, customersTotal, err := h.partners.ListCustomers(r.Context(), partnerID, 1, 0)
 	if err != nil {
-		slog.Error("admin partners: operations", "error", err, "partner_id", partnerID)
+		slog.Error("admin partners: customers count", "error", err, "partner_id", partnerID)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-
-	customers, _, err := h.partners.ListCustomers(r.Context(), partnerID, 50, 0)
+	_, opsTotal, err := h.partners.ListOperations(r.Context(), partnerID, 1, 0)
 	if err != nil {
-		slog.Error("admin partners: customers", "error", err, "partner_id", partnerID)
+		slog.Error("admin partners: operations count", "error", err, "partner_id", partnerID)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	payouts, err := h.partners.ListPayouts(r.Context(), partnerID, 50)
+	_, payoutsTotal, err := h.partners.ListPayouts(r.Context(), partnerID, 1, 0)
 	if err != nil {
-		slog.Error("admin partners: partner payouts", "error", err, "partner_id", partnerID)
+		slog.Error("admin partners: payouts count", "error", err, "partner_id", partnerID)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	resp := adminPartnerDetailResp{
-		Partner:    adminPartnerToDTO(*row),
-		Links:      make([]partnerLinkDTO, 0, len(links)),
-		Operations: make([]adminPartnerOperationDTO, 0, len(ops)),
-		Customers:  make([]partnerCustomerDTO, 0, len(customers)),
-		Payouts:    make([]adminPartnerPayoutDTO, 0, len(payouts)),
-	}
-	for _, c := range customers {
-		resp.Customers = append(resp.Customers, partnerCustomerDTO{
-			Label:      adminCustomerLabel(c.TelegramUsername, c.Email, c.TelegramID, c.IsWebOnly),
-			Active:     c.Active,
-			HasPaid:    c.HasPaid,
-			Earned:     c.Earned,
-			LinkName:   ptrString(c.LinkName),
-			AttachedAt: c.AttachedAt.UTC().Format(time.RFC3339),
-		})
-	}
-	for _, p := range payouts {
-		resp.Payouts = append(resp.Payouts, adminPartnerPayoutDTO{
-			ID:              p.ID,
-			PartnerID:       p.PartnerID,
-			Amount:          p.Amount,
-			Status:          p.Status,
-			Method:          ptrString(p.Method),
-			DetailsSnapshot: ptrString(p.DetailsSnapshot),
-			AdminComment:    ptrString(p.AdminComment),
-			ExternalRef:     ptrString(p.ExternalRef),
-			RequestedAt:     p.RequestedAt.UTC().Format(time.RFC3339),
-			ProcessedAt:     formatTimeRFC3339(p.ProcessedAt),
-		})
+		Partner: adminPartnerToDTO(*row),
+		Links:   make([]partnerLinkDTO, 0, len(links)),
+		Counts: adminPartnerCountsDTO{
+			Customers:  customersTotal,
+			Operations: opsTotal,
+			Payouts:    payoutsTotal,
+		},
 	}
 	for _, l := range links {
 		resp.Links = append(resp.Links, partnerLinkDTO{
@@ -423,8 +427,49 @@ func (h *AdminPartnersHandler) detail(w http.ResponseWriter, r *http.Request, pa
 			Earned:    l.Earned,
 		})
 	}
-	for _, op := range ops {
-		resp.Operations = append(resp.Operations, adminPartnerOperationDTO{
+
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// --- постраничные вкладки карточки ---
+
+func (h *AdminPartnersHandler) partnerCustomers(w http.ResponseWriter, r *http.Request, partnerID int64) {
+	limit, offset := paginationParams(r, 25, 100)
+	rows, total, err := h.partners.ListCustomers(r.Context(), partnerID, limit, offset)
+	if err != nil {
+		slog.Error("admin partners: customers", "error", err, "partner_id", partnerID)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	items := make([]partnerCustomerDTO, 0, len(rows))
+	for _, c := range rows {
+		// Ярлык админский, без маскирования: партнёрская маска здесь помешала
+		// бы разбирать спор — см. adminCustomerLabel.
+		items = append(items, partnerCustomerDTO{
+			Label:      adminCustomerLabel(c.TelegramUsername, c.Email, c.TelegramID, c.IsWebOnly),
+			Active:     c.Active,
+			HasPaid:    c.HasPaid,
+			Earned:     c.Earned,
+			LinkName:   ptrString(c.LinkName),
+			AttachedAt: c.AttachedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
+}
+
+func (h *AdminPartnersHandler) partnerOperations(w http.ResponseWriter, r *http.Request, partnerID int64) {
+	limit, offset := paginationParams(r, 25, 100)
+	rows, total, err := h.partners.ListOperations(r.Context(), partnerID, limit, offset)
+	if err != nil {
+		slog.Error("admin partners: operations", "error", err, "partner_id", partnerID)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	items := make([]adminPartnerOperationDTO, 0, len(rows))
+	for _, op := range rows {
+		items = append(items, adminPartnerOperationDTO{
 			At:     op.At.UTC().Format(time.RFC3339),
 			Kind:   op.Kind,
 			Detail: op.Detail,
@@ -434,9 +479,35 @@ func (h *AdminPartnersHandler) detail(w http.ResponseWriter, r *http.Request, pa
 			Note:   ptrString(op.Note),
 		})
 	}
-
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
+}
+
+func (h *AdminPartnersHandler) partnerPayouts(w http.ResponseWriter, r *http.Request, partnerID int64) {
+	limit, offset := paginationParams(r, 25, 100)
+	rows, total, err := h.partners.ListPayouts(r.Context(), partnerID, limit, offset)
+	if err != nil {
+		slog.Error("admin partners: partner payouts", "error", err, "partner_id", partnerID)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	items := make([]adminPartnerPayoutDTO, 0, len(rows))
+	for _, p := range rows {
+		items = append(items, adminPartnerPayoutDTO{
+			ID:              p.ID,
+			PartnerID:       p.PartnerID,
+			Amount:          p.Amount,
+			Status:          p.Status,
+			Method:          ptrString(p.Method),
+			DetailsSnapshot: ptrString(p.DetailsSnapshot),
+			AdminComment:    ptrString(p.AdminComment),
+			ExternalRef:     ptrString(p.ExternalRef),
+			RequestedAt:     p.RequestedAt.UTC().Format(time.RFC3339),
+			ProcessedAt:     formatTimeRFC3339(p.ProcessedAt),
+		})
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
 }
 
 func (h *AdminPartnersHandler) listPayouts(w http.ResponseWriter, r *http.Request) {

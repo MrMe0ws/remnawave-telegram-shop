@@ -1569,6 +1569,8 @@
           "adjust": "Корректировка баланса",
           "payoutDetails": "Реквизиты",
           "linksTitle": "Потоки",
+          "showMore": "Показать ещё",
+          "loading": "Загрузка…",
           "linksEmpty": "Потоков нет.",
           "linkCustomers": "{{n}} клиентов",
           "tabOverview": "Обзор",

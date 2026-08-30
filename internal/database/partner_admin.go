@@ -571,10 +571,24 @@ func (r *PartnerRepository) finishPayout(ctx context.Context, payoutID int64, st
 //
 // UNION ALL, а не две выборки в Go: только так limit и сортировка по дате
 // работают на объединённом списке, а не на каждой половине отдельно.
-func (r *PartnerRepository) ListOperations(ctx context.Context, partnerID int64, limit int) ([]PartnerOperationRow, error) {
+func (r *PartnerRepository) ListOperations(ctx context.Context, partnerID int64, limit, offset int) ([]PartnerOperationRow, int, error) {
 	if limit <= 0 {
 		limit = 50
 	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Всего строк — сумма двух журналов. Отдельным запросом, а не оконной
+	// функцией поверх UNION: считать total в той же выборке значило бы
+	// протащить через LIMIT весь объединённый набор.
+	var total int
+	if err := r.pool.QueryRow(ctx, `
+SELECT (SELECT count(*) FROM partner_earning WHERE partner_id = $1)
+     + (SELECT count(*) FROM partner_payout  WHERE partner_id = $1)`, partnerID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count partner operations: %w", err)
+	}
+
 	rows, err := r.pool.Query(ctx, `
 SELECT at, kind, detail, amount, status, ref, note FROM (
     SELECT e.created_at AS at,
@@ -598,9 +612,9 @@ SELECT at, kind, detail, amount, status, ref, note FROM (
      WHERE po.partner_id = $1
 ) ops
 ORDER BY at DESC
-LIMIT $2`, partnerID, limit)
+LIMIT $2 OFFSET $3`, partnerID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list partner operations: %w", err)
+		return nil, 0, fmt.Errorf("failed to list partner operations: %w", err)
 	}
 	defer rows.Close()
 
@@ -609,7 +623,7 @@ LIMIT $2`, partnerID, limit)
 		var op PartnerOperationRow
 		var detail *string
 		if err := rows.Scan(&op.At, &op.Kind, &detail, &op.Amount, &op.Status, &op.Ref, &op.Note); err != nil {
-			return nil, fmt.Errorf("failed to scan partner operation: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan partner operation: %w", err)
 		}
 		if detail != nil {
 			op.Detail = *detail
@@ -617,9 +631,9 @@ LIMIT $2`, partnerID, limit)
 		out = append(out, op)
 	}
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating partner operations: %w", rows.Err())
+		return nil, 0, fmt.Errorf("error iterating partner operations: %w", rows.Err())
 	}
-	return out, nil
+	return out, total, nil
 }
 
 // LedgerBalanceCheck — сверка денормализованного баланса с журналом.

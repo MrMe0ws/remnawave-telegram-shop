@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/lib/api'
 import type {
@@ -27,6 +27,7 @@ function useInvalidatePartners() {
       qc.invalidateQueries({ queryKey: PAYOUTS_KEY }),
       qc.invalidateQueries({ queryKey: PARTNERS_PENDING_KEY }),
       qc.invalidateQueries({ queryKey: ['admin-partner-detail'] }),
+      qc.invalidateQueries({ queryKey: ['admin-partner-tab'] }),
     ])
   }
 }
@@ -53,6 +54,46 @@ export function useAdminPartnerDetail(id: number | null) {
     queryFn: () => api.adminPartnerDetail(id as number),
     enabled: id != null,
   })
+}
+
+/**
+ * Постраничная вкладка карточки партнёра.
+ *
+ * Листаем через offset, а не наращиваем limit: сервер обрезает limit сотней, и
+ * «показать ещё» после сотой строки перезапрашивало бы ту же страницу, а
+ * кнопка не исчезала бы никогда.
+ */
+const TAB_PAGE_SIZE = 25
+
+function usePartnerTab<T>(
+  tab: string,
+  id: number | null,
+  enabled: boolean,
+  fetchPage: (id: number, params: { limit: number; offset: number }) => Promise<{ items: T[]; total: number }>,
+) {
+  return useInfiniteQuery({
+    queryKey: ['admin-partner-tab', tab, id],
+    queryFn: ({ pageParam }) => fetchPage(id as number, { limit: TAB_PAGE_SIZE, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0)
+      return loaded < lastPage.total ? loaded : undefined
+    },
+    enabled: id != null && enabled,
+    staleTime: 15_000,
+  })
+}
+
+export function useAdminPartnerCustomers(id: number | null, enabled: boolean) {
+  return usePartnerTab('customers', id, enabled, api.adminPartnerCustomers)
+}
+
+export function useAdminPartnerOperations(id: number | null, enabled: boolean) {
+  return usePartnerTab('operations', id, enabled, api.adminPartnerOperations)
+}
+
+export function useAdminPartnerPayoutHistory(id: number | null, enabled: boolean) {
+  return usePartnerTab('payouts', id, enabled, api.adminPartnerPayoutHistory)
 }
 
 export function useAdminPartnerPayouts(status?: string) {

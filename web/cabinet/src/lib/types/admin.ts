@@ -590,6 +590,8 @@ export interface AdminPartnerDTO {
   effective_first_percent: number
   effective_renewal_percent: number
   links_limit?: number | null
+  /** Действующий лимит потоков: индивидуальный либо подставленный глобальный. */
+  effective_links_limit: number
 
   balance: number
   hold_balance: number
@@ -650,12 +652,26 @@ export interface AdminPartnerCustomerDTO {
   attached_at: string
 }
 
+/**
+ * Карточка партнёра.
+ *
+ * Журналы (клиенты, операции, выплаты) сюда не приходят: у активного партнёра
+ * там сотни строк. Вкладки грузят их постранично, а `counts` нужен только для
+ * счётчиков на самих вкладках.
+ */
 export interface AdminPartnerDetailDTO {
   partner: AdminPartnerDTO
   links: AdminPartnerLinkDTO[]
-  operations: AdminPartnerOperationDTO[]
-  customers: AdminPartnerCustomerDTO[]
-  payouts: AdminPartnerPayoutDTO[]
+  counts: {
+    customers: number
+    operations: number
+    payouts: number
+  }
+}
+
+export interface AdminPage<T> {
+  items: T[]
+  total: number
 }
 
 export interface AdminPartnerPayoutDTO {

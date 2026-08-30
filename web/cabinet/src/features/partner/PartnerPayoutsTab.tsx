@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CreditCard, History } from 'lucide-react'
 
@@ -11,10 +11,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { api, ApiError, type PartnerAccountDTO } from '@/lib/api'
 
 import { PARTNER_STATE_KEY } from './PartnerProgramPage'
 import { formatMoney, formatDayMonth, formatDayShort } from './format'
+import { PARTNER_SURFACE } from './surface'
 
 /**
  * Тело отказа приходит JSON'ом со слагом ошибки и подробностями: минимальной
@@ -40,11 +42,23 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
   const [payoutError, setPayoutError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
-  const { data: payouts, isLoading } = useQuery({
+  /*
+   * Размер страницы тот же, что у клиентов и начислений. Листаем через offset,
+   * а не наращиваем limit: сервер обрезает limit сотней, и «показать ещё»
+   * после сотой строки перезапрашивало бы ту же страницу.
+   */
+  const history = useInfiniteQuery({
     queryKey: ['partner-payouts'],
-    queryFn: () => api.partnerPayouts(),
+    queryFn: ({ pageParam }) => api.partnerPayouts({ limit: 25, offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => {
+      const loaded = pages.reduce((n, p) => n + p.items.length, 0)
+      return loaded < lastPage.total ? loaded : undefined
+    },
     staleTime: 30_000,
   })
+  const isLoading = history.isLoading
+  const payoutItems = history.data?.pages.flatMap((p) => p.items) ?? []
 
   const saveDetails = useMutation({
     mutationFn: () => api.partnerSavePayoutDetails(method.trim(), details.trim()),
@@ -143,6 +157,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   disabled={!canRequest}
+                  className="bg-secondary"
                 />
               </div>
 
@@ -207,6 +222,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   }}
                   maxLength={64}
                   placeholder={t('partnerPage.payouts.methodPlaceholder')}
+                  className="bg-secondary"
                 />
               </div>
               <div className="space-y-1.5">
@@ -220,6 +236,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   }}
                   maxLength={512}
                   placeholder={t('partnerPage.payouts.detailsPlaceholder')}
+                  className="bg-secondary"
                 />
               </div>
 
@@ -259,13 +276,13 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
               </div>
             ) : null}
 
-            {payouts && payouts.items.length === 0 ? (
+            {history.data && payoutItems.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">{t('partnerPage.payouts.empty')}</p>
             ) : null}
 
-            {payouts && payouts.items.length > 0 ? (
-              <ul className="divide-y divide-border rounded-lg border border-border">
-                {payouts.items.map((p) => (
+            {payoutItems.length > 0 ? (
+              <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
+                {payoutItems.map((p) => (
                   <li key={p.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
                     <div className="min-w-0">
                       <p className="font-semibold tabular-nums">{formatMoney(p.amount)}</p>
@@ -285,6 +302,18 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   </li>
                 ))}
               </ul>
+            ) : null}
+
+            {history.hasNextPage ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full"
+                disabled={history.isFetchingNextPage}
+                onClick={() => void history.fetchNextPage()}
+              >
+                {t('partnerPage.showMore')}
+              </Button>
             ) : null}
           </CardContent>
         </Card>

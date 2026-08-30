@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 
 import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from './format'
+import { PARTNER_SURFACE } from './surface'
 
 /**
  * Размер страницы.
@@ -56,7 +58,7 @@ export function PartnerCustomersTab() {
           ) : null}
 
           {items.length > 0 ? (
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
               {items.map((row, i) => (
                 <li key={`${row.label}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
                   <div className="min-w-0">
@@ -135,7 +137,7 @@ export function PartnerEarningsTab() {
           ) : null}
 
           {items.length > 0 ? (
-            <ul className="divide-y divide-border rounded-lg border border-border">
+            <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
               {items.map((row) => (
                 <li
                   key={row.id}
@@ -221,7 +223,7 @@ function EarningStatus({ status, holdUntil }: { status: string; holdUntil?: stri
 
 function ListSkeleton() {
   return (
-    <div className="divide-y divide-border rounded-lg border border-border" aria-hidden>
+    <div className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)} aria-hidden>
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex items-center justify-between gap-2 px-3 py-2.5">
           <Skeleton className="h-3.5 w-32" />

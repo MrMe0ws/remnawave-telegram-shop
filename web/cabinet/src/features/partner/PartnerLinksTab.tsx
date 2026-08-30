@@ -15,6 +15,7 @@ import { api, ApiError, type PartnerAccountDTO, type PartnerLinkDTO } from '@/li
 
 import { PARTNER_STATE_KEY } from './PartnerProgramPage'
 import { formatMoney } from './format'
+import { PARTNER_SURFACE } from './surface'
 
 export function PartnerLinksTab({ partner }: { partner: PartnerAccountDTO }) {
   const { t } = useTranslation()
@@ -259,7 +260,7 @@ function StreamCard({
           />
         ) : null}
 
-        <div className="grid grid-cols-3 gap-2 rounded-lg border border-border p-2 text-center">
+        <div className={cn('grid grid-cols-3 gap-2 rounded-lg p-2 text-center', PARTNER_SURFACE)}>
           <StreamStat label={t('partnerPage.links.statCustomers')} value={String(link.customers)} />
           <StreamStat label={t('partnerPage.links.statPaying')} value={String(link.paying)} />
           <StreamStat label={t('partnerPage.links.statEarned')} value={formatMoney(link.earned)} />

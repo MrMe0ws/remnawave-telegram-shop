@@ -30,13 +30,31 @@ import {
   useAdminPartnerSetStatus,
   useAdminPartnerUpdateTerms,
   useAdminPartnerAdjust,
+  useAdminPartnerCustomers,
+  useAdminPartnerOperations,
+  useAdminPartnerPayoutHistory,
 } from '../hooks/useAdminPartners'
 import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from '@/features/partner/format'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { cn } from '@/lib/utils'
-import type { AdminPartnerDTO } from '@/lib/types/admin'
+import type {
+  AdminPartnerDTO,
+  AdminPartnerCustomerDTO,
+  AdminPartnerOperationDTO,
+  AdminPartnerPayoutDTO,
+} from '@/lib/types/admin'
 
 type TabId = 'overview' | 'links' | 'customers' | 'operations' | 'payouts'
+
+/**
+ * Поверхность вложенного элемента.
+ *
+ * Панель модалки покрашена в --card, и элементы с одной только рамкой на ней
+ * сливались в общее полотно. Токены поверхностей разведены по светлоте
+ * (фон → muted → card → secondary → border), поэтому шаг «на один вверх» от
+ * card — это secondary, и он одинаково работает в обеих темах.
+ */
+const SURFACE = 'border border-border bg-secondary'
 
 /**
  * Карточка партнёра в модалке.
@@ -59,6 +77,9 @@ export function AdminPartnerModal({
   const setStatus = useAdminPartnerSetStatus()
   const partner = data?.partner
 
+  // Счётчики приходят с карточкой, а сами журналы — постранично из своих
+  // ручек: у активного партнёра там сотни строк, и грузить их все ради
+  // числа на вкладке незачем.
   const tabs: { id: TabId; label: string; icon: LucideIcon; count?: number }[] = [
     { id: 'overview', label: t('admin.partners.detail.tabOverview'), icon: LayoutGrid },
     { id: 'links', label: t('admin.partners.detail.linksTitle'), icon: Link2, count: data?.links.length },
@@ -66,15 +87,15 @@ export function AdminPartnerModal({
       id: 'customers',
       label: t('admin.partners.detail.tabCustomers'),
       icon: Users,
-      count: data?.customers.length,
+      count: data?.counts.customers,
     },
     {
       id: 'operations',
       label: t('admin.partners.detail.operationsTitle'),
       icon: ArrowLeftRight,
-      count: data?.operations.length,
+      count: data?.counts.operations,
     },
-    { id: 'payouts', label: t('admin.partners.tabs.payouts'), icon: Banknote, count: data?.payouts.length },
+    { id: 'payouts', label: t('admin.partners.tabs.payouts'), icon: Banknote, count: data?.counts.payouts },
   ]
 
   return (
@@ -171,9 +192,9 @@ export function AdminPartnerModal({
 
           {tab === 'overview' ? <OverviewTab partner={partner} /> : null}
           {tab === 'links' ? <LinksTab links={data.links} /> : null}
-          {tab === 'customers' ? <CustomersTab customers={data.customers} /> : null}
-          {tab === 'operations' ? <OperationsTab operations={data.operations} /> : null}
-          {tab === 'payouts' ? <PayoutsTab payouts={data.payouts} /> : null}
+          {tab === 'customers' ? <CustomersTab partnerID={partner.id} /> : null}
+          {tab === 'operations' ? <OperationsTab partnerID={partner.id} /> : null}
+          {tab === 'payouts' ? <PayoutsTab partnerID={partner.id} /> : null}
         </div>
       )}
     </AdminModal>
@@ -211,7 +232,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
         />
       </div>
 
-      <dl className="divide-y divide-border rounded-lg border border-border text-sm">
+      <dl className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
         <Row
           icon={Sparkles}
           label={t('admin.partners.terms.first')}
@@ -238,10 +259,19 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
             </>
           }
         />
+        {/* Число показываем всегда, даже когда лимит общий: «как у всех» не
+            отвечает на вопрос, сколько именно потоков доступно партнёру. */}
         <Row
           icon={Link2}
           label={t('admin.partners.terms.linksLimit')}
-          value={partner.links_limit ?? t('admin.partners.terms.global')}
+          value={
+            <>
+              {partner.effective_links_limit}{' '}
+              <span className="text-xs text-muted-foreground">
+                {partner.links_limit == null ? t('admin.partners.terms.global') : t('admin.partners.terms.individual')}
+              </span>
+            </>
+          }
         />
         <Row
           icon={CreditCard}
@@ -251,7 +281,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
       </dl>
 
       {partner.app_about ? (
-        <div className="rounded-lg border border-border p-3 text-sm">
+        <div className={cn('rounded-lg p-3 text-sm', SURFACE)}>
           <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
             <FileText className="size-3.5 shrink-0 text-primary" />
             {t('admin.partners.detail.application')}
@@ -280,7 +310,7 @@ function LinksTab({ links }: { links: { id: number; name: string; code: string; 
   const { t } = useTranslation()
   if (links.length === 0) return <Empty text={t('admin.partners.detail.linksEmpty')} />
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+    <ul className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
       {links.map((l) => (
         <li key={l.id} className={cn('flex items-center justify-between gap-3 px-3 py-2.5', l.archived && 'opacity-60')}>
           <div className="min-w-0">
@@ -299,115 +329,170 @@ function LinksTab({ links }: { links: { id: number; name: string; code: string; 
   )
 }
 
-function CustomersTab({ customers }: { customers: { label: string; active: boolean; has_paid: boolean; earned: number; link_name?: string; attached_at: string }[] }) {
+function CustomersTab({ partnerID }: { partnerID: number }) {
   const { t } = useTranslation()
-  if (customers.length === 0) return <Empty text={t('admin.partners.detail.customersEmpty')} />
-  return (
-    <ul className="divide-y divide-border rounded-lg border border-border text-sm">
-      {customers.map((c, i) => (
-        <li key={`${c.label}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="truncate font-mono text-xs">{c.label}</p>
-            <p className="text-xs text-muted-foreground">
-              {[c.link_name, formatDayShort(c.attached_at)].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-          <div className="shrink-0 text-right">
-            <span
-              className={cn(
-                'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                c.has_paid && c.active
-                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-secondary text-muted-foreground',
-              )}
-            >
-              {c.has_paid
-                ? c.active
-                  ? t('partnerPage.customers.paying')
-                  : t('partnerPage.customers.expired')
-                : t('partnerPage.customers.notPaid')}
-            </span>
-            <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">{formatMoney(c.earned)}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
+  const query = useAdminPartnerCustomers(partnerID, true)
+  const items: AdminPartnerCustomerDTO[] = query.data?.pages.flatMap((p) => p.items) ?? []
 
-function OperationsTab({ operations }: { operations: { at: string; kind: string; detail?: string; amount: number; status: string; ref?: string; note?: string }[] }) {
-  const { t } = useTranslation()
-  if (operations.length === 0) return <Empty text={t('admin.partners.detail.operationsEmpty')} />
+  if (query.isLoading) return <TabLoader />
+  if (items.length === 0) return <Empty text={t('admin.partners.detail.customersEmpty')} />
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[520px] border-collapse text-sm">
-        <thead>
-          <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
-            <th className="px-2 pb-2 font-medium">{t('admin.partners.detail.opDate')}</th>
-            <th className="px-2 pb-2 font-medium">{t('admin.partners.detail.opKind')}</th>
-            <th className="px-2 pb-2 font-medium">{t('admin.partners.detail.opRef')}</th>
-            <th className="px-2 pb-2 text-right font-medium">{t('admin.partners.detail.opAmount')}</th>
-            <th className="px-2 pb-2 text-right font-medium">{t('admin.partners.detail.opStatus')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {operations.map((op, i) => (
-            <tr key={`${op.at}-${i}`} className="border-t border-border">
-              <td className="whitespace-nowrap px-2 py-2">{formatDayShort(op.at)}</td>
-              <td className="px-2 py-2">
-                {op.kind === 'payout'
-                  ? t('admin.partners.detail.opPayout')
-                  : t(`admin.partners.detail.opEarning.${op.detail || 'renewal'}`)}
-              </td>
-              <td className="px-2 py-2 text-xs text-muted-foreground">{op.ref || op.note || '—'}</td>
-              {/*
-                Минус здесь — это выплата партнёру, а не авария, поэтому
-                красным он не красится. Отменённое начисление гасим
-                зачёркиванием: сумма в баланс не попала.
-              */}
-              <td
+    <>
+      <ul className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
+        {items.map((c, i) => (
+          <li key={`${c.label}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate font-mono text-xs">{c.label}</p>
+              <p className="text-xs text-muted-foreground">
+                {[c.link_name, formatDayShort(c.attached_at)].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span
                 className={cn(
-                  'px-2 py-2 text-right font-medium tabular-nums',
-                  op.status === 'cancelled'
-                    ? 'text-muted-foreground line-through'
-                    : op.amount < 0
-                      ? 'text-foreground'
-                      : 'text-emerald-600 dark:text-emerald-400',
+                  'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                  c.has_paid && c.active
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-card text-muted-foreground',
                 )}
               >
-                {op.amount < 0 ? '−' : '+'}
-                {formatMoney(Math.abs(op.amount))}
-              </td>
-              <td className="px-2 py-2 text-right">
-                <OperationStatusChip status={op.status} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                {c.has_paid
+                  ? c.active
+                    ? t('partnerPage.customers.paying')
+                    : t('partnerPage.customers.expired')
+                  : t('partnerPage.customers.notPaid')}
+              </span>
+              <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">{formatMoney(c.earned)}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <ShowMore query={query} />
+    </>
   )
 }
 
-function PayoutsTab({ payouts }: { payouts: { id: number; amount: number; status: string; method?: string; external_ref?: string; admin_comment?: string; requested_at: string; processed_at?: string }[] }) {
+function OperationsTab({ partnerID }: { partnerID: number }) {
   const { t } = useTranslation()
-  if (payouts.length === 0) return <Empty text={t('admin.partners.payouts.empty')} />
+  const query = useAdminPartnerOperations(partnerID, true)
+  const items: AdminPartnerOperationDTO[] = query.data?.pages.flatMap((p) => p.items) ?? []
+
+  if (query.isLoading) return <TabLoader />
+  if (items.length === 0) return <Empty text={t('admin.partners.detail.operationsEmpty')} />
+
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border text-sm">
-      {payouts.map((p) => (
-        <li key={p.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="font-semibold tabular-nums">{formatMoney(p.amount)}</p>
-            <p className="text-xs text-muted-foreground">
-              {[formatDayMonth(p.requested_at), p.method].filter(Boolean).join(' · ')}
-            </p>
-            {p.external_ref ? <p className="font-mono text-xs text-muted-foreground">{p.external_ref}</p> : null}
-            {p.admin_comment ? <p className="text-xs text-muted-foreground">{p.admin_comment}</p> : null}
-          </div>
-          <PayoutStatusChip status={p.status} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <div className={cn('overflow-x-auto rounded-lg', SURFACE)}>
+        <table className="w-full min-w-[520px] border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+              <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.detail.opDate')}</th>
+              <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.detail.opKind')}</th>
+              <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.detail.opRef')}</th>
+              <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.detail.opAmount')}</th>
+              <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.detail.opStatus')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((op, i) => (
+              <tr key={`${op.at}-${i}`} className="border-t border-border">
+                <td className="whitespace-nowrap px-3 py-2">{formatDayShort(op.at)}</td>
+                <td className="px-3 py-2">
+                  {op.kind === 'payout'
+                    ? t('admin.partners.detail.opPayout')
+                    : t(`admin.partners.detail.opEarning.${op.detail || 'renewal'}`)}
+                </td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{op.ref || op.note || '—'}</td>
+                {/*
+                  Минус здесь — это выплата партнёру, а не авария, поэтому
+                  красным он не красится. Отменённое начисление гасим
+                  зачёркиванием: сумма в баланс не попала.
+                */}
+                <td
+                  className={cn(
+                    'px-3 py-2 text-right font-medium tabular-nums',
+                    op.status === 'cancelled'
+                      ? 'text-muted-foreground line-through'
+                      : op.amount < 0
+                        ? 'text-foreground'
+                        : 'text-emerald-600 dark:text-emerald-400',
+                  )}
+                >
+                  {op.amount < 0 ? '−' : '+'}
+                  {formatMoney(Math.abs(op.amount))}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <OperationStatusChip status={op.status} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ShowMore query={query} />
+    </>
+  )
+}
+
+function PayoutsTab({ partnerID }: { partnerID: number }) {
+  const { t } = useTranslation()
+  const query = useAdminPartnerPayoutHistory(partnerID, true)
+  const items: AdminPartnerPayoutDTO[] = query.data?.pages.flatMap((p) => p.items) ?? []
+
+  if (query.isLoading) return <TabLoader />
+  if (items.length === 0) return <Empty text={t('admin.partners.payouts.empty')} />
+
+  return (
+    <>
+      <ul className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
+        {items.map((p) => (
+          <li key={p.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="font-semibold tabular-nums">{formatMoney(p.amount)}</p>
+              <p className="text-xs text-muted-foreground">
+                {[formatDayMonth(p.requested_at), p.method].filter(Boolean).join(' · ')}
+              </p>
+              {p.external_ref ? <p className="font-mono text-xs text-muted-foreground">{p.external_ref}</p> : null}
+              {p.admin_comment ? <p className="text-xs text-muted-foreground">{p.admin_comment}</p> : null}
+            </div>
+            <PayoutStatusChip status={p.status} />
+          </li>
+        ))}
+      </ul>
+      <ShowMore query={query} />
+    </>
+  )
+}
+
+/** Догрузка следующей страницы вкладки. */
+function ShowMore({
+  query,
+}: {
+  query: { hasNextPage: boolean; isFetchingNextPage: boolean; fetchNextPage: () => unknown }
+}) {
+  const { t } = useTranslation()
+  if (!query.hasNextPage) return null
+  return (
+    <button
+      type="button"
+      disabled={query.isFetchingNextPage}
+      onClick={() => void query.fetchNextPage()}
+      className={cn(
+        'mt-3 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-border disabled:opacity-60',
+        SURFACE,
+      )}
+    >
+      {query.isFetchingNextPage ? t('admin.partners.detail.loading') : t('admin.partners.detail.showMore')}
+    </button>
+  )
+}
+
+function TabLoader() {
+  return (
+    <div className="flex justify-center py-8">
+      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+    </div>
   )
 }
 
@@ -426,7 +511,7 @@ export function CopyValue({ value }: { value: string }) {
       <button
         type="button"
         onClick={() => void copy(value)}
-        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-label="copy"
       >
         {state === 'done' ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
@@ -453,7 +538,7 @@ function OperationStatusChip({ status }: { status: string }) {
     pending: { label: t('partnerPage.payouts.statusPending'), className: 'bg-primary/15 text-primary' },
     rejected: { label: t('partnerPage.payouts.statusRejected'), className: 'bg-destructive/15 text-destructive' },
   }
-  const view = map[status] ?? { label: status, className: 'bg-secondary text-muted-foreground' }
+  const view = map[status] ?? { label: status, className: 'bg-card text-muted-foreground' }
   return (
     <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', view.className)}>{view.label}</span>
   )
@@ -492,9 +577,9 @@ function StatusChip({ status }: { status: string }) {
 /**
  * Кнопка действия над партнёром.
  *
- * Смена статуса меняет доступ к деньгам, поэтому такие кнопки
- * залиты цветом, а вспомогательные (условия, корректировка)
- * остаются контурными: так в ряду видно, что здесь главное.
+ * Смена статуса меняет доступ к деньгам, поэтому такие кнопки залиты цветом, а
+ * вспомогательные (условия, корректировка) остаются контурными: так в ряду
+ * видно, что здесь главное.
  */
 function ActionButton({
   icon: Icon,
@@ -510,7 +595,7 @@ function ActionButton({
   tone?: 'outline' | 'primary' | 'danger'
 }) {
   const tones: Record<string, string> = {
-    outline: 'border-border hover:bg-accent',
+    outline: `${SURFACE} hover:bg-border`,
     primary: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90',
     danger: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90',
   }
@@ -542,7 +627,7 @@ function Metric({
   sub: string
 }) {
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className={cn('rounded-lg p-3', SURFACE)}>
       <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
         <Icon className="size-3.5 shrink-0 text-primary" />
         {label}

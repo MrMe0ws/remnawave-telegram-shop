@@ -24,8 +24,11 @@ import type {
   AdminPaymentsDTO,
   AdminPaymentsListDTO,
   AdminPaymentDetailDTO,
+  AdminPage,
   AdminPartnerDTO,
+  AdminPartnerCustomerDTO,
   AdminPartnerDetailDTO,
+  AdminPartnerOperationDTO,
   AdminPartnerPayoutDTO,
   AdminPartnerPendingDTO,
   AdminPartnerTermsInput,
@@ -1117,7 +1120,8 @@ export const api = {
   partnerSavePayoutDetails: (method: string, details: string) =>
     request<{ ok: boolean }>('PUT', '/me/partner/payout-details', { method, details }),
 
-  partnerPayouts: () => request<{ items: PartnerPayoutDTO[] }>('GET', '/me/partner/payouts'),
+  partnerPayouts: (params?: { limit?: number; offset?: number }) =>
+    request<{ items: PartnerPayoutDTO[]; total: number }>('GET', `/me/partner/payouts${pageQuery(params)}`),
 
   partnerRequestPayout: (amount: number) =>
     request<PartnerPayoutDTO>('POST', '/me/partner/payouts', { amount }),
@@ -1379,6 +1383,15 @@ export const api = {
 
   adminPartnerDetail: (id: number) =>
     request<AdminPartnerDetailDTO>('GET', `/admin/partners/${id}`),
+
+  adminPartnerCustomers: (id: number, params?: { limit?: number; offset?: number }) =>
+    request<AdminPage<AdminPartnerCustomerDTO>>('GET', `/admin/partners/${id}/customers${pageQuery(params)}`),
+
+  adminPartnerOperations: (id: number, params?: { limit?: number; offset?: number }) =>
+    request<AdminPage<AdminPartnerOperationDTO>>('GET', `/admin/partners/${id}/operations${pageQuery(params)}`),
+
+  adminPartnerPayoutHistory: (id: number, params?: { limit?: number; offset?: number }) =>
+    request<AdminPage<AdminPartnerPayoutDTO>>('GET', `/admin/partners/${id}/payouts${pageQuery(params)}`),
 
   adminPartnerApprove: (id: number, body: AdminPartnerTermsInput) =>
     request<AdminOkDTO>('POST', `/admin/partners/${id}/approve`, body),

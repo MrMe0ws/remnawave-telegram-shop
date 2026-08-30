@@ -10,6 +10,9 @@ import {
   Banknote,
   CreditCard,
   Wallet,
+  Clock,
+  HandCoins,
+  PiggyBank,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -24,6 +27,7 @@ import { PartnerLinksTab } from './PartnerLinksTab'
 import { PartnerCustomersTab, PartnerEarningsTab } from './PartnerListTab'
 import { PartnerPayoutsTab } from './PartnerPayoutsTab'
 import { formatMoney, formatMonthShort, formatMonthLong, formatDayMonth, formatPercent } from './format'
+import { PARTNER_SURFACE } from './surface'
 
 type TabId = 'overview' | 'links' | 'customers' | 'earnings' | 'payouts'
 
@@ -116,41 +120,41 @@ function PartnerOverview({
       <RevealItem>
         <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
           <CardContent className="pt-6">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+              <Wallet size={13} className="shrink-0 text-primary" />
               {t('partnerPage.overview.available')}
             </p>
             <p className="mt-1 text-3xl font-semibold text-primary">{formatMoney(partner.balance)}</p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t('partnerPage.overview.onHold')}
-                </p>
-                <p className="mt-0.5 font-semibold tabular-nums">{formatMoney(partner.hold_balance)}</p>
-                {partner.next_hold_release_at ? (
-                  <p className="text-xs text-muted-foreground">
-                    {t('partnerPage.overview.opensAt', { date: formatDayMonth(partner.next_hold_release_at) })}
-                  </p>
-                ) : null}
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t('partnerPage.overview.paidOut')}
-                </p>
-                <p className="mt-0.5 font-semibold tabular-nums">{formatMoney(partner.total_paid)}</p>
-                {partner.reserved_balance > 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    {t('partnerPage.overview.reserved', { amount: formatMoney(partner.reserved_balance) })}
-                  </p>
-                ) : null}
-              </div>
+              <BalanceCell
+                icon={Clock}
+                label={t('partnerPage.overview.onHold')}
+                value={formatMoney(partner.hold_balance)}
+                sub={
+                  partner.next_hold_release_at
+                    ? t('partnerPage.overview.opensAt', { date: formatDayMonth(partner.next_hold_release_at) })
+                    : undefined
+                }
+              />
+              <BalanceCell
+                icon={PiggyBank}
+                label={t('partnerPage.overview.paidOut')}
+                value={formatMoney(partner.total_paid)}
+                sub={
+                  partner.reserved_balance > 0
+                    ? t('partnerPage.overview.reserved', { amount: formatMoney(partner.reserved_balance) })
+                    : undefined
+                }
+              />
             </div>
 
             <Button
-              className="mt-4 w-full"
+              className="mt-4 w-full gap-2"
               onClick={onWithdraw}
               disabled={!partner.can_withdraw || belowMinimum || partner.has_open_payout}
             >
+              <HandCoins size={16} className="shrink-0" />
               {partner.has_open_payout
                 ? t('partnerPage.overview.payoutPending')
                 : belowMinimum
@@ -207,7 +211,7 @@ function PartnerOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="divide-y divide-border rounded-lg border border-border text-sm">
+            <dl className={cn('divide-y divide-border rounded-lg text-sm', PARTNER_SURFACE)}>
               <TermRow
                 label={t('partnerPage.terms.firstPayment')}
                 value={<Badge>{formatPercent(partner.first_percent)}</Badge>}
@@ -310,6 +314,35 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
           </span>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Ячейка внутри карточки баланса.
+ *
+ * Своя поверхность: холд и выплаченное — это отдельные суммы, а не сноски к
+ * доступному остатку, и на общем фоне карточки они читались как один абзац.
+ */
+function BalanceCell({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  sub?: string
+}) {
+  return (
+    <div className={cn('rounded-lg p-3', PARTNER_SURFACE)}>
+      <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+        <Icon size={13} className="shrink-0 text-primary" />
+        {label}
+      </p>
+      <p className="mt-0.5 font-semibold tabular-nums">{value}</p>
+      {sub ? <p className="text-xs text-muted-foreground">{sub}</p> : null}
     </div>
   )
 }

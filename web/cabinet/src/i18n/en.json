@@ -1556,6 +1556,8 @@
           "adjust": "Adjust balance",
           "payoutDetails": "Payout details",
           "linksTitle": "Streams",
+          "showMore": "Show more",
+          "loading": "Loading…",
           "linksEmpty": "No streams.",
           "linkCustomers": "{{n}} clients",
           "tabOverview": "Overview",

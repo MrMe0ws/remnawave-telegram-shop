@@ -117,16 +117,26 @@ func (r *PartnerRepository) CreatePayout(ctx context.Context, partnerID int64, a
 }
 
 // ListPayouts — история заявок партнёра, новые сверху.
-func (r *PartnerRepository) ListPayouts(ctx context.Context, partnerID int64, limit int) ([]PartnerPayout, error) {
+func (r *PartnerRepository) ListPayouts(ctx context.Context, partnerID int64, limit, offset int) ([]PartnerPayout, int, error) {
 	if limit <= 0 {
 		limit = 50
 	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int
+	if err := r.pool.QueryRow(ctx,
+		`SELECT count(*) FROM partner_payout WHERE partner_id = $1`, partnerID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count partner payouts: %w", err)
+	}
+
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+partnerPayoutColumns+`
 		   FROM partner_payout WHERE partner_id = $1
-		  ORDER BY requested_at DESC, id DESC LIMIT $2`, partnerID, limit)
+		  ORDER BY requested_at DESC, id DESC LIMIT $2 OFFSET $3`, partnerID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list partner payouts: %w", err)
+		return nil, 0, fmt.Errorf("failed to list partner payouts: %w", err)
 	}
 	defer rows.Close()
 
@@ -135,14 +145,14 @@ func (r *PartnerRepository) ListPayouts(ctx context.Context, partnerID int64, li
 		var p PartnerPayout
 		if err := rows.Scan(&p.ID, &p.PartnerID, &p.Amount, &p.Status, &p.Method, &p.DetailsSnapshot,
 			&p.AdminComment, &p.ExternalRef, &p.RequestedAt, &p.ProcessedAt, &p.ProcessedBy); err != nil {
-			return nil, fmt.Errorf("failed to scan partner payout: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan partner payout: %w", err)
 		}
 		out = append(out, p)
 	}
 	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating partner payouts: %w", rows.Err())
+		return nil, 0, fmt.Errorf("error iterating partner payouts: %w", rows.Err())
 	}
-	return out, nil
+	return out, total, nil
 }
 
 // LastPayoutRequestAt — когда партнёр последний раз просил вывод. Отклонённые

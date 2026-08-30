@@ -407,12 +407,27 @@ func TestAdjustBalance(t *testing.T) {
 	}
 	assertMoney(t, "balance не изменился", partnerBalances(t, repo, partner.ID).Balance, 300)
 
-	ops, err := repo.ListOperations(ctx, partner.ID, 10)
+	ops, total, err := repo.ListOperations(ctx, partner.ID, 10, 0)
 	if err != nil {
 		t.Fatalf("list operations: %v", err)
 	}
 	if len(ops) != 2 {
 		t.Fatalf("в журнале %d операций, want 2 — правки должны попадать в ленту", len(ops))
+	}
+	if total != 2 {
+		t.Fatalf("total = %d, want 2 — счётчик вкладки берётся из него", total)
+	}
+
+	// Вторая страница: смещение отрезает первую строку, total от него не зависит.
+	page2, total2, err := repo.ListOperations(ctx, partner.ID, 10, 1)
+	if err != nil {
+		t.Fatalf("list operations offset: %v", err)
+	}
+	if len(page2) != 1 || total2 != 2 {
+		t.Fatalf("страница со смещением: %d строк при total %d, want 1 при 2", len(page2), total2)
+	}
+	if !page2[0].At.Equal(ops[1].At) {
+		t.Fatalf("смещение сдвинуло не на ту строку: %v, want %v", page2[0].At, ops[1].At)
 	}
 }
 

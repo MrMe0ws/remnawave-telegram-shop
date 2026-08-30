@@ -861,7 +861,8 @@ func (h *PartnerHandler) Payouts(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		payouts, err := h.partners.ListPayouts(r.Context(), partner.ID, 50)
+		limit, offset := paginationParams(r, 25, 100)
+		payouts, total, err := h.partners.ListPayouts(r.Context(), partner.ID, limit, offset)
 		if err != nil {
 			slog.Error("partner: list payouts", "error", err, "partner_id", partner.ID)
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -881,7 +882,7 @@ func (h *PartnerHandler) Payouts(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		writeJSON(w, http.StatusOK, map[string]any{"items": items})
+		writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
 
 	case http.MethodPost:
 		h.createPayout(w, r, partner)
