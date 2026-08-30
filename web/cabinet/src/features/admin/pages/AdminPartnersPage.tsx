@@ -438,6 +438,11 @@ function PayoutsTab({ onOpenPartner }: { onOpenPartner: (id: number) => void }) 
   const payouts = useAdminPartnerPayouts(scope === 'open' ? 'open' : undefined)
   const items = payouts.data?.items ?? []
 
+  // Заявка в работе — это задача, обработанная — запись в архиве. Вёрстка у
+  // них разная, поэтому список делится здесь, а не внутри карточки.
+  const open = items.filter((row) => row.status === 'pending' || row.status === 'approved')
+  const closed = items.filter((row) => row.status !== 'pending' && row.status !== 'approved')
+
   return (
     <div className="space-y-3">
       <div className="flex gap-1 rounded-lg bg-muted p-1 text-xs">
@@ -461,9 +466,106 @@ function PayoutsTab({ onOpenPartner }: { onOpenPartner: (id: number) => void }) 
         <EmptyBlock text={t(scope === 'open' ? 'admin.partners.payouts.empty' : 'admin.partners.payouts.historyEmpty')} />
       ) : null}
 
-      {items.map((row) => (
-        <PayoutCard key={row.id} payout={row} onOpenPartner={onOpenPartner} />
-      ))}
+      {/* Заголовки нужны только там, где на экране обе группы: во вкладке
+          «В работе» они повторяли бы название самой вкладки. */}
+      {open.length > 0 ? (
+        <>
+          {closed.length > 0 ? <SectionLabel text={t('admin.partners.payouts.sectionOpen')} /> : null}
+          <div className="space-y-3">
+            {open.map((row) => (
+              <PayoutCard key={row.id} payout={row} onOpenPartner={onOpenPartner} />
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {closed.length > 0 ? (
+        <>
+          {open.length > 0 ? <SectionLabel text={t('admin.partners.payouts.sectionDone')} /> : null}
+          <ProcessedPayoutsTable items={closed} onOpenPartner={onOpenPartner} />
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+function SectionLabel({ text }: { text: string }) {
+  return <p className="pt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{text}</p>
+}
+
+/**
+ * Обработанные выплаты — таблицей, а не карточками.
+ *
+ * Карточка нужна там, где есть работа: поля для чека и кнопки. У закрытой
+ * заявки работы нет, и карточного размера ей доставалась пустая правая
+ * колонка. История партнёра («заработал / выплачено») здесь тоже не
+ * повторяется: это его свойство, одинаковое во всех его строках, и решение по
+ * закрытой заявке принимать уже не нужно — за ним есть карточка партнёра.
+ */
+function ProcessedPayoutsTable({
+  items,
+  onOpenPartner,
+}: {
+  items: AdminPartnerPayoutDTO[]
+  onOpenPartner: (id: number) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <table className="w-full min-w-[720px] border-collapse text-sm">
+        <thead>
+          <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+            <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colDate')}</th>
+            <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colPartner')}</th>
+            <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.payouts.colAmount')}</th>
+            <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colStatus')}</th>
+            <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colDetails')}</th>
+            <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colResult')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((row) => (
+            <tr key={row.id} className="border-t border-border align-top">
+              {/* Дата подачи, а не обработки: колонка та же, что и в очереди,
+                  поэтому строка не меняет смысл при переходе из одной группы в
+                  другую. Дата обработки — в последней колонке, рядом с чеком. */}
+              <td className="whitespace-nowrap px-3 py-2.5 text-xs text-muted-foreground">
+                <p>{formatDayShort(row.requested_at)}</p>
+                <p>{t('admin.partners.payouts.index', { n: row.payout_index })}</p>
+              </td>
+              <td className="px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => onOpenPartner(row.partner_id)}
+                  className="font-medium hover:underline"
+                >
+                  {row.partner_label}
+                </button>
+              </td>
+              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold tabular-nums">
+                {formatMoney(row.amount)}
+              </td>
+              <td className="px-3 py-2.5">
+                <PayoutStatusChip status={row.status} />
+              </td>
+              <td className="px-3 py-2.5">
+                <CopyValue value={row.details_snapshot || ''} />
+              </td>
+              <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                {row.external_ref ? (
+                  <p className="font-mono">{t('admin.partners.payouts.refDone', { ref: row.external_ref })}</p>
+                ) : null}
+                {row.admin_comment ? <p>{row.admin_comment}</p> : null}
+                {row.processed_at ? (
+                  <p>{t('admin.partners.payouts.processed', { date: formatDayShort(row.processed_at) })}</p>
+                ) : null}
+                {!row.external_ref && !row.admin_comment && !row.processed_at ? <span>—</span> : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -494,12 +596,12 @@ function PayoutCard({
             </button>
             <span className="text-lg font-semibold tabular-nums">{formatMoney(payout.amount)}</span>
             <PayoutStatusChip status={payout.status} />
+            <span className="text-xs text-muted-foreground">
+              {t('admin.partners.payouts.requested', { date: formatDayShort(payout.requested_at) })} ·{' '}
+              {t('admin.partners.payouts.index', { n: payout.payout_index })}
+            </span>
           </div>
           <CopyValue value={payout.details_snapshot || ''} />
-          <p className="text-xs text-muted-foreground">
-            {t('admin.partners.payouts.requested', { date: formatDayShort(payout.requested_at) })} ·{' '}
-            {t('admin.partners.payouts.index', { n: payout.payout_index })}
-          </p>
           {/* История партнёра: по ней за секунду видно нормальную заявку и
               подозрительную. */}
           <p className="text-xs text-muted-foreground">
@@ -510,17 +612,6 @@ function PayoutCard({
           </p>
         </div>
 
-        {payout.status === 'paid' || payout.status === 'rejected' ? (
-          <div className="w-full space-y-1 text-xs text-muted-foreground sm:w-[280px]">
-            {payout.external_ref ? (
-              <p className="font-mono">{t('admin.partners.payouts.refDone', { ref: payout.external_ref })}</p>
-            ) : null}
-            {payout.admin_comment ? <p>{payout.admin_comment}</p> : null}
-            {payout.processed_at ? (
-              <p>{t('admin.partners.payouts.processed', { date: formatDayShort(payout.processed_at) })}</p>
-            ) : null}
-          </div>
-        ) : (
         <div className="w-full space-y-2 sm:w-[280px]">
           <input
             value={externalRef}
@@ -554,7 +645,6 @@ function PayoutCard({
           </div>
           <p className="text-[11px] text-muted-foreground">{t('admin.partners.payouts.refHint')}</p>
         </div>
-        )}
       </div>
     </div>
   )
