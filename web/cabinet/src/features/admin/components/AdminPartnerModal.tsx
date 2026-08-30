@@ -48,16 +48,6 @@ import type {
 type TabId = 'overview' | 'links' | 'customers' | 'operations' | 'payouts'
 
 /**
- * Поверхность вложенного элемента.
- *
- * Панель модалки покрашена в --card, и элементы с одной только рамкой на ней
- * сливались в общее полотно. Токены поверхностей разведены по светлоте
- * (фон → muted → card → secondary → border), поэтому шаг «на один вверх» от
- * card — это secondary, и он одинаково работает в обеих темах.
- */
-const SURFACE = 'border border-border bg-secondary'
-
-/**
  * Карточка партнёра в модалке.
  *
  * Разбор спора и обработка выплаты — это один заход: админ смотрит, сколько
@@ -233,7 +223,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
         />
       </div>
 
-      <dl className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
+      <dl className="divide-y divide-border rounded-lg border border-border text-sm">
         <Row
           icon={Sparkles}
           label={t('admin.partners.terms.first')}
@@ -260,20 +250,9 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
             </>
           }
         />
-        {/* Число показываем всегда, даже когда лимит общий: «как у всех» не
-            отвечает на вопрос, сколько именно потоков доступно партнёру. */}
-        <Row
-          icon={Link2}
-          label={t('admin.partners.terms.linksLimit')}
-          value={
-            <>
-              {partner.effective_links_limit}{' '}
-              <span className="text-xs text-muted-foreground">
-                {partner.links_limit == null ? t('admin.partners.terms.global') : t('admin.partners.terms.individual')}
-              </span>
-            </>
-          }
-        />
+        {/* Только число: лимит потоков — это ответ на вопрос «сколько», а
+            откуда он взялся, видно в форме изменения условий. */}
+        <Row icon={Link2} label={t('admin.partners.terms.linksLimit')} value={partner.effective_links_limit} />
         <Row
           icon={CreditCard}
           label={t('admin.partners.detail.payoutDetails')}
@@ -282,7 +261,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
       </dl>
 
       {partner.app_about ? (
-        <div className={cn('rounded-lg p-3 text-sm', SURFACE)}>
+        <div className="rounded-lg border border-border p-3 text-sm">
           <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
             <FileText className="size-3.5 shrink-0 text-primary" />
             {t('admin.partners.detail.application')}
@@ -311,7 +290,7 @@ function LinksTab({ links }: { links: { id: number; name: string; code: string; 
   const { t } = useTranslation()
   if (links.length === 0) return <Empty text={t('admin.partners.detail.linksEmpty')} />
   return (
-    <ul className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
+    <ul className="divide-y divide-border rounded-lg border border-border text-sm">
       {links.map((l) => (
         <li key={l.id} className={cn('flex items-center justify-between gap-3 px-3 py-2.5', l.archived && 'opacity-60')}>
           <div className="min-w-0">
@@ -340,7 +319,7 @@ function CustomersTab({ partnerID }: { partnerID: number }) {
 
   return (
     <>
-      <ul className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
+      <ul className="divide-y divide-border rounded-lg border border-border text-sm">
         {items.map((c, i) => (
           <li key={`${c.label}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
             <div className="min-w-0">
@@ -355,7 +334,7 @@ function CustomersTab({ partnerID }: { partnerID: number }) {
                   'rounded-full px-2 py-0.5 text-[11px] font-medium',
                   c.has_paid && c.active
                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-card text-muted-foreground',
+                    : 'bg-secondary text-muted-foreground',
                 )}
               >
                 {c.has_paid
@@ -391,7 +370,6 @@ function OperationsTab({ partnerID }: { partnerID: number }) {
         {items.map((op, i) => (
           <RecordCard
             key={`m-${op.at}-${i}`}
-            className="bg-secondary"
             rows={[
               { label: t('admin.partners.detail.opDate'), value: formatDayShort(op.at) },
               {
@@ -426,7 +404,7 @@ function OperationsTab({ partnerID }: { partnerID: number }) {
         ))}
       </div>
 
-      <div className={cn('hidden overflow-x-auto rounded-lg sm:block', SURFACE)}>
+      <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
         <table className="w-full min-w-[520px] border-collapse text-sm">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -488,7 +466,7 @@ function PayoutsTab({ partnerID }: { partnerID: number }) {
 
   return (
     <>
-      <ul className={cn('divide-y divide-border rounded-lg text-sm', SURFACE)}>
+      <ul className="divide-y divide-border rounded-lg border border-border text-sm">
         {items.map((p) => (
           <li key={p.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
             <div className="min-w-0">
@@ -521,10 +499,7 @@ function ShowMore({
       type="button"
       disabled={query.isFetchingNextPage}
       onClick={() => void query.fetchNextPage()}
-      className={cn(
-        'mt-3 w-full rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-border disabled:opacity-60',
-        SURFACE,
-      )}
+      className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-60"
     >
       {query.isFetchingNextPage ? t('admin.partners.detail.loading') : t('admin.partners.detail.showMore')}
     </button>
@@ -581,7 +556,7 @@ function OperationStatusChip({ status, block }: { status: string; block?: boolea
     pending: { label: t('partnerPage.payouts.statusPending'), className: 'bg-primary/15 text-primary' },
     rejected: { label: t('partnerPage.payouts.statusRejected'), className: 'bg-destructive/15 text-destructive' },
   }
-  const view = map[status] ?? { label: status, className: 'bg-card text-muted-foreground' }
+  const view = map[status] ?? { label: status, className: 'bg-secondary text-muted-foreground' }
   return (
     <span
       className={cn(
@@ -652,7 +627,7 @@ function ActionButton({
   tone?: 'outline' | 'primary' | 'danger'
 }) {
   const tones: Record<string, string> = {
-    outline: `${SURFACE} hover:bg-border`,
+    outline: 'border-border hover:bg-accent',
     primary: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90',
     danger: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90',
   }
@@ -684,7 +659,7 @@ function Metric({
   sub: string
 }) {
   return (
-    <div className={cn('rounded-lg p-3', SURFACE)}>
+    <div className="rounded-lg border border-border p-3">
       <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
         <Icon className="size-3.5 shrink-0 text-primary" />
         {label}

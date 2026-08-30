@@ -27,7 +27,6 @@ import { PartnerLinksTab } from './PartnerLinksTab'
 import { PartnerCustomersTab, PartnerEarningsTab } from './PartnerListTab'
 import { PartnerPayoutsTab } from './PartnerPayoutsTab'
 import { formatMoney, formatMonthShort, formatMonthLong, formatDayMonth, formatPercent } from './format'
-import { PARTNER_SURFACE } from './surface'
 
 type TabId = 'overview' | 'links' | 'customers' | 'earnings' | 'payouts'
 
@@ -211,7 +210,7 @@ function PartnerOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className={cn('divide-y divide-border rounded-lg text-sm', PARTNER_SURFACE)}>
+            <dl className="divide-y divide-border rounded-lg border border-border text-sm">
               <TermRow
                 label={t('partnerPage.terms.firstPayment')}
                 value={<Badge>{formatPercent(partner.first_percent)}</Badge>}
@@ -318,12 +317,7 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
   )
 }
 
-/**
- * Ячейка внутри карточки баланса.
- *
- * Своя поверхность: холд и выплаченное — это отдельные суммы, а не сноски к
- * доступному остатку, и на общем фоне карточки они читались как один абзац.
- */
+/** Ячейка внутри карточки баланса: холд и выплаченное с подписями. */
 function BalanceCell({
   icon: Icon,
   label,
@@ -336,7 +330,7 @@ function BalanceCell({
   sub?: string
 }) {
   return (
-    <div className={cn('rounded-lg p-3', PARTNER_SURFACE)}>
+    <div>
       <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
         <Icon size={13} className="shrink-0 text-primary" />
         {label}

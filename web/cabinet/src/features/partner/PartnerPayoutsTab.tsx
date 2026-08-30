@@ -16,7 +16,7 @@ import { api, ApiError, type PartnerAccountDTO } from '@/lib/api'
 
 import { PARTNER_STATE_KEY } from './PartnerProgramPage'
 import { formatMoney, formatDayMonth, formatDayShort } from './format'
-import { PARTNER_SURFACE, PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './surface'
+import { PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './layout'
 
 /**
  * Тело отказа приходит JSON'ом со слагом ошибки и подробностями: минимальной
@@ -157,7 +157,6 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   disabled={!canRequest}
-                  className="bg-secondary"
                 />
               </div>
 
@@ -222,7 +221,6 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   }}
                   maxLength={64}
                   placeholder={t('partnerPage.payouts.methodPlaceholder')}
-                  className="bg-secondary"
                 />
               </div>
               <div className="space-y-1.5">
@@ -236,7 +234,6 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                   }}
                   maxLength={512}
                   placeholder={t('partnerPage.payouts.detailsPlaceholder')}
-                  className="bg-secondary"
                 />
               </div>
 
@@ -281,7 +278,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
             ) : null}
 
             {payoutItems.length > 0 ? (
-              <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
+              <ul className="divide-y divide-border rounded-lg border border-border">
                 {payoutItems.map((p) => (
                   <li key={p.id} className={PARTNER_MOBILE_ROW}>
                     <div className="min-w-0 max-w-full">

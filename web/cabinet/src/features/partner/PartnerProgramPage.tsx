@@ -10,8 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
-import { PARTNER_SURFACE } from './surface'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -204,7 +202,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     onChange={(e) => setAbout(e.target.value)}
                     rows={3}
                     maxLength={2000}
-                    className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
                     placeholder={t('partnerPage.form.aboutPlaceholder')}
                   />
                 </div>
@@ -218,7 +216,6 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     onChange={(e) => setChannels(e.target.value)}
                     maxLength={1000}
                     placeholder={t('partnerPage.form.channelsPlaceholder')}
-                    className="bg-secondary"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -231,7 +228,6 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                     onChange={(e) => setExpected(e.target.value)}
                     maxLength={200}
                     placeholder={t('partnerPage.form.expectedPlaceholder')}
-                    className="bg-secondary"
                   />
                 </div>
 
@@ -290,7 +286,7 @@ function PartnerPending({ state }: { state: PartnerStateResponse }) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <dl className={cn('divide-y divide-border rounded-lg text-sm', PARTNER_SURFACE)}>
+              <dl className="divide-y divide-border rounded-lg border border-border text-sm">
                 <ApplicationRow label={t('partnerPage.form.about')} value={state.application.about} />
                 <ApplicationRow label={t('partnerPage.form.channels')} value={state.application.channels} />
                 <ApplicationRow label={t('partnerPage.form.expected')} value={state.application.expected} />

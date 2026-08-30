@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 
 import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from './format'
-import { PARTNER_SURFACE, PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './surface'
+import { PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './layout'
 
 /**
  * Размер страницы.
@@ -58,7 +58,7 @@ export function PartnerCustomersTab() {
           ) : null}
 
           {items.length > 0 ? (
-            <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {items.map((row, i) => (
                 <li key={`${row.label}-${i}`} className={PARTNER_MOBILE_ROW}>
                   <div className="min-w-0 max-w-full">
@@ -140,7 +140,7 @@ export function PartnerEarningsTab() {
           ) : null}
 
           {items.length > 0 ? (
-            <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {items.map((row) => (
                 <li key={row.id} className={cn(PARTNER_MOBILE_ROW, row.status === 'cancelled' && 'opacity-60')}>
                   <div className="min-w-0 max-w-full">
@@ -224,7 +224,7 @@ function EarningStatus({ status, holdUntil }: { status: string; holdUntil?: stri
 
 function ListSkeleton() {
   return (
-    <div className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)} aria-hidden>
+    <div className="divide-y divide-border rounded-lg border border-border" aria-hidden>
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex items-center justify-between gap-2 px-3 py-2.5">
           <Skeleton className="h-3.5 w-32" />
