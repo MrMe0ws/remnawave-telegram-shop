@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Clock, FileText, ListChecks } from 'lucide-react'
+import { Clock, FileText, ListChecks, XCircle, PenLine, Megaphone, Users, RefreshCw } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
@@ -79,10 +79,15 @@ function PartnerBody({ state }: { state: PartnerStateResponse }) {
 function PartnerLanding({ state }: { state: PartnerStateResponse }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const rejected = state.status === 'rejected'
+
   const [about, setAbout] = useState(state.application?.about ?? '')
   const [channels, setChannels] = useState(state.application?.channels ?? '')
   const [expected, setExpected] = useState(state.application?.expected ?? '')
   const [error, setError] = useState<string | null>(null)
+  // После отказа форма прячется за кнопкой: отказ — это ответ, который надо
+  // прочитать, а не поле для новой попытки, подсунутое сразу под ним.
+  const [formOpen, setFormOpen] = useState(!rejected)
 
   const apply = useMutation({
     mutationFn: () => api.partnerApply({ about: about.trim(), channels: channels.trim(), expected: expected.trim() }),
@@ -112,10 +117,36 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
     apply.mutate()
   }
 
-  const rejected = state.status === 'rejected'
-
   return (
     <>
+      {/* Отказ показывается первым: это ответ на заявку, а не сноска под
+          рекламным блоком. */}
+      {rejected ? (
+        <RevealItem>
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+                <div className="min-w-0 space-y-1.5">
+                  <p className="font-semibold text-destructive">{t('partnerPage.rejectedTitle')}</p>
+                  {state.application?.admin_note ? (
+                    <p className="text-sm text-foreground">{state.application.admin_note}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('partnerPage.rejectedNoComment')}</p>
+                  )}
+                  {state.applications_enabled && !formOpen ? (
+                    <Button variant="outline" size="sm" className="mt-2 gap-1.5" onClick={() => setFormOpen(true)}>
+                      <RefreshCw size={14} />
+                      {t('partnerPage.form.titleAgain')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </RevealItem>
+      ) : null}
+
       <RevealItem>
         <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
           <CardContent className="pt-6">
@@ -138,28 +169,19 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ol className="space-y-2 text-sm text-muted-foreground">
-              <li>{t('partnerPage.landing.step1')}</li>
-              <li>{t('partnerPage.landing.step2')}</li>
-              <li>{t('partnerPage.landing.step3', { days: state.terms.hold_days })}</li>
-              <li>{t('partnerPage.landing.step4', { min: formatMoney(state.terms.min_payout) })}</li>
+            {/* Нумерованные шаги: порядок здесь настоящий — ссылка, оплата,
+                холд, вывод, — поэтому номера несут смысл, а не украшают. */}
+            <ol className="space-y-3">
+              <Step n={1} text={t('partnerPage.landing.step1')} />
+              <Step n={2} text={t('partnerPage.landing.step2')} />
+              <Step n={3} text={t('partnerPage.landing.step3', { days: state.terms.hold_days })} />
+              <Step n={4} text={t('partnerPage.landing.step4', { min: formatMoney(state.terms.min_payout) })} />
             </ol>
           </CardContent>
         </Card>
       </RevealItem>
 
-      {rejected && state.application?.admin_note ? (
-        <RevealItem>
-          <Alert>
-            <AlertDescription>
-              <span className="font-medium">{t('partnerPage.rejectedTitle')}</span>{' '}
-              {state.application.admin_note}
-            </AlertDescription>
-          </Alert>
-        </RevealItem>
-      ) : null}
-
-      {state.applications_enabled ? (
+      {state.applications_enabled && formOpen ? (
         <RevealItem>
           <Card>
             <CardHeader className="pb-2">
@@ -171,7 +193,9 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
             <CardContent>
               <form className="space-y-3" onSubmit={onSubmit}>
                 <div className="space-y-1.5">
-                  <Label htmlFor="partner-about">{t('partnerPage.form.about')}</Label>
+                  <FieldLabel htmlFor="partner-about" icon={<PenLine size={14} />}>
+                    {t('partnerPage.form.about')}
+                  </FieldLabel>
                   <textarea
                     id="partner-about"
                     value={about}
@@ -183,7 +207,9 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="partner-channels">{t('partnerPage.form.channels')}</Label>
+                  <FieldLabel htmlFor="partner-channels" icon={<Megaphone size={14} />}>
+                    {t('partnerPage.form.channels')}
+                  </FieldLabel>
                   <Input
                     id="partner-channels"
                     value={channels}
@@ -193,7 +219,9 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="partner-expected">{t('partnerPage.form.expected')}</Label>
+                  <FieldLabel htmlFor="partner-expected" icon={<Users size={14} />}>
+                    {t('partnerPage.form.expected')}
+                  </FieldLabel>
                   <Input
                     id="partner-expected"
                     value={expected}
@@ -217,7 +245,9 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
             </CardContent>
           </Card>
         </RevealItem>
-      ) : (
+      ) : null}
+
+      {!state.applications_enabled ? (
         <RevealItem>
           <Card>
             <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -225,7 +255,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
             </CardContent>
           </Card>
         </RevealItem>
-      )}
+      ) : null}
     </>
   )
 }
@@ -266,6 +296,33 @@ function PartnerPending({ state }: { state: PartnerStateResponse }) {
         </RevealItem>
       ) : null}
     </>
+  )
+}
+
+function Step({ n, text }: { n: number; text: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">
+        {n}
+      </span>
+      <span className="text-sm text-muted-foreground">{text}</span>
+    </li>
+  )
+}
+
+/**
+ * Подпись поля с иконкой.
+ *
+ * Иконки намеренно приглушённые и мельче заголовочной: заголовок карточки
+ * задаёт раздел, а эти лишь помогают взглядом находить нужное поле. Одного
+ * размера и цвета с заголовком они бы с ним конкурировали.
+ */
+function FieldLabel({ htmlFor, icon, children }: { htmlFor: string; icon: ReactNode; children: ReactNode }) {
+  return (
+    <Label htmlFor={htmlFor} className="flex items-center gap-1.5">
+      <span className="text-muted-foreground">{icon}</span>
+      {children}
+    </Label>
   )
 }
 

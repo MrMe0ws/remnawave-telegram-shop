@@ -133,6 +133,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [user?.is_admin])
   const logout = useAuthStore((s) => s.logout)
   const supportChatEnabled = Boolean(bootstrap?.support_chat_enabled)
+  const partnerMaxPercent = bootstrap?.partner_max_percent ?? 0
   const { data: supportSummary } = useSupportSummary(supportChatEnabled, 60_000)
   const supportUnread = supportSummary?.unread_count ?? 0
   const [menuOpen, setMenuOpen] = useState(false)
@@ -318,6 +319,15 @@ export function AppLayout({ children }: AppLayoutProps) {
                           strokeWidth={1.75}
                         />
                         {label}
+                        {/* Ставка прямо в меню: партнёрка — единственный пункт,
+                            который что-то обещает, и обещание должно быть
+                            видно до перехода. Значение приходит из настроек,
+                            поэтому не разъедется со страницей. */}
+                        {to === '/partner' && partnerMaxPercent > 0 ? (
+                          <span className="ml-auto shrink-0 rounded-full bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                            {t('nav.partnerBadge', { percent: `${partnerMaxPercent}%` })}
+                          </span>
+                        ) : null}
                       </Link>
                     )
                   })}

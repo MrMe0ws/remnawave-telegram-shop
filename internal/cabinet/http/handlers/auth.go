@@ -135,6 +135,7 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		// Совпадает с PARTNER_PROGRAM_ENABLED: выключенная программа не должна
 		// светиться пунктом меню, который ведёт на «раздел недоступен».
 		"partner_nav_visible":  botcfg.PartnerProgramEnabled(),
+		"partner_max_percent":  maxPartnerPercent(),
 		"support_chat_enabled": botcfg.SupportBotAPIEnabled(),
 		"turnstile_enabled":      cabcfg.TurnstileEnabled(),
 		"pwa_enabled":            cabcfg.PWAEnabled(),
@@ -354,4 +355,15 @@ func (h *AuthHandler) clearAuthCookies(w http.ResponseWriter) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	clearCabCsrfCookie(w, h.cookieDomain)
+}
+
+// maxPartnerPercent — большая из двух ставок партнёрской программы. Идёт в
+// бейдж «до N%» рядом с пунктом меню: обещание в меню обязано совпадать с тем,
+// что человек увидит на самой странице.
+func maxPartnerPercent() float64 {
+	first, renewal := botcfg.PartnerFirstPercent(), botcfg.PartnerRenewalPercent()
+	if renewal > first {
+		return renewal
+	}
+	return first
 }

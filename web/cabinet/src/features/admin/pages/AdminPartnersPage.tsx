@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Handshake, Check, X, UserPlus, Loader2, AlertTriangle } from 'lucide-react'
+import { Handshake, Check, X, UserPlus, Loader2, AlertTriangle, FileText, Users, Banknote, type LucideIcon } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
+import { AdminPartnerModal, PayoutStatusChip } from '../components/AdminPartnerModal'
 import {
   useAdminPartners,
   useAdminPartnerApprove,
@@ -23,17 +24,39 @@ type TabId = 'applications' | 'partners' | 'payouts'
 export default function AdminPartnersPage() {
   const { t } = useTranslation()
   const [tab, setTab] = useState<TabId>('applications')
+  // Карточка партнёра открывается модалкой поверх очереди: разбор заявки и
+  // обработка выплаты — один заход, уходить со страницы незачем.
+  const [openPartner, setOpenPartner] = useState<number | null>(null)
 
   const pending = useAdminPartnerPending()
   const applications = useAdminPartners('pending')
   const partners = useAdminPartners()
-  const payouts = useAdminPartnerPayouts('open')
 
+  // Заявки и выплаты — несделанная работа, их счётчики подсвечены. Число
+  // партнёров — просто справка, и выделять его незачем.
   const tabs = useMemo(
     () => [
-      { id: 'applications' as const, label: t('admin.partners.tabs.applications'), count: pending.data?.applications },
-      { id: 'partners' as const, label: t('admin.partners.tabs.partners'), count: partners.data?.total },
-      { id: 'payouts' as const, label: t('admin.partners.tabs.payouts'), count: pending.data?.payouts },
+      {
+        id: 'applications' as const,
+        label: t('admin.partners.tabs.applications'),
+        count: pending.data?.applications,
+        icon: FileText,
+        urgent: true,
+      },
+      {
+        id: 'partners' as const,
+        label: t('admin.partners.tabs.partners'),
+        count: partners.data?.total,
+        icon: Users,
+        urgent: false,
+      },
+      {
+        id: 'payouts' as const,
+        label: t('admin.partners.tabs.payouts'),
+        count: pending.data?.payouts,
+        icon: Banknote,
+        urgent: true,
+      },
     ],
     [t, pending.data, partners.data?.total],
   )
@@ -59,30 +82,78 @@ export default function AdminPartnersPage() {
 
         <div role="tablist" className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
           {tabs.map((item) => (
-            <button
+            <TabButton
               key={item.id}
-              role="tab"
-              type="button"
-              aria-selected={tab === item.id}
+              icon={item.icon}
+              label={item.label}
+              count={item.count}
+              urgent={item.urgent}
+              active={tab === item.id}
               onClick={() => setTab(item.id)}
-              className={cn(
-                'flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-                tab === item.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {item.label}
-              {item.count ? ` · ${item.count}` : ''}
-            </button>
+            />
           ))}
         </div>
 
         {tab === 'applications' ? (
           <ApplicationsTab items={applications.data?.items ?? []} loading={applications.isLoading} />
         ) : null}
-        {tab === 'partners' ? <PartnersTab items={partners.data?.items ?? []} loading={partners.isLoading} /> : null}
-        {tab === 'payouts' ? <PayoutsTab items={payouts.data?.items ?? []} loading={payouts.isLoading} /> : null}
+        {tab === 'partners' ? (
+          <PartnersTab items={partners.data?.items ?? []} loading={partners.isLoading} onOpen={setOpenPartner} />
+        ) : null}
+        {tab === 'payouts' ? <PayoutsTab onOpenPartner={setOpenPartner} /> : null}
+
+        <AdminPartnerModal partnerID={openPartner} onClose={() => setOpenPartner(null)} />
       </div>
     </AdminLayout>
+  )
+}
+
+/**
+ * Кнопка вкладки со счётчиком.
+ *
+ * urgent — счётчик означает несделанную работу (заявки, необработанные
+ * выплаты) и подсвечивается; иначе это просто справочное число, и подсветка
+ * приучала бы игнорировать её и там, где она важна.
+ */
+function TabButton({
+  icon: Icon,
+  label,
+  count,
+  urgent,
+  active,
+  onClick,
+}: {
+  icon: LucideIcon
+  label: string
+  count?: number
+  urgent: boolean
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      role="tab"
+      type="button"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        'flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+        active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+      )}
+    >
+      <Icon size={14} className={cn('shrink-0', active && 'text-primary')} />
+      {label}
+      {count ? (
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+            urgent ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
+          )}
+        >
+          {count}
+        </span>
+      ) : null}
+    </button>
   )
 }
 
@@ -195,7 +266,15 @@ function ApplicationCard({ partner }: { partner: AdminPartnerDTO }) {
 }
 
 /** Список партнёров плюс ручное назначение. */
-function PartnersTab({ items, loading }: { items: AdminPartnerDTO[]; loading: boolean }) {
+function PartnersTab({
+  items,
+  loading,
+  onOpen,
+}: {
+  items: AdminPartnerDTO[]
+  loading: boolean
+  onOpen: (id: number) => void
+}) {
   const { t } = useTranslation()
   const [grantOpen, setGrantOpen] = useState(false)
 
@@ -231,11 +310,13 @@ function PartnersTab({ items, loading }: { items: AdminPartnerDTO[]; loading: bo
             </thead>
             <tbody>
               {items.map((row) => (
-                <tr key={row.id} className="border-t border-border hover:bg-accent/40">
+                <tr
+                  key={row.id}
+                  className="cursor-pointer border-t border-border hover:bg-accent/40"
+                  onClick={() => onOpen(row.id)}
+                >
                   <td className="px-3 py-2.5">
-                    <a href={`/admin/partners/${row.id}`} className="font-medium hover:underline">
-                      {row.label}
-                    </a>
+                    <span className="font-medium">{row.label}</span>
                     <p className="text-xs text-muted-foreground">
                       {t('admin.partners.list.since', { date: formatDayShort(row.approved_at || row.created_at) })}
                     </p>
@@ -345,22 +426,55 @@ function GrantModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
-/** Очередь выплат: реквизиты готовы к копированию, перевод делается вне бота. */
-function PayoutsTab({ items, loading }: { items: AdminPartnerPayoutDTO[]; loading: boolean }) {
+/**
+ * Выплаты: очередь необработанных и история.
+ *
+ * История нужна не реже очереди: по ней сверяют «когда и по какому переводу
+ * платили», когда партнёр приходит с вопросом через месяц.
+ */
+function PayoutsTab({ onOpenPartner }: { onOpenPartner: (id: number) => void }) {
   const { t } = useTranslation()
-  if (loading) return <LoadingBlock />
-  if (items.length === 0) return <EmptyBlock text={t('admin.partners.payouts.empty')} />
+  const [scope, setScope] = useState<'open' | 'all'>('open')
+  const payouts = useAdminPartnerPayouts(scope === 'open' ? 'open' : undefined)
+  const items = payouts.data?.items ?? []
 
   return (
     <div className="space-y-3">
+      <div className="flex gap-1 rounded-lg bg-muted p-1 text-xs">
+        {(['open', 'all'] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setScope(id)}
+            className={cn(
+              'flex-1 rounded-md px-3 py-1.5 font-medium transition-colors',
+              scope === id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t(`admin.partners.payouts.scope.${id}`)}
+          </button>
+        ))}
+      </div>
+
+      {payouts.isLoading ? <LoadingBlock /> : null}
+      {!payouts.isLoading && items.length === 0 ? (
+        <EmptyBlock text={t(scope === 'open' ? 'admin.partners.payouts.empty' : 'admin.partners.payouts.historyEmpty')} />
+      ) : null}
+
       {items.map((row) => (
-        <PayoutCard key={row.id} payout={row} />
+        <PayoutCard key={row.id} payout={row} onOpenPartner={onOpenPartner} />
       ))}
     </div>
   )
 }
 
-function PayoutCard({ payout }: { payout: AdminPartnerPayoutDTO }) {
+function PayoutCard({
+  payout,
+  onOpenPartner,
+}: {
+  payout: AdminPartnerPayoutDTO
+  onOpenPartner: (id: number) => void
+}) {
   const { t } = useTranslation()
   const action = useAdminPartnerPayoutAction()
   const [externalRef, setExternalRef] = useState('')
@@ -371,8 +485,15 @@ function PayoutCard({ payout }: { payout: AdminPartnerPayoutDTO }) {
       <div className="flex flex-wrap gap-4">
         <div className="min-w-[220px] flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">{payout.partner_label}</span>
+            <button
+              type="button"
+              onClick={() => onOpenPartner(payout.partner_id)}
+              className="font-semibold hover:underline"
+            >
+              {payout.partner_label}
+            </button>
             <span className="text-lg font-semibold tabular-nums">{formatMoney(payout.amount)}</span>
+            <PayoutStatusChip status={payout.status} />
           </div>
           <p className="font-mono text-xs">{payout.details_snapshot || '—'}</p>
           <p className="text-xs text-muted-foreground">
@@ -389,6 +510,17 @@ function PayoutCard({ payout }: { payout: AdminPartnerPayoutDTO }) {
           </p>
         </div>
 
+        {payout.status === 'paid' || payout.status === 'rejected' ? (
+          <div className="w-full space-y-1 text-xs text-muted-foreground sm:w-[280px]">
+            {payout.external_ref ? (
+              <p className="font-mono">{t('admin.partners.payouts.refDone', { ref: payout.external_ref })}</p>
+            ) : null}
+            {payout.admin_comment ? <p>{payout.admin_comment}</p> : null}
+            {payout.processed_at ? (
+              <p>{t('admin.partners.payouts.processed', { date: formatDayShort(payout.processed_at) })}</p>
+            ) : null}
+          </div>
+        ) : (
         <div className="w-full space-y-2 sm:w-[280px]">
           <input
             value={externalRef}
@@ -422,6 +554,7 @@ function PayoutCard({ payout }: { payout: AdminPartnerPayoutDTO }) {
           </div>
           <p className="text-[11px] text-muted-foreground">{t('admin.partners.payouts.refHint')}</p>
         </div>
+        )}
       </div>
     </div>
   )

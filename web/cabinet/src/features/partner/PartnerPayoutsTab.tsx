@@ -154,13 +154,16 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
 
               {/* Причина, по которой кнопка недоступна, показывается рядом с ней,
                   а не всплывает ошибкой после отправки формы. */}
+              {/* Заявка принята — успех: партнёр сделал всё, что от него
+                  требовалось. Кулдаун и отсутствие реквизитов — не ошибка, а
+                  информация, поэтому синий, а не красный. */}
               {partner.has_open_payout ? (
-                <Alert>
+                <Alert variant="success">
                   <AlertDescription>{t('partnerPage.payouts.pendingNotice')}</AlertDescription>
                 </Alert>
               ) : null}
               {cooldownActive ? (
-                <Alert>
+                <Alert variant="info">
                   <AlertDescription>
                     {t('partnerPage.payouts.cooldownNotice', {
                       date: formatDayMonth(partner.payout_available_at),
@@ -169,7 +172,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                 </Alert>
               ) : null}
               {!hasDetails ? (
-                <Alert>
+                <Alert variant="info">
                   <AlertDescription>{t('partnerPage.payouts.detailsFirst')}</AlertDescription>
                 </Alert>
               ) : null}
@@ -226,12 +229,12 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                 </Alert>
               ) : null}
               {saved ? (
-                <Alert>
+                <Alert variant="success">
                   <AlertDescription>{t('partnerPage.payouts.detailsSaved')}</AlertDescription>
                 </Alert>
               ) : null}
 
-              <Button type="submit" variant="outline" className="w-full" disabled={saveDetails.isPending}>
+              <Button type="submit" className="w-full" disabled={saveDetails.isPending}>
                 {t('partnerPage.payouts.saveDetails')}
               </Button>
             </form>
@@ -269,6 +272,11 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
                       <p className="text-xs text-muted-foreground">
                         {[formatDayShort(p.requested_at), p.method].filter(Boolean).join(' · ')}
                       </p>
+                      {p.external_ref ? (
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {t('partnerPage.payouts.ref', { ref: p.external_ref })}
+                        </p>
+                      ) : null}
                       {p.admin_comment ? (
                         <p className="text-xs text-muted-foreground">{p.admin_comment}</p>
                       ) : null}
@@ -287,7 +295,12 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
 
 function PayoutStatus({ status }: { status: string }) {
   const { t } = useTranslation()
-  if (status === 'paid') return <Badge className="shrink-0">{t('partnerPage.payouts.statusPaid')}</Badge>
+  if (status === 'paid')
+    return (
+      <Badge variant="success" className="shrink-0">
+        {t('partnerPage.payouts.statusPaid')}
+      </Badge>
+    )
   if (status === 'rejected')
     return (
       <Badge variant="destructive" className="shrink-0">

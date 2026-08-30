@@ -641,10 +641,21 @@ export interface AdminPartnerLinkDTO {
   earned: number
 }
 
+export interface AdminPartnerCustomerDTO {
+  label: string
+  active: boolean
+  has_paid: boolean
+  earned: number
+  link_name?: string
+  attached_at: string
+}
+
 export interface AdminPartnerDetailDTO {
   partner: AdminPartnerDTO
   links: AdminPartnerLinkDTO[]
   operations: AdminPartnerOperationDTO[]
+  customers: AdminPartnerCustomerDTO[]
+  payouts: AdminPartnerPayoutDTO[]
 }
 
 export interface AdminPartnerPayoutDTO {

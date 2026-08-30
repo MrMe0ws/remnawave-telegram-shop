@@ -99,6 +99,8 @@ type adminPartnerDetailResp struct {
 	Partner    adminPartnerDTO            `json:"partner"`
 	Links      []partnerLinkDTO           `json:"links"`
 	Operations []adminPartnerOperationDTO `json:"operations"`
+	Customers  []partnerCustomerDTO       `json:"customers"`
+	Payouts    []adminPartnerPayoutDTO    `json:"payouts"`
 }
 
 // --- маппинг ---
@@ -364,10 +366,49 @@ func (h *AdminPartnersHandler) detail(w http.ResponseWriter, r *http.Request, pa
 		return
 	}
 
+	customers, _, err := h.partners.ListCustomers(r.Context(), partnerID, 50, 0)
+	if err != nil {
+		slog.Error("admin partners: customers", "error", err, "partner_id", partnerID)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	payouts, err := h.partners.ListPayouts(r.Context(), partnerID, 50)
+	if err != nil {
+		slog.Error("admin partners: partner payouts", "error", err, "partner_id", partnerID)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
 	resp := adminPartnerDetailResp{
 		Partner:    adminPartnerToDTO(*row),
 		Links:      make([]partnerLinkDTO, 0, len(links)),
 		Operations: make([]adminPartnerOperationDTO, 0, len(ops)),
+		Customers:  make([]partnerCustomerDTO, 0, len(customers)),
+		Payouts:    make([]adminPartnerPayoutDTO, 0, len(payouts)),
+	}
+	for _, c := range customers {
+		resp.Customers = append(resp.Customers, partnerCustomerDTO{
+			Label:      partnerCustomerLabel(c.TelegramUsername, c.Email, c.TelegramID, c.IsWebOnly),
+			Active:     c.Active,
+			HasPaid:    c.HasPaid,
+			Earned:     c.Earned,
+			LinkName:   ptrString(c.LinkName),
+			AttachedAt: c.AttachedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	for _, p := range payouts {
+		resp.Payouts = append(resp.Payouts, adminPartnerPayoutDTO{
+			ID:              p.ID,
+			PartnerID:       p.PartnerID,
+			Amount:          p.Amount,
+			Status:          p.Status,
+			Method:          ptrString(p.Method),
+			DetailsSnapshot: ptrString(p.DetailsSnapshot),
+			AdminComment:    ptrString(p.AdminComment),
+			ExternalRef:     ptrString(p.ExternalRef),
+			RequestedAt:     p.RequestedAt.UTC().Format(time.RFC3339),
+			ProcessedAt:     formatTimeRFC3339(p.ProcessedAt),
+		})
 	}
 	for _, l := range links {
 		resp.Links = append(resp.Links, partnerLinkDTO{

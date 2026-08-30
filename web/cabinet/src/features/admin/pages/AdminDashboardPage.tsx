@@ -8,6 +8,7 @@ import {
   TicketPercent,
   Zap,
   Gem,
+  Handshake,
   Megaphone,
   Server,
   RefreshCw,
@@ -46,6 +47,7 @@ export default function AdminDashboardPage() {
 
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
   const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false
+  const partnerEnabled = bootstrap?.partner_enabled ?? false
 
   const links: QuickLink[] = [
     {
@@ -112,6 +114,16 @@ export default function AdminDashboardPage() {
       iconBg: 'bg-rose-500/12 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400',
       accent: { from: '244 63 94', to: '236 72 153', glow: '244 63 94' },
       condition: loyaltyEnabled,
+    },
+    {
+      to: '/admin/partners',
+      icon: Handshake,
+      titleKey: 'admin.nav.partners',
+      descKey: 'admin.dashboard.linkPartners',
+      bg: 'from-amber-500/12 via-orange-500/6 to-card',
+      iconBg: 'bg-amber-500/12 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
+      accent: { from: '245 158 11', to: '249 115 22', glow: '245 158 11' },
+      condition: partnerEnabled,
     },
     {
       to: '/admin/settings',

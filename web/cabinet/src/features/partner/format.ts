@@ -29,6 +29,16 @@ export function formatMonthShort(ym: string): string {
   return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(currentLocale(), { month: 'short' })
 }
 
+/** «август 2026» — подпись выбранного месяца на графике. */
+export function formatMonthLong(ym: string): string {
+  const [year, month] = ym.split('-').map(Number)
+  if (!year || !month) return ym
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(currentLocale(), {
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 /** «5 сентября» — дата раскрытия холда и подобные. */
 export function formatDayMonth(iso?: string): string {
   if (!iso) return ''

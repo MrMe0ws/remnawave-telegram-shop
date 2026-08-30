@@ -18,8 +18,10 @@ func TestPartnerCustomerLabel(t *testing.T) {
 		webOnly    bool
 		want       string
 	}{
-		{"username в приоритете", strPtr("mikhail_k"), strPtr("a@mail.ru"), 78123456, false, "@mikhail_k"},
-		{"имя с пробелом не получает собаку", strPtr("Михаил К"), nil, 78123456, false, "Михаил К"},
+		{"username маскируется", strPtr("mikhail_k"), strPtr("a@mail.ru"), 78123456, false, "@mi***_k"},
+		{"длинное имя маскируется", strPtr("cat_tac_cat"), nil, 78123456, false, "@ca***at"},
+		{"короткое имя маскируется сильнее", strPtr("bob"), nil, 78123456, false, "@b***b"},
+		{"двухбуквенное имя не восстановить", strPtr("bo"), nil, 78123456, false, "@b***"},
 		{"пустой username пропускается", strPtr("  "), strPtr("andrey@mail.ru"), 78123456, false, "a***y@mail.ru"},
 		{"email маскируется", nil, strPtr("andrey@mail.ru"), 0, true, "a***y@mail.ru"},
 		{"короткий email тоже маскируется", nil, strPtr("a@mail.ru"), 0, true, "a***@mail.ru"},

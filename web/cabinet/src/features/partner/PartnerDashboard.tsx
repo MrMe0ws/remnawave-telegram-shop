@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TrendingUp, Briefcase } from 'lucide-react'
+import { TrendingUp, Briefcase, LayoutGrid, Link2, Users, Receipt, Banknote, type LucideIcon } from 'lucide-react'
 
 import { RevealItem } from '@/components/PageReveal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,16 +12,16 @@ import type { PartnerAccountDTO, PartnerStateResponse } from '@/lib/api'
 import { PartnerLinksTab } from './PartnerLinksTab'
 import { PartnerCustomersTab, PartnerEarningsTab } from './PartnerListTab'
 import { PartnerPayoutsTab } from './PartnerPayoutsTab'
-import { formatMoney, formatMonthShort, formatDayMonth, formatPercent } from './format'
+import { formatMoney, formatMonthShort, formatMonthLong, formatDayMonth, formatPercent } from './format'
 
 type TabId = 'overview' | 'links' | 'customers' | 'earnings' | 'payouts'
 
-const TABS: { id: TabId; labelKey: string }[] = [
-  { id: 'overview', labelKey: 'partnerPage.tabs.overview' },
-  { id: 'links', labelKey: 'partnerPage.tabs.links' },
-  { id: 'customers', labelKey: 'partnerPage.tabs.customers' },
-  { id: 'earnings', labelKey: 'partnerPage.tabs.earnings' },
-  { id: 'payouts', labelKey: 'partnerPage.tabs.payouts' },
+const TABS: { id: TabId; labelKey: string; icon: LucideIcon }[] = [
+  { id: 'overview', labelKey: 'partnerPage.tabs.overview', icon: LayoutGrid },
+  { id: 'links', labelKey: 'partnerPage.tabs.links', icon: Link2 },
+  { id: 'customers', labelKey: 'partnerPage.tabs.customers', icon: Users },
+  { id: 'earnings', labelKey: 'partnerPage.tabs.earnings', icon: Receipt },
+  { id: 'payouts', labelKey: 'partnerPage.tabs.payouts', icon: Banknote },
 ]
 
 export function PartnerDashboard({
@@ -43,23 +43,27 @@ export function PartnerDashboard({
             aria-label={t('partnerPage.title')}
             className="flex w-full gap-1 overflow-x-auto rounded-xl bg-muted p-1"
           >
-            {TABS.map((item) => (
-              <button
-                key={item.id}
-                role="tab"
-                type="button"
-                aria-selected={tab === item.id}
-                onClick={() => setTab(item.id)}
-                className={cn(
-                  'flex-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
-                  tab === item.id
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {t(item.labelKey)}
-              </button>
-            ))}
+            {TABS.map((item) => {
+              const Icon = item.icon
+              return (
+                <button
+                  key={item.id}
+                  role="tab"
+                  type="button"
+                  aria-selected={tab === item.id}
+                  onClick={() => setTab(item.id)}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    tab === item.id
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Icon size={14} className={cn('shrink-0', tab === item.id && 'text-primary')} />
+                  {t(item.labelKey)}
+                </button>
+              )
+            })}
           </div>
         </div>
       </RevealItem>
@@ -223,6 +227,9 @@ function PartnerOverview({
  */
 function MonthsChart({ months }: { months: { month: string; amount: number }[] }) {
   const { t } = useTranslation()
+  // По умолчанию подсвечен последний месяц — он же обычно и самый интересный.
+  const [active, setActive] = useState(months.length - 1)
+  const current = months[Math.min(Math.max(active, 0), months.length - 1)]
   const max = Math.max(...months.map((m) => m.amount), 1)
   const width = 300
   const height = 88
@@ -231,6 +238,13 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
 
   return (
     <div>
+      {/* Значение выбранного месяца — подписью над графиком, а не всплывающей
+          подсказкой: на телефоне hover'а нет, и подсказка была бы недоступна
+          ровно там, где кабинет открывают чаще всего. */}
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <span className="text-sm font-semibold tabular-nums">{formatMoney(current?.amount ?? 0)}</span>
+        <span className="text-xs text-muted-foreground">{formatMonthLong(current?.month ?? '')}</span>
+      </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
@@ -243,7 +257,6 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
       >
         {months.map((m, i) => {
           const barHeight = Math.max((m.amount / max) * (height - 8), 2)
-          const isLast = i === months.length - 1
           return (
             <rect
               key={m.month}
@@ -252,14 +265,22 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
               width={barWidth}
               height={barHeight}
               rx={4}
-              className={isLast ? 'fill-primary' : 'fill-primary/25'}
+              tabIndex={0}
+              role="button"
+              aria-label={`${formatMonthLong(m.month)}: ${formatMoney(m.amount)}`}
+              className={cn('cursor-pointer outline-none', i === active ? 'fill-primary' : 'fill-primary/25')}
+              onMouseEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
+              onClick={() => setActive(i)}
             />
           )
         })}
       </svg>
-      <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-        {months.map((m) => (
-          <span key={m.month}>{formatMonthShort(m.month)}</span>
+      <div className="mt-1 flex justify-between text-xs">
+        {months.map((m, i) => (
+          <span key={m.month} className={i === active ? 'font-medium text-foreground' : 'text-muted-foreground'}>
+            {formatMonthShort(m.month)}
+          </span>
         ))}
       </div>
     </div>

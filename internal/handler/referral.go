@@ -72,7 +72,6 @@ func buildReferralDescription(langCode string) string {
 				config.ReferralFirstReferrerDays(),
 				config.ReferralRepeatReferrerDays(),
 				config.ReferralFirstRefereeDays(),
-				config.ReferralRepeatReferrerDays(),
 			)
 		}
 		return fmt.Sprintf(

@@ -126,6 +126,8 @@ export interface AuthBootstrapResponse {
   fortune_nav_visible?: boolean
   /** false при PARTNER_PROGRAM_ENABLED=false — пункт «Партнёрам» скрыт. */
   partner_nav_visible?: boolean
+  /** Максимальная ставка партнёрки — бейдж «до N%» рядом с пунктом меню. */
+  partner_max_percent?: number
   /** true при SUPPORT_BOT_API=true — чат поддержки в кабинете вместо внешней ссылки. */
   support_chat_enabled?: boolean
   /** false — только тёмная тема, переключатель в шапке скрыт (CABINET_LIGHT_THEME_ENABLED). */

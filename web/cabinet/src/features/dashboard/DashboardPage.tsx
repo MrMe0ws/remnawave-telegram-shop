@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
   Users,
+  Handshake,
   Zap,
   ChevronRight,
   Ticket,
@@ -326,6 +327,41 @@ function StatusBadge({ days, isActive }: { days: number | null; isActive: boolea
  * «Новости» и «Отзывы» приходят из bootstrap, поэтому до его ответа держим
  * места заглушками, иначе строка подпрыгивает.
  */
+interface QuickAction {
+  to: string
+  icon: LucideIcon
+  label: string
+  hint: string
+  accent: string
+}
+
+/**
+ * Строка быстрого перехода.
+ *
+ * compact — режим «две штуки в ряд на телефоне»: подсказка прячется, иначе
+ * подписи наезжают друг на друга на узких экранах.
+ */
+function QuickActionLink({ action, compact }: { action: QuickAction; compact?: boolean }) {
+  const { to, icon: Icon, label, hint, accent } = action
+  return (
+    <Link
+      to={to}
+      className={cn('cabinet-elevated-card cabinet-row flex items-center gap-3 px-3 py-2.5', accent)}
+    >
+      <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
+        <Icon size={16} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{label}</span>
+        <span className={cn('block truncate text-xs text-muted-foreground', compact && 'hidden sm:block')}>
+          {hint}
+        </span>
+      </span>
+      <ChevronRight size={18} className="cabinet-row-chevron shrink-0 text-muted-foreground" aria-hidden />
+    </Link>
+  )
+}
+
 function QuickLinks({
   newsUrl,
   feedbackUrl,
@@ -342,20 +378,16 @@ function QuickLinks({
    * и подсветку строки, поэтому элемент читается как одно целое, а не как
    * цветная иконка на нейтральной плашке.
    */
-  const primary: { to: string; icon: LucideIcon; label: string; hint: string; accent: string }[] = [
+  const bootstrap = useAuthBootstrap().data
+  const partnerVisible = bootstrap?.partner_nav_visible !== false
+
+  const primary: QuickAction[] = [
     {
       to: '/tariffs',
       icon: Zap,
       label: t('dashboard.tariffsCardTitle'),
       hint: t('dashboard.tariffsCardHint'),
       accent: 'cabinet-accent-violet',
-    },
-    {
-      to: '/referral',
-      icon: Users,
-      label: t('dashboard.referralsCardTitle'),
-      hint: t('dashboard.referralsCardHint'),
-      accent: '',
     },
     {
       to: '/promocodes',
@@ -366,37 +398,45 @@ function QuickLinks({
     },
   ]
 
+  /*
+   * Рефералка и партнёрка идут парой: это две программы про «приведи клиента»,
+   * и стоять они должны рядом, а не через строку. Ряд держится в две колонки
+   * даже на телефоне — подписи короткие, помещаются; подсказка под ними на
+   * узком экране прячется, иначе строка ломается.
+   *
+   * Партнёрка выключается настройкой, и тогда рефералка остаётся одна: ряд
+   * схлопывается в одну колонку, а не оставляет пустую половину.
+   */
+  const pair: QuickAction[] = [
+    {
+      to: '/referral',
+      icon: Users,
+      label: t('dashboard.referralsCardTitle'),
+      hint: t('dashboard.referralsCardHint'),
+      accent: '',
+    },
+  ]
+  if (partnerVisible) {
+    pair.push({
+      to: '/partner',
+      icon: Handshake,
+      label: t('dashboard.partnerCardTitle'),
+      hint: t('dashboard.partnerCardHint'),
+      accent: 'cabinet-accent-emerald',
+    })
+  }
+
   return (
     <div className="space-y-2.5">
       <div className="grid gap-2.5 sm:grid-cols-2">
-        {primary.map(({ to, icon: Icon, label, hint, accent }, i) => (
-          <Link
-            key={to}
-            to={to}
-            className={cn(
-              'cabinet-elevated-card cabinet-row flex items-center gap-3 px-3 py-2.5',
-              accent,
-              /*
-               * Нечётный последний остаётся один в ряду — растягиваем его на
-               * обе колонки, иначе рядом с ним висит пустая половина.
-               * Считаем по факту: рефералы могут быть выключены.
-               */
-              i === primary.length - 1 && primary.length % 2 === 1 && 'sm:col-span-2',
-            )}
-          >
-            <span className="cabinet-icon-box inline-flex size-9 shrink-0 items-center justify-center rounded-lg">
-              <Icon size={16} aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{label}</span>
-              <span className="block truncate text-xs text-muted-foreground">{hint}</span>
-            </span>
-            <ChevronRight
-              size={18}
-              className="cabinet-row-chevron shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-          </Link>
+        {primary.map((action) => (
+          <QuickActionLink key={action.to} action={action} />
+        ))}
+      </div>
+
+      <div className={cn('grid gap-2.5', pair.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+        {pair.map((action) => (
+          <QuickActionLink key={action.to} action={action} compact={pair.length === 2} />
         ))}
       </div>
 

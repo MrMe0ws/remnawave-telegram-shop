@@ -181,18 +181,17 @@ func ptrString(v *string) string {
 
 // partnerCustomerLabel — подпись клиента в списках партнёра.
 //
-// Партнёр видит, что клиент живой и платит, но не получает контакт: иначе
-// список приведённых превращается в базу для увода к конкуренту. Порядок как на
-// странице рефералов — username, затем маскированный email, затем половина
-// telegram id.
+// Маскируется ВСЁ: и username, и email, и telegram id. Партнёр должен видеть,
+// что клиент живой и платит, но не получать контакт — иначе список приведённых
+// превращается в готовую базу для увода к конкуренту. Открытый @username это
+// контакт ничуть не меньше, чем почта: по нему пишут напрямую.
+//
+// Подпись при этом остаётся узнаваемой для самого партнёра: он помнит, кого
+// приводил, и «@ca***at» ему хватает, чтобы сопоставить строку с человеком.
 func partnerCustomerLabel(username, email *string, telegramID int64, webOnly bool) string {
 	if username != nil {
-		u := strings.TrimSpace(*username)
-		if u != "" {
-			if strings.Contains(u, " ") {
-				return u
-			}
-			return "@" + u
+		if masked := maskPartnerHandle(strings.TrimSpace(*username)); masked != "" {
+			return masked
 		}
 	}
 	if email != nil {
@@ -204,6 +203,25 @@ func partnerCustomerLabel(username, email *string, telegramID int64, webOnly boo
 		return "—"
 	}
 	return utils.MaskHalfInt64(telegramID)
+}
+
+// maskPartnerHandle прячет середину имени: «cat_tac_cat» → «@ca***at».
+// Короткие имена сокращаются сильнее, чтобы из двух символов не восстановить
+// целое.
+func maskPartnerHandle(handle string) string {
+	h := strings.TrimPrefix(strings.TrimSpace(handle), "@")
+	if h == "" {
+		return ""
+	}
+	runes := []rune(h)
+	switch {
+	case len(runes) <= 2:
+		return "@" + string(runes[0]) + "***"
+	case len(runes) <= 5:
+		return "@" + string(runes[0]) + "***" + string(runes[len(runes)-1])
+	default:
+		return "@" + string(runes[:2]) + "***" + string(runes[len(runes)-2:])
+	}
 }
 
 func maskPartnerEmail(email string) string {

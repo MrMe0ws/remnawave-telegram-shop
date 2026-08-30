@@ -91,7 +91,7 @@ export default function ReferralProgramPage() {
                         <li>
                           <Trans
                             i18nKey="referralPage.howProgressiveMonthlyNext"
-                            values={{ repeat: data.referral_repeat_referrer_days ?? 0 }}
+                            values={{ referee: data.referral_first_referee_days ?? 0 }}
                             components={[<span className={bonusClass} key="next" />]}
                           />
                         </li>
@@ -102,6 +102,9 @@ export default function ReferralProgramPage() {
                           referee: data.referral_first_referee_days ?? 0,
                         })}
                       </p>
+                      {/* Обе ссылки ведут на один аккаунт — без этой строчки
+                          регулярно спрашивают, какую из них «правильную» давать. */}
+                      <p className="text-xs">{t('referralPage.linksHint')}</p>
                     </>
                   ) : (
                     <ul className="list-disc space-y-1.5 pl-5">

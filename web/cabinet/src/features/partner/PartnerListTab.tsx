@@ -66,7 +66,7 @@ export function PartnerCustomersTab() {
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <Badge variant={row.has_paid ? 'default' : 'secondary'}>
+                    <Badge variant={row.has_paid ? (row.active ? 'success' : 'secondary') : 'secondary'}>
                       {row.has_paid
                         ? row.active
                           ? t('partnerPage.customers.paying')
