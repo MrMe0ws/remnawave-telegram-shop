@@ -16,6 +16,7 @@ import {
   useAdminPartnerGrant,
 } from '../hooks/useAdminPartners'
 import { formatMoney, formatPercent, formatDayShort } from '@/features/partner/format'
+import { RecordCard } from '@/components/RecordCard'
 import { cn } from '@/lib/utils'
 import type { AdminPartnerDTO, AdminPartnerPayoutDTO } from '@/lib/types/admin'
 
@@ -294,8 +295,73 @@ function PartnersTab({
       {loading ? <LoadingBlock /> : null}
       {!loading && items.length === 0 ? <EmptyBlock text={t('admin.partners.list.empty')} /> : null}
 
+      {/* Карточки до sm, таблица начиная с sm: семь колонок в 360 точек не
+          помещаются, а горизонтальная прокрутка прячет за краем ровно те
+          числа, ради которых в список и заходят. */}
       {items.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="space-y-2 sm:hidden">
+          {items.map((row) => (
+            <RecordCard
+              key={`m-${row.id}`}
+              onClick={() => onOpen(row.id)}
+              rows={[
+                {
+                  label: t('admin.partners.list.partner'),
+                  value: (
+                    <>
+                      {row.label}
+                      <p className="text-xs font-normal text-muted-foreground">
+                        {t('admin.partners.list.since', { date: formatDayShort(row.approved_at || row.created_at) })}
+                      </p>
+                    </>
+                  ),
+                },
+                {
+                  label: t('admin.partners.list.percents'),
+                  value: (
+                    <span className="tabular-nums">
+                      {formatPercent(row.effective_first_percent)} / {formatPercent(row.effective_renewal_percent)}
+                    </span>
+                  ),
+                },
+                {
+                  label: t('admin.partners.list.customers'),
+                  value: (
+                    <span className="tabular-nums">
+                      {row.customers}
+                      <span className="text-muted-foreground"> / {row.paying_customers}</span>
+                    </span>
+                  ),
+                },
+                {
+                  label: t('admin.partners.list.earned'),
+                  value: <span className="tabular-nums">{formatMoney(row.total_earned)}</span>,
+                },
+                {
+                  label: t('admin.partners.list.balance'),
+                  value: <span className="tabular-nums">{formatMoney(row.balance)}</span>,
+                },
+                ...(row.open_payouts > 0
+                  ? [
+                      {
+                        label: t('admin.partners.list.payouts'),
+                        value: (
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                            {t('admin.partners.list.openPayouts', { n: row.open_payouts })}
+                          </span>
+                        ),
+                      },
+                    ]
+                  : []),
+              ]}
+              footer={<StatusChip status={row.status} block />}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {items.length > 0 ? (
+        <div className="hidden overflow-x-auto rounded-xl border border-border bg-card sm:block">
           <table className="w-full min-w-[720px] border-collapse text-sm">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -512,8 +578,75 @@ function ProcessedPayoutsTable({
   const { t } = useTranslation()
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full min-w-[720px] border-collapse text-sm">
+    <>
+      {/* На телефоне запись разворачивается вертикально, а статус занимает всю
+          ширину: именно он отвечает на вопрос «чем кончилось», и в узкой
+          колонке таблицы его приходилось искать прокруткой. */}
+      <div className="space-y-2 sm:hidden">
+        {items.map((row) => (
+          <RecordCard
+            key={`m-${row.id}`}
+            rows={[
+              {
+                label: t('admin.partners.payouts.colDate'),
+                value: (
+                  <>
+                    {formatDayShort(row.requested_at)}
+                    <p className="text-xs font-normal text-muted-foreground">
+                      {t('admin.partners.payouts.index', { n: row.payout_index })}
+                    </p>
+                  </>
+                ),
+              },
+              {
+                label: t('admin.partners.payouts.colPartner'),
+                value: (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPartner(row.partner_id)}
+                    className="font-medium hover:underline"
+                  >
+                    {row.partner_label}
+                  </button>
+                ),
+              },
+              {
+                label: t('admin.partners.payouts.colAmount'),
+                value: <span className="tabular-nums">{formatMoney(row.amount)}</span>,
+              },
+              {
+                label: t('admin.partners.payouts.colDetails'),
+                value: <CopyValue value={row.details_snapshot || ''} />,
+              },
+              {
+                label: t('admin.partners.payouts.colResult'),
+                value: (
+                  <>
+                    {row.external_ref ? (
+                      <p className="font-mono text-xs">
+                        {t('admin.partners.payouts.refDone', { ref: row.external_ref })}
+                      </p>
+                    ) : null}
+                    {row.admin_comment ? (
+                      <p className="text-xs font-normal text-muted-foreground">{row.admin_comment}</p>
+                    ) : null}
+                    {row.processed_at ? (
+                      <p className="text-xs font-normal text-muted-foreground">
+                        {t('admin.partners.payouts.processed', { date: formatDayShort(row.processed_at) })}
+                      </p>
+                    ) : null}
+                    {!row.external_ref && !row.admin_comment && !row.processed_at ? <span>—</span> : null}
+                  </>
+                ),
+              },
+            ]}
+            footer={<PayoutStatusChip status={row.status} block />}
+          />
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card sm:block">
+        <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
           <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
             <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colDate')}</th>
@@ -565,8 +698,9 @@ function ProcessedPayoutsTable({
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </>
   )
 }
 
@@ -652,7 +786,7 @@ function PayoutCard({
 
 // --- мелочи ---
 
-export function StatusChip({ status }: { status: string }) {
+export function StatusChip({ status, block }: { status: string; block?: boolean }) {
   const { t } = useTranslation()
   const styles: Record<string, string> = {
     active: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
@@ -661,7 +795,13 @@ export function StatusChip({ status }: { status: string }) {
     rejected: 'bg-muted text-muted-foreground',
   }
   return (
-    <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status] ?? styles.rejected)}>
+    <span
+      className={cn(
+        'rounded-full px-2 py-0.5 text-[11px] font-medium',
+        block && 'block rounded-lg py-1.5 text-center text-xs',
+        styles[status] ?? styles.rejected,
+      )}
+    >
       {t(`admin.partners.status.${status}`)}
     </span>
   )

@@ -16,7 +16,7 @@ import { api, ApiError, type PartnerAccountDTO } from '@/lib/api'
 
 import { PARTNER_STATE_KEY } from './PartnerProgramPage'
 import { formatMoney, formatDayMonth, formatDayShort } from './format'
-import { PARTNER_SURFACE } from './surface'
+import { PARTNER_SURFACE, PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './surface'
 
 /**
  * Тело отказа приходит JSON'ом со слагом ошибки и подробностями: минимальной
@@ -283,8 +283,8 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
             {payoutItems.length > 0 ? (
               <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
                 {payoutItems.map((p) => (
-                  <li key={p.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                    <div className="min-w-0">
+                  <li key={p.id} className={PARTNER_MOBILE_ROW}>
+                    <div className="min-w-0 max-w-full">
                       <p className="font-semibold tabular-nums">{formatMoney(p.amount)}</p>
                       <p className="text-xs text-muted-foreground">
                         {[formatDayShort(p.requested_at), p.method].filter(Boolean).join(' · ')}
@@ -324,26 +324,27 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
 
 function PayoutStatus({ status }: { status: string }) {
   const { t } = useTranslation()
+  const className = cn('shrink-0', PARTNER_MOBILE_BADGE)
   if (status === 'paid')
     return (
-      <Badge variant="success" className="shrink-0">
+      <Badge variant="success" className={className}>
         {t('partnerPage.payouts.statusPaid')}
       </Badge>
     )
   if (status === 'rejected')
     return (
-      <Badge variant="destructive" className="shrink-0">
+      <Badge variant="destructive" className={className}>
         {t('partnerPage.payouts.statusRejected')}
       </Badge>
     )
   if (status === 'approved')
     return (
-      <Badge variant="default" className="shrink-0">
+      <Badge variant="default" className={className}>
         {t('partnerPage.payouts.statusApproved')}
       </Badge>
     )
   return (
-    <Badge variant="default" className="shrink-0">
+    <Badge variant="default" className={className}>
       {t('partnerPage.payouts.statusPending')}
     </Badge>
   )

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 
 import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from './format'
-import { PARTNER_SURFACE } from './surface'
+import { PARTNER_SURFACE, PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE } from './surface'
 
 /**
  * Размер страницы.
@@ -60,15 +60,18 @@ export function PartnerCustomersTab() {
           {items.length > 0 ? (
             <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
               {items.map((row, i) => (
-                <li key={`${row.label}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                  <div className="min-w-0">
+                <li key={`${row.label}-${i}`} className={PARTNER_MOBILE_ROW}>
+                  <div className="min-w-0 max-w-full">
                     <p className="truncate font-mono text-xs">{row.label}</p>
                     <p className="text-xs text-muted-foreground">
                       {[row.link_name, formatDayShort(row.attached_at)].filter(Boolean).join(' · ')}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <Badge variant={row.has_paid ? (row.active ? 'success' : 'destructive') : 'secondary'}>
+                  <div className="w-full shrink-0 sm:w-auto sm:text-right">
+                    <Badge
+                      className={PARTNER_MOBILE_BADGE}
+                      variant={row.has_paid ? (row.active ? 'success' : 'destructive') : 'secondary'}
+                    >
                       {row.has_paid
                         ? row.active
                           ? t('partnerPage.customers.paying')
@@ -139,11 +142,8 @@ export function PartnerEarningsTab() {
           {items.length > 0 ? (
             <ul className={cn('divide-y divide-border rounded-lg', PARTNER_SURFACE)}>
               {items.map((row) => (
-                <li
-                  key={row.id}
-                  className={`flex items-start justify-between gap-3 px-3 py-2.5 ${row.status === 'cancelled' ? 'opacity-60' : ''}`}
-                >
-                  <div className="min-w-0">
+                <li key={row.id} className={cn(PARTNER_MOBILE_ROW, row.status === 'cancelled' && 'opacity-60')}>
+                  <div className="min-w-0 max-w-full">
                     {/* Ручная корректировка бывает отрицательной — знак берётся
                         из суммы, а не приписывается всегда как «+». */}
                     <p className="font-semibold tabular-nums">
@@ -198,9 +198,10 @@ export function PartnerEarningsTab() {
 
 function EarningStatus({ status, holdUntil }: { status: string; holdUntil?: string }) {
   const { t } = useTranslation()
+  const className = cn('shrink-0', PARTNER_MOBILE_BADGE)
   if (status === 'hold') {
     return (
-      <Badge variant="default" className="shrink-0">
+      <Badge variant="default" className={className}>
         {holdUntil
           ? t('partnerPage.earnings.holdUntil', { date: formatDayMonth(holdUntil) })
           : t('partnerPage.earnings.hold')}
@@ -209,13 +210,13 @@ function EarningStatus({ status, holdUntil }: { status: string; holdUntil?: stri
   }
   if (status === 'cancelled') {
     return (
-      <Badge variant="destructive" className="shrink-0">
+      <Badge variant="destructive" className={className}>
         {t('partnerPage.earnings.cancelled')}
       </Badge>
     )
   }
   return (
-    <Badge variant="success" className="shrink-0">
+    <Badge variant="success" className={className}>
       {t('partnerPage.earnings.available')}
     </Badge>
   )

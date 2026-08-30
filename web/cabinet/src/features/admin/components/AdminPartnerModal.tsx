@@ -36,6 +36,7 @@ import {
 } from '../hooks/useAdminPartners'
 import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from '@/features/partner/format'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { RecordCard } from '@/components/RecordCard'
 import { cn } from '@/lib/utils'
 import type {
   AdminPartnerDTO,
@@ -383,7 +384,49 @@ function OperationsTab({ partnerID }: { partnerID: number }) {
 
   return (
     <>
-      <div className={cn('overflow-x-auto rounded-lg', SURFACE)}>
+      {/* Карточки только на узком экране, таблица — начиная с sm. Одни и те же
+          данные в двух вёрстках: колоночная таблица в 360 точек не помещается,
+          а карточка на десктопе тратит высоту впустую. */}
+      <div className="space-y-2 sm:hidden">
+        {items.map((op, i) => (
+          <RecordCard
+            key={`m-${op.at}-${i}`}
+            className="bg-secondary"
+            rows={[
+              { label: t('admin.partners.detail.opDate'), value: formatDayShort(op.at) },
+              {
+                label: t('admin.partners.detail.opKind'),
+                value:
+                  op.kind === 'payout'
+                    ? t('admin.partners.detail.opPayout')
+                    : t(`admin.partners.detail.opEarning.${op.detail || 'renewal'}`),
+              },
+              {
+                label: t('admin.partners.detail.opAmount'),
+                value: (
+                  <span
+                    className={cn(
+                      'tabular-nums',
+                      op.status === 'cancelled'
+                        ? 'text-muted-foreground line-through'
+                        : op.amount < 0
+                          ? 'text-foreground'
+                          : 'text-emerald-600 dark:text-emerald-400',
+                    )}
+                  >
+                    {op.amount < 0 ? '−' : '+'}
+                    {formatMoney(Math.abs(op.amount))}
+                  </span>
+                ),
+              },
+              { label: t('admin.partners.detail.opRef'), value: op.ref || op.note || '—', mono: true },
+            ]}
+            footer={<OperationStatusChip status={op.status} block />}
+          />
+        ))}
+      </div>
+
+      <div className={cn('hidden overflow-x-auto rounded-lg sm:block', SURFACE)}>
         <table className="w-full min-w-[520px] border-collapse text-sm">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -527,7 +570,7 @@ export function CopyValue({ value }: { value: string }) {
  * читал английский слаг и додумывал смысл. Цвет по общему правилу: успех
  * зелёный, отказ красный, ожидание синее.
  */
-function OperationStatusChip({ status }: { status: string }) {
+function OperationStatusChip({ status, block }: { status: string; block?: boolean }) {
   const { t } = useTranslation()
   const map: Record<string, { label: string; className: string }> = {
     available: { label: t('partnerPage.earnings.available'), className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
@@ -540,11 +583,19 @@ function OperationStatusChip({ status }: { status: string }) {
   }
   const view = map[status] ?? { label: status, className: 'bg-card text-muted-foreground' }
   return (
-    <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', view.className)}>{view.label}</span>
+    <span
+      className={cn(
+        'rounded-full px-2 py-0.5 text-[11px] font-medium',
+        block && 'block rounded-lg py-1.5 text-center text-xs',
+        view.className,
+      )}
+    >
+      {view.label}
+    </span>
   )
 }
 
-export function PayoutStatusChip({ status }: { status: string }) {
+export function PayoutStatusChip({ status, block }: { status: string; block?: boolean }) {
   const { t } = useTranslation()
   const styles: Record<string, string> = {
     paid: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
@@ -553,7 +604,13 @@ export function PayoutStatusChip({ status }: { status: string }) {
     rejected: 'bg-destructive/15 text-destructive',
   }
   return (
-    <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status] ?? styles.rejected)}>
+    <span
+      className={cn(
+        'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium',
+        block && 'block rounded-lg py-1.5 text-center text-xs',
+        styles[status] ?? styles.rejected,
+      )}
+    >
       {t(`partnerPage.payouts.status${status.charAt(0).toUpperCase()}${status.slice(1)}`)}
     </span>
   )
