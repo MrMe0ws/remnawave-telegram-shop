@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TrendingUp, Briefcase, LayoutGrid, Link2, Users, Receipt, Banknote, type LucideIcon } from 'lucide-react'
+import {
+  TrendingUp,
+  Briefcase,
+  LayoutGrid,
+  Link2,
+  Users,
+  Receipt,
+  Banknote,
+  CreditCard,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { RevealItem } from '@/components/PageReveal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -152,16 +163,19 @@ function PartnerOverview({
 
       <RevealItem className="grid gap-3 sm:grid-cols-3">
         <StatCard
+          icon={Users}
           label={t('partnerPage.overview.customers')}
           value={String(summary.customers)}
           sub={t('partnerPage.overview.customersWeek', { n: summary.customers_last_week })}
         />
         <StatCard
+          icon={CreditCard}
           label={t('partnerPage.overview.paying')}
           value={String(summary.paying)}
           sub={t('partnerPage.overview.conversion', { n: summary.conversion_pct })}
         />
         <StatCard
+          icon={Wallet}
           label={t('partnerPage.overview.earned')}
           value={formatMoney(summary.earned_total)}
           sub={t('partnerPage.overview.earnedMonth', { amount: formatMoney(summary.earned_last_month) })}
@@ -196,11 +210,11 @@ function PartnerOverview({
             <dl className="divide-y divide-border rounded-lg border border-border text-sm">
               <TermRow
                 label={t('partnerPage.terms.firstPayment')}
-                value={<Badge variant="secondary">{formatPercent(partner.first_percent)}</Badge>}
+                value={<Badge>{formatPercent(partner.first_percent)}</Badge>}
               />
               <TermRow
                 label={t('partnerPage.terms.renewals')}
-                value={<Badge variant="secondary">{formatPercent(partner.renewal_percent)}</Badge>}
+                value={<Badge>{formatPercent(partner.renewal_percent)}</Badge>}
               />
               <TermRow
                 label={t('partnerPage.terms.hold')}
@@ -232,7 +246,7 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
   const current = months[Math.min(Math.max(active, 0), months.length - 1)]
   const max = Math.max(...months.map((m) => m.amount), 1)
   const width = 300
-  const height = 88
+  const height = 100
   const gap = 8
   const barWidth = Math.max((width - gap * (months.length - 1)) / months.length, 4)
 
@@ -256,10 +270,22 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
         })}
       >
         {months.map((m, i) => {
-          const barHeight = Math.max((m.amount / max) * (height - 8), 2)
+          const barHeight = Math.max((m.amount / max) * (height - 20), 2)
+          const cx = i * (barWidth + gap) + barWidth / 2
           return (
+            <g key={m.month}>
+              {i === active ? (
+                <text
+                  x={cx}
+                  y={Math.max(height - barHeight - 4, 9)}
+                  textAnchor="middle"
+                  className="fill-muted-foreground"
+                  fontSize={9}
+                >
+                  {formatMoney(m.amount)}
+                </text>
+              ) : null}
             <rect
-              key={m.month}
               x={i * (barWidth + gap)}
               y={height - barHeight}
               width={barWidth}
@@ -273,6 +299,7 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
               onFocus={() => setActive(i)}
               onClick={() => setActive(i)}
             />
+            </g>
           )
         })}
       </svg>
@@ -287,11 +314,24 @@ function MonthsChart({ months }: { months: { month: string; amount: number }[] }
   )
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  sub: string
+}) {
   return (
     <Card>
       <CardContent className="pt-4">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+          <Icon size={13} className="shrink-0 text-primary" />
+          {label}
+        </p>
         <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
       </CardContent>

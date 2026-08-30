@@ -5,7 +5,7 @@ import { Handshake, Check, X, UserPlus, Loader2, AlertTriangle, FileText, Users,
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
-import { AdminPartnerModal, PayoutStatusChip } from '../components/AdminPartnerModal'
+import { AdminPartnerModal, PayoutStatusChip, CopyValue } from '../components/AdminPartnerModal'
 import {
   useAdminPartners,
   useAdminPartnerApprove,
@@ -495,7 +495,7 @@ function PayoutCard({
             <span className="text-lg font-semibold tabular-nums">{formatMoney(payout.amount)}</span>
             <PayoutStatusChip status={payout.status} />
           </div>
-          <p className="font-mono text-xs">{payout.details_snapshot || '—'}</p>
+          <CopyValue value={payout.details_snapshot || ''} />
           <p className="text-xs text-muted-foreground">
             {t('admin.partners.payouts.requested', { date: formatDayShort(payout.requested_at) })} ·{' '}
             {t('admin.partners.payouts.index', { n: payout.payout_index })}

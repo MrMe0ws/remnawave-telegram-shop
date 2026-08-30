@@ -145,3 +145,28 @@ func TestRoundMoney(t *testing.T) {
 		}
 	}
 }
+
+// Администратору маска не нужна: он разбирает споры и ищет людей в поддержке.
+func TestAdminCustomerLabel_notMasked(t *testing.T) {
+	cases := []struct {
+		name       string
+		username   *string
+		email      *string
+		telegramID int64
+		webOnly    bool
+		want       string
+	}{
+		{"username как есть", strPtr("cat_tac_cat"), nil, 78123456, false, "@cat_tac_cat"},
+		{"собака не дублируется", strPtr("@bob"), nil, 0, false, "@bob"},
+		{"почта как есть", nil, strPtr("andrey@mail.ru"), 0, true, "andrey@mail.ru"},
+		{"telegram id целиком", nil, nil, 78123456, false, "78123456"},
+		{"без контактов — прочерк", nil, nil, 0, true, "—"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := adminCustomerLabel(tc.username, tc.email, tc.telegramID, tc.webOnly); got != tc.want {
+				t.Fatalf("adminCustomerLabel = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

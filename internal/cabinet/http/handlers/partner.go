@@ -205,6 +205,29 @@ func partnerCustomerLabel(username, email *string, telegramID int64, webOnly boo
 	return utils.MaskHalfInt64(telegramID)
 }
 
+// adminCustomerLabel — подпись человека для администратора: без маскирования.
+//
+// Маска существует ради одного сценария — партнёр не должен получить контакты
+// приведённых им людей. Администратору она только мешает: он разбирает споры,
+// ищет человека в поддержке и сверяет реквизиты, и «@ca***at» для этого
+// бесполезен.
+func adminCustomerLabel(username, email *string, telegramID int64, webOnly bool) string {
+	if username != nil {
+		if u := strings.TrimPrefix(strings.TrimSpace(*username), "@"); u != "" {
+			return "@" + u
+		}
+	}
+	if email != nil {
+		if e := strings.TrimSpace(*email); e != "" {
+			return e
+		}
+	}
+	if webOnly || telegramID == 0 {
+		return "—"
+	}
+	return strconv.FormatInt(telegramID, 10)
+}
+
 // maskPartnerHandle прячет середину имени: «cat_tac_cat» → «@ca***at».
 // Короткие имена сокращаются сильнее, чтобы из двух символов не восстановить
 // целое.

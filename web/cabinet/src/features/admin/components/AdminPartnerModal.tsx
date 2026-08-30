@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Handshake, Pause, Play, Ban, Scale, SlidersHorizontal, Loader2 } from 'lucide-react'
+import { Handshake, Pause, Play, Ban, Scale, SlidersHorizontal, Loader2, Copy, Check } from 'lucide-react'
 
 import { AdminModal } from './AdminModal'
 import {
@@ -10,6 +10,7 @@ import {
   useAdminPartnerAdjust,
 } from '../hooks/useAdminPartners'
 import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from '@/features/partner/format'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { cn } from '@/lib/utils'
 import type { AdminPartnerDTO } from '@/lib/types/admin'
 
@@ -50,7 +51,7 @@ export function AdminPartnerModal({
       onClose={onClose}
       title={partner?.label ?? t('admin.partners.title')}
       icon={Handshake}
-      panelClassName="max-w-3xl"
+      panelClassName="max-w-5xl"
     >
       {isLoading || !partner ? (
         <div className="flex justify-center py-10">
@@ -107,7 +108,7 @@ export function AdminPartnerModal({
             ) : null}
           </div>
 
-          <div role="tablist" className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+          <div role="tablist" className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1 lg:overflow-visible">
             {tabs.map((item) => (
               <button
                 key={item.id}
@@ -144,7 +145,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-3 lg:gap-3">
         <Metric
           label={t('admin.partners.detail.earnedTotal')}
           value={formatMoney(partner.total_earned)}
@@ -194,7 +195,10 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
           label={t('admin.partners.terms.linksLimit')}
           value={partner.links_limit ?? t('admin.partners.terms.global')}
         />
-        <Row label={t('admin.partners.detail.payoutDetails')} value={partner.payout_details || '—'} />
+        <Row
+          label={t('admin.partners.detail.payoutDetails')}
+          value={<CopyValue value={partner.payout_details || ''} />}
+        />
       </dl>
 
       {partner.app_about ? (
@@ -306,11 +310,18 @@ function OperationsTab({ operations }: { operations: { at: string; kind: string;
                   : t(`admin.partners.detail.opEarning.${op.detail || 'renewal'}`)}
               </td>
               <td className="px-2 py-2 text-xs text-muted-foreground">{op.ref || op.note || '—'}</td>
-              <td className={cn('px-2 py-2 text-right tabular-nums', op.amount < 0 && 'text-muted-foreground')}>
+              <td
+                className={cn(
+                  'px-2 py-2 text-right font-medium tabular-nums',
+                  op.amount < 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400',
+                )}
+              >
                 {op.amount < 0 ? '−' : '+'}
                 {formatMoney(Math.abs(op.amount))}
               </td>
-              <td className="px-2 py-2 text-right text-xs text-muted-foreground">{op.status}</td>
+              <td className="px-2 py-2 text-right">
+                <OperationStatusChip status={op.status} />
+              </td>
             </tr>
           ))}
         </tbody>
@@ -341,13 +352,61 @@ function PayoutsTab({ payouts }: { payouts: { id: number; amount: number; status
   )
 }
 
+/**
+ * Значение с кнопкой копирования.
+ *
+ * Реквизиты и номера переводов переносят в банковское приложение руками —
+ * выделять их мышью из строки таблицы неудобно и легко прихватить лишнее.
+ */
+export function CopyValue({ value }: { value: string }) {
+  const { state, copy } = useCopyToClipboard()
+  if (!value) return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="font-mono text-xs">{value}</span>
+      <button
+        type="button"
+        onClick={() => void copy(value)}
+        className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        aria-label="copy"
+      >
+        {state === 'done' ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+      </button>
+    </span>
+  )
+}
+
+/**
+ * Статус строки в ленте операций.
+ *
+ * Раньше сюда падало сырое значение из базы («available», «pending») — админ
+ * читал английский слаг и додумывал смысл. Цвет по общему правилу: успех
+ * зелёный, отказ красный, ожидание синее.
+ */
+function OperationStatusChip({ status }: { status: string }) {
+  const { t } = useTranslation()
+  const map: Record<string, { label: string; className: string }> = {
+    available: { label: t('partnerPage.earnings.available'), className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+    hold: { label: t('partnerPage.earnings.hold'), className: 'bg-primary/15 text-primary' },
+    cancelled: { label: t('partnerPage.earnings.cancelled'), className: 'bg-destructive/15 text-destructive' },
+    paid: { label: t('partnerPage.payouts.statusPaid'), className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+    approved: { label: t('partnerPage.payouts.statusApproved'), className: 'bg-primary/15 text-primary' },
+    pending: { label: t('partnerPage.payouts.statusPending'), className: 'bg-primary/15 text-primary' },
+    rejected: { label: t('partnerPage.payouts.statusRejected'), className: 'bg-destructive/15 text-destructive' },
+  }
+  const view = map[status] ?? { label: status, className: 'bg-secondary text-muted-foreground' }
+  return (
+    <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', view.className)}>{view.label}</span>
+  )
+}
+
 export function PayoutStatusChip({ status }: { status: string }) {
   const { t } = useTranslation()
   const styles: Record<string, string> = {
     paid: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
     approved: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
     pending: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-    rejected: 'bg-muted text-muted-foreground',
+    rejected: 'bg-destructive/15 text-destructive',
   }
   return (
     <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status] ?? styles.rejected)}>

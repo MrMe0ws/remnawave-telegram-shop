@@ -432,6 +432,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                       strokeWidth={1.75}
                     />
                     {label}
+                    {to === '/partner' && partnerMaxPercent > 0 ? (
+                      <span className="ml-auto shrink-0 rounded-full bg-primary/12 px-2 py-0.5 text-xs font-semibold text-primary">
+                        {t('nav.partnerBadge', { percent: `${partnerMaxPercent}%` })}
+                      </span>
+                    ) : null}
                   </Link>
                 )
               })}

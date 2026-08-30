@@ -37,16 +37,6 @@ export default function ReferralProgramPage() {
   const stats = data?.stats
   const bonusClass = 'font-semibold text-emerald-600 dark:text-emerald-400'
 
-  // Пример на 6 месяцев считаем той же формулой, что и бэкенд: повышенная
-  // ставка за первый оплаченный месяц плюс обычная за каждый следующий.
-  // Абстрактное правило люди пересчитывают в уме неохотно, конкретное число
-  // читается сразу.
-  const monthlyExample = useMemo(() => {
-    const first = data?.referral_first_referrer_days ?? 0
-    const repeat = data?.referral_repeat_referrer_days ?? 0
-    return first + repeat * 5
-  }, [data?.referral_first_referrer_days, data?.referral_repeat_referrer_days])
-
   return (
     <AppLayout>
       <PageReveal className="mx-auto w-full max-w-2xl space-y-6">
@@ -96,12 +86,6 @@ export default function ReferralProgramPage() {
                           />
                         </li>
                       </ul>
-                      <p className="text-xs">
-                        {t('referralPage.howProgressiveMonthlyExample', {
-                          example: monthlyExample,
-                          referee: data.referral_first_referee_days ?? 0,
-                        })}
-                      </p>
                       {/* Обе ссылки ведут на один аккаунт — без этой строчки
                           регулярно спрашивают, какую из них «правильную» давать. */}
                       <p className="text-xs">{t('referralPage.linksHint')}</p>
@@ -142,7 +126,6 @@ export default function ReferralProgramPage() {
                   />
                 </p>
               )}
-              <p className="text-xs">{t('referralPage.howLinksHint')}</p>
             </CardContent>
           </Card>
           </RevealItem>

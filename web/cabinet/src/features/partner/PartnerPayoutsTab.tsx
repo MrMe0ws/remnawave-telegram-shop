@@ -309,12 +309,12 @@ function PayoutStatus({ status }: { status: string }) {
     )
   if (status === 'approved')
     return (
-      <Badge variant="secondary" className="shrink-0">
+      <Badge variant="default" className="shrink-0">
         {t('partnerPage.payouts.statusApproved')}
       </Badge>
     )
   return (
-    <Badge variant="secondary" className="shrink-0">
+    <Badge variant="default" className="shrink-0">
       {t('partnerPage.payouts.statusPending')}
     </Badge>
   )

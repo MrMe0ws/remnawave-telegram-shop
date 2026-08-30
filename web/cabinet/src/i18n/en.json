@@ -560,7 +560,7 @@
         "title": "Partner application",
         "titleAgain": "Apply again",
         "about": "Tell us about yourself and your audience",
-        "aboutPlaceholder": "I run a Telegram channel about bypassing blocks, 12k subscribers…",
+        "aboutPlaceholder": "I run a Telegram channel, 12k subscribers…",
         "channels": "Channels: Telegram, websites, YouTube",
         "channelsPlaceholder": "@mychannel, youtube.com/@review",
         "expected": "How many clients do you expect to bring per month",
@@ -1471,8 +1471,8 @@
           "rejected": "revoked"
         },
         "terms": {
-          "first": "First payment",
-          "renewal": "Renewals",
+          "first": "First payment, %",
+          "renewal": "Renewals, %",
           "linksLimit": "Stream limit",
           "global": "default",
           "individual": "custom",

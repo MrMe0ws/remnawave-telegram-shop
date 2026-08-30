@@ -109,7 +109,7 @@ func adminPartnerToDTO(row database.PartnerAdminRow) adminPartnerDTO {
 	return adminPartnerDTO{
 		ID:     row.ID,
 		Status: row.Status,
-		Label: partnerCustomerLabel(row.CustomerUsername, row.CustomerEmail,
+		Label: adminCustomerLabel(row.CustomerUsername, row.CustomerEmail,
 			row.CustomerTelegramID, row.CustomerIsWebOnly),
 		FirstPercent:      row.FirstPercent,
 		RenewalPercent:    row.RenewalPercent,
@@ -388,7 +388,7 @@ func (h *AdminPartnersHandler) detail(w http.ResponseWriter, r *http.Request, pa
 	}
 	for _, c := range customers {
 		resp.Customers = append(resp.Customers, partnerCustomerDTO{
-			Label:      partnerCustomerLabel(c.TelegramUsername, c.Email, c.TelegramID, c.IsWebOnly),
+			Label:      adminCustomerLabel(c.TelegramUsername, c.Email, c.TelegramID, c.IsWebOnly),
 			Active:     c.Active,
 			HasPaid:    c.HasPaid,
 			Earned:     c.Earned,
@@ -455,7 +455,7 @@ func (h *AdminPartnersHandler) listPayouts(w http.ResponseWriter, r *http.Reques
 		items = append(items, adminPartnerPayoutDTO{
 			ID:        row.ID,
 			PartnerID: row.PartnerID,
-			PartnerLabel: partnerCustomerLabel(row.CustomerUsername, row.CustomerEmail,
+			PartnerLabel: adminCustomerLabel(row.CustomerUsername, row.CustomerEmail,
 				row.CustomerTelegramID, row.CustomerIsWebOnly),
 			Amount:          row.Amount,
 			Status:          row.Status,

@@ -235,7 +235,7 @@ function StreamCard({
           ) : (
             <>
               <p className="font-medium">{link.name}</p>
-              <Badge variant={link.archived ? 'secondary' : 'default'}>
+              <Badge variant={link.archived ? 'default' : 'success'}>
                 {link.archived ? t('partnerPage.links.archived') : t('partnerPage.links.active')}
               </Badge>
             </>
@@ -246,6 +246,14 @@ function StreamCard({
           <ReferralCopyRow
             label={t('partnerPage.links.botLink')}
             value={link.bot_link}
+            canShare={false}
+            onShare={() => {}}
+          />
+        ) : null}
+        {link.web_link ? (
+          <ReferralCopyRow
+            label={t('partnerPage.links.webLink')}
+            value={link.web_link}
             canShare={false}
             onShare={() => {}}
           />

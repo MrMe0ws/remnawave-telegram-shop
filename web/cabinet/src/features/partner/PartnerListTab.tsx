@@ -66,7 +66,7 @@ export function PartnerCustomersTab() {
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <Badge variant={row.has_paid ? (row.active ? 'success' : 'secondary') : 'secondary'}>
+                    <Badge variant={row.has_paid ? (row.active ? 'success' : 'destructive') : 'secondary'}>
                       {row.has_paid
                         ? row.active
                           ? t('partnerPage.customers.paying')
@@ -198,7 +198,7 @@ function EarningStatus({ status, holdUntil }: { status: string; holdUntil?: stri
   const { t } = useTranslation()
   if (status === 'hold') {
     return (
-      <Badge variant="secondary" className="shrink-0">
+      <Badge variant="default" className="shrink-0">
         {holdUntil
           ? t('partnerPage.earnings.holdUntil', { date: formatDayMonth(holdUntil) })
           : t('partnerPage.earnings.hold')}
@@ -212,7 +212,11 @@ function EarningStatus({ status, holdUntil }: { status: string; holdUntil?: stri
       </Badge>
     )
   }
-  return <Badge className="shrink-0">{t('partnerPage.earnings.available')}</Badge>
+  return (
+    <Badge variant="success" className="shrink-0">
+      {t('partnerPage.earnings.available')}
+    </Badge>
+  )
 }
 
 function ListSkeleton() {
