@@ -67,17 +67,21 @@ type refereeRowDTO struct {
 }
 
 type referralsResp struct {
-	ReferrerTelegramID   int64            `json:"referrer_telegram_id"`
-	Stats                referralStatsDTO `json:"stats"`
-	Referees             []refereeRowDTO  `json:"referees"`
-	BotStartLink         string           `json:"bot_start_link,omitempty"`
-	CabinetRegisterLink  string           `json:"cabinet_register_link,omitempty"`
-	ReferralMode         string           `json:"referral_mode"`
+	ReferrerTelegramID  int64            `json:"referrer_telegram_id"`
+	Stats               referralStatsDTO `json:"stats"`
+	Referees            []refereeRowDTO  `json:"referees"`
+	BotStartLink        string           `json:"bot_start_link,omitempty"`
+	CabinetRegisterLink string           `json:"cabinet_register_link,omitempty"`
+	ReferralMode        string           `json:"referral_mode"`
 	// Параметры бонусов как в боте (для подробного UI).
-	ReferralBonusDaysDefault    int `json:"referral_bonus_days_default"`
-	ReferralFirstReferrerDays   int `json:"referral_first_referrer_days,omitempty"`
-	ReferralFirstRefereeDays    int `json:"referral_first_referee_days,omitempty"`
-	ReferralRepeatReferrerDays  int `json:"referral_repeat_referrer_days,omitempty"`
+	ReferralBonusDaysDefault   int `json:"referral_bonus_days_default"`
+	ReferralFirstReferrerDays  int `json:"referral_first_referrer_days,omitempty"`
+	ReferralFirstRefereeDays   int `json:"referral_first_referee_days,omitempty"`
+	ReferralRepeatReferrerDays int `json:"referral_repeat_referrer_days,omitempty"`
+	// Помесячное начисление бонуса пригласившему. Без этого флага страница
+	// обещала бы фиксированные дни там, где за годовую оплату начислят кратно
+	// больше.
+	ReferralScaleByMonths bool `json:"referral_scale_by_months"`
 }
 
 // GetReferrals — GET /cabinet/api/me/referrals.
@@ -152,12 +156,12 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 	}
 
 	dto := referralStatsDTO{
-		Total:            stats.Total,
-		Paid:             stats.Paid,
-		Active:           stats.Active,
-		ConversionPct:    stats.Conversion,
-		EarnedDaysTotal:  stats.EarnedTotal,
-		EarnedDaysLastMo: stats.EarnedLastMonth,
+		Total:              stats.Total,
+		Paid:               stats.Paid,
+		Active:             stats.Active,
+		ConversionPct:      stats.Conversion,
+		EarnedDaysTotal:    stats.EarnedTotal,
+		EarnedDaysLastMo:   stats.EarnedLastMonth,
 		ReferralDaysPerPay: config.GetReferralDays(),
 	}
 
@@ -172,6 +176,7 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 		resp.ReferralFirstReferrerDays = config.ReferralFirstReferrerDays()
 		resp.ReferralFirstRefereeDays = config.ReferralFirstRefereeDays()
 		resp.ReferralRepeatReferrerDays = config.ReferralRepeatReferrerDays()
+		resp.ReferralScaleByMonths = config.ReferralScaleByMonths()
 	}
 
 	if u := telegramBotStartURL(config.BotURL(), tg); u != "" {
@@ -205,16 +210,16 @@ func telegramBotStartURL(botURL string, referrerTelegramID int64) string {
 }
 
 type purchaseRowDTO struct {
-	ID           int64    `json:"id"`
-	Amount       float64  `json:"amount"`
-	Currency     string   `json:"currency"`
-	Status       string   `json:"status"`
-	InvoiceType  string   `json:"invoice_type"`
-	PurchaseKind string   `json:"purchase_kind"`
-	Month        int      `json:"month"`
-	ExtraHwid    int      `json:"extra_hwid"`
-	PaidAt       *string  `json:"paid_at,omitempty"`
-	CreatedAt    string   `json:"created_at"`
+	ID           int64   `json:"id"`
+	Amount       float64 `json:"amount"`
+	Currency     string  `json:"currency"`
+	Status       string  `json:"status"`
+	InvoiceType  string  `json:"invoice_type"`
+	PurchaseKind string  `json:"purchase_kind"`
+	Month        int     `json:"month"`
+	ExtraHwid    int     `json:"extra_hwid"`
+	PaidAt       *string `json:"paid_at,omitempty"`
+	CreatedAt    string  `json:"created_at"`
 }
 
 type purchasesResp struct {

@@ -10,27 +10,27 @@
   "cabinet_minimal_footer": "🌐 Cabinet - cabinet.me0ws.ru\n📰 News channel - @VPN_meows_news",
   "cabinet_minimal_btn_trial": {
     "text": "Try free",
-    "emoji_id": "5424972470023104089",    
+    "emoji_id": "5424972470023104089",
     "style": "red"
   },
   "cabinet_minimal_btn_buy": {
     "text": "Buy",
-   "emoji_id": "5350452584119279096",    
+    "emoji_id": "5350452584119279096",
     "style": "red"
   },
   "cabinet_minimal_btn_subscription": {
     "text": "Subscription",
-    "emoji_id": "5283080528818360566",    
+    "emoji_id": "5283080528818360566",
     "style": "green"
   },
   "cabinet_minimal_btn_support": {
     "text": "Support",
-    "emoji_id": "5417915203100613993",    
+    "emoji_id": "5417915203100613993",
     "style": "blue"
   },
   "cabinet_minimal_btn_info": {
     "text": "Guides & info",
-    "emoji_id": "5350481781306958339",    
+    "emoji_id": "5350481781306958339",
     "style": "blue"
   },
   "cabinet_minimal_btn_feedback": {
@@ -176,6 +176,7 @@
   "referral_button": "🤝 Referrals",
   "referral_desc_default": "🚩 For the first successful payment\nmade via your referral link\nyou receive +%d days",
   "referral_desc_progressive": "🚩 Referral bonuses\nFirst top up: you +%d days, referral +%d days\nEach next top up: you +%d days",
+  "referral_desc_progressive_monthly": "🚩 Referral bonuses\n\nWhen your referral pays for a subscription the first time:\n<b>you +%d days for the first paid month and +%d days for each following one</b>\n<b>your referral +%d days</b> as a welcome bonus\n\nFor each of their later payments:\n<b>you +%d days per paid month</b>",
   "referral_stats": "\n\n<b>📊 Your stats:</b>\n👫 Invited: %d\n💳 Paid via your link: %d\nActive referrals: %d\nConversion: %d%%\n📅 Total days earned: %d\nLast month: %d",
   "referral_bonus_granted": "🎁 Referral bonus received: +%d days",
   "referral_first_bonus_granted": "🎁 Bonus for first payment via referral link: +%d days",

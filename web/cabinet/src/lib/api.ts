@@ -24,6 +24,11 @@ import type {
   AdminPaymentsDTO,
   AdminPaymentsListDTO,
   AdminPaymentDetailDTO,
+  AdminPartnerDTO,
+  AdminPartnerDetailDTO,
+  AdminPartnerPayoutDTO,
+  AdminPartnerPendingDTO,
+  AdminPartnerTermsInput,
   AdminPromoCodeDTO,
   AdminPromoGetDTO,
   AdminPromoRedemptionsListDTO,
@@ -119,6 +124,8 @@ export interface AuthBootstrapResponse {
   pwa_short_name?: string
   /** false при FORTUNE_ENABLED=false — пункт «Колесо фортуны» в меню кабинета скрыт (маршрут /fortune доступен по ссылке). */
   fortune_nav_visible?: boolean
+  /** false при PARTNER_PROGRAM_ENABLED=false — пункт «Партнёрам» скрыт. */
+  partner_nav_visible?: boolean
   /** true при SUPPORT_BOT_API=true — чат поддержки в кабинете вместо внешней ссылки. */
   support_chat_enabled?: boolean
   /** false — только тёмная тема, переключатель в шапке скрыт (CABINET_LIGHT_THEME_ENABLED). */
@@ -538,6 +545,141 @@ export interface ReferralsResponse {
   referral_first_referrer_days?: number
   referral_first_referee_days?: number
   referral_repeat_referrer_days?: number
+  /** Помесячное начисление бонуса пригласившему. */
+  referral_scale_by_months?: boolean
+}
+
+/* --- Партнёрская программа ------------------------------------------------
+ *
+ * Не путать с реферальной: рефералка платит днями подписки, партнёрка —
+ * деньгами, и у неё есть баланс, холд и заявки на вывод. Клиент состоит ровно
+ * в одной из программ.
+ */
+
+/** Условия программы — значения по умолчанию из настроек бота. */
+export interface PartnerTerms {
+  first_percent: number
+  renewal_percent: number
+  hold_days: number
+  min_payout: number
+  payout_cooldown_days: number
+  max_links: number
+  count_extra_hwid: boolean
+}
+
+export interface PartnerApplication {
+  about?: string
+  channels?: string
+  expected?: string
+  submitted_at?: string
+  /** Комментарий админа: при отказе объясняет причину. */
+  admin_note?: string
+}
+
+/** Ссылка партнёра. Основная (is_default) и потоки — одна сущность. */
+export interface PartnerLinkDTO {
+  id: number
+  code: string
+  name: string
+  is_default: boolean
+  archived: boolean
+  bot_link?: string
+  web_link?: string
+  customers: number
+  paying: number
+  earned: number
+  /** Пустой поток удаляется физически. */
+  can_delete: boolean
+  /** Поток с историей можно только заархивировать. */
+  can_archive: boolean
+}
+
+export interface PartnerSummaryDTO {
+  customers: number
+  customers_last_week: number
+  paying: number
+  active: number
+  conversion_pct: number
+  earned_total: number
+  earned_last_month: number
+}
+
+export interface PartnerMonthDTO {
+  /** YYYY-MM */
+  month: string
+  amount: number
+}
+
+export interface PartnerAccountDTO {
+  balance: number
+  hold_balance: number
+  reserved_balance: number
+  total_earned: number
+  total_paid: number
+  /** Эффективные проценты партнёра: индивидуальные либо общие. */
+  first_percent: number
+  renewal_percent: number
+  next_hold_release_at?: string
+  can_withdraw: boolean
+  /** Заполнено, пока действует кулдаун между выплатами. */
+  payout_available_at?: string
+  has_open_payout: boolean
+  payout_method?: string
+  payout_details?: string
+  links_used: number
+  links_limit: number
+  summary: PartnerSummaryDTO
+  months: PartnerMonthDTO[]
+  links: PartnerLinkDTO[]
+}
+
+export type PartnerStatus = 'none' | 'pending' | 'active' | 'suspended' | 'rejected'
+
+export interface PartnerStateResponse {
+  enabled: boolean
+  applications_enabled: boolean
+  status: PartnerStatus
+  terms: PartnerTerms
+  application?: PartnerApplication
+  /** Заполнено только у партнёра в работе. */
+  partner?: PartnerAccountDTO
+}
+
+export interface PartnerCustomerDTO {
+  /** Маскированная подпись: контакт клиента партнёру не отдаётся. */
+  label: string
+  active: boolean
+  has_paid: boolean
+  earned: number
+  link_name?: string
+  attached_at: string
+}
+
+export interface PartnerEarningDTO {
+  id: number
+  amount: number
+  percent: number
+  base_amount: number
+  base_currency: string
+  base_amount_rub: number
+  kind: 'first' | 'renewal' | 'adjustment'
+  status: 'hold' | 'available' | 'cancelled'
+  hold_until?: string
+  note?: string
+  customer_label?: string
+  link_name?: string
+  created_at: string
+}
+
+export interface PartnerPayoutDTO {
+  id: number
+  amount: number
+  status: 'pending' | 'approved' | 'paid' | 'rejected'
+  method?: string
+  admin_comment?: string
+  external_ref?: string
+  requested_at: string
+  processed_at?: string
 }
 
 export interface SupportMessageDTO {
@@ -747,6 +889,14 @@ async function request<T>(
   return res.json() as Promise<T>
 }
 
+/** Собирает ?limit=&offset= для листингов с пагинацией. */
+function pageQuery(params?: { limit?: number; offset?: number }): string {
+  const q = new URLSearchParams()
+  if (params?.limit != null) q.set('limit', String(params.limit))
+  if (params?.offset != null) q.set('offset', String(params.offset))
+  return q.toString() ? `?${q.toString()}` : ''
+}
+
 // --- Методы ----------------------------------------------------------------
 
 export const api = {
@@ -935,6 +1085,40 @@ export const api = {
 
   referrals: () =>
     request<ReferralsResponse>('GET', '/me/referrals'),
+
+  partnerState: () => request<PartnerStateResponse>('GET', '/me/partner'),
+
+  partnerApply: (body: { about: string; channels: string; expected: string }) =>
+    request<{ status: PartnerStatus }>('POST', '/me/partner/apply', body),
+
+  partnerCustomers: (params?: { limit?: number; offset?: number }) =>
+    request<{ items: PartnerCustomerDTO[]; total: number }>(
+      'GET',
+      `/me/partner/customers${pageQuery(params)}`,
+    ),
+
+  partnerEarnings: (params?: { limit?: number; offset?: number }) =>
+    request<{ items: PartnerEarningDTO[]; total: number }>(
+      'GET',
+      `/me/partner/earnings${pageQuery(params)}`,
+    ),
+
+  partnerCreateLink: (name: string) =>
+    request<PartnerLinkDTO>('POST', '/me/partner/links', { name }),
+
+  partnerUpdateLink: (id: number, body: { name?: string; archived?: boolean }) =>
+    request<{ ok: boolean }>('PATCH', `/me/partner/links/${id}`, body),
+
+  partnerDeleteLink: (id: number) =>
+    request<{ ok: boolean }>('DELETE', `/me/partner/links/${id}`),
+
+  partnerSavePayoutDetails: (method: string, details: string) =>
+    request<{ ok: boolean }>('PUT', '/me/partner/payout-details', { method, details }),
+
+  partnerPayouts: () => request<{ items: PartnerPayoutDTO[] }>('GET', '/me/partner/payouts'),
+
+  partnerRequestPayout: (amount: number) =>
+    request<PartnerPayoutDTO>('POST', '/me/partner/payouts', { amount }),
 
   supportSummary: () => request<SupportSummaryResponse>('GET', '/support/summary'),
 
@@ -1177,6 +1361,64 @@ export const api = {
   adminTariffUpdate: (id: number, fields: Record<string, unknown>) =>
     request<AdminTariffDTO>('PATCH', `/admin/tariffs/${id}`, fields),
   adminTariffDelete: (id: number) => request<AdminOkDTO>('DELETE', `/admin/tariffs/${id}`),
+
+  // --- Партнёрская программа ---
+
+  adminPartners: (params?: { status?: string; limit?: number; offset?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.set('status', params.status)
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.offset != null) q.set('offset', String(params.offset))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<{ items: AdminPartnerDTO[]; total: number }>('GET', `/admin/partners${suffix}`)
+  },
+
+  adminPartnerPending: () => request<AdminPartnerPendingDTO>('GET', '/admin/partners/pending'),
+
+  adminPartnerDetail: (id: number) =>
+    request<AdminPartnerDetailDTO>('GET', `/admin/partners/${id}`),
+
+  adminPartnerApprove: (id: number, body: AdminPartnerTermsInput) =>
+    request<AdminOkDTO>('POST', `/admin/partners/${id}/approve`, body),
+
+  adminPartnerReject: (id: number, comment: string) =>
+    request<AdminOkDTO>('POST', `/admin/partners/${id}/reject`, { comment }),
+
+  adminPartnerSetStatus: (id: number, status: string, comment = '') =>
+    request<AdminOkDTO>('POST', `/admin/partners/${id}/status`, { status, comment }),
+
+  adminPartnerUpdateTerms: (id: number, body: AdminPartnerTermsInput) =>
+    request<AdminOkDTO>('PATCH', `/admin/partners/${id}`, body),
+
+  adminPartnerAdjust: (id: number, amount: number, comment: string) =>
+    request<AdminOkDTO>('POST', `/admin/partners/${id}/adjust`, { amount, comment }),
+
+  adminPartnerGrant: (body: {
+    customer_id?: number
+    telegram_id?: number
+    first_percent?: number | null
+    renewal_percent?: number | null
+    comment?: string
+  }) => request<AdminOkDTO>('POST', '/admin/partners/grant', body),
+
+  adminPartnerPayouts: (params?: { status?: string; limit?: number; offset?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.status) q.set('status', params.status)
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.offset != null) q.set('offset', String(params.offset))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<{ items: AdminPartnerPayoutDTO[]; total: number }>('GET', `/admin/partners/payouts${suffix}`)
+  },
+
+  adminPartnerPayoutAction: (
+    id: number,
+    action: 'approve' | 'paid' | 'reject',
+    body: { external_ref?: string; comment?: string } = {},
+  ) =>
+    request<AdminOkDTO>('POST', `/admin/partners/payouts/${id}/${action}`, {
+      external_ref: body.external_ref ?? '',
+      comment: body.comment ?? '',
+    }),
 
   adminLoyaltyTiers: () => request<AdminLoyaltyTierDTO[]>('GET', '/admin/loyalty/tiers'),
   adminLoyaltyCreateTier: (body: unknown) =>

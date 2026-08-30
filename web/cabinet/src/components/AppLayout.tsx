@@ -11,6 +11,7 @@ import {
   X,
   TicketPercent,
   Users,
+  Handshake,
   Gift,
   LogOut,
   ShieldCheck,
@@ -66,6 +67,7 @@ const overflowNavMainItems: { to: string; icon: typeof Home; labelKey: string }[
   { to: '/support', icon: MessageCircle, labelKey: 'nav.support' },
   { to: '/promocodes', icon: TicketPercent, labelKey: 'nav.promocodes' },
   { to: '/referral', icon: Users, labelKey: 'nav.referral' },
+  { to: '/partner', icon: Handshake, labelKey: 'nav.partner' },
   { to: '/fortune', icon: Gift, labelKey: 'nav.fortune' },
 ]
 
@@ -111,11 +113,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   const decorTheme = useCabinetDecorTheme()
   const { data: bootstrap } = useAuthBootstrap()
   const overflowMainNav = useMemo(() => {
-    if (bootstrap?.fortune_nav_visible === false) {
-      return overflowNavMainItems.filter((item) => item.to !== '/fortune')
-    }
-    return overflowNavMainItems
-  }, [bootstrap?.fortune_nav_visible])
+    // Выключенные разделы убираются из меню: пункт, ведущий на «недоступно», —
+    // это обещание, которого продукт не выполняет.
+    const hidden = new Set<string>()
+    if (bootstrap?.fortune_nav_visible === false) hidden.add('/fortune')
+    if (bootstrap?.partner_nav_visible === false) hidden.add('/partner')
+    if (hidden.size === 0) return overflowNavMainItems
+    return overflowNavMainItems.filter((item) => !hidden.has(item.to))
+  }, [bootstrap?.fortune_nav_visible, bootstrap?.partner_nav_visible])
   const user = useAuthStore((s) => s.user)
   const navItems = useMemo(() => {
     if (user?.is_admin) {

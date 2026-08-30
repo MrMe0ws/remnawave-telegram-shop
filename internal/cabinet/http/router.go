@@ -86,7 +86,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// auth/service — так тот же сервис переиспользуется будущим merge-сервисом.
 	customerRepo := database.NewCustomerRepository(pool)
 	referralRepo := database.NewReferralRepository(pool)
-	customerBootstrap := bootstrap.NewCustomerBootstrap(customerRepo, linkRepo, accountRepo, referralRepo)
+	partnerRepo := database.NewPartnerRepository(pool)
+	customerBootstrap := bootstrap.NewCustomerBootstrap(customerRepo, linkRepo, accountRepo, referralRepo, partnerRepo)
 
 	// TariffRepository — только для tariffs-режима; в classic-режиме catalog
 	// ходит только в env. Создаём всегда и отдаём catalog'у: он сам выбирает
@@ -233,6 +234,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	connectInviteHandler := handlers.NewConnectInvite(subscriptionSvc, cabcfg.JWTSecret())
 
 	activityHandler := handlers.NewCabinetActivity(linkRepo, identityRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
+	partnerHandler := handlers.NewPartner(customerBootstrap, customerRepo, partnerRepo, cabcfg.PublicURL(), config.BotURL())
 
 	promoRepo := database.NewPromoRepository(pool)
 	fortuneSvc := cabsvc.NewFortuneService(pool, linkRepo, customerBootstrap, customerRepo, purchaseRepo, promoRepo, fortRepo, rw)
@@ -360,6 +362,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminPromosHandler := handlers.NewAdminPromos(promoRepo)
 	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
+	adminPartnersHandler := handlers.NewAdminPartners(partnerRepo, customerRepo, config.BotURL())
 	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, broadcastSender, tgBot)
 	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
 	adminSettingsHandler := handlers.NewAdminSettings(runtimeSettingsRepo)
@@ -369,8 +372,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		adminSyncHandler = handlers.NewAdminSync(syncService)
 	}
 
-	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
-		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
+	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, partnerHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
+		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
@@ -455,6 +458,7 @@ func registerAPIRoutes(
 	subscription *handlers.SubscriptionHandler,
 	connectInvite *handlers.ConnectInviteHandler,
 	activity *handlers.CabinetActivityHandler,
+	partner *handlers.PartnerHandler,
 	promocodes *handlers.PromoCodesHandler,
 	oauthH *handlers.OAuthHandler,
 	pay *handlers.PaymentsHandler,
@@ -470,6 +474,7 @@ func registerAPIRoutes(
 	adminPromos *handlers.AdminPromosHandler,
 	adminTariffs *handlers.AdminTariffsHandler,
 	adminLoyalty *handlers.AdminLoyaltyHandler,
+	adminPartners *handlers.AdminPartnersHandler,
 	adminBroadcast *handlers.AdminBroadcastHandler,
 	adminInfra *handlers.AdminInfraHandler,
 	adminSettings *handlers.AdminSettingsHandler,
@@ -1002,6 +1007,68 @@ func registerAPIRoutes(
 		)
 	}
 
+	// Кабинет партнёра. Чтение — только авторизация и лимит; всё, что меняет
+	// деньги или ссылки, дополнительно проходит CSRF, как остальные мутирующие
+	// ручки кабинета.
+	if partner != nil {
+		partnerRead := func(h http.HandlerFunc, route string) http.Handler {
+			return middleware.Chain(h,
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey(route)),
+			)
+		}
+		partnerWrite := func(h http.HandlerFunc, route string) http.Handler {
+			return middleware.Chain(h,
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.CSRF(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey(route)),
+			)
+		}
+
+		api.Handle("/cabinet/api/me/partner",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: partnerRead(partner.GetState, "partner_state"),
+			}),
+		)
+		api.Handle("/cabinet/api/me/partner/apply",
+			methodRouter(map[string]http.Handler{
+				http.MethodPost: partnerWrite(partner.Apply, "partner_apply"),
+			}),
+		)
+		api.Handle("/cabinet/api/me/partner/customers",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: partnerRead(partner.GetCustomers, "partner_customers"),
+			}),
+		)
+		api.Handle("/cabinet/api/me/partner/earnings",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: partnerRead(partner.GetEarnings, "partner_earnings"),
+			}),
+		)
+		api.Handle("/cabinet/api/me/partner/links",
+			methodRouter(map[string]http.Handler{
+				http.MethodPost: partnerWrite(partner.CreateLink, "partner_link_create"),
+			}),
+		)
+		// Слэш на конце — префиксный маршрут: id потока разбирается из пути.
+		api.Handle("/cabinet/api/me/partner/links/",
+			partnerWrite(partner.LinkByID, "partner_link_edit"),
+		)
+		api.Handle("/cabinet/api/me/partner/payout-details",
+			methodRouter(map[string]http.Handler{
+				http.MethodPut: partnerWrite(partner.PutPayoutDetails, "partner_payout_details"),
+			}),
+		)
+		api.Handle("/cabinet/api/me/partner/payouts",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet:  partnerRead(partner.Payouts, "partner_payouts"),
+				http.MethodPost: partnerWrite(partner.Payouts, "partner_payout_create"),
+			}),
+		)
+	}
+
 	if support != nil {
 		api.Handle("/cabinet/api/support/summary",
 			methodRouter(map[string]http.Handler{
@@ -1331,6 +1398,24 @@ func registerAPIRoutes(
 			middleware.RateLimit(adminAcctLim, accountKey("admin_tariffs_byid")),
 		),
 	)
+
+	// Admin Partners — партнёрская программа: заявки, партнёры, выплаты.
+	// Один префиксный маршрут: разбор действия внутри обработчика, иначе
+	// полтора десятка регистраций с одинаковой цепочкой middleware.
+	if adminPartners != nil {
+		adminPartnersChain := func(h http.Handler, route string) http.Handler {
+			return middleware.Chain(h,
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.CSRF(),
+				middleware.RateLimit(adminAcctLim, accountKey(route)),
+			)
+		}
+		api.Handle("/cabinet/api/admin/partners",
+			adminPartnersChain(http.HandlerFunc(adminPartners.Handle), "admin_partners"))
+		api.Handle("/cabinet/api/admin/partners/",
+			adminPartnersChain(http.HandlerFunc(adminPartners.Handle), "admin_partners_action"))
+	}
 
 	// Admin Loyalty
 	api.Handle("/cabinet/api/admin/loyalty/tiers",

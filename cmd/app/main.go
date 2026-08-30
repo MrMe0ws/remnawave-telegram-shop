@@ -123,11 +123,24 @@ func main() {
 	customerRepository := database.NewCustomerRepository(pool) // Работа с пользователями
 	purchaseRepository := database.NewPurchaseRepository(pool) // Работа с покупками
 	tariffRepository := database.NewTariffRepository(pool)     // Тарифы (SALES_MODE=tariffs)
-	referralRepository := database.NewReferralRepository(pool) // Работа с реферальной системой
+	referralRepository := database.NewReferralRepository(pool)             // Работа с реферальной системой
+	referralLedgerRepository := database.NewReferralBonusLedgerRepository(pool) // Журнал реферальных начислений
 	promoRepository := database.NewPromoRepository(pool)
 	statsRepository := database.NewStatsRepository(pool)
 	infraBillingRepository := database.NewInfraBillingRepository(pool)
 	loyaltyTierRepository := database.NewLoyaltyTierRepository(pool)
+	partnerRepository := database.NewPartnerRepository(pool) // Партнёрская программа
+
+	// Разовое восстановление журнала реферальных начислений по истории покупок.
+	// Без него счётчики «заработано дней» обнулились бы в момент обновления:
+	// экраны читают журнал, а не пересчитывают историю из purchase. Пустая
+	// таблица — единственный признак того, что бэкфилл ещё не выполнялся, так
+	// что повторные старты бота ничего не задваивают.
+	if err := database.BackfillReferralLedger(ctx, referralLedgerRepository); err != nil {
+		// Не фатально: бот работает и с неполной статистикой, а падение на
+		// старте из-за неё оставило бы магазин без продаж.
+		slog.Error("referral ledger backfill failed", "error", err)
+	}
 
 	// Инициализация клиентов для работы с внешними сервисами
 	cryptoPayClient := cryptopay.NewCryptoPayClient(config.CryptoPayUrl(), config.CryptoPayToken())                // Криптоплатежи
@@ -173,7 +186,7 @@ func main() {
 	}
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, referralRepository, cache, receiptQueue, promoService, loyaltyTierRepository)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, referralRepository, referralLedgerRepository, partnerRepository, cache, receiptQueue, promoService, loyaltyTierRepository)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// CryptoPay; YooKassa и Platega — поллинг только если не задан соответствующий WEBHOOK_URL.
@@ -221,11 +234,25 @@ func main() {
 			"schedule", config.MoynalogRetryCron(), "maxAge", config.MoynalogRetryMaxAge())
 	}
 
+	// Раскрытие партнёрского холда: начисления, отлежавшие PARTNER_HOLD_DAYS,
+	// становятся доступными к выводу. Раз в час, а не раз в сутки, чтобы дата
+	// «деньги придут N-го» не разъезжалась с реальностью на полсуток.
+	//
+	// Крон стартует всегда, без проверки PARTNER_PROGRAM_ENABLED: это
+	// рантайм-настройка, её включают из админки без перезапуска, и гейт на
+	// старте запер бы начисления в холде навсегда у всех, кто включил
+	// программу уже после запуска бота. Пустая таблица делает тик бесплатным,
+	// а выключение программы не должно замораживать уже заработанное.
+	partnerHoldCronScheduler := partnerHoldReleaser(partnerRepository)
+	partnerHoldCronScheduler.Start()
+	defer partnerHoldCronScheduler.Stop()
+	slog.Info("Partner hold release cron started", "holdDays", config.PartnerHoldDays())
+
 	// Инициализация сервиса синхронизации с Remnawave
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
 
 	// Создание главного обработчика всех команд и callback'ов бота
-	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository, loyaltyTierRepository)
+	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, partnerRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository, loyaltyTierRepository)
 
 	// Получение информации о боте (username и т.д.)
 	// Используем контекст с таймаутом для GetMe, чтобы избежать зависания при проблемах с сетью
@@ -950,6 +977,35 @@ func lifecycleChecker(lifecycleService *notification.LifecycleService) *cron.Cro
 
 	if err != nil {
 		panic(fmt.Sprintf("Failed to add lifecycle cron job: %v", err))
+	}
+	return c
+}
+
+// partnerHoldReleaser - cron раскрытия партнёрского холда: переводит отлежавшие
+// начисления в доступные к выводу и двигает остатки партнёров.
+//
+// Ошибка тика не фатальна: следующий час подберёт всё, что не успело раскрыться,
+// потому что выборка идёт по состоянию строк, а не по времени последнего запуска.
+func partnerHoldReleaser(partners *database.PartnerRepository) *cron.Cron {
+	c := cron.New()
+
+	_, err := c.AddFunc("0 * * * *", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		released, err := partners.ReleaseDueHolds(ctx, time.Now().UTC())
+		if err != nil {
+			slog.Error("Error releasing partner holds", "error", err)
+			return
+		}
+		for _, r := range released {
+			slog.Info("Partner hold released",
+				"partner_id", r.PartnerID, "amount", r.Amount, "entries", r.Count)
+		}
+	})
+
+	if err != nil {
+		panic(fmt.Sprintf("Failed to add partner hold cron job: %v", err))
 	}
 	return c
 }

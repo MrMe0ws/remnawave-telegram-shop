@@ -125,3 +125,18 @@ function readUrlParamFromHashOrSearch(name: string): string {
   const fromHash = new URLSearchParams(hash).get(name)
   return fromHash ?? ''
 }
+
+/**
+ * Источник, из которого пришёл посетитель, из query-параметров.
+ *
+ * У регистрации одно поле «откуда пришёл», и через него идут обе программы:
+ * `?ref=` — реферальная ссылка (telegram_id пригласившего), `?p=` —
+ * партнёрская. Партнёрский код отправляем с префиксом `p_`, иначе бэкенд не
+ * отличит его от реферального идентификатора.
+ */
+export function acquisitionCodeFromQuery(params: URLSearchParams): string {
+  const ref = (params.get('ref') ?? '').trim()
+  if (ref) return ref
+  const partner = (params.get('p') ?? '').trim()
+  return partner ? `p_${partner.replace(/^p_/i, '')}` : ''
+}

@@ -63,6 +63,18 @@ func buildReferralDescription(langCode string) string {
 	tm := translation.GetInstance()
 	mode := config.ReferralMode()
 	if mode == "progressive" {
+		// Помесячное начисление описывается двумя ставками, поэтому у него свой
+		// текст: прежний обещал бы фиксированные дни там, где за годовую оплату
+		// начислят кратно больше.
+		if config.ReferralScaleByMonths() {
+			return fmt.Sprintf(
+				tm.GetText(langCode, "referral_desc_progressive_monthly"),
+				config.ReferralFirstReferrerDays(),
+				config.ReferralRepeatReferrerDays(),
+				config.ReferralFirstRefereeDays(),
+				config.ReferralRepeatReferrerDays(),
+			)
+		}
 		return fmt.Sprintf(
 			tm.GetText(langCode, "referral_desc_progressive"),
 			config.ReferralFirstReferrerDays(),

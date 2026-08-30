@@ -26,13 +26,14 @@ type CustomerBootstrap struct {
 	linkRepo     *repository.AccountCustomerLinkRepo
 	accountRepo  *repository.AccountRepo      // опционально: предпроверка «аккаунт жив»
 	referralRepo *database.ReferralRepository // опционально: регистрация по ?ref=
+	partnerRepo  *database.PartnerRepository  // опционально: регистрация по ?p=
 }
 
 // NewCustomerBootstrap — конструктор. referralRepo может быть nil — тогда AttachReferralAfterWebRegister не создаёт строки.
 // accountRepo тоже может быть nil: тогда удалённый аккаунт отловится не предпроверкой,
 // а guarded-insert'ом в linkRepo.Create — ценой одной строки-сироты в customer.
-func NewCustomerBootstrap(customerRepo *database.CustomerRepository, linkRepo *repository.AccountCustomerLinkRepo, accountRepo *repository.AccountRepo, referralRepo *database.ReferralRepository) *CustomerBootstrap {
-	return &CustomerBootstrap{customerRepo: customerRepo, linkRepo: linkRepo, accountRepo: accountRepo, referralRepo: referralRepo}
+func NewCustomerBootstrap(customerRepo *database.CustomerRepository, linkRepo *repository.AccountCustomerLinkRepo, accountRepo *repository.AccountRepo, referralRepo *database.ReferralRepository, partnerRepo *database.PartnerRepository) *CustomerBootstrap {
+	return &CustomerBootstrap{customerRepo: customerRepo, linkRepo: linkRepo, accountRepo: accountRepo, referralRepo: referralRepo, partnerRepo: partnerRepo}
 }
 
 // ensureAccountAlive — предпроверка перед созданием customer'а. Возвращает

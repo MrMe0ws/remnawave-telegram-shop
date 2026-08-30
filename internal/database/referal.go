@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"remnawave-tg-shop-bot/internal/config"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -39,10 +38,14 @@ type ReferralStats struct {
 
 type ReferralRepository struct {
 	pool *pgxpool.Pool
+	// Журнал начислений — единственный источник правды по выданным дням.
+	// Собирается здесь же, а не прокидывается снаружи: ему нужен только пул, и
+	// внутренняя сборка избавляет от правки всех вызовов NewReferralRepository.
+	ledger *ReferralBonusLedgerRepository
 }
 
 func NewReferralRepository(pool *pgxpool.Pool) *ReferralRepository {
-	return &ReferralRepository{pool: pool}
+	return &ReferralRepository{pool: pool, ledger: NewReferralBonusLedgerRepository(pool)}
 }
 
 func (r *ReferralRepository) Create(ctx context.Context, referrerID, refereeID int64) (*Referral, error) {
@@ -208,17 +211,15 @@ func (r *ReferralRepository) FindRefereeSummariesByReferrerPage(ctx context.Cont
 	return list, nil
 }
 
-// CalculateEarnedDays рассчитывает количество заработанных дней по рефералам
+// CalculateEarnedDays возвращает фактически начисленные пригласившему дни.
+//
+// Раньше число выводилось из счётчика оплативших рефералов, умноженного на
+// текущую настройку. Такой пересчёт задним числом менял историю при каждой
+// правке настроек и в принципе не умел учитывать множитель за длину периода:
+// из «реферал оплатил трижды» нельзя восстановить, на какой срок.
 func (r *ReferralRepository) CalculateEarnedDays(ctx context.Context, referrerID int64) (int, error) {
-	paidCount, err := r.CountPaidReferralsByReferrer(ctx, referrerID)
-	if err != nil {
-		return 0, err
-	}
-
-	// Каждый оплативший реферал дает дни из конфигурации
-	referralDays := config.GetReferralDays()
-	earnedDays := paidCount * referralDays
-	return earnedDays, nil
+	total, _, err := r.ledger.EarnedDaysByReferrer(ctx, referrerID)
+	return total, err
 }
 
 func (r *ReferralRepository) GetStats(ctx context.Context, referrerID int64) (ReferralStats, error) {
@@ -240,7 +241,9 @@ func (r *ReferralRepository) GetStats(ctx context.Context, referrerID int64) (Re
 		conversion = int(math.Round(float64(paidCount) * 100 / float64(totalCount)))
 	}
 
-	earnedTotal, earnedLastMonth, err := r.calculateEarnedDays(ctx, referrerID, paidCount)
+	// Журнал начислений — единственный источник правды по выданным дням: и
+	// режим, и множитель за длину периода уже вшиты в записанные строки.
+	earnedTotal, earnedLastMonth, err := r.ledger.EarnedDaysByReferrer(ctx, referrerID)
 	if err != nil {
 		return ReferralStats{}, err
 	}
@@ -253,99 +256,6 @@ func (r *ReferralRepository) GetStats(ctx context.Context, referrerID int64) (Re
 		EarnedTotal:     earnedTotal,
 		EarnedLastMonth: earnedLastMonth,
 	}, nil
-}
-
-type paidReferralSummary struct {
-	TotalPaid     int
-	PaidLastMonth int
-	FirstPaidAt   time.Time
-}
-
-func (r *ReferralRepository) calculateEarnedDays(ctx context.Context, referrerID int64, paidCount int) (int, int, error) {
-	cutoff := time.Now().AddDate(0, 0, -30)
-	summaries, err := r.getPaidReferralSummaries(ctx, referrerID, cutoff)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	mode := config.ReferralMode()
-	if mode == "progressive" {
-		firstReferrerDays := config.ReferralFirstReferrerDays()
-		repeatReferrerDays := config.ReferralRepeatReferrerDays()
-
-		earnedTotal := 0
-		earnedLastMonth := 0
-		for _, summary := range summaries {
-			if summary.TotalPaid > 0 {
-				earnedTotal += firstReferrerDays + maxInt(summary.TotalPaid-1, 0)*repeatReferrerDays
-			}
-			if summary.PaidLastMonth > 0 {
-				if !summary.FirstPaidAt.Before(cutoff) {
-					earnedLastMonth += firstReferrerDays + maxInt(summary.PaidLastMonth-1, 0)*repeatReferrerDays
-				} else {
-					earnedLastMonth += summary.PaidLastMonth * repeatReferrerDays
-				}
-			}
-		}
-		return earnedTotal, earnedLastMonth, nil
-	}
-
-	referralDays := config.GetReferralDays()
-	earnedTotal := paidCount * referralDays
-	earnedLastMonth := 0
-	for _, summary := range summaries {
-		if summary.TotalPaid > 0 && !summary.FirstPaidAt.Before(cutoff) {
-			earnedLastMonth += referralDays
-		}
-	}
-	return earnedTotal, earnedLastMonth, nil
-}
-
-func (r *ReferralRepository) getPaidReferralSummaries(ctx context.Context, referrerID int64, cutoff time.Time) (map[int64]paidReferralSummary, error) {
-	query := sq.Select(
-		"r.referee_id",
-		"COUNT(p.id) AS total_paid",
-		"MIN(p.paid_at) AS first_paid_at",
-	).
-		Column(sq.Expr("SUM(CASE WHEN p.paid_at >= ? THEN 1 ELSE 0 END) AS paid_last_month", cutoff)).
-		From("referral r").
-		Join("customer c ON c.telegram_id = r.referee_id").
-		Join("purchase p ON p.customer_id = c.id").
-		Where(sq.Eq{"r.referrer_id": referrerID, "p.status": PurchaseStatusPaid}).
-		GroupBy("r.referee_id").
-		PlaceholderFormat(sq.Dollar)
-
-	sql, args, err := query.ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build paid referral summaries query: %w", err)
-	}
-
-	rows, err := r.pool.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query paid referral summaries: %w", err)
-	}
-	defer rows.Close()
-
-	result := make(map[int64]paidReferralSummary)
-	for rows.Next() {
-		var refereeID int64
-		var summary paidReferralSummary
-		if err := rows.Scan(&refereeID, &summary.TotalPaid, &summary.FirstPaidAt, &summary.PaidLastMonth); err != nil {
-			return nil, fmt.Errorf("failed to scan paid referral summary: %w", err)
-		}
-		result[refereeID] = summary
-	}
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating paid referral summaries: %w", rows.Err())
-	}
-	return result, nil
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func (r *ReferralRepository) FindByReferee(ctx context.Context, refereeID int64) (*Referral, error) {

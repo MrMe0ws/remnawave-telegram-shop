@@ -14,7 +14,7 @@ import { api, ApiError } from '@/lib/api'
 import { getTurnstileToken } from '@/lib/turnstile'
 import { useAuthStore } from '@/store/auth'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
-import { getTelegramInitData } from '@/lib/utils'
+import { getTelegramInitData, acquisitionCodeFromQuery } from '@/lib/utils'
 import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
 import { AuthSocialProviders } from './AuthSocialProviders'
 import { EmailAuthTabs } from './EmailAuthTabs'
@@ -51,7 +51,7 @@ export default function LoginPage() {
     const newPending = sp.get('status') === 'merge_verification_required' && sp.get('reason_code') === 'google_link_email_confirmation_required'
     return [oldPending || newPending, sp.get('masked_email') ?? ''] as const
   })
-  const referralFromUrl = (searchParams.get('ref') ?? '').trim()
+  const referralFromUrl = acquisitionCodeFromQuery(searchParams)
   const { data: bootstrap } = useAuthBootstrap()
   const botHandle = botHandleFromLink(bootstrap?.site_links?.bot)
   const showTelegramWidgetAbove =

@@ -13,10 +13,13 @@ import (
 // StatsRepository агрегаты для админ-экрана «Статистика».
 type StatsRepository struct {
 	pool *pgxpool.Pool
+	// Журнал реферальных начислений. Собирается внутри — ему нужен только пул,
+	// а вызовы NewStatsRepository от этого не меняются.
+	referralLedger *ReferralBonusLedgerRepository
 }
 
 func NewStatsRepository(pool *pgxpool.Pool) *StatsRepository {
-	return &StatsRepository{pool: pool}
+	return &StatsRepository{pool: pool, referralLedger: NewReferralBonusLedgerRepository(pool)}
 }
 
 const sqlSubPurchase = `p.status = 'paid' AND p.month > 0 AND p.purchase_kind IN ('subscription', 'tariff_upgrade')`
@@ -371,30 +374,13 @@ WHERE EXISTS (
 	return out, nil
 }
 
+// referralBonusDaysRange — дни, начисленные пригласившим за интервал.
+//
+// Раньше здесь жила отдельная реконструкция формулы из таблицы purchase, своя
+// для progressive и своя для default, — третья и четвёртая копии одного расчёта
+// в кодовой базе. Журнал делает вопрос режима неважным: в нём лежит выданное.
 func (s *StatsRepository) referralBonusDaysRange(ctx context.Context, from, to time.Time) (int64, error) {
-	if config.ReferralMode() == "progressive" {
-		return s.sumProgressiveReferrerDays(ctx, from, to)
-	}
-	days := int64(config.GetReferralDays())
-	if days <= 0 {
-		return 0, nil
-	}
-	var n int64
-	q := `
-WITH fp AS (
-  SELECT c.telegram_id AS tid, MIN(p.paid_at) AS first_paid
-  FROM purchase p
-  JOIN customer c ON c.id = p.customer_id
-  WHERE p.status = 'paid' AND p.month > 0
-  GROUP BY c.telegram_id
-)
-SELECT COUNT(*) FROM referral r
-JOIN fp ON fp.tid = r.referee_id
-WHERE fp.first_paid >= $1 AND fp.first_paid < $2`
-	if err := s.pool.QueryRow(ctx, q, from, to).Scan(&n); err != nil {
-		return 0, fmt.Errorf("stats ref bonus range: %w", err)
-	}
-	return n * days, nil
+	return s.referralLedger.SumReferrerDaysRange(ctx, from, to)
 }
 
 func (s *StatsRepository) loadTariffBreakdown(ctx context.Context, now, today0, weekAgo, halfYearAgo, yearAgo, monthStart, monthEnd time.Time) ([]AdminTariffStat, error) {
@@ -625,111 +611,19 @@ GROUP BY c.current_tariff_id`
 }
 
 func (s *StatsRepository) referralBonusDaysReferrer(ctx context.Context, today0, weekAgo, monthStart, monthEnd, now time.Time) (today, week, month, all int64, err error) {
-	if config.ReferralMode() == "progressive" {
-		all, err = s.sumProgressiveReferrerDays(ctx, time.Time{}, now)
-		if err != nil {
-			return 0, 0, 0, 0, err
-		}
-		today, err = s.sumProgressiveReferrerDays(ctx, today0, now)
-		if err != nil {
-			return 0, 0, 0, 0, err
-		}
-		week, err = s.sumProgressiveReferrerDays(ctx, weekAgo, now)
-		if err != nil {
-			return 0, 0, 0, 0, err
-		}
-		month, err = s.sumProgressiveReferrerDays(ctx, monthStart, monthEnd)
-		if err != nil {
-			return 0, 0, 0, 0, err
-		}
-		return today, week, month, all, nil
-	}
-
-	days := int64(config.GetReferralDays())
-	if days <= 0 {
-		return 0, 0, 0, 0, nil
-	}
-
-	countRange := func(from, to time.Time) (int64, error) {
-		var n int64
-		q := `
-WITH fp AS (
-  SELECT c.telegram_id AS tid, MIN(p.paid_at) AS first_paid
-  FROM purchase p
-  JOIN customer c ON c.id = p.customer_id
-  WHERE p.status = 'paid' AND p.month > 0
-  GROUP BY c.telegram_id
-)
-SELECT COUNT(*) FROM referral r
-JOIN fp ON fp.tid = r.referee_id
-WHERE fp.first_paid >= $1 AND fp.first_paid < $2`
-		err := s.pool.QueryRow(ctx, q, from, to).Scan(&n)
-		return n * days, err
-	}
-
-	var allN int64
-	q := `
-WITH fp AS (
-  SELECT c.telegram_id AS tid, MIN(p.paid_at) AS first_paid
-  FROM purchase p
-  JOIN customer c ON c.id = p.customer_id
-  WHERE p.status = 'paid' AND p.month > 0
-  GROUP BY c.telegram_id
-)
-SELECT COUNT(*) FROM referral r
-JOIN fp ON fp.tid = r.referee_id`
-	if err := s.pool.QueryRow(ctx, q).Scan(&allN); err != nil {
+	if all, err = s.referralLedger.SumReferrerDaysRange(ctx, time.Time{}, now); err != nil {
 		return 0, 0, 0, 0, err
 	}
-	all = allN * days
-
-	today, err = countRange(today0, now)
-	if err != nil {
+	if today, err = s.referralLedger.SumReferrerDaysRange(ctx, today0, now); err != nil {
 		return 0, 0, 0, 0, err
 	}
-	week, err = countRange(weekAgo, now)
-	if err != nil {
+	if week, err = s.referralLedger.SumReferrerDaysRange(ctx, weekAgo, now); err != nil {
 		return 0, 0, 0, 0, err
 	}
-	month, err = countRange(monthStart, monthEnd)
-	if err != nil {
+	if month, err = s.referralLedger.SumReferrerDaysRange(ctx, monthStart, monthEnd); err != nil {
 		return 0, 0, 0, 0, err
 	}
 	return today, week, month, all, nil
-}
-
-func (s *StatsRepository) sumProgressiveReferrerDays(ctx context.Context, from, to time.Time) (int64, error) {
-	first := config.ReferralFirstReferrerDays()
-	repeat := config.ReferralRepeatReferrerDays()
-	var filter string
-	args := []interface{}{first, repeat}
-	if from.IsZero() {
-		filter = `WHERE p.paid_at IS NOT NULL AND p.paid_at < $3`
-		args = append(args, to)
-	} else {
-		filter = `WHERE p.paid_at IS NOT NULL AND p.paid_at >= $3 AND p.paid_at < $4`
-		args = append(args, from, to)
-	}
-	q := `
-WITH ranked AS (
-  SELECT p.paid_at,
-         ROW_NUMBER() OVER (PARTITION BY p.customer_id ORDER BY p.paid_at) AS rn
-  FROM purchase p
-  JOIN customer c ON c.id = p.customer_id
-  JOIN referral ref ON ref.referee_id = c.telegram_id
-  WHERE p.status = 'paid' AND p.month > 0
-)
-SELECT COALESCE(SUM(
-  CASE WHEN p.rn = 1 THEN $1::int ELSE $2::int END
-), 0)::bigint
-FROM ranked p
-` + filter
-	var sum int64
-	err := s.pool.QueryRow(ctx, q, args...).Scan(&sum)
-	if err != nil {
-		return 0, fmt.Errorf("stats progressive ref days: %w", err)
-	}
-	return sum, nil
 }
 
 func (s *StatsRepository) topReferrers(ctx context.Context, limit int) ([]AdminTopReferrer, error) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -16,7 +15,6 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
-	"remnawave-tg-shop-bot/utils"
 )
 
 func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -39,26 +37,9 @@ func (h Handler) StartCommandHandler(ctx context.Context, b *bot.Bot, update *mo
 			return
 		}
 
-		if strings.Contains(update.Message.Text, "ref_") {
-			arg := strings.Split(update.Message.Text, " ")[1]
-			if strings.HasPrefix(arg, "ref_") {
-				code := strings.TrimPrefix(arg, "ref_")
-				referrerId, err := strconv.ParseInt(code, 10, 64)
-				if err != nil {
-					slog.Error("error parsing referrer id", err)
-					return
-				}
-				referrer, ferr := h.customerRepository.FindByTelegramId(ctx, referrerId)
-				if ferr == nil && referrer != nil {
-					_, err := h.referralRepository.Create(ctx, referrerId, existingCustomer.TelegramID)
-					if err != nil {
-						slog.Error("error creating referral", err)
-						return
-					}
-					slog.Info("referral created", "referrerId", utils.MaskHalfInt64(referrerId), "refereeId", utils.MaskHalfInt64(existingCustomer.TelegramID))
-				}
-			}
-		}
+		// Источник, из которого пришёл клиент: партнёрская ссылка или
+		// реферальная. Взаимоисключающие — см. attachStartSource.
+		h.attachStartSource(ctx, update.Message.Text, existingCustomer)
 	} else {
 		updates := map[string]interface{}{
 			"language": langCode,

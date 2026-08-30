@@ -132,6 +132,9 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"telegram_web_auth_mode": h.telegramWebAuthMode,
 		// Совпадает с FORTUNE_ENABLED: скрыть пункт меню в SPA; /fortune по прямой ссылке остаётся.
 		"fortune_nav_visible": cabcfg.GetFortuneWheel().Enabled,
+		// Совпадает с PARTNER_PROGRAM_ENABLED: выключенная программа не должна
+		// светиться пунктом меню, который ведёт на «раздел недоступен».
+		"partner_nav_visible":  botcfg.PartnerProgramEnabled(),
 		"support_chat_enabled": botcfg.SupportBotAPIEnabled(),
 		"turnstile_enabled":      cabcfg.TurnstileEnabled(),
 		"pwa_enabled":            cabcfg.PWAEnabled(),

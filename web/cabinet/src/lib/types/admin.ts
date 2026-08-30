@@ -6,6 +6,8 @@
 export interface AdminBootstrapDTO {
   sales_mode: string
   loyalty_enabled: boolean
+  /** false при PARTNER_PROGRAM_ENABLED=false — раздел «Партнёры» скрыт. */
+  partner_enabled?: boolean
   fortune_enabled: boolean
   /** Версия сборки: «5.3.0» для релиза, «dev-2fdc211» для main. */
   version?: string
@@ -565,4 +567,117 @@ export interface AdminBotSettingsDTO {
 export interface AdminBotSettingsPatchDTO {
   ok: boolean
   changed: string[]
+}
+
+/* --- Партнёрская программа -------------------------------------------------
+ *
+ * Партнёр — это клиент со статусом и денежным контуром: балансом, холдом и
+ * заявками на вывод. Заявки на партнёрство отдельной сущностью не хранятся,
+ * это тот же партнёр в статусе pending.
+ */
+
+export type AdminPartnerStatus = 'pending' | 'active' | 'suspended' | 'rejected'
+
+export interface AdminPartnerDTO {
+  id: number
+  status: AdminPartnerStatus
+  /** Маскированная подпись клиента: @username, e***l@mail.ru либо часть id. */
+  label: string
+
+  /** null — действуют глобальные проценты из настроек бота. */
+  first_percent?: number | null
+  renewal_percent?: number | null
+  effective_first_percent: number
+  effective_renewal_percent: number
+  links_limit?: number | null
+
+  balance: number
+  hold_balance: number
+  reserved_balance: number
+  total_earned: number
+  total_paid: number
+
+  customers: number
+  paying_customers: number
+  open_payouts: number
+
+  /** Он же как клиент магазина — по этим числам видно, живой ли аккаунт. */
+  customer_since: string
+  customer_paid_count: number
+  customer_paid_sum: number
+
+  app_about?: string
+  app_channels?: string
+  app_expected?: string
+  app_submitted_at?: string
+  admin_note?: string
+
+  payout_method?: string
+  payout_details?: string
+  created_at: string
+  approved_at?: string
+}
+
+export interface AdminPartnerOperationDTO {
+  at: string
+  /** earning — начисление либо ручная правка; payout — выплата. */
+  kind: 'earning' | 'payout'
+  detail?: string
+  amount: number
+  status: string
+  ref?: string
+  note?: string
+}
+
+export interface AdminPartnerLinkDTO {
+  id: number
+  code: string
+  name: string
+  is_default: boolean
+  archived: boolean
+  bot_link?: string
+  customers: number
+  paying: number
+  earned: number
+}
+
+export interface AdminPartnerDetailDTO {
+  partner: AdminPartnerDTO
+  links: AdminPartnerLinkDTO[]
+  operations: AdminPartnerOperationDTO[]
+}
+
+export interface AdminPartnerPayoutDTO {
+  id: number
+  partner_id: number
+  partner_label: string
+  amount: number
+  status: 'pending' | 'approved' | 'paid' | 'rejected'
+  method?: string
+  /** Реквизиты на момент подачи — их и копирует админ для перевода. */
+  details_snapshot?: string
+  admin_comment?: string
+  external_ref?: string
+  requested_at: string
+  processed_at?: string
+  partner_total_earned: number
+  partner_total_paid: number
+  /** Какая это по счёту заявка партнёра. */
+  payout_index: number
+}
+
+export interface AdminPartnerPendingDTO {
+  applications: number
+  payouts: number
+  total: number
+  /** Начисления, пропущенные из-за незаданного RUB_PER_STAR. */
+  skipped_stars_earnings: number
+}
+
+/** null в проценте означает «вернуть к глобальному значению». */
+export interface AdminPartnerTermsInput {
+  first_percent?: number | null
+  renewal_percent?: number | null
+  links_limit?: number | null
+  comment?: string
 }

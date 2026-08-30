@@ -151,7 +151,7 @@ func buildAdminSettingsResponse() adminSettingsGetResp {
 	// которая ругнётся в лог, если про это забыли).
 	order := []string{
 		"cabinet", "tariffs",
-		"trial", "hwid", "referral", "stars", "loyalty",
+		"trial", "hwid", "referral", "partner", "stars", "loyalty",
 		"payments", "payments_notify", "moynalog", "access", "links", "tags",
 		"lifecycle", "fortune",
 	}

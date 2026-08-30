@@ -1,0 +1,486 @@
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Handshake, Check, X, UserPlus, Loader2, AlertTriangle } from 'lucide-react'
+
+import { AdminLayout } from '../layout/AdminLayout'
+import { AdminPageHeader } from '../components/AdminPageHeader'
+import { AdminModal } from '../components/AdminModal'
+import {
+  useAdminPartners,
+  useAdminPartnerApprove,
+  useAdminPartnerReject,
+  useAdminPartnerPending,
+  useAdminPartnerPayouts,
+  useAdminPartnerPayoutAction,
+  useAdminPartnerGrant,
+} from '../hooks/useAdminPartners'
+import { formatMoney, formatPercent, formatDayShort } from '@/features/partner/format'
+import { cn } from '@/lib/utils'
+import type { AdminPartnerDTO, AdminPartnerPayoutDTO } from '@/lib/types/admin'
+
+type TabId = 'applications' | 'partners' | 'payouts'
+
+export default function AdminPartnersPage() {
+  const { t } = useTranslation()
+  const [tab, setTab] = useState<TabId>('applications')
+
+  const pending = useAdminPartnerPending()
+  const applications = useAdminPartners('pending')
+  const partners = useAdminPartners()
+  const payouts = useAdminPartnerPayouts('open')
+
+  const tabs = useMemo(
+    () => [
+      { id: 'applications' as const, label: t('admin.partners.tabs.applications'), count: pending.data?.applications },
+      { id: 'partners' as const, label: t('admin.partners.tabs.partners'), count: partners.data?.total },
+      { id: 'payouts' as const, label: t('admin.partners.tabs.payouts'), count: pending.data?.payouts },
+    ],
+    [t, pending.data, partners.data?.total],
+  )
+
+  return (
+    <AdminLayout>
+      <div className="space-y-5">
+        <AdminPageHeader
+          icon={Handshake}
+          title={t('admin.partners.title')}
+          subtitle={t('admin.partners.subtitle')}
+          accent="amber"
+        />
+
+        {/* Пропущенные из-за незаданного курса звезды начисления — это деньги,
+            которых партнёр не получил. Молчать о них нельзя. */}
+        {pending.data && pending.data.skipped_stars_earnings > 0 ? (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{t('admin.partners.starsWarning', { n: pending.data.skipped_stars_earnings })}</span>
+          </div>
+        ) : null}
+
+        <div role="tablist" className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+          {tabs.map((item) => (
+            <button
+              key={item.id}
+              role="tab"
+              type="button"
+              aria-selected={tab === item.id}
+              onClick={() => setTab(item.id)}
+              className={cn(
+                'flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                tab === item.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {item.label}
+              {item.count ? ` · ${item.count}` : ''}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'applications' ? (
+          <ApplicationsTab items={applications.data?.items ?? []} loading={applications.isLoading} />
+        ) : null}
+        {tab === 'partners' ? <PartnersTab items={partners.data?.items ?? []} loading={partners.isLoading} /> : null}
+        {tab === 'payouts' ? <PayoutsTab items={payouts.data?.items ?? []} loading={payouts.isLoading} /> : null}
+      </div>
+    </AdminLayout>
+  )
+}
+
+/** Заявки: проценты задаются прямо здесь, до одобрения. */
+function ApplicationsTab({ items, loading }: { items: AdminPartnerDTO[]; loading: boolean }) {
+  const { t } = useTranslation()
+  if (loading) return <LoadingBlock />
+  if (items.length === 0) return <EmptyBlock text={t('admin.partners.applications.empty')} />
+
+  return (
+    <div className="space-y-3">
+      {items.map((row) => (
+        <ApplicationCard key={row.id} partner={row} />
+      ))}
+    </div>
+  )
+}
+
+function ApplicationCard({ partner }: { partner: AdminPartnerDTO }) {
+  const { t } = useTranslation()
+  const approve = useAdminPartnerApprove()
+  const reject = useAdminPartnerReject()
+
+  const [first, setFirst] = useState(String(partner.effective_first_percent))
+  const [renewal, setRenewal] = useState(String(partner.effective_renewal_percent))
+  const [comment, setComment] = useState('')
+
+  const busy = approve.isPending || reject.isPending
+
+  // Пустое поле означает «брать общее значение из настроек», а не 0%:
+  // Number('') === 0, и без явной проверки одобрение назначало бы партнёру
+  // нулевую ставку, при которой он не зарабатывает ничего.
+  function parsePercent(v: string): number | null {
+    const trimmed = v.trim()
+    if (!trimmed) return null
+    const n = Number(trimmed.replace(',', '.'))
+    return Number.isFinite(n) ? n : null
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex flex-wrap gap-4">
+        <div className="min-w-[240px] flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{partner.label}</span>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              {t('admin.partners.status.pending')}
+            </span>
+            <span className="text-xs text-muted-foreground">{formatDayShort(partner.app_submitted_at)}</span>
+          </div>
+          {partner.app_about ? <p className="text-sm text-muted-foreground">{partner.app_about}</p> : null}
+          {partner.app_channels ? (
+            <p className="text-xs text-muted-foreground">
+              {t('admin.partners.applications.channels')}: <span className="font-mono">{partner.app_channels}</span>
+              {partner.app_expected ? ` · ${t('admin.partners.applications.expected')}: ${partner.app_expected}` : ''}
+            </p>
+          ) : null}
+          {/* История человека как клиента: по ней видно, живой это аккаунт или
+              регистрация, заведённая ради заявки. */}
+          <p className="text-xs text-muted-foreground">
+            {t('admin.partners.applications.clientSince', { date: formatDayShort(partner.customer_since) })} ·{' '}
+            {t('admin.partners.applications.clientPaid', {
+              count: partner.customer_paid_count,
+              sum: formatMoney(partner.customer_paid_sum),
+            })}
+          </p>
+        </div>
+
+        <div className="w-full space-y-2 sm:w-[260px]">
+          <div className="flex items-center gap-2">
+            <PercentInput label={t('admin.partners.terms.first')} value={first} onChange={setFirst} />
+            <PercentInput label={t('admin.partners.terms.renewal')} value={renewal} onChange={setRenewal} />
+          </div>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={2}
+            placeholder={t('admin.partners.applications.commentPlaceholder')}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs focus:border-primary focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                approve.mutate({
+                  id: partner.id,
+                  terms: { first_percent: parsePercent(first), renewal_percent: parsePercent(renewal), comment },
+                })
+              }
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+            >
+              {approve.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              {t('admin.partners.applications.approve')}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => reject.mutate({ id: partner.id, comment })}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-medium disabled:opacity-60"
+            >
+              <X className="size-3.5" />
+              {t('admin.partners.applications.reject')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Список партнёров плюс ручное назначение. */
+function PartnersTab({ items, loading }: { items: AdminPartnerDTO[]; loading: boolean }) {
+  const { t } = useTranslation()
+  const [grantOpen, setGrantOpen] = useState(false)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setGrantOpen(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
+        >
+          <UserPlus className="size-3.5" />
+          {t('admin.partners.grant.open')}
+        </button>
+      </div>
+
+      {loading ? <LoadingBlock /> : null}
+      {!loading && items.length === 0 ? <EmptyBlock text={t('admin.partners.list.empty')} /> : null}
+
+      {items.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full min-w-[720px] border-collapse text-sm">
+            <thead>
+              <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.list.partner')}</th>
+                <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.list.status')}</th>
+                <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.list.percents')}</th>
+                <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.list.customers')}</th>
+                <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.list.earned')}</th>
+                <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.list.balance')}</th>
+                <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.list.payouts')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((row) => (
+                <tr key={row.id} className="border-t border-border hover:bg-accent/40">
+                  <td className="px-3 py-2.5">
+                    <a href={`/admin/partners/${row.id}`} className="font-medium hover:underline">
+                      {row.label}
+                    </a>
+                    <p className="text-xs text-muted-foreground">
+                      {t('admin.partners.list.since', { date: formatDayShort(row.approved_at || row.created_at) })}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <StatusChip status={row.status} />
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {formatPercent(row.effective_first_percent)} / {formatPercent(row.effective_renewal_percent)}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {row.customers}
+                    <span className="text-muted-foreground"> / {row.paying_customers}</span>
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(row.total_earned)}</td>
+                  <td className="px-3 py-2.5 text-right font-medium tabular-nums">{formatMoney(row.balance)}</td>
+                  <td className="px-3 py-2.5 text-right">
+                    {row.open_payouts > 0 ? (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                        {t('admin.partners.list.openPayouts', { n: row.open_payouts })}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      <GrantModal open={grantOpen} onClose={() => setGrantOpen(false)} />
+    </div>
+  )
+}
+
+/**
+ * Ручное назначение партнёром.
+ *
+ * Договорённости чаще случаются в личке, чем через форму: заставлять человека
+ * подавать формальную заявку ради галочки — лишний шаг, на котором теряются
+ * реальные партнёры.
+ */
+function GrantModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation()
+  const grant = useAdminPartnerGrant()
+  const [telegramID, setTelegramID] = useState('')
+  const [first, setFirst] = useState('')
+  const [renewal, setRenewal] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  function submit() {
+    const tg = Number(telegramID.trim())
+    if (!Number.isFinite(tg) || tg === 0) {
+      setError(t('admin.partners.grant.errors.telegram'))
+      return
+    }
+    setError(null)
+    grant.mutate(
+      {
+        telegram_id: tg,
+        // Пустое поле означает «как у всех», а не ноль.
+        first_percent: first.trim() ? Number(first.replace(',', '.')) : null,
+        renewal_percent: renewal.trim() ? Number(renewal.replace(',', '.')) : null,
+      },
+      {
+        onSuccess: () => {
+          setTelegramID('')
+          onClose()
+        },
+        onError: () => setError(t('admin.partners.grant.errors.generic')),
+      },
+    )
+  }
+
+  return (
+    <AdminModal open={open} onClose={onClose} title={t('admin.partners.grant.title')}>
+      <div className="space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            {t('admin.partners.grant.telegramID')}
+          </label>
+          <input
+            value={telegramID}
+            onChange={(e) => setTelegramID(e.target.value)}
+            inputMode="numeric"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+        </div>
+        <div className="flex gap-2">
+          <PercentInput label={t('admin.partners.terms.first')} value={first} onChange={setFirst} placeholder="—" />
+          <PercentInput label={t('admin.partners.terms.renewal')} value={renewal} onChange={setRenewal} placeholder="—" />
+        </div>
+        <p className="text-xs text-muted-foreground">{t('admin.partners.grant.hint')}</p>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        <button
+          type="button"
+          onClick={submit}
+          disabled={grant.isPending}
+          className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {t('admin.partners.grant.submit')}
+        </button>
+      </div>
+    </AdminModal>
+  )
+}
+
+/** Очередь выплат: реквизиты готовы к копированию, перевод делается вне бота. */
+function PayoutsTab({ items, loading }: { items: AdminPartnerPayoutDTO[]; loading: boolean }) {
+  const { t } = useTranslation()
+  if (loading) return <LoadingBlock />
+  if (items.length === 0) return <EmptyBlock text={t('admin.partners.payouts.empty')} />
+
+  return (
+    <div className="space-y-3">
+      {items.map((row) => (
+        <PayoutCard key={row.id} payout={row} />
+      ))}
+    </div>
+  )
+}
+
+function PayoutCard({ payout }: { payout: AdminPartnerPayoutDTO }) {
+  const { t } = useTranslation()
+  const action = useAdminPartnerPayoutAction()
+  const [externalRef, setExternalRef] = useState('')
+  const [comment, setComment] = useState('')
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex flex-wrap gap-4">
+        <div className="min-w-[220px] flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{payout.partner_label}</span>
+            <span className="text-lg font-semibold tabular-nums">{formatMoney(payout.amount)}</span>
+          </div>
+          <p className="font-mono text-xs">{payout.details_snapshot || '—'}</p>
+          <p className="text-xs text-muted-foreground">
+            {t('admin.partners.payouts.requested', { date: formatDayShort(payout.requested_at) })} ·{' '}
+            {t('admin.partners.payouts.index', { n: payout.payout_index })}
+          </p>
+          {/* История партнёра: по ней за секунду видно нормальную заявку и
+              подозрительную. */}
+          <p className="text-xs text-muted-foreground">
+            {t('admin.partners.payouts.history', {
+              earned: formatMoney(payout.partner_total_earned),
+              paid: formatMoney(payout.partner_total_paid),
+            })}
+          </p>
+        </div>
+
+        <div className="w-full space-y-2 sm:w-[280px]">
+          <input
+            value={externalRef}
+            onChange={(e) => setExternalRef(e.target.value)}
+            placeholder={t('admin.partners.payouts.refPlaceholder')}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs focus:border-primary focus:outline-none"
+          />
+          <input
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={t('admin.partners.payouts.commentPlaceholder')}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs focus:border-primary focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={action.isPending}
+              onClick={() => action.mutate({ id: payout.id, action: 'paid', externalRef, comment })}
+              className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+            >
+              {t('admin.partners.payouts.markPaid')}
+            </button>
+            <button
+              type="button"
+              disabled={action.isPending}
+              onClick={() => action.mutate({ id: payout.id, action: 'reject', comment })}
+              className="flex-1 rounded-lg border border-border px-3 py-2 text-xs font-medium disabled:opacity-60"
+            >
+              {t('admin.partners.payouts.reject')}
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">{t('admin.partners.payouts.refHint')}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- мелочи ---
+
+export function StatusChip({ status }: { status: string }) {
+  const { t } = useTranslation()
+  const styles: Record<string, string> = {
+    active: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+    pending: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+    suspended: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    rejected: 'bg-muted text-muted-foreground',
+  }
+  return (
+    <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status] ?? styles.rejected)}>
+      {t(`admin.partners.status.${status}`)}
+    </span>
+  )
+}
+
+export function PercentInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <div className="flex-1">
+      <label className="mb-1 block text-[10px] uppercase tracking-wide text-muted-foreground">{label}</label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        inputMode="decimal"
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+      />
+    </div>
+  )
+}
+
+function LoadingBlock() {
+  return (
+    <div className="flex justify-center rounded-xl border border-border bg-card py-10">
+      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
+
+function EmptyBlock({ text }: { text: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card py-10 text-center text-sm text-muted-foreground">
+      {text}
+    </div>
+  )
+}

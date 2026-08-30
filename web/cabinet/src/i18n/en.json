@@ -22,6 +22,7 @@
       "info": "Info",
       "profile": "Profile",
       "referral": "Referrals",
+      "partner": "Partners",
       "fortune": "Wheel",
       "loyalty": "Loyalty",
       "logout": "Log out",
@@ -522,6 +523,172 @@
       "compactTitle": "Level {{n}}",
       "compactDiscount": "{{pct}}% off renewals"
     },
+    "partnerPage": {
+      "title": "Partner program",
+      "loadError": "Could not load this section. Refresh the page.",
+      "disabled": "The partner program is currently unavailable.",
+      "applicationsClosed": "We are not accepting new partners right now. Check back later.",
+      "rejectedTitle": "Application declined.",
+      "showMore": "Show more",
+      "suspendedNotice": "Payouts are paused by an administrator. Commissions keep accruing — contact support to sort it out.",
+      "status": {
+        "pending": "Under review"
+      },
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "alreadyPartner": "You are already a partner.",
+        "alreadyPending": "Your application is already under review.",
+        "aboutRequired": "Tell us about yourself — we cannot review an empty application.",
+        "tooLong": "That text is too long, please shorten it."
+      },
+      "landing": {
+        "title": "Earn from your audience",
+        "subtitle": "Bring in clients with your link and earn a percentage of every payment they make — not once, but for as long as they keep renewing.",
+        "firstPayment": "First payment",
+        "renewals": "Every renewal",
+        "howTitle": "How it works",
+        "step1": "Get a personal link plus a stream for each channel you use.",
+        "step2": "A client pays for a subscription — you earn your percentage.",
+        "step3": "After {{days}} days the commission becomes available for payout.",
+        "step4": "Request a payout from {{min}} to your own details."
+      },
+      "form": {
+        "title": "Partner application",
+        "titleAgain": "Apply again",
+        "about": "Tell us about yourself and your audience",
+        "aboutPlaceholder": "I run a Telegram channel about bypassing blocks, 12k subscribers…",
+        "channels": "Channels: Telegram, websites, YouTube",
+        "channelsPlaceholder": "@mychannel, youtube.com/@review",
+        "expected": "How many clients do you expect to bring per month",
+        "expectedPlaceholder": "30–50",
+        "note": "We will reply in the bot, usually within a day.",
+        "submit": "Submit application",
+        "submitting": "Submitting…"
+      },
+      "pending": {
+        "title": "Application under review",
+        "subtitle": "We received your application. The answer will arrive in the bot, usually within a day.",
+        "submitted": "What you submitted"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "links": "Links",
+        "customers": "Clients",
+        "earnings": "Commissions",
+        "payouts": "Payouts"
+      },
+      "overview": {
+        "available": "Available for payout",
+        "onHold": "On hold",
+        "opensAt": "unlocks {{date}}",
+        "paidOut": "Paid out in total",
+        "reserved": "{{amount}} reserved for a payout request",
+        "withdraw": "Withdraw {{amount}}",
+        "belowMinimum": "Minimum payout is {{min}}",
+        "payoutPending": "A payout request is already open",
+        "customers": "Clients",
+        "customersWeek": "+{{n}} this week",
+        "paying": "Paying",
+        "conversion": "{{n}}% conversion",
+        "earned": "Earned",
+        "earnedMonth": "{{amount}} this month",
+        "chartTitle": "Commissions by month",
+        "chartAlt": "Monthly commissions: from {{from}} to {{to}}"
+      },
+      "terms": {
+        "title": "Your terms",
+        "firstPayment": "Client's first payment",
+        "renewals": "Every renewal",
+        "hold": "Hold before payout",
+        "holdValue": "{{days}} days",
+        "minPayout": "Minimum payout",
+        "cooldown": "Interval between payouts",
+        "cooldownValue": "{{days}} days"
+      },
+      "links": {
+        "mainTitle": "Main link",
+        "default": "default",
+        "botLink": "Telegram link",
+        "webLink": "Link for websites and social media",
+        "mainHint": "Both links work the same way — pick the one that fits the channel.",
+        "newTitle": "New stream",
+        "namePlaceholder": "For example: YouTube review",
+        "create": "Create",
+        "usage": "{{used}} of {{limit}} streams used",
+        "empty": "No streams yet. Create a separate link per channel to see which one brings paying clients.",
+        "save": "Save",
+        "cancel": "Cancel",
+        "archived": "archived",
+        "active": "active",
+        "statCustomers": "Clients",
+        "statPaying": "Paying",
+        "statEarned": "Earned",
+        "rename": "Rename",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete",
+        "deleteBlockedHint": "Clients already came through this stream, so it can only be archived — the commission history has to stay explainable.",
+        "errors": {
+          "limit": "Stream limit reached. Archive one you no longer use to free a slot.",
+          "hasHistory": "This stream cannot be deleted — clients already came through it. Archive it instead.",
+          "isDefault": "The main link cannot be deleted or archived.",
+          "invalidName": "Enter a stream name (up to 64 characters)."
+        }
+      },
+      "customers": {
+        "title": "Clients you brought",
+        "empty": "Nobody has come through your links yet.",
+        "paying": "paying",
+        "expired": "expired",
+        "notPaid": "never paid",
+        "earnedFrom": "{{amount}} to you"
+      },
+      "earnings": {
+        "title": "Commission history",
+        "empty": "No commissions yet.",
+        "kindFirst": "first payment {{percent}}",
+        "kindRenewal": "renewal {{percent}}",
+        "kindAdjustment": "adjustment",
+        "fromAmount": "from {{amount}} · {{date}}",
+        "holdUntil": "on hold until {{date}}",
+        "hold": "on hold",
+        "available": "available",
+        "cancelled": "cancelled",
+        "hint": "Cancelled commissions are refunds and disputed payments."
+      },
+      "payouts": {
+        "amount": "Payout amount",
+        "request": "Submit request",
+        "sending": "Submitting…",
+        "manualNotice": "An administrator will process the request, usually within a business day. The amount leaves your available balance immediately.",
+        "pendingNotice": "A payout request is already open. Wait until it is processed.",
+        "cooldownNotice": "The next payout will be available on {{date}}.",
+        "detailsFirst": "Add your payout details first.",
+        "detailsTitle": "Payout details",
+        "method": "Method",
+        "methodPlaceholder": "Bank transfer, card, crypto…",
+        "details": "Details",
+        "detailsPlaceholder": "+7 999 123-45-67, T-Bank",
+        "detailsSaved": "Details saved.",
+        "saveDetails": "Save details",
+        "historyTitle": "Payout history",
+        "empty": "No payouts yet.",
+        "statusPaid": "paid",
+        "statusRejected": "declined",
+        "statusApproved": "approved",
+        "statusPending": "pending",
+        "errors": {
+          "invalidDetails": "Fill in both the method and the details.",
+          "detailsRequired": "Add your payout details first.",
+          "belowMinimum": "The minimum payout is {{min}}.",
+          "insufficient": "Not enough funds on the balance.",
+          "pending": "A payout request is already open.",
+          "cooldown": "The next payout will be available on {{date}}.",
+          "blocked": "Payouts are unavailable right now.",
+          "invalidAmount": "Enter a valid amount."
+        }
+      }
+    },
     "referralPage": {
       "title": "Referral program",
       "intro": "Invite friends with your link — rewards follow the same rules as in the bot.",
@@ -546,6 +713,9 @@
       "howProgressiveIntro": "Progressive mode (same as in the bot):",
       "howProgressiveFirst": "First referral payment: you get <0>+{{ref}} days</0>, your invitee <1>+{{referee}} days</1>.",
       "howProgressiveNext": "Each later subscription payment by the referral: you get <0>+{{n}} days</0>.",
+      "howProgressiveMonthlyFirst": "Your referral's first payment: you get <0>+{{first}} days</0> for the first paid month and <1>+{{repeat}} days</1> for each following one, your invitee gets <2>+{{referee}} days</2> as a welcome bonus.",
+      "howProgressiveMonthlyNext": "Each later payment by your referral: you get <0>+{{repeat}} days</0> per paid month.",
+      "howProgressiveMonthlyExample": "For example, if your referral pays for 6 months at once: you get {{example}} days, they get {{referee}} days.",
       "howLinksHint": "Share the bot link or the cabinet sign-up link — both are tied to your account.",
       "shareInviteText": "Join VPN MEOWS using my link and get bonus days after registration 🔥"
     },
@@ -832,6 +1002,7 @@
         "tariffs": "Tariffs",
         "loyalty": "Loyalty",
         "broadcast": "Broadcast",
+        "partners": "Partners",
         "infra": "Infrastructure",
         "sync": "Sync",
         "settings": "Bot settings"
@@ -1277,6 +1448,119 @@
           "extraHwid": "Extra devices"
         }
       },
+      "partners": {
+        "title": "Partners",
+        "subtitle": "Partner applications, terms and payouts.",
+        "starsWarning": "Commissions skipped on Telegram Stars payments: {{n}}. Set RUB_PER_STAR in settings — without a rate there is nothing to take a percentage of.",
+        "tabs": {
+          "applications": "Applications",
+          "partners": "Partners",
+          "payouts": "Payouts"
+        },
+        "status": {
+          "pending": "under review",
+          "active": "active",
+          "suspended": "suspended",
+          "rejected": "revoked"
+        },
+        "terms": {
+          "first": "First payment",
+          "renewal": "Renewals",
+          "linksLimit": "Stream limit",
+          "global": "default",
+          "individual": "custom",
+          "emptyHint": "An empty field means the global value from bot settings. Zero means the partner is paid nothing."
+        },
+        "applications": {
+          "empty": "No new applications.",
+          "channels": "Channels",
+          "expected": "plan",
+          "clientSince": "Client since {{date}}",
+          "clientPaid": "payments: {{count}} totalling {{sum}}",
+          "commentPlaceholder": "Comment for the partner…",
+          "approve": "Approve",
+          "reject": "Decline"
+        },
+        "list": {
+          "empty": "No partners yet.",
+          "partner": "Partner",
+          "status": "Status",
+          "percents": "Percentages",
+          "customers": "Clients / paying",
+          "earned": "Earned",
+          "balance": "Balance",
+          "payouts": "Payouts",
+          "since": "since {{date}}",
+          "openPayouts": "{{n}} request"
+        },
+        "grant": {
+          "open": "Make a partner",
+          "title": "Make a partner",
+          "telegramID": "Client Telegram ID",
+          "hint": "The partner is created active and the main link is generated automatically. Empty percentages mean the global values from settings.",
+          "submit": "Make a partner",
+          "errors": {
+            "telegram": "Enter the client's Telegram ID.",
+            "generic": "Could not create the partner. Check that such a client exists."
+          }
+        },
+        "payouts": {
+          "empty": "No open payout requests.",
+          "requested": "requested {{date}}",
+          "index": "payout #{{n}}",
+          "history": "earned {{earned}} · paid out {{paid}}",
+          "refPlaceholder": "Transfer or receipt number",
+          "commentPlaceholder": "Comment for the partner…",
+          "markPaid": "Mark paid",
+          "reject": "Decline",
+          "refHint": "The transfer number is your only proof if the partner says the money never arrived. Declining returns the amount to their balance."
+        },
+        "detail": {
+          "back": "Back to partners",
+          "notFound": "Partner not found.",
+          "subtitle": "Partner since {{date}}",
+          "clientSince": "client since {{date}}",
+          "suspend": "Suspend",
+          "resume": "Resume",
+          "revoke": "Revoke partnership",
+          "earnedTotal": "Earned in total",
+          "paidTotal": "paid out {{amount}}",
+          "available": "Available",
+          "holdReserved": "on hold {{hold}} · reserved {{reserved}}",
+          "customers": "Clients brought",
+          "paying": "{{n}} paying",
+          "termsTitle": "Terms",
+          "editTerms": "Edit terms",
+          "adjust": "Adjust balance",
+          "payoutDetails": "Payout details",
+          "linksTitle": "Streams",
+          "linksEmpty": "No streams.",
+          "linkCustomers": "{{n}} clients",
+          "operationsTitle": "Balance operations",
+          "operationsEmpty": "No operations yet.",
+          "opDate": "Date",
+          "opKind": "Operation",
+          "opRef": "Reference",
+          "opAmount": "Amount",
+          "opStatus": "Status",
+          "opPayout": "Payout",
+          "opEarning": {
+            "first": "Commission · first payment",
+            "renewal": "Commission · renewal",
+            "adjustment": "Adjustment"
+          },
+          "notePlaceholder": "Administrator note…",
+          "save": "Save",
+          "adjustAmount": "Amount",
+          "adjustHint": "A negative amount debits the balance, a positive one credits it. The operation appears in the feed.",
+          "adjustReason": "Reason",
+          "adjustErrors": {
+            "amount": "Enter a non-zero amount.",
+            "comment": "Give a reason — without one the operation is unexplainable.",
+            "failed": "Could not apply: the balance may be lower than the amount you are debiting."
+          }
+        }
+      },
       "promos": {
         "title": "Promo codes",
         "subtitle": "Promo code management",
@@ -1599,7 +1883,8 @@
             "limits": "Device limits"
           },
           "referral": {
-            "days": "Bonus days"
+            "days": "Bonus days",
+            "scaling": "Per-month accrual"
           },
           "payments_notify": {
             "toggle": "Enable",
@@ -1645,6 +1930,7 @@
           "tags": "Remnawave tags",
           "hwid": "HWID / devices",
           "referral": "Referrals",
+          "partner": "Partners",
           "access": "Behavior & access",
           "lifecycle": "Auto reminders",
           "links": "Bot links",
@@ -1830,6 +2116,50 @@
           "REFERRAL_REPEAT_REFERRER_DAYS": {
             "label": "Days for referrer (repeat)",
             "hint": ""
+          },
+          "REFERRAL_SCALE_BY_MONTHS": {
+            "label": "Accrue per paid month",
+            "hint": "On: the first paid month uses \"days for referrer (first)\", every following month uses \"days for referrer (repeat)\". Off: a flat bonus regardless of the period"
+          },
+          "PARTNER_PROGRAM_ENABLED": {
+            "label": "Partner program",
+            "hint": "Hides the section from clients and stops accruals"
+          },
+          "PARTNER_APPLICATIONS_ENABLED": {
+            "label": "Accept applications",
+            "hint": "Application form on the partner page"
+          },
+          "PARTNER_AUTO_APPROVE": {
+            "label": "Auto-approve",
+            "hint": "Anyone becomes a partner without review"
+          },
+          "PARTNER_FIRST_PERCENT": {
+            "label": "First payment percent",
+            "hint": "Default; a partner's individual terms override it"
+          },
+          "PARTNER_RENEWAL_PERCENT": {
+            "label": "Renewal percent",
+            "hint": "Default; a partner's individual terms override it"
+          },
+          "PARTNER_HOLD_DAYS": {
+            "label": "Hold, days",
+            "hint": "How long an accrual waits before payout. 0 — available at once"
+          },
+          "PARTNER_MIN_PAYOUT": {
+            "label": "Minimum payout, ₽",
+            "hint": ""
+          },
+          "PARTNER_PAYOUT_COOLDOWN_DAYS": {
+            "label": "Payout cooldown, days",
+            "hint": ""
+          },
+          "PARTNER_MAX_LINKS": {
+            "label": "Links per partner",
+            "hint": "Archived links do not use up the limit"
+          },
+          "PARTNER_COUNT_EXTRA_HWID": {
+            "label": "Count extra device top-ups",
+            "hint": "By default a device top-up earns the partner nothing"
           },
           "FORWARD_USER_MESSAGES_TO_ADMIN": {
             "label": "Forward messages to admin",

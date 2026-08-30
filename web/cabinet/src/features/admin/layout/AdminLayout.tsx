@@ -8,6 +8,7 @@ import {
   TicketPercent,
   Zap,
   Gem,
+  Handshake,
   Megaphone,
   Server,
   RefreshCw,
@@ -21,6 +22,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
+import { useAdminPartnerPending } from '../hooks/useAdminPartners'
 import { AdminChrome } from './AdminChrome'
 import { AdminBreadcrumbs } from './AdminBreadcrumbs'
 import { AdminPageMetaContext, type AdminPageMeta } from './useAdminPageMeta'
@@ -37,6 +39,8 @@ interface AdminNavItem {
   icon: LucideIcon
   labelKey: string
   condition?: boolean
+  /** Счётчик несделанных дел: заявки партнёров плюс заявки на вывод. */
+  badge?: number
 }
 
 interface AdminNavGroup {
@@ -72,6 +76,10 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
 
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
   const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false
+  const partnerEnabled = bootstrap?.partner_enabled ?? false
+  // Бейдж считает заявки вместе с выплатами: иначе выплаты висят
+  // незамеченными по несколько дней.
+  const partnerPending = useAdminPartnerPending()
 
   const navGroups: AdminNavGroup[] = [
     {
@@ -94,6 +102,13 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
         { to: '/admin/promos', icon: TicketPercent, labelKey: 'admin.nav.promos' },
         { to: '/admin/broadcast', icon: Megaphone, labelKey: 'admin.nav.broadcast' },
         { to: '/admin/loyalty', icon: Gem, labelKey: 'admin.nav.loyalty', condition: loyaltyEnabled },
+        {
+          to: '/admin/partners',
+          icon: Handshake,
+          labelKey: 'admin.nav.partners',
+          condition: partnerEnabled,
+          badge: partnerPending.data?.total,
+        },
       ],
     },
     {
@@ -157,6 +172,11 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
                       >
                         <Icon className={cn('size-4 shrink-0', active && 'text-primary')} />
                         <span className="truncate">{t(item.labelKey)}</span>
+                        {item.badge ? (
+                          <span className="ml-auto shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                            {item.badge}
+                          </span>
+                        ) : null}
                       </Link>
                     </li>
                   )

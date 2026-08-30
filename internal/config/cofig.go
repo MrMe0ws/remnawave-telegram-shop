@@ -64,6 +64,7 @@ type config struct {
 	referralFirstReferrerDays                                                    int
 	referralFirstRefereeDays                                                     int
 	referralRepeatReferrerDays                                                   int
+	referralScaleByMonths                                                        bool
 	trialAddsToPaid                                                              bool
 	hwidAddPrice                                                                 int
 	hwidAddStarsPrice                                                            int
@@ -111,6 +112,19 @@ type config struct {
 	lifecycleWinbackDiscountTTLHours                                             int
 	lifecycleVideoGuideURL                                                       string
 	lifecycleSupportContact                                                      string
+
+	// Партнёрская программа. Проценты — float: индивидуальные условия вроде
+	// 12.5% обсуждаются так же часто, как круглые.
+	partnerProgramEnabled      bool
+	partnerApplicationsEnabled bool
+	partnerAutoApprove         bool
+	partnerFirstPercent        float64
+	partnerRenewalPercent      float64
+	partnerHoldDays            int
+	partnerMinPayout           float64
+	partnerPayoutCooldownDays  int
+	partnerMaxLinks            int
+	partnerCountExtraHwid      bool
 }
 
 var conf config
@@ -221,6 +235,62 @@ func ReferralRepeatReferrerDays() int {
 
 func TrialAddsToPaid() bool {
 	return conf.trialAddsToPaid
+}
+
+// PartnerProgramEnabled — общий рубильник партнёрской программы: скрывает
+// раздел у клиентов и останавливает начисления, не трогая уже начисленное.
+func PartnerProgramEnabled() bool {
+	return conf.partnerProgramEnabled
+}
+
+// PartnerApplicationsEnabled — показывать ли форму заявки. Выключается, когда
+// набор партнёров закрыт, а действующие продолжают работать.
+func PartnerApplicationsEnabled() bool {
+	return conf.partnerApplicationsEnabled
+}
+
+// PartnerAutoApprove — принимать в партнёры без модерации.
+func PartnerAutoApprove() bool {
+	return conf.partnerAutoApprove
+}
+
+// PartnerFirstPercent — процент с первой оплаты приведённого клиента.
+// Значение по умолчанию; индивидуальные условия партнёра его перекрывают.
+func PartnerFirstPercent() float64 {
+	return conf.partnerFirstPercent
+}
+
+// PartnerRenewalPercent — процент со всех последующих оплат клиента.
+func PartnerRenewalPercent() float64 {
+	return conf.partnerRenewalPercent
+}
+
+// PartnerHoldDays — сколько дней начисление лежит недоступным. Ноль означает
+// «сразу к выводу»; это законное значение, а не выключенная фича.
+func PartnerHoldDays() int {
+	return conf.partnerHoldDays
+}
+
+// PartnerMinPayout — минимальная сумма заявки на вывод, ₽.
+func PartnerMinPayout() float64 {
+	return conf.partnerMinPayout
+}
+
+// PartnerPayoutCooldownDays — минимальный интервал между заявками на вывод.
+func PartnerPayoutCooldownDays() int {
+	return conf.partnerPayoutCooldownDays
+}
+
+// PartnerMaxLinks — сколько рабочих потоков может завести партнёр.
+func PartnerMaxLinks() int {
+	return conf.partnerMaxLinks
+}
+
+// PartnerCountExtraHwid — начислять ли процент с доплаты за дополнительные
+// устройства. По умолчанию нет: это техническая доплата действующего клиента,
+// а не приведённая партнёром продажа.
+func PartnerCountExtraHwid() bool {
+	return conf.partnerCountExtraHwid
 }
 
 func HwidAddPrice() int {
@@ -694,6 +764,45 @@ func envIntDefault(key string, def int) int {
 	return i
 }
 
+func envFloatDefault(key string, def float64) float64 {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def
+	}
+	f, err := strconv.ParseFloat(strings.Replace(v, ",", ".", 1), 64)
+	if err != nil {
+		log.Panicf("invalid float in %q: %v", key, err)
+	}
+	return f
+}
+
+// clampPercent — процент всегда в 0..100. Отрицательный процент означал бы
+// списание с партнёра за то, что он привёл клиента, а больше сотни — что
+// продажа приносит убыток; и то и другое почти наверняка опечатка.
+func clampPercent(v float64) float64 {
+	if v < 0 {
+		return 0
+	}
+	if v > 100 {
+		return 100
+	}
+	return v
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func maxFloat(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func envInt64Default(key string, def int64) int64 {
 	v := os.Getenv(key)
 	if v == "" {
@@ -977,6 +1086,19 @@ func InitConfig() {
 	conf.referralFirstReferrerDays = envIntDefault("REFERRAL_FIRST_REFERRER_DAYS", 7)
 	conf.referralFirstRefereeDays = envIntDefault("REFERRAL_FIRST_REFEREE_DAYS", 7)
 	conf.referralRepeatReferrerDays = envIntDefault("REFERRAL_REPEAT_REFERRER_DAYS", 3)
+	conf.referralScaleByMonths = envBoolDefault("REFERRAL_SCALE_BY_MONTHS", true)
+	// Партнёрская программа. Выключена по умолчанию: включение — осознанное
+	// решение владельца, потому что оно начинает раздавать деньги.
+	conf.partnerProgramEnabled = envBoolDefault("PARTNER_PROGRAM_ENABLED", false)
+	conf.partnerApplicationsEnabled = envBoolDefault("PARTNER_APPLICATIONS_ENABLED", true)
+	conf.partnerAutoApprove = envBoolDefault("PARTNER_AUTO_APPROVE", false)
+	conf.partnerFirstPercent = clampPercent(envFloatDefault("PARTNER_FIRST_PERCENT", 40))
+	conf.partnerRenewalPercent = clampPercent(envFloatDefault("PARTNER_RENEWAL_PERCENT", 20))
+	conf.partnerHoldDays = maxInt(envIntDefault("PARTNER_HOLD_DAYS", 7), 0)
+	conf.partnerMinPayout = maxFloat(envFloatDefault("PARTNER_MIN_PAYOUT", 1000), 0)
+	conf.partnerPayoutCooldownDays = maxInt(envIntDefault("PARTNER_PAYOUT_COOLDOWN_DAYS", 7), 0)
+	conf.partnerMaxLinks = maxInt(envIntDefault("PARTNER_MAX_LINKS", 10), 1)
+	conf.partnerCountExtraHwid = envBoolDefault("PARTNER_COUNT_EXTRA_HWID", false)
 	conf.trialAddsToPaid = envBoolDefault("TRIAL_ADD_TO_PAID", true)
 	conf.hwidAddPrice = mustEnvInt("HWID_ADD_PRICE")
 	conf.hwidAddStarsPrice = envIntDefault("HWID_ADD_STARS_PRICE", conf.hwidAddPrice)

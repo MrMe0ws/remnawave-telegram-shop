@@ -106,6 +106,8 @@ type PaymentService struct {
 	yookasaClient         *yookasa.Client
 	plategaClient         *platega.Client
 	referralRepository    *database.ReferralRepository
+	referralLedger        *database.ReferralBonusLedgerRepository
+	partnerRepository     *database.PartnerRepository
 	cache                 *cache.Cache
 	receiptQueue          *receipt.Service
 	promoService          *promo.Service
@@ -129,6 +131,8 @@ func NewPaymentService(
 	yookasaClient *yookasa.Client,
 	plategaClient *platega.Client,
 	referralRepository *database.ReferralRepository,
+	referralLedger *database.ReferralBonusLedgerRepository,
+	partnerRepository *database.PartnerRepository,
 	cache *cache.Cache,
 	receiptQueue *receipt.Service,
 	promoService *promo.Service,
@@ -145,6 +149,8 @@ func NewPaymentService(
 		yookasaClient:         yookasaClient,
 		plategaClient:         plategaClient,
 		referralRepository:    referralRepository,
+		referralLedger:        referralLedger,
+		partnerRepository:     partnerRepository,
 		cache:                 cache,
 		receiptQueue:          receiptQueue,
 		promoService:          promoService,
@@ -675,6 +681,7 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 	if err := s.applyReferralBonus(ctx, purchase, customer); err != nil {
 		return err
 	}
+	s.applyPartnerCommission(ctx, purchase, customer)
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
 	s.applyLoyaltyXPAfterPayment(ctx, purchase, customer)
 	slog.Info("purchase processed", "purchase_id", utils.MaskHalfInt64(purchase.ID), "type", purchase.InvoiceType, "customer_id", utils.MaskHalfInt64(customer.ID))
@@ -806,10 +813,10 @@ func (s PaymentService) applyReferralBonus(ctx context.Context, purchase *databa
 	if mode == "progressive" {
 		return s.applyProgressiveReferralBonus(ctxReferee, referral, purchase, customer)
 	}
-	return s.applyDefaultReferralBonus(ctxReferee, referral)
+	return s.applyDefaultReferralBonus(ctxReferee, referral, purchase)
 }
 
-func (s PaymentService) applyDefaultReferralBonus(ctx context.Context, referral *database.Referral) error {
+func (s PaymentService) applyDefaultReferralBonus(ctx context.Context, referral *database.Referral, purchase *database.Purchase) error {
 	if referral.BonusGranted {
 		return nil
 	}
@@ -819,10 +826,14 @@ func (s PaymentService) applyDefaultReferralBonus(ctx context.Context, referral 
 		return err
 	}
 
+	// Разовый бонус режима default по длине периода не масштабируется: он
+	// начисляется один раз за само появление платящего реферала, а не за каждую
+	// его оплату. Прогрессия — предмет режима progressive.
 	bonusDays := config.GetReferralDays()
 	if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
 		return err
 	}
+	s.recordReferralBonus(ctx, referral, purchase, referrerCustomer, bonusDays, 0, 0, database.ReferralBonusKindDefault)
 	if err := s.referralRepository.MarkBonusGranted(ctx, referral.ID); err != nil {
 		return err
 	}
@@ -847,42 +858,100 @@ func (s PaymentService) applyProgressiveReferralBonus(ctx context.Context, refer
 		return err
 	}
 
-	bonusDays := 0
-	if paidCount == 1 {
-		refereeBonusDays := config.ReferralFirstRefereeDays()
-		if err := s.grantReferralDays(ctx, customer, refereeBonusDays); err != nil {
+	// Вся политика начисления живёт в config.ReferralBonusForPayment: сколько
+	// получает пригласивший (помесячно, с повышенной ставкой за первый месяц) и
+	// сколько приглашённый (фиксированный приветственный бонус).
+	months := purchase.Month
+	isFirstPayment := paidCount == 1
+	bonus := config.ReferralBonusForPayment(months, isFirstPayment)
+
+	referrerKind := database.ReferralBonusKindRepeatReferrer
+	if isFirstPayment {
+		referrerKind = database.ReferralBonusKindFirstReferrer
+
+		// Приглашённому начисляем первым: если продление ему не удастся,
+		// пригласивший не получит своё за оплату, которая до реферала не доехала.
+		if err := s.grantReferralDays(ctx, customer, bonus.RefereeDays); err != nil {
 			return err
 		}
-		if err := s.sendReferralFirstBonusMessage(ctx, customer, refereeBonusDays); err != nil {
+		// Помесячных ставок нет: бонус приглашённого плоский по замыслу.
+		s.recordReferralBonus(ctx, referral, purchase, customer, bonus.RefereeDays, 0, 0, database.ReferralBonusKindFirstReferee)
+		if err := s.sendReferralFirstBonusMessage(ctx, customer, bonus.RefereeDays); err != nil {
 			return err
-		}
-		bonusDays = config.ReferralFirstReferrerDays()
-		if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
-			return err
-		}
-		if !referral.BonusGranted {
-			if err := s.referralRepository.MarkBonusGranted(ctx, referral.ID); err != nil {
-				return err
-			}
-		}
-	} else {
-		bonusDays = config.ReferralRepeatReferrerDays()
-		if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
-			return err
-		}
-		if !referral.BonusGranted {
-			if err := s.referralRepository.MarkBonusGranted(ctx, referral.ID); err != nil {
-				return err
-			}
 		}
 	}
 
-	slog.Info("Granted referral bonus", "customer_id", utils.MaskHalfInt64(referrerCustomer.ID))
+	bonusDays := bonus.ReferrerDays
+	if err := s.grantReferralDays(ctx, referrerCustomer, bonusDays); err != nil {
+		return err
+	}
+	s.recordReferralBonus(ctx, referral, purchase, referrerCustomer, bonusDays, bonus.FirstMonthDays, bonus.PerMonthDays, referrerKind)
+	if !referral.BonusGranted {
+		if err := s.referralRepository.MarkBonusGranted(ctx, referral.ID); err != nil {
+			return err
+		}
+	}
+
+	slog.Info("Granted referral bonus",
+		"customer_id", utils.MaskHalfInt64(referrerCustomer.ID),
+		"days", bonusDays, "months", months,
+		"first_month_days", bonus.FirstMonthDays, "per_month_days", bonus.PerMonthDays,
+		"kind", referrerKind)
 	if bonusDays <= 0 {
 		return nil
 	}
 	err = s.sendReferralBonusMessage(ctx, referrerCustomer, bonusDays)
 	return err
+}
+
+// recordReferralBonus фиксирует в журнале уже выданные дни.
+//
+// Вызывается ТОЛЬКО после успешного grantReferralDays: журнал описывает
+// выданное, а не задуманное, иначе статистика начнёт считать дни, до подписки
+// не доехавшие.
+//
+// Ошибка записи намеренно не роняет обработку платежа. Подписка к этому моменту
+// уже продлена во внешней панели, откатить это нельзя, и падение здесь привело
+// бы к повторной обработке платежа — то есть к ПОВТОРНОМУ продлению. Потерянная
+// строка статистики — несопоставимо меньшая беда, чем задвоенные дни, поэтому
+// сбой уходит в лог и на этом всё.
+func (s PaymentService) recordReferralBonus(
+	ctx context.Context,
+	referral *database.Referral,
+	purchase *database.Purchase,
+	recipient *database.Customer,
+	days int,
+	firstMonthDays int,
+	perMonthDays int,
+	kind string,
+) {
+	if s.referralLedger == nil || days <= 0 || referral == nil || recipient == nil {
+		return
+	}
+	entry := database.ReferralBonusEntry{
+		ReferralID:          &referral.ID,
+		ReferrerTelegramID:  referral.ReferrerID,
+		RefereeTelegramID:   referral.RefereeID,
+		RecipientTelegramID: recipient.TelegramID,
+		RecipientCustomerID: &recipient.ID,
+		Days:                days,
+		FirstMonthDays:      firstMonthDays,
+		PerMonthDays:        perMonthDays,
+		Kind:                kind,
+		CreatedAt:           time.Now().UTC(),
+	}
+	if purchase != nil {
+		entry.PurchaseID = &purchase.ID
+		entry.Months = purchase.Month
+	}
+	if err := s.referralLedger.Insert(ctx, entry); err != nil {
+		slog.Error("referral bonus ledger write failed",
+			"error", err,
+			"kind", kind,
+			"days", days,
+			"recipient_id", utils.MaskHalfInt64(recipient.ID),
+		)
+	}
 }
 
 func (s PaymentService) grantReferralDays(ctx context.Context, customer *database.Customer, days int) error {

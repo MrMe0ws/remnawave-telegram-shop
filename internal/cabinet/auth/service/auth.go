@@ -155,8 +155,25 @@ func (s *Service) ensureCustomer(ctx context.Context, accountID int64, language 
 }
 
 // attachReferralBestEffort — после создания аккаунта по ref (email / OAuth / Telegram).
+//
+// Через это поле приходит и партнёрский код (?p=<code>), и реферальный
+// telegram_id: у регистрации один параметр «откуда пришёл». Партнёрская ссылка
+// проверяется первой, и при успехе реферальная привязка не делается — клиент
+// принадлежит одной программе, иначе одна оплата оплачивается дважды.
 func (s *Service) attachReferralBestEffort(ctx context.Context, accountID int64, language, referralRaw string) {
-	if refTG := bootstrap.ParseReferralTelegramID(referralRaw); refTG != 0 && s.bootstrap != nil {
+	if s.bootstrap == nil {
+		return
+	}
+	if code := bootstrap.ParsePartnerCode(referralRaw); code != "" {
+		attached, err := s.bootstrap.AttachPartnerAfterWebRegister(ctx, accountID, language, code)
+		if err != nil {
+			slog.Warn("cabinet partner attach failed", "account_id", accountID, "error", err)
+		}
+		if attached {
+			return
+		}
+	}
+	if refTG := bootstrap.ParseReferralTelegramID(referralRaw); refTG != 0 {
 		if err := s.bootstrap.AttachReferralAfterWebRegister(ctx, accountID, language, refTG); err != nil {
 			slog.Warn("cabinet referral attach failed", "account_id", accountID, "error", err)
 		}

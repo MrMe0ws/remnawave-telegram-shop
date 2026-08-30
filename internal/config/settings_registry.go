@@ -349,6 +349,89 @@ func RuntimeSettingsRegistry() []SettingField {
 			Apply:  applyIntField(func(v int) error { conf.referralRepeatReferrerDays = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.referralRepeatReferrerDays) },
 		},
+		{
+			Key: "REFERRAL_SCALE_BY_MONTHS", Group: "referral", Type: SettingBool, Instant: true,
+			Apply:  applyBoolField(func(v bool) { conf.referralScaleByMonths = v }),
+			Current: func() string { return boolStr(conf.referralScaleByMonths) },
+		},
+
+		// --- partner ---
+		//
+		// Проценты — значения по умолчанию: индивидуальные условия партнёра
+		// хранятся в partner.first_percent / renewal_percent и перекрывают их.
+		// Правка процентов не пересчитывает прошлые начисления: в
+		// partner_earning записан процент, действовавший в момент платежа.
+		{
+			Key: "PARTNER_PROGRAM_ENABLED", Group: "partner", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.partnerProgramEnabled = v }),
+			Current: func() string { return boolStr(conf.partnerProgramEnabled) },
+		},
+		{
+			Key: "PARTNER_APPLICATIONS_ENABLED", Group: "partner", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.partnerApplicationsEnabled = v }),
+			Current: func() string { return boolStr(conf.partnerApplicationsEnabled) },
+		},
+		{
+			Key: "PARTNER_AUTO_APPROVE", Group: "partner", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.partnerAutoApprove = v }),
+			Current: func() string { return boolStr(conf.partnerAutoApprove) },
+		},
+		{
+			Key: "PARTNER_FIRST_PERCENT", Group: "partner", Type: SettingFloat,
+			Apply: applyFloatField(func(v float64) error {
+				if v < 0 || v > 100 {
+					return fmt.Errorf("must be between 0 and 100")
+				}
+				conf.partnerFirstPercent = v
+				return nil
+			}),
+			Current: func() string { return floatStr(conf.partnerFirstPercent) },
+		},
+		{
+			Key: "PARTNER_RENEWAL_PERCENT", Group: "partner", Type: SettingFloat,
+			Apply: applyFloatField(func(v float64) error {
+				if v < 0 || v > 100 {
+					return fmt.Errorf("must be between 0 and 100")
+				}
+				conf.partnerRenewalPercent = v
+				return nil
+			}),
+			Current: func() string { return floatStr(conf.partnerRenewalPercent) },
+		},
+		{
+			Key: "PARTNER_HOLD_DAYS", Group: "partner", Type: SettingInt,
+			MinInt: intPtr(0), MaxInt: intPtr(365),
+			Apply:   applyIntField(func(v int) error { conf.partnerHoldDays = v; return nil }),
+			Current: func() string { return strconv.Itoa(conf.partnerHoldDays) },
+		},
+		{
+			Key: "PARTNER_MIN_PAYOUT", Group: "partner", Type: SettingFloat,
+			Apply: applyFloatField(func(v float64) error {
+				if v < 0 {
+					return fmt.Errorf("must be >= 0")
+				}
+				conf.partnerMinPayout = v
+				return nil
+			}),
+			Current: func() string { return floatStr(conf.partnerMinPayout) },
+		},
+		{
+			Key: "PARTNER_PAYOUT_COOLDOWN_DAYS", Group: "partner", Type: SettingInt,
+			MinInt: intPtr(0), MaxInt: intPtr(365),
+			Apply:   applyIntField(func(v int) error { conf.partnerPayoutCooldownDays = v; return nil }),
+			Current: func() string { return strconv.Itoa(conf.partnerPayoutCooldownDays) },
+		},
+		{
+			Key: "PARTNER_MAX_LINKS", Group: "partner", Type: SettingInt,
+			MinInt: intPtr(1), MaxInt: intPtr(100),
+			Apply:   applyIntField(func(v int) error { conf.partnerMaxLinks = v; return nil }),
+			Current: func() string { return strconv.Itoa(conf.partnerMaxLinks) },
+		},
+		{
+			Key: "PARTNER_COUNT_EXTRA_HWID", Group: "partner", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.partnerCountExtraHwid = v }),
+			Current: func() string { return boolStr(conf.partnerCountExtraHwid) },
+		},
 
 		// --- access ---
 		{
@@ -543,6 +626,12 @@ func boolStr(v bool) string {
 }
 
 func intPtr(v int) *int { return &v }
+
+// floatStr печатает число без хвостовых нулей: в поле админки должно стоять
+// «40», а не «40.00000», иначе каждое сохранение выглядит как правка.
+func floatStr(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
+}
 
 const plategaCredentialsHint = "set PLATEGA_MERCHANT_ID and PLATEGA_SECRET in .env first"
 

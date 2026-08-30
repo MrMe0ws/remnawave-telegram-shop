@@ -20,6 +20,7 @@ type adminBootstrapResp struct {
 	SalesMode      string `json:"sales_mode"`
 	LoyaltyEnabled bool   `json:"loyalty_enabled"`
 	FortuneEnabled bool   `json:"fortune_enabled"`
+	PartnerEnabled bool   `json:"partner_enabled"`
 	// Версия сборки — чтобы админ видел в шапке, что за образ поднят, и не
 	// искал это в логах контейнера.
 	Version string `json:"version"`
@@ -37,6 +38,7 @@ func (h *AdminBootstrapHandler) Bootstrap(w http.ResponseWriter, r *http.Request
 		SalesMode:      config.SalesMode(),
 		LoyaltyEnabled: config.LoyaltyEnabled(),
 		FortuneEnabled: fw.Enabled,
+		PartnerEnabled: config.PartnerProgramEnabled(),
 		Version:        config.BuildVersion(),
 		Commit:         config.BuildCommit(),
 	}
