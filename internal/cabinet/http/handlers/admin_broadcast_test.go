@@ -1,6 +1,10 @@
 package handlers
 
-import "testing"
+import (
+	"testing"
+
+	"remnawave-tg-shop-bot/internal/broadcast"
+)
 
 func TestIsValidBroadcastAudience(t *testing.T) {
 	if !isValidBroadcastAudience("all") {
@@ -31,13 +35,35 @@ func TestBroadcastSendReqHasContent(t *testing.T) {
 	}
 }
 
-func TestBroadcastImageContentType(t *testing.T) {
-	asPhoto, ok := broadcastImageContentType("image/png")
-	if !ok || !asPhoto {
-		t.Fatalf("png: ok=%v asPhoto=%v", ok, asPhoto)
+func TestBroadcastMediaContentType(t *testing.T) {
+	cases := map[string]broadcast.MediaKind{
+		"image/png":       broadcast.MediaPhoto,
+		"image/jpeg":      broadcast.MediaPhoto,
+		"video/mp4":       broadcast.MediaVideo,
+		"video/quicktime": broadcast.MediaVideo,
 	}
-	_, ok = broadcastImageContentType("image/gif")
-	if ok {
-		t.Fatal("gif should fail")
+	for ct, want := range cases {
+		kind, ok := broadcastMediaContentType(ct)
+		if !ok || kind != want {
+			t.Errorf("%s: kind=%q ok=%v, want %q", ct, kind, ok, want)
+		}
+	}
+	if _, ok := broadcastMediaContentType("image/gif"); ok {
+		t.Error("gif should be rejected")
+	}
+	if _, ok := broadcastMediaContentType("application/pdf"); ok {
+		t.Error("pdf should be rejected")
+	}
+}
+
+// Неизвестный вид не должен уезжать в SendPhoto: тот на видео просто откажет.
+func TestRecipientMediaFallsBackToDocument(t *testing.T) {
+	req := broadcastSendReq{Media: &broadcastMediaReq{FileID: "abc", Kind: "sticker"}}
+	if got := req.recipientMedia().Kind; got != broadcast.MediaDocument {
+		t.Errorf("unknown kind => %q, want %q", got, broadcast.MediaDocument)
+	}
+	req.Media.Kind = string(broadcast.MediaVideo)
+	if got := req.recipientMedia().Kind; got != broadcast.MediaVideo {
+		t.Errorf("video kind => %q", got)
 	}
 }

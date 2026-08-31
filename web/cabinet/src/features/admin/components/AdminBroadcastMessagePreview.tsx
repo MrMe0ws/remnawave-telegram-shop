@@ -5,6 +5,8 @@ import {
   broadcastLinkLabelKey,
   type BroadcastLinkKey,
 } from '../utils/broadcastLinks'
+import type { AdminBroadcastMediaKind } from '@/lib/types/admin'
+import { renderTelegramHtml } from '../utils/telegramHtml'
 
 interface BroadcastButtons {
   buy: boolean
@@ -17,6 +19,7 @@ interface BroadcastButtons {
 interface AdminBroadcastMessagePreviewProps {
   text: string
   mediaUrl?: string | null
+  mediaKind?: AdminBroadcastMediaKind
   buttons: BroadcastButtons
   audienceLabel: string
   recipientCount: number
@@ -25,6 +28,7 @@ interface AdminBroadcastMessagePreviewProps {
 export function AdminBroadcastMessagePreview({
   text,
   mediaUrl,
+  mediaKind,
   buttons,
   audienceLabel,
   recipientCount,
@@ -53,17 +57,23 @@ export function AdminBroadcastMessagePreview({
 
       <div className="mx-auto max-w-md">
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-[#18222d] text-[#f5f5f5] shadow-sm dark:bg-[#0e1621]">
-          {mediaUrl && (
-            <img
-              src={mediaUrl}
-              alt=""
-              className="max-h-80 w-full object-cover"
-            />
-          )}
+          {mediaUrl &&
+            (mediaKind === 'video' ? (
+              <video src={mediaUrl} className="max-h-80 w-full object-cover" controls muted playsInline />
+            ) : (
+              <img src={mediaUrl} alt="" className="max-h-80 w-full object-cover" />
+            ))}
           {caption && (
-            <p className="whitespace-pre-wrap px-3 py-2.5 text-[15px] leading-snug">
-              {caption}
-            </p>
+            /*
+             * Разметку показываем разобранной, а не тегами: текст уходит
+             * получателю с parse_mode=HTML, и превью с «<b>» на экране не
+             * отвечало на вопрос, ради которого его открывают, — как это
+             * будет выглядеть в чате.
+             */
+            <p
+              className="whitespace-pre-wrap px-3 py-2.5 text-[15px] leading-snug [&_a]:text-[#6ab3f3] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-white/30 [&_blockquote]:pl-2 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:font-mono [&_code]:text-[13px]"
+              dangerouslySetInnerHTML={{ __html: renderTelegramHtml(caption) }}
+            />
           )}
           {!mediaUrl && !caption && (
             <p className="px-3 py-2.5 text-sm text-white/50">{t('admin.broadcast.previewNoText')}</p>

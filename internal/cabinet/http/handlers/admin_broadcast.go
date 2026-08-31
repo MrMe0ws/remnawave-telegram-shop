@@ -19,7 +19,10 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 )
 
-const broadcastMediaMaxBytes = 10 << 20 // 10 MiB
+// Потолок загрузки. 50 MiB — предел Bot API на отправку файла ботом; меньше
+// ставить незачем, а больше Telegram всё равно не примет. На стороне nginx для
+// этого location нужен свой client_max_body_size, см. SETUP-GUIDE-RU.md.
+const broadcastMediaMaxBytes = 50 << 20 // 50 MiB
 
 var (
 	broadcastSendMu      sync.Mutex
@@ -123,8 +126,9 @@ type broadcastButtonsReq struct {
 }
 
 type broadcastMediaReq struct {
-	FileID  string `json:"file_id"`
-	AsPhoto bool   `json:"as_photo"`
+	FileID string `json:"file_id"`
+	// photo | video | document — что вернул upload-media.
+	Kind string `json:"kind"`
 }
 
 type broadcastSendReq struct {
@@ -188,9 +192,17 @@ func (req *broadcastSendReq) recipientMedia() *broadcast.Media {
 	if req.Media == nil {
 		return nil
 	}
+	kind := broadcast.MediaKind(strings.TrimSpace(req.Media.Kind))
+	switch kind {
+	case broadcast.MediaPhoto, broadcast.MediaVideo, broadcast.MediaDocument:
+	default:
+		// Незнакомый вид — отправляем файлом: он доедет любым, тогда как
+		// SendPhoto на видео просто откажет.
+		kind = broadcast.MediaDocument
+	}
 	return &broadcast.Media{
-		FileID:  req.Media.FileID,
-		AsPhoto: req.Media.AsPhoto,
+		FileID: req.Media.FileID,
+		Kind:   kind,
 	}
 }
 
@@ -310,30 +322,22 @@ func (h *AdminBroadcastHandler) UploadMedia(w http.ResponseWriter, r *http.Reque
 	if contentType == "" || contentType == "application/octet-stream" {
 		contentType = strings.ToLower(strings.TrimSpace(mime.TypeByExtension(filename)))
 	}
-	asPhoto, ok := broadcastImageContentType(contentType)
+	kind, ok := broadcastMediaContentType(contentType)
 	if !ok {
-		http.Error(w, "unsupported image type (jpeg, png, webp only)", http.StatusBadRequest)
+		http.Error(w, "unsupported media type (jpeg, png, webp, mp4, webm, mov only)", http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
+	upload := &models.InputFileUpload{Filename: filename, Data: bytes.NewReader(data)}
 	var sent *models.Message
-	if asPhoto {
-		sent, err = h.bot.SendPhoto(ctx, &bot.SendPhotoParams{
-			ChatID: adminID,
-			Photo: &models.InputFileUpload{
-				Filename: filename,
-				Data:     bytes.NewReader(data),
-			},
-		})
-	} else {
-		sent, err = h.bot.SendDocument(ctx, &bot.SendDocumentParams{
-			ChatID: adminID,
-			Document: &models.InputFileUpload{
-				Filename: filename,
-				Data:     bytes.NewReader(data),
-			},
-		})
+	switch kind {
+	case broadcast.MediaVideo:
+		sent, err = h.bot.SendVideo(ctx, &bot.SendVideoParams{ChatID: adminID, Video: upload})
+	case broadcast.MediaPhoto:
+		sent, err = h.bot.SendPhoto(ctx, &bot.SendPhotoParams{ChatID: adminID, Photo: upload})
+	default:
+		sent, err = h.bot.SendDocument(ctx, &bot.SendDocumentParams{ChatID: adminID, Document: upload})
 	}
 	if err != nil {
 		slog.Error("admin broadcast: upload media", "error", err)
@@ -341,7 +345,7 @@ func (h *AdminBroadcastHandler) UploadMedia(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	fileID, extractPhoto := extractTelegramFileID(sent)
+	fileID, sentKind := extractTelegramFileID(sent)
 	if fileID == "" {
 		http.Error(w, "failed to resolve telegram file_id", http.StatusBadGateway)
 		return
@@ -355,32 +359,46 @@ func (h *AdminBroadcastHandler) UploadMedia(w http.ResponseWriter, r *http.Reque
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"file_id":  fileID,
-		"as_photo": extractPhoto,
+		"file_id": fileID,
+		"kind":    string(sentKind),
 	})
 }
 
-func broadcastImageContentType(contentType string) (asPhoto bool, ok bool) {
+// broadcastMediaContentType — чем отправлять файл, который принесла админка.
+//
+// Видео не «картинка покрупнее»: SendPhoto на mp4 просто откажет, а SendDocument
+// доставит его файлом, который в чате не проигрывается.
+func broadcastMediaContentType(contentType string) (kind broadcast.MediaKind, ok bool) {
 	switch contentType {
 	case "image/jpeg", "image/jpg", "image/png", "image/webp":
-		return true, true
+		return broadcast.MediaPhoto, true
+	case "video/mp4", "video/webm", "video/quicktime":
+		return broadcast.MediaVideo, true
 	default:
-		return false, false
+		return "", false
 	}
 }
 
-func extractTelegramFileID(msg *models.Message) (fileID string, asPhoto bool) {
+// extractTelegramFileID — какой file_id и какого вида получился после загрузки.
+//
+// Смотрим на то, чем сообщение стало у Telegram, а не на то, чем мы его
+// отправляли: mov без нужных кодеков он кладёт в Document, и слать такой файл
+// потом методом SendVideo бессмысленно.
+func extractTelegramFileID(msg *models.Message) (fileID string, kind broadcast.MediaKind) {
 	if msg == nil {
-		return "", false
+		return "", ""
 	}
 	if len(msg.Photo) > 0 {
 		last := msg.Photo[len(msg.Photo)-1]
-		return last.FileID, true
+		return last.FileID, broadcast.MediaPhoto
+	}
+	if msg.Video != nil {
+		return msg.Video.FileID, broadcast.MediaVideo
 	}
 	if msg.Document != nil {
-		return msg.Document.FileID, false
+		return msg.Document.FileID, broadcast.MediaDocument
 	}
-	return "", false
+	return "", ""
 }
 
 // Send starts a Telegram broadcast using the same delivery logic as TG admin panel.
@@ -449,17 +467,21 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 				Text:   "⏳ Рассылка из web-админки запущена. Ожидайте итоговое сообщение…",
 			})
 		}
-		h.sender.Send(
-			ctx,
-			h.bot,
-			adminID,
-			payload.Audience,
-			payload.TariffID,
-			payload.Text,
-			nil,
-			payload.recipientMedia(),
-			payload.recipientButtons(),
-		)
+		h.sender.Send(ctx, h.bot, adminID, payload.Audience, payload.TariffID, broadcast.Message{
+			Text: payload.Text,
+			/*
+			 * Редактор web-админки вставляет теги Telegram HTML (<b>, <i>,
+			 * <a href>), и без ParseMode они уходили получателю как обычный
+			 * текст: человек видел «<b>Заголовок</b>» вместо жирного.
+			 *
+			 * Entities здесь не передаём: Bot API принимает либо разметку,
+			 * либо готовые entities, и второе — способ рассылки из
+			 * Telegram-админки, где они копируются из сообщения админа.
+			 */
+			ParseMode: models.ParseModeHTML,
+			Media:     payload.recipientMedia(),
+			Buttons:   payload.recipientButtons(),
+		})
 	}()
 
 	slog.Info("admin broadcast: send started",

@@ -21,19 +21,19 @@ import (
 type BroadcastType string
 
 const (
-	BroadcastTypeAll           BroadcastType = "all"            // Всем пользователям
-	BroadcastTypeActivePaid    BroadcastType = "active_paid"    // Активные платные
-	BroadcastTypeActiveTrial   BroadcastType = "active_trial"   // Активный триал
-	BroadcastTypeActiveAll     BroadcastType = "active_all"     // Все активные
+	BroadcastTypeAll           BroadcastType = "all"          // Всем пользователям
+	BroadcastTypeActivePaid    BroadcastType = "active_paid"  // Активные платные
+	BroadcastTypeActiveTrial   BroadcastType = "active_trial" // Активный триал
+	BroadcastTypeActiveAll     BroadcastType = "active_all"   // Все активные
 	BroadcastTypeInactivePaid  BroadcastType = "inactive_paid"
 	BroadcastTypeInactiveTrial BroadcastType = "inactive_trial"
-	BroadcastTypeInactiveAll    BroadcastType = "inactive_all"
+	BroadcastTypeInactiveAll   BroadcastType = "inactive_all"
 )
 
 // BroadcastRecipientButtons — какие inline-кнопки прикрепить к рассылке.
 type BroadcastRecipientButtons = broadcast.RecipientButtons
 
-// broadcastDraftMedia — черновик рассылки с картинкой (фото или файл JPEG/PNG/WebP).
+// broadcastDraftMedia — вложение черновика рассылки: фото, видео или файл.
 type broadcastDraftMedia = broadcast.Media
 
 // BroadcastState хранит состояние рассылки для каждого админа
@@ -45,27 +45,27 @@ type BroadcastState struct {
 	pendingButtons       map[int64]BroadcastRecipientButtons
 	waitingForInput      map[int64]bool
 	waitingForButtonPick map[int64]bool
-	selectedType              map[int64]BroadcastType
+	selectedType         map[int64]BroadcastType
 	// Фильтр тарифа для платных сегментов в SALES_MODE=tariffs; nil — все платники сегмента; не в map — то же после classic.
-	selectedTariffID map[int64]*int64
-	broadcastOpenedFromAdmin  map[int64]bool
-	promptMessageID           map[int64]int
-	pendingPreviewMsgID       map[int64]int
+	selectedTariffID         map[int64]*int64
+	broadcastOpenedFromAdmin map[int64]bool
+	promptMessageID          map[int64]int
+	pendingPreviewMsgID      map[int64]int
 }
 
 func newBroadcastState() *BroadcastState {
 	return &BroadcastState{
-		pendingText:          make(map[int64]string),
-		pendingEntities:      make(map[int64][]models.MessageEntity),
-		pendingMedia:         make(map[int64]*broadcastDraftMedia),
-		pendingButtons:       make(map[int64]BroadcastRecipientButtons),
-		waitingForInput:      make(map[int64]bool),
-		waitingForButtonPick: make(map[int64]bool),
-		selectedType:               make(map[int64]BroadcastType),
-		selectedTariffID:             make(map[int64]*int64),
-		broadcastOpenedFromAdmin:   make(map[int64]bool),
-		promptMessageID:            make(map[int64]int),
-		pendingPreviewMsgID:        make(map[int64]int),
+		pendingText:              make(map[int64]string),
+		pendingEntities:          make(map[int64][]models.MessageEntity),
+		pendingMedia:             make(map[int64]*broadcastDraftMedia),
+		pendingButtons:           make(map[int64]BroadcastRecipientButtons),
+		waitingForInput:          make(map[int64]bool),
+		waitingForButtonPick:     make(map[int64]bool),
+		selectedType:             make(map[int64]BroadcastType),
+		selectedTariffID:         make(map[int64]*int64),
+		broadcastOpenedFromAdmin: make(map[int64]bool),
+		promptMessageID:          make(map[int64]int),
+		pendingPreviewMsgID:      make(map[int64]int),
 	}
 }
 
@@ -180,22 +180,31 @@ func (h Handler) broadcastPaidTariffPickKeyboard(lang string, activePaidSegment 
 }
 
 // extractBroadcastImageFromMessage — фото как картинка или документ JPEG/PNG/WebP (отправка файлом).
-func extractBroadcastImageFromMessage(m *models.Message) (fileID string, asPhoto bool, ok bool) {
+func extractBroadcastImageFromMessage(m *models.Message) (fileID string, kind broadcast.MediaKind, ok bool) {
 	if m == nil {
-		return "", false, false
+		return "", "", false
 	}
 	if len(m.Photo) > 0 {
 		last := m.Photo[len(m.Photo)-1]
-		return last.FileID, true, true
+		return last.FileID, broadcast.MediaPhoto, true
+	}
+	// Видео Telegram отдаёт отдельным полем, а не документом — и переслать его
+	// надо тоже видео, иначе в чате получателя оно не проиграется.
+	if m.Video != nil {
+		return m.Video.FileID, broadcast.MediaVideo, true
 	}
 	if m.Document != nil {
 		mime := strings.ToLower(strings.TrimSpace(m.Document.MimeType))
 		switch mime {
 		case "image/jpeg", "image/jpg", "image/png", "image/webp":
-			return m.Document.FileID, false, true
+			return m.Document.FileID, broadcast.MediaDocument, true
+		case "video/mp4", "video/quicktime", "video/webm":
+			// Видео, отправленное файлом (без сжатия), Telegram кладёт в
+			// Document. Получателю всё равно шлём его как видео.
+			return m.Document.FileID, broadcast.MediaVideo, true
 		}
 	}
-	return "", false, false
+	return "", "", false
 }
 
 // BroadcastAwaitingMessageInput — админ выбрал аудиторию и бот ждёт текст/картинку черновика.
@@ -628,7 +637,7 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 	}
 	broadcastState.mu.Unlock()
 
-	fileID, asPhoto, hasMedia := extractBroadcastImageFromMessage(update.Message)
+	fileID, mediaKind, hasMedia := extractBroadcastImageFromMessage(update.Message)
 	var messageText string
 	var entities []models.MessageEntity
 	if hasMedia {
@@ -664,7 +673,7 @@ func (h Handler) BroadcastMessageHandler(ctx context.Context, b *bot.Bot, update
 		delete(broadcastState.pendingEntities, adminID)
 	}
 	if hasMedia {
-		broadcastState.pendingMedia[adminID] = &broadcastDraftMedia{FileID: fileID, AsPhoto: asPhoto}
+		broadcastState.pendingMedia[adminID] = &broadcastDraftMedia{FileID: fileID, Kind: mediaKind}
 	} else {
 		delete(broadcastState.pendingMedia, adminID)
 	}
@@ -787,46 +796,15 @@ func (h Handler) BroadcastButtonsNextHandler(ctx context.Context, b *bot.Bot, up
 		MessageID: pickerMsg.ID,
 	})
 
-	var previewMsg *models.Message
-	var previewErr error
+	// Предпросмотр рисуется тем же кодом, что и сама рассылка: иначе админ
+	// подтверждает одно, а получатели видят другое.
 	markup := h.buildBroadcastReplyMarkup(lang, flags)
-	if draftMedia != nil {
-		if draftMedia.AsPhoto {
-			pp := &bot.SendPhotoParams{
-				ChatID:          adminID,
-				Photo:           &models.InputFileString{Data: draftMedia.FileID},
-				Caption:         messageText,
-				CaptionEntities: entities,
-			}
-			if markup != nil {
-				pp.ReplyMarkup = markup
-			}
-			previewMsg, previewErr = b.SendPhoto(ctx, pp)
-		} else {
-			dp := &bot.SendDocumentParams{
-				ChatID:          adminID,
-				Document:        &models.InputFileString{Data: draftMedia.FileID},
-				Caption:         messageText,
-				CaptionEntities: entities,
-			}
-			if markup != nil {
-				dp.ReplyMarkup = markup
-			}
-			previewMsg, previewErr = b.SendDocument(ctx, dp)
-		}
-	} else {
-		previewParams := bot.SendMessageParams{
-			ChatID: adminID,
-			Text:   messageText,
-		}
-		if len(entities) > 0 {
-			previewParams.Entities = entities
-		}
-		if markup != nil {
-			previewParams.ReplyMarkup = markup
-		}
-		previewMsg, previewErr = b.SendMessage(ctx, &previewParams)
-	}
+	previewMsg, previewErr := broadcast.Deliver(ctx, b, adminID, broadcast.Message{
+		Text:     messageText,
+		Entities: entities,
+		Media:    draftMedia,
+		Buttons:  flags,
+	}, markup)
 	if previewErr != nil {
 		slog.Error("broadcast preview send", "error", previewErr)
 	}
@@ -991,5 +969,13 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		slog.Error("broadcast sender not configured")
 		return
 	}
-	h.broadcastSender.Send(ctx, b, adminID, audience, tf, messageText, entities, media, flags)
+	h.broadcastSender.Send(ctx, b, adminID, audience, tf, broadcast.Message{
+		Text: messageText,
+		// Форматирование приходит готовыми entities из исходного сообщения
+		// админа, поэтому ParseMode здесь не нужен и вреден: Bot API принимает
+		// что-то одно.
+		Entities: entities,
+		Media:    media,
+		Buttons:  flags,
+	})
 }

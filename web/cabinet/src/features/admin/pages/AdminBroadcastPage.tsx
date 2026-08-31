@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ImagePlus, Megaphone, Send, Users, Eye, AlertCircle, X, MessageSquare, PanelBottom } from 'lucide-react'
 import { api } from '@/lib/api'
+import type { AdminBroadcastMediaKind } from '@/lib/types/admin'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminFeedback } from '../components/AdminFeedback'
@@ -27,7 +28,7 @@ interface AudienceItem {
 
 interface UploadedMedia {
   file_id: string
-  as_photo: boolean
+  kind: AdminBroadcastMediaKind
   previewUrl: string
   name: string
 }
@@ -85,7 +86,7 @@ export default function AdminBroadcastPage() {
         if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
         return {
           file_id: res.file_id,
-          as_photo: res.as_photo,
+          kind: res.kind,
           previewUrl,
           name: file.name,
         }
@@ -124,7 +125,7 @@ export default function AdminBroadcastPage() {
         text,
         buttons,
         media: media
-          ? { file_id: media.file_id, as_photo: media.as_photo }
+          ? { file_id: media.file_id, kind: media.kind }
           : null,
       }),
     onSuccess: (res) => {
@@ -267,7 +268,7 @@ export default function AdminBroadcastPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
               className="hidden"
               onChange={(e) => {
                 handleFileChange(e.target.files?.[0])
@@ -282,8 +283,8 @@ export default function AdminBroadcastPage() {
             >
               <ImagePlus className="size-4" />
               {uploadMutation.isPending
-                ? t('admin.broadcast.uploadingPhoto')
-                : t('admin.broadcast.attachPhoto')}
+                ? t('admin.broadcast.uploadingMedia')
+                : t('admin.broadcast.attachMedia')}
             </button>
           </div>
 
@@ -296,14 +297,27 @@ export default function AdminBroadcastPage() {
 
           {media && (
             <div className="mt-3 flex items-start gap-3 rounded-md border border-border/50 bg-muted/30 p-3">
-              <img
-                src={media.previewUrl}
-                alt={media.name}
-                className="size-20 rounded-md object-cover"
-              />
+              {media.kind === 'video' ? (
+                <video
+                  src={media.previewUrl}
+                  className="size-20 rounded-md object-cover"
+                  muted
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={media.previewUrl}
+                  alt={media.name}
+                  className="size-20 rounded-md object-cover"
+                />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{media.name}</p>
-                <p className="text-xs text-muted-foreground">{t('admin.broadcast.photoAttached')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {media.kind === 'video'
+                    ? t('admin.broadcast.videoAttached')
+                    : t('admin.broadcast.photoAttached')}
+                </p>
               </div>
               <button
                 type="button"
@@ -337,6 +351,7 @@ export default function AdminBroadcastPage() {
             <AdminBroadcastMessagePreview
               text={text}
               mediaUrl={media?.previewUrl}
+              mediaKind={media?.kind}
               buttons={buttons}
               audienceLabel={audienceLabels[selectedAudience] ?? selectedAudience}
               recipientCount={previewCount}

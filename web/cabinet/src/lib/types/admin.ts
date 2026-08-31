@@ -344,9 +344,12 @@ export interface AdminBroadcastPreviewDTO {
   status?: string
 }
 
+/** Чем вложение уйдёт в Telegram. Решает сервер по тому, во что его превратил Bot API. */
+export type AdminBroadcastMediaKind = 'photo' | 'video' | 'document'
+
 export interface AdminBroadcastMediaDTO {
   file_id: string
-  as_photo: boolean
+  kind: AdminBroadcastMediaKind
 }
 
 export interface AdminBroadcastSendDTO {

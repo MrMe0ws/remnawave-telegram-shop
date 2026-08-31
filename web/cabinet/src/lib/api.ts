@@ -1505,7 +1505,7 @@ export const api = {
     }
     media?: {
       file_id: string
-      as_photo: boolean
+      kind: string
     } | null
   }) => request<AdminBroadcastSendDTO>('POST', '/admin/broadcast/send', body),
 
