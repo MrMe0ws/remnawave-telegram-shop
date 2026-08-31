@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/go-telegram/bot/models"
+
 	"remnawave-tg-shop-bot/internal/translation"
 )
 
@@ -108,4 +110,62 @@ func TestTruncKeepsRunesIntact(t *testing.T) {
 	if got := trunc("коротко", 100); got != "коротко" {
 		t.Errorf("короткая строка не должна меняться, получено %q", got)
 	}
+}
+
+// Ссылка в тексте теряется среди строк и открывает браузер мимо Telegram, поэтому
+// в партнёрских уведомлениях раздел открывает именно кнопка.
+func TestPartnerNotifyMarkup(t *testing.T) {
+	tm := translation.GetInstance()
+	if err := tm.InitTranslations("../../translations", "ru"); err != nil {
+		t.Fatalf("init translations: %v", err)
+	}
+	n := &PartnerNotifier{tm: tm, publicURL: "https://cabinet.example.com"}
+
+	admin := button(t, n.adminMarkup("ru", "admin_partner_notify_open_link", "/admin/partners"))
+	if admin.URL != "https://cabinet.example.com/admin/partners" {
+		t.Errorf("админская кнопка ведёт на %q", admin.URL)
+	}
+	// Уведомление админа уходит в группу, а там web_app-кнопка запрещена Bot API.
+	if admin.WebApp != nil {
+		t.Error("админская кнопка должна быть URL-кнопкой")
+	}
+	if admin.Text == "" {
+		t.Error("у кнопки нет подписи")
+	}
+
+	// Без CABINET_MINI_APP_URL точки входа нет — остаётся ссылка на PublicURL.
+	partner := button(t, n.partnerMarkup("ru"))
+	if partner.URL != "https://cabinet.example.com/partner" {
+		t.Errorf("кнопка партнёра ведёт на %q", partner.URL)
+	}
+	if partner.Text == "" {
+		t.Error("у кнопки партнёра нет подписи")
+	}
+}
+
+// Без адреса кабинета кнопка вела бы в никуда: сообщение уходит без неё.
+func TestPartnerNotifyMarkupWithoutURL(t *testing.T) {
+	tm := translation.GetInstance()
+	if err := tm.InitTranslations("../../translations", "ru"); err != nil {
+		t.Fatalf("init translations: %v", err)
+	}
+	n := &PartnerNotifier{tm: tm}
+	if m := n.adminMarkup("ru", "admin_partner_notify_open_link", "/admin/partners"); m != nil {
+		t.Errorf("без PublicURL админской кнопки быть не должно, получено %#v", m)
+	}
+	if m := n.partnerMarkup("ru"); m != nil {
+		t.Errorf("без PublicURL кнопки партнёра быть не должно, получено %#v", m)
+	}
+}
+
+func button(t *testing.T, markup models.ReplyMarkup) models.InlineKeyboardButton {
+	t.Helper()
+	kb, ok := markup.(models.InlineKeyboardMarkup)
+	if !ok {
+		t.Fatalf("ожидалась inline-клавиатура, получено %#v", markup)
+	}
+	if len(kb.InlineKeyboard) != 1 || len(kb.InlineKeyboard[0]) != 1 {
+		t.Fatalf("ожидалась ровно одна кнопка, получено %#v", kb.InlineKeyboard)
+	}
+	return kb.InlineKeyboard[0][0]
 }

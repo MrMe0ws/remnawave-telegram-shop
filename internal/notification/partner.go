@@ -14,6 +14,7 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/handler"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/utils"
 )
@@ -78,7 +79,7 @@ func (n *PartnerNotifier) ApplicationSubmitted(ctx context.Context, app PartnerA
 	}
 	// Анкета режется: «о себе» разрешено до 2000 символов, площадки до 1000, а
 	// сообщение Telegram обрывается на 4096 — целиком анкета в уведомление не
-	// поместится. Полный текст всегда есть в карточке, ссылка на неё ниже.
+	// поместится. Полный текст всегда есть в карточке, кнопка в раздел — под сообщением.
 	n.notifyAdmin(ctx, key, "admin_partner_notify_open_link", "/admin/partners",
 		esc(app.Label), escOrDash(trunc(app.About, 600)),
 		escOrDash(trunc(app.Channels, 400)), escOrDash(trunc(app.Expected, 200)))
@@ -165,8 +166,7 @@ func (n *PartnerNotifier) notifyAdmin(ctx context.Context, key, linkKey, path st
 	if text == "" {
 		return
 	}
-	text += n.linkLine(lang, linkKey, path)
-	n.deliver(ctx, chatID, threadID, text, "admin")
+	n.deliver(ctx, chatID, threadID, text, n.adminMarkup(lang, linkKey, path), "admin")
 }
 
 // notifyPartner отправляет в личку партнёру. Партнёр — обычный клиент, поэтому
@@ -201,26 +201,28 @@ func (n *PartnerNotifier) notifyPartner(ctx context.Context, customerID int64, k
 		if text == "" {
 			return
 		}
-		text += n.linkLine(lang, "partner_notify_open_link", "/partner")
-		n.send(ctx, customer.TelegramID, 0, text, "partner")
+		n.send(ctx, customer.TelegramID, 0, text, n.partnerMarkup(lang), "partner")
 	}()
 }
 
-func (n *PartnerNotifier) deliver(ctx context.Context, chatID int64, threadID int, text, audience string) {
+func (n *PartnerNotifier) deliver(ctx context.Context, chatID int64, threadID int, text string, markup models.ReplyMarkup, audience string) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 		defer cancel()
-		n.send(ctx, chatID, threadID, text, audience)
+		n.send(ctx, chatID, threadID, text, markup, audience)
 	}()
 }
 
-func (n *PartnerNotifier) send(ctx context.Context, chatID int64, threadID int, text, audience string) {
+func (n *PartnerNotifier) send(ctx context.Context, chatID int64, threadID int, text string, markup models.ReplyMarkup, audience string) {
 	disabled := true
 	params := &bot.SendMessageParams{
 		ChatID:             chatID,
 		Text:               text,
 		ParseMode:          models.ParseModeHTML,
 		LinkPreviewOptions: &models.LinkPreviewOptions{IsDisabled: &disabled},
+	}
+	if markup != nil {
+		params.ReplyMarkup = markup
 	}
 	if threadID > 0 {
 		params.MessageThreadID = threadID
@@ -246,18 +248,57 @@ func (n *PartnerNotifier) render(lang, key string, args ...any) string {
 	return fmt.Sprintf(tpl, args...)
 }
 
-// linkLine добавляет ссылку в кабинет отдельной строкой, а не плейсхолдером в
-// шаблоне: PublicURL может быть не задан, и тогда в тексте не должно остаться
-// ни дырки от аргумента, ни ссылки в никуда.
-func (n *PartnerNotifier) linkLine(lang, key, path string) string {
+// --- кнопки ---
+
+// adminMarkup — кнопка в раздел «Партнёры» веб-админки. Именно URL-кнопка, а не
+// WebApp: уведомление уходит в PARTNER_NOTIFY_CHAT_ID, то есть чаще всего в
+// группу или тему форума, а web_app-кнопки Bot API принимает только в личке.
+// Одна разметка на оба случая надёжнее, чем выбор кнопки по знаку chat id.
+func (n *PartnerNotifier) adminMarkup(lang, key, path string) models.ReplyMarkup {
+	u := n.cabinetURL(path)
+	if u == "" {
+		// Кабинет без CABINET_PUBLIC_URL, но с точкой входа мини-аппа:
+		// открываем админку по ней, а не теряем кнопку целиком.
+		u = handler.BuildCabinetWebAppURL("/cabinet" + path)
+	}
+	return n.linkMarkup(lang, key, models.InlineKeyboardButton{URL: u})
+}
+
+// partnerMarkup — кнопка в кабинет партнёра. Партнёру пишем всегда в личку,
+// поэтому здесь доступен WebApp: раздел открывается прямо в Telegram — ровно
+// как кнопка «Партнёрам» в рассылке. Без точки входа мини-аппа остаётся
+// обычная ссылка на CABINET_PUBLIC_URL.
+func (n *PartnerNotifier) partnerMarkup(lang string) models.ReplyMarkup {
+	if u := handler.BuildCabinetWebAppURL("/cabinet/partner"); u != "" {
+		return n.linkMarkup(lang, "partner_notify_open_link",
+			models.InlineKeyboardButton{WebApp: &models.WebAppInfo{URL: u}})
+	}
+	return n.linkMarkup(lang, "partner_notify_open_link",
+		models.InlineKeyboardButton{URL: n.cabinetURL("/partner")})
+}
+
+// cabinetURL — абсолютный адрес раздела кабинета либо "". Без PublicURL вернуть
+// относительный "/partner" хуже, чем не вернуть ничего: Bot API отвергает
+// кнопку с таким URL вместе со всем сообщением, и уведомление просто пропадёт.
+func (n *PartnerNotifier) cabinetURL(path string) string {
 	if n.publicURL == "" {
 		return ""
 	}
-	caption := strings.TrimSpace(n.tm.GetText(lang, key))
-	if caption == "" {
-		return ""
+	return n.publicURL + path
+}
+
+// linkMarkup гасит кнопку, если вести некуда или нечем подписать: сообщение
+// уйдёт просто без неё — как раньше уходило без строки со ссылкой.
+func (n *PartnerNotifier) linkMarkup(lang, key string, button models.InlineKeyboardButton) models.ReplyMarkup {
+	if button.URL == "" && button.WebApp == nil {
+		return nil
 	}
-	return fmt.Sprintf("\n\n<a href=\"%s%s\">%s</a>", esc(n.publicURL), path, esc(caption))
+	if strings.TrimSpace(n.tm.GetText(lang, key)) == "" {
+		return nil
+	}
+	return models.InlineKeyboardMarkup{InlineKeyboard: [][]models.InlineKeyboardButton{
+		{n.tm.WithButton(lang, key, button)},
+	}}
 }
 
 // --- форматирование ---
