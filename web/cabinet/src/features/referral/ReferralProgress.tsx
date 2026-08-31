@@ -110,6 +110,8 @@ export function ReferralProgress({
                 оплату, — это обман, который человек заметит через месяц. */}
             {hint ? <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p> : null}
 
+            {/* aria-hidden: дорожка дублирует заголовок и подпись под ней,
+                и для скринридера это лишний поток из пяти чисел. */}
             <div className="mt-4 flex gap-1.5" aria-hidden>
               {Array.from({ length: TRACK_LENGTH }, (_, i) => {
                 const index = trackStart + i
@@ -125,7 +127,7 @@ export function ReferralProgress({
                       !done && !now && 'border-border bg-muted/40 text-muted-foreground',
                     )}
                   >
-                    {index + 1}
+                    {t('referralPage.progress.trackMonth', { n: index + 1 })}
                   </span>
                 )
               })}
@@ -136,7 +138,9 @@ export function ReferralProgress({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {/* Три в ряд и на телефоне: это одна сводка, а не три независимых
+            карточки, и в столбик она занимает пол-экрана ни за чем. */}
+        <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
           <StatTile
             label={t('referralPage.statTotal')}
             value={String(stats.total ?? 0)}
@@ -160,10 +164,12 @@ export function ReferralProgress({
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-xl border border-border bg-muted/40 p-3">
-      <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
+    <div className="rounded-xl border border-border bg-muted p-2.5 sm:p-3">
+      <p className="text-[10px] uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10.5px]">
+        {label}
+      </p>
+      <p className="mt-0.5 text-xl font-semibold tabular-nums sm:text-2xl">{value}</p>
+      <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground sm:text-[11px]">{sub}</p>
     </div>
   )
 }

@@ -24,7 +24,29 @@ const HOLD_MS = 2200
  * Чистый SVG, а не recharts: тот весит около полумегабайта и живёт только в
  * админке — тянуть его в кабинет ради одной ломаной незачем.
  */
-export function OfferGrowthChart({ values, className }: { values: number[]; className?: string }) {
+/** Подпись шкалы значений: `at` — доля от потолка, 0 внизу, 1 наверху. */
+export interface OfferGrowthTick {
+  label: string
+  at: number
+}
+
+export function OfferGrowthChart({
+  values,
+  max,
+  ticks,
+  className,
+}: {
+  values: number[]
+  /**
+   * Потолок шкалы. По умолчанию — максимум ряда, и тогда верхняя точка
+   * упирается в край. Своё значение нужно там, где рядом стоят подписи: они
+   * обязаны читаться круглыми числами, а максимум ряда круглым не бывает.
+   */
+  max?: number
+  /** Подписи шкалы слева. Пусто — оси нет, график занимает всю ширину. */
+  ticks?: OfferGrowthTick[]
+  className?: string
+}) {
   const reduceMotion = useReducedMotion()
 
   const lineRef = useRef<SVGPathElement>(null)
@@ -39,7 +61,7 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
     const dot = dotRef.current
     if (!line || !area || !clip || !dot) return
 
-    const { linePath, areaPath } = buildPaths(values)
+    const { linePath, areaPath } = buildPaths(values, max)
     line.setAttribute('d', linePath)
     area.setAttribute('d', areaPath)
 
@@ -77,10 +99,30 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
     }
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
-  }, [values, reduceMotion])
+  }, [values, max, reduceMotion])
 
   return (
     <div className={className}>
+      {ticks?.length ? (
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-8" aria-hidden>
+          {ticks.map((tick) => (
+            <span
+              key={tick.label + tick.at}
+              className="absolute right-1.5 -translate-y-1/2 text-[10px] tabular-nums text-muted-foreground"
+              style={{ top: `${(yFor(tick.at) / H) * 100}%` }}
+            >
+              {tick.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {/*
+        Внутренняя обёртка совпадает с областью графика. Голову линии нельзя
+        крепить к внешней: абсолютные координаты считаются от padding-box, и
+        на ширину жёлоба под подписи точка уехала бы вбок.
+      */}
+      <div className="relative h-full" style={ticks?.length ? { marginLeft: 32 } : undefined}>
       {/*
         Цвет задан на самом svg: currentColor внутри <defs> разрешается по
         элементу градиента, а не по пути, который на него ссылается.
@@ -101,10 +143,12 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
           </clipPath>
         </defs>
 
+        {/* Сетка идёт по подписям, если они есть: линия без своей подписи
+            ничего не сообщает, а подпись без линии не к чему привязать. */}
         <g stroke="hsl(var(--border))" strokeWidth={1}>
-          <line x1="0" y1="42" x2={W} y2="42" />
-          <line x1="0" y1="85" x2={W} y2="85" />
-          <line x1="0" y1="128" x2={W} y2="128" />
+          {(ticks?.length ? ticks.map((tick) => yFor(tick.at)) : [42, 85, 128]).map((y) => (
+            <line key={y} x1="0" y1={y} x2={W} y2={y} />
+          ))}
         </g>
 
         <path ref={areaRef} fill="url(#cabinet-growth-fill)" clipPath="url(#cabinet-growth-clip)" d="" />
@@ -138,16 +182,38 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
         aria-hidden
         className="pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500 opacity-0 shadow-[0_0_12px_3px] shadow-emerald-500/50 transition-opacity"
       />
+      </div>
     </div>
   )
 }
 
+/**
+ * Округление потолка шкалы вверх до круглого числа.
+ *
+ * Ось подписывается значениями, и «111» на ней ничего не объясняет: подписи
+ * читаются только круглыми. Берём ближайший вверх шаг ряда 1 / 2 / 2,5 / 5 / 10
+ * в текущем порядке величины.
+ */
+export function niceCeil(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 1
+  const base = Math.pow(10, Math.floor(Math.log10(value)))
+  for (const step of [1, 2, 2.5, 5]) {
+    if (value <= step * base) return step * base
+  }
+  return 10 * base
+}
+
+/** Координата y для доли от потолка шкалы. */
+function yFor(fraction: number): number {
+  return H - fraction * (H - 16) - 8
+}
+
 /** Пути линии и площади под ней в координатах viewBox. */
-function buildPaths(values: number[]): { linePath: string; areaPath: string } {
-  const max = Math.max(...values) || 1
+function buildPaths(values: number[], ceiling?: number): { linePath: string; areaPath: string } {
+  const max = ceiling && ceiling > 0 ? ceiling : Math.max(...values) || 1
   const points = values.map((v, i) => {
     const x = (i / (values.length - 1)) * W
-    const y = H - (v / max) * (H - 16) - 8
+    const y = yFor(v / max)
     return `${x.toFixed(1)},${y.toFixed(1)}`
   })
   const linePath = `M${points.join(' L')}`

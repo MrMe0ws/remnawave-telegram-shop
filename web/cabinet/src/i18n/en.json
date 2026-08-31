@@ -743,27 +743,22 @@
         "refereeBadge_other": "+{{count}} days for your friend"
       },
       "calc": {
-        "kicker": "Calculator",
+        "kicker": "Counted in subscription days",
         "title": "Friends renew — you stop paying",
-        "subtitle": "+{{first}} days for your friend's first paid month and +{{repeat}} days for every renewal after it.",
-        "subtitleOnce": "+{{first}} days for the first subscription payment via your link.",
         "friends": "Friends I'll invite this year",
         "friendsValue_one": "{{count}} friend",
         "friendsValue_other": "{{count}} friends",
-        "firstMonth": "First month",
-        "firstMonthNote": "your friend's first payment",
-        "year": "Over a year",
-        "yearNote": "≈ {{months}} months of subscription",
-        "termFirst": "First month",
-        "termRepeat": "Each renewal",
-        "termReferee": "Friend on signup",
-        "chartTitle": "Bonus days accumulated",
-        "chartTotal": "total: {{days}} d.",
         "axisStart": "1 mo.",
         "axisMid": "6 mo.",
         "axisEnd": "{{n}} mo.",
         "disclaimer": "A forecast, not a promise: we assume one friend joins per month and everyone keeps renewing. Churn is not included.",
-        "disclaimerOnce": "A forecast, not a promise: we assume every invited friend pays for a subscription. Churn is not included."
+        "disclaimerOnce": "A forecast, not a promise: we assume every invited friend pays for a subscription. Churn is not included.",
+        "payoffDays": "bonus days",
+        "payoffMonths": "That's {{months}} months of subscription for free",
+        "refereeGift": "And every friend gets {{days}} on sign-up",
+        "ruleFirst": "to you for a friend's first paid month",
+        "ruleRepeat": "to you for every renewal after that",
+        "ruleReferee": "to the friend right at sign-up"
       },
       "progress": {
         "ofDays": "of {{n}} days",
@@ -776,7 +771,8 @@
         "friends_other": "{{count}} friends",
         "renewals_one": "{{count}} renewal",
         "renewals_other": "{{count}} renewals",
-        "trackNote": "Every 30 bonus days is one free month of subscription"
+        "trackNote": "Every 30 bonus days is one free month of subscription",
+        "trackMonth": "mo. {{n}}"
       },
       "flow": {
         "title": "How it works",

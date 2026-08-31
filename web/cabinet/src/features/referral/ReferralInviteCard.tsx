@@ -56,7 +56,9 @@ export function ReferralInviteCard({
         <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6">
           {/* Белое поле вокруг кода — требование читаемости, а не украшение:
               QR сканируют с чужого телефона под углом и при бликах. */}
-          <div className="mx-auto w-full max-w-[168px] rounded-xl bg-white p-2.5 shadow-sm sm:mx-0">
+          {/* Без внутреннего отступа: тихая зона по краям есть у самого кода,
+              и внешний padding только удваивал белое поле. */}
+          <div className="mx-auto w-full max-w-[168px] overflow-hidden rounded-xl bg-white shadow-sm sm:mx-0">
             <QrCode
               value={active.url}
               size={168}
