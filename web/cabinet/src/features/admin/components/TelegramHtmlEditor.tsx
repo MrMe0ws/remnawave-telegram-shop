@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Bold,
@@ -36,10 +36,18 @@ interface TelegramHtmlEditorProps {
   initialHtml?: string
   /** Меняется, когда поле надо перечитать заново: очистка после отправки, другой тариф. */
   resetKey: number
+  /**
+   * Какие инструменты показывать. По умолчанию все.
+   *
+   * Нужно там, где разметку рисует не Telegram: описание тарифа кабинет
+   * прогоняет через санитайзер разметки, и часть тегов до пользователя
+   * не доезжает — кнопка, которая ничего не делает, хуже отсутствующей.
+   */
+  tools?: TelegramHtmlCommand[]
   className?: string
 }
 
-type Command =
+export type TelegramHtmlCommand =
   | 'bold'
   | 'italic'
   | 'underline'
@@ -52,7 +60,7 @@ type Command =
   | 'clear'
 
 interface Tool {
-  cmd: Command
+  cmd: TelegramHtmlCommand
   icon: LucideIcon
   labelKey: string
   hint: string
@@ -106,11 +114,27 @@ export function TelegramHtmlEditor({
   placeholder,
   initialHtml,
   resetKey,
+  tools,
   className,
 }: TelegramHtmlEditorProps) {
   const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState<Record<string, boolean>>({})
+
+  /*
+   * Разделители после отбора могут оказаться подряд или с краю — тогда в
+   * панели видны пустые вертикальные чёрточки без кнопок между ними.
+   */
+  const visibleTools = useMemo(() => {
+    if (!tools) return TOOLS
+    const kept = TOOLS.filter((tool) => tool === 'sep' || tools.includes(tool.cmd))
+    return kept.filter((tool, i) => {
+      if (tool !== 'sep') return true
+      const prev = kept[i - 1]
+      const next = kept[i + 1]
+      return prev !== undefined && prev !== 'sep' && next !== undefined && next !== 'sep'
+    })
+  }, [tools])
 
   const emit = useCallback(() => {
     const node = ref.current
@@ -177,7 +201,7 @@ export function TelegramHtmlEditor({
     })
   }
 
-  const run = (cmd: Command) => {
+  const run = (cmd: TelegramHtmlCommand) => {
     const node = ref.current
     if (!node) return
     node.focus()
@@ -227,7 +251,7 @@ export function TelegramHtmlEditor({
 
   const syncActive = useCallback(() => {
     const next: Record<string, boolean> = {}
-    for (const tool of TOOLS) {
+    for (const tool of visibleTools) {
       if (tool === 'sep' || !tool.queryable) continue
       try {
         next[tool.cmd] = document.queryCommandState(tool.cmd)
@@ -236,7 +260,7 @@ export function TelegramHtmlEditor({
       }
     }
     setActive(next)
-  }, [])
+  }, [visibleTools])
 
   useEffect(() => {
     const onSelection = () => {
@@ -252,7 +276,7 @@ export function TelegramHtmlEditor({
     if (!e.ctrlKey && !e.metaKey) return
     const key = e.key.toLowerCase()
     if (e.shiftKey) {
-      const map: Record<string, Command> = { x: 'strikeThrough', m: 'mono', p: 'spoiler', n: 'clear' }
+      const map: Record<string, TelegramHtmlCommand> = { x: 'strikeThrough', m: 'mono', p: 'spoiler', n: 'clear' }
       const cmd = map[key] ?? (key === '.' || key === '>' ? 'quote' : undefined)
       if (cmd) {
         e.preventDefault()
@@ -275,7 +299,7 @@ export function TelegramHtmlEditor({
         role="toolbar"
         aria-label={t('admin.broadcast.editor.toolbar')}
       >
-        {TOOLS.map((tool, i) =>
+        {visibleTools.map((tool, i) =>
           tool === 'sep' ? (
             <span key={`sep-${i}`} className="mx-1 h-4 w-px bg-border" aria-hidden />
           ) : (

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 
 import { detectUnsupportedMarkdown } from '../utils/telegramMarkup'
-import { TelegramHtmlEditor } from './TelegramHtmlEditor'
+import { TelegramHtmlEditor, type TelegramHtmlCommand } from './TelegramHtmlEditor'
 
 interface Props {
   value: string
@@ -25,6 +25,17 @@ interface Props {
  * (см. TelegramHtmlEditor). Разметку кабинет рендерит через ReactMarkdown,
  * который эти теги тоже понимает, — см. TariffDescription.
  */
+/*
+ * Набор инструментов урезан.
+ *
+ * Описание кабинет рендерит через ReactMarkdown с санитайзером (см.
+ * TariffDescription), и часть тегов Telegram до пользователя не доезжает:
+ * подчёркивание, моноширинный, скрытый текст и сворачиваемая цитата остаются
+ * обычным текстом. Кнопка, которая по нажатию ничего не меняет, хуже
+ * отсутствующей — она выглядит как поломка.
+ */
+const TARIFF_TOOLS: TelegramHtmlCommand[] = ['bold', 'italic', 'strikeThrough', 'quote', 'link', 'clear']
+
 export function TariffDescriptionEditor({ value, onChange, resetKey, placeholder }: Props) {
   const { t } = useTranslation()
 
@@ -41,6 +52,7 @@ export function TariffDescriptionEditor({ value, onChange, resetKey, placeholder
         initialHtml={value}
         resetKey={resetKey}
         onChange={onChange}
+        tools={TARIFF_TOOLS}
         placeholder={placeholder ?? t('admin.tariffs.descriptionSource')}
         className="min-h-[120px]"
       />

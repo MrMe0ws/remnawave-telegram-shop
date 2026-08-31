@@ -120,9 +120,16 @@ export function PartnerStatusFilter({
         <div
           role="group"
           aria-label={t('admin.partners.filter.title')}
-          /* Фон непрозрачный: список висит над таблицей, и сквозь него не
-             должно быть видно строк. */
-          className="absolute right-0 z-30 mt-1.5 w-56 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-xl"
+          /*
+           * Фон непрозрачный: список висит над таблицей, и сквозь него не
+           * должно быть видно строк.
+           *
+           * На узком экране раскрывается вправо от кнопки, а не влево: кнопка
+           * стоит в правой части ряда, и выпадающий список шириной 224 точки
+           * уезжал за левый край — main обрезает по overflow-x-clip, и половина
+           * пунктов просто пропадала.
+           */
+          className="absolute left-0 right-auto z-30 mt-1.5 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border bg-card py-1 shadow-xl sm:left-auto sm:right-0"
         >
           {PARTNER_STATUSES.map((status) => {
             const checked = value.includes(status)

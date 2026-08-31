@@ -421,10 +421,12 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                 {t('admin.tariffs.unsavedIndicator')}
               </span>
             )}
+            {/* Отмена нейтральная: акцентная подсветка читалась как «вот
+                основное действие», хотя рядом стоит «Сохранить». */}
             <button
               type="button"
               onClick={handleRequestClose}
-              className="rounded-lg border px-4 py-2 text-sm hover:bg-accent"
+              className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               {t('admin.cancel')}
             </button>
