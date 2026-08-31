@@ -51,7 +51,7 @@ function FlowStep({ node, index, last }: { node: OfferFlowNode; index: number; l
       <div
         className={cn(
           'rounded-xl border p-4',
-          accent ? 'border-emerald-500/35 bg-emerald-500/10' : 'border-border bg-muted/40',
+          accent ? 'border-emerald-500/35 bg-emerald-500/10' : 'border-border bg-muted',
         )}
       >
         <div
@@ -59,7 +59,9 @@ function FlowStep({ node, index, last }: { node: OfferFlowNode; index: number; l
             'mb-2.5 flex size-8 items-center justify-center rounded-lg',
             accent
               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-              : 'bg-primary/12 text-primary',
+              // Именно /15: значения 12 нет в шкале прозрачности Tailwind,
+              // класс bg-primary/12 не генерируется и фон просто не рисуется.
+              : 'bg-primary/15 text-primary',
           )}
         >
           <Icon size={17} />

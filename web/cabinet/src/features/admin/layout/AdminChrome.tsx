@@ -56,7 +56,7 @@ export function AdminChrome({ children }: AdminChromeProps) {
           </Link>
 
           <div className="flex min-w-0 items-center gap-2 border-l border-border/60 pl-2 sm:pl-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 dark:bg-primary/20">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 dark:bg-primary/20">
               <ShieldCheck className="size-4 text-primary" />
             </div>
             <div className="min-w-0">

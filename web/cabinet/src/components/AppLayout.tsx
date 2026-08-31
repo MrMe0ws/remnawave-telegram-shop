@@ -324,7 +324,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                             видно до перехода. Значение приходит из настроек,
                             поэтому не разъедется со страницей. */}
                         {to === '/partner' && partnerMaxPercent > 0 ? (
-                          <span className="ml-auto shrink-0 rounded-full bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          <span className="ml-auto shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                             {t('nav.partnerBadge', { percent: `${partnerMaxPercent}%` })}
                           </span>
                         ) : null}
@@ -433,7 +433,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                     />
                     {label}
                     {to === '/partner' && partnerMaxPercent > 0 ? (
-                      <span className="ml-auto shrink-0 rounded-full bg-primary/12 px-2 py-0.5 text-xs font-semibold text-primary">
+                      <span className="ml-auto shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
                         {t('nav.partnerBadge', { percent: `${partnerMaxPercent}%` })}
                       </span>
                     ) : null}

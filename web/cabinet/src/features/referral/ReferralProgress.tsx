@@ -120,7 +120,7 @@ export function ReferralProgress({
                     key={index}
                     className={cn(
                       'flex h-8 flex-1 items-center justify-center rounded-lg border text-[11px] font-semibold tabular-nums',
-                      done && 'border-primary/40 bg-primary/12 text-primary',
+                      done && 'border-primary/40 bg-primary/15 text-primary',
                       now && 'border-dashed border-primary bg-transparent text-foreground',
                       !done && !now && 'border-border bg-muted/40 text-muted-foreground',
                     )}

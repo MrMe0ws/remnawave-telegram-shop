@@ -24,7 +24,7 @@ export function OfferOutBox({
     <div
       className={cn(
         'rounded-xl border p-3',
-        highlight ? 'border-emerald-500/35 bg-emerald-500/10' : 'border-border bg-muted/40',
+        highlight ? 'border-emerald-500/35 bg-emerald-500/10' : 'border-border bg-muted',
       )}
     >
       <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -44,7 +44,7 @@ export function OfferOutBox({
 /** Условие программы: процент, дни — то, что задано настройками, а не расчётом. */
 export function OfferTermTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-muted/40 p-3">
+    <div className="rounded-xl border border-border bg-muted p-3">
       <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-bold tracking-tight text-primary">{value}</p>
     </div>

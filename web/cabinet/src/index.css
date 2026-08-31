@@ -3767,7 +3767,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
  */
 .cabinet-flow-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 0;
 }
 
 @media (min-width: 1024px) {
@@ -3778,16 +3778,22 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   }
 }
 
+/*
+ * Связка — единственное, что стоит между узлами: у сетки отступов нет.
+ * Поэтому линия занимает связку целиком и упирается в обе карточки, а импульс
+ * ходит строго внутри неё. Пока расстояние задавал gap, линию и импульс
+ * приходилось выпускать наружу — и они наезжали на соседние узлы.
+ */
 .cabinet-flow-link {
   position: relative;
-  height: 22px;
+  height: 40px;
 }
 
 .cabinet-flow-line {
   position: absolute;
   left: 24px;
-  top: -14px;
-  bottom: -14px;
+  top: 0;
+  bottom: 0;
   width: 2px;
   background: hsl(var(--border));
 }
@@ -3795,7 +3801,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
 .cabinet-flow-pulse {
   position: absolute;
   left: 19px;
-  top: -6px;
+  top: 0;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -3806,7 +3812,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
 
 @keyframes cabinet-flow-pulse-y {
   0% {
-    top: -18px;
+    top: 0;
     opacity: 0;
   }
   15%,
@@ -3814,14 +3820,14 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
     opacity: 1;
   }
   100% {
-    top: calc(100% + 12px);
+    top: calc(100% - 12px);
     opacity: 0;
   }
 }
 
 @keyframes cabinet-flow-pulse-x {
   0% {
-    left: -8px;
+    left: 0;
     opacity: 0;
   }
   15%,
@@ -3829,7 +3835,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
     opacity: 1;
   }
   100% {
-    left: 100%;
+    left: calc(100% - 12px);
     opacity: 0;
   }
 }

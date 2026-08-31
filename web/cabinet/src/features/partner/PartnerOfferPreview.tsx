@@ -67,7 +67,7 @@ export function PartnerOfferPreview({
           {/* Скриншот кабинета. Отдельная заливка и рамка нужны как раз здесь:
               блок изображает другой экран, и без границы он сливается с
               карточкой, в которой лежит. */}
-          <div className="rounded-2xl border border-border bg-gradient-to-br from-secondary/70 to-muted/60 p-3 sm:p-4">
+          <div className="rounded-2xl border border-border bg-gradient-to-br from-card to-muted p-3 sm:p-4">
             <div className="mb-3 flex items-center gap-2">
               <BarChart3 size={14} className="text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{t('partnerPage.preview.shotTitle')}</span>
@@ -82,7 +82,7 @@ export function PartnerOfferPreview({
               <Stat label={t('partnerPage.overview.paidOut')} value="96 700 ₽" />
             </div>
 
-            <div className="mt-2 rounded-xl border border-border bg-card/70 p-3">
+            <div className="mt-2 rounded-xl border border-border bg-background/70 p-3">
               <div className="mb-1.5 flex justify-between text-[11px] text-muted-foreground">
                 <span>{t('partnerPage.preview.chartLabel')}</span>
                 <span className="tabular-nums text-emerald-600 dark:text-emerald-400">+41%</span>
@@ -130,7 +130,7 @@ export function PartnerOfferPreview({
 
 function Stat({ label, value, money }: { label: string; value: string; money?: boolean }) {
   return (
-    <div className="rounded-xl border border-border bg-card/70 p-2.5">
+    <div className="rounded-xl border border-border bg-background/70 p-2.5">
       <p className="text-[9.5px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p
         className={
@@ -148,7 +148,7 @@ function Stat({ label, value, money }: { label: string; value: string; money?: b
 function StreamRow({ name, meta, amount }: { name: string; meta: string; amount: string }) {
   const { t } = useTranslation()
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card/70 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background/70 px-3 py-2">
       <span className="min-w-0 truncate text-xs">
         <span className="font-semibold">{name}</span>{' '}
         <span className="text-muted-foreground">· {t('partnerPage.preview.clicks', { n: meta })}</span>

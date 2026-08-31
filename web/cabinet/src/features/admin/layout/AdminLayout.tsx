@@ -166,7 +166,7 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
                         className={cn(
                           'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                           active
-                            ? 'bg-primary/12 text-primary shadow-sm dark:bg-primary/20'
+                            ? 'bg-primary/15 text-primary shadow-sm dark:bg-primary/20'
                             : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
                         )}
                       >

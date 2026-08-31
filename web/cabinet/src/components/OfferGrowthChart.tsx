@@ -44,11 +44,9 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
     area.setAttribute('d', areaPath)
 
     const length = line.getTotalLength()
-    line.style.strokeDasharray = String(length)
 
     /** t — доля отрисованной длины, 0..1. */
     const frame = (t: number) => {
-      line.style.strokeDashoffset = String(length * (1 - t))
       clip.setAttribute('width', (W * t).toFixed(2))
       const p = line.getPointAtLength(length * t)
       dot.style.left = `${(p.x / W) * 100}%`
@@ -110,6 +108,13 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
         </g>
 
         <path ref={areaRef} fill="url(#cabinet-growth-fill)" clipPath="url(#cabinet-growth-clip)" d="" />
+        {/*
+          Линию раскрывает та же обрезка, что и заливку.
+          Через stroke-dasharray это ломалось: non-scaling-stroke считает длину
+          штриха в экранных пикселях, а getTotalLength отдаёт её в единицах
+          viewBox. viewBox растянут по ширине примерно в полтора раза, поэтому
+          линия обрывалась, не доходя до своего конца.
+        */}
         <path
           ref={lineRef}
           fill="none"
@@ -117,8 +122,9 @@ export function OfferGrowthChart({ values, className }: { values: number[]; clas
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          // Растянутый viewBox утолщал бы линию по горизонтали.
+          // Иначе растянутый viewBox утолщал бы линию по горизонтали.
           vectorEffect="non-scaling-stroke"
+          clipPath="url(#cabinet-growth-clip)"
           d=""
         />
       </svg>

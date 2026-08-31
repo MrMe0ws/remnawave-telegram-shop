@@ -143,7 +143,7 @@ export function PartnerOfferCalculator({
             ) : null}
           </div>
 
-          <div className="flex flex-col rounded-xl border border-border bg-muted/40 p-4">
+          <div className="flex flex-col rounded-xl border border-border bg-muted p-4">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-sm font-semibold">{t('partnerPage.calc.chartTitle')}</span>
               <span className="text-xs text-muted-foreground">

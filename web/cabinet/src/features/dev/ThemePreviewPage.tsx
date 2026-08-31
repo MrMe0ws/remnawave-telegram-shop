@@ -225,7 +225,7 @@ function HeaderStub({ page }: { page: Page }) {
     <header className="cabinet-app-header relative z-20 border-b border-border/80 bg-card/92 px-4 backdrop-blur-xl sm:px-6">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-3">
         <span className="flex shrink-0 items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <Shield size={16} />
           </span>
           <span className="font-heading text-base font-bold tracking-tight">Meows VPN</span>
@@ -308,7 +308,7 @@ function DashboardStub() {
               <p className="text-sm text-muted-foreground">Подписка</p>
               <p className="mt-0.5 font-heading text-xl font-bold">Премиум</p>
             </div>
-            <span className="rounded-full border border-primary/35 bg-primary/12 px-3 py-1 text-xs font-semibold text-primary">
+            <span className="rounded-full border border-primary/35 bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
               Активна
             </span>
           </div>
@@ -367,7 +367,7 @@ function QuickLink({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
       className="group subscription-feature-card dashboard-quick-link flex h-full min-h-[3.25rem] items-center justify-between gap-2 px-3 py-4 sm:px-4"
     >
       <span className="flex items-center gap-2.5">
-        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Icon size={16} />
         </span>
         <span className="text-sm font-medium">{label}</span>
@@ -388,7 +388,7 @@ function SubscriptionStub() {
         <CardContent className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
           <div className="flex items-center justify-between gap-3">
             <p className="font-heading text-lg font-bold">Моя подписка</p>
-            <span className="rounded-full border border-primary/35 bg-primary/12 px-3 py-1 text-xs font-semibold text-primary">
+            <span className="rounded-full border border-primary/35 bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
               Премиум
             </span>
           </div>
@@ -456,7 +456,7 @@ function SubscriptionStub() {
 function DeviceRow({ name, platform }: { name: string; platform: string }) {
   return (
     <div className="cabinet-elevated-card flex items-center gap-3 px-4 py-3">
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
         <MonitorSmartphone size={16} />
       </span>
       <div className="min-w-0">

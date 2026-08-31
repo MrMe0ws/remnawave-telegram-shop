@@ -813,13 +813,13 @@
         }
       },
       "calc": {
-        "clients": "Клиентов в месяц",
+        "clients": "Новых клиентов в месяц",
         "firstMonth": "Первый месяц",
         "firstMonthNote": "только первые оплаты",
         "lastMonth": "{{n}}-й месяц",
         "lastMonthNote": "с учётом продлений",
         "chartTitle": "Накопленный доход",
-        "chartTotal": "итого: {{amount}}",
+        "chartTotal": "всего за год: {{amount}}",
         "axisStart": "1 мес.",
         "axisMid": "6 мес.",
         "axisEnd": "12 мес.",

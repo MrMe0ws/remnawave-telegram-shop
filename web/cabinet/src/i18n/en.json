@@ -691,13 +691,13 @@
         }
       },
       "calc": {
-        "clients": "Customers per month",
+        "clients": "New customers per month",
         "firstMonth": "First month",
         "firstMonthNote": "first payments only",
         "lastMonth": "Month {{n}}",
         "lastMonthNote": "renewals included",
         "chartTitle": "Cumulative income",
-        "chartTotal": "total: {{amount}}",
+        "chartTotal": "over the year: {{amount}}",
         "axisStart": "1 mo.",
         "axisMid": "6 mo.",
         "axisEnd": "12 mo.",
