@@ -8,31 +8,21 @@ import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminBroadcastMessagePreview } from '../components/AdminBroadcastMessagePreview'
-import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { AdminSelect } from '../components/AdminSelect'
 import { BroadcastTextEditor } from '../components/BroadcastTextEditor'
 import { BroadcastAudienceSelector } from '../components/BroadcastAudienceSelector'
-import { BroadcastLinkPicker } from '../components/BroadcastLinkPicker'
+import {
+  BroadcastButtonsPicker,
+  type BroadcastButtonsState,
+} from '../components/BroadcastButtonsPicker'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
-import {
-  BROADCAST_LINK_KEYS,
-  broadcastLinkLabelKey,
-  type BroadcastLinkKey,
-} from '../utils/broadcastLinks'
+import { BROADCAST_LINK_KEYS, broadcastLinkLabelKey } from '../utils/broadcastLinks'
 
 interface AudienceItem {
   audience: string
   label: string
   count: number
-}
-
-interface BroadcastButtons {
-  buy: boolean
-  connect: boolean
-  promo: boolean
-  main_menu: boolean
-  links: BroadcastLinkKey[]
 }
 
 interface UploadedMedia {
@@ -57,7 +47,7 @@ function useBroadcastTariffs(enabled: boolean) {
   })
 }
 
-const defaultButtons: BroadcastButtons = {
+const defaultButtons: BroadcastButtonsState = {
   buy: false,
   connect: false,
   promo: false,
@@ -74,7 +64,7 @@ export default function AdminBroadcastPage() {
   const [selectedAudience, setSelectedAudience] = useState('all')
   const [selectedTariff, setSelectedTariff] = useState<number | null>(null)
   const [text, setText] = useState('')
-  const [buttons, setButtons] = useState<BroadcastButtons>(defaultButtons)
+  const [buttons, setButtons] = useState<BroadcastButtonsState>(defaultButtons)
   const [media, setMedia] = useState<UploadedMedia | null>(null)
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const [previewVisible, setPreviewVisible] = useState(false)
@@ -177,15 +167,6 @@ export default function AdminBroadcastPage() {
   ]
     .filter(Boolean)
     .join(', ')
-
-  function toggleLink(key: BroadcastLinkKey, checked: boolean) {
-    setButtons((prev) => ({
-      ...prev,
-      links: checked
-        ? BROADCAST_LINK_KEYS.filter((item) => item === key || prev.links.includes(item))
-        : prev.links.filter((item) => item !== key),
-    }))
-  }
 
   const confirmMessage = t('admin.broadcast.confirmMessage', {
     audience: audienceLabels[selectedAudience] ?? selectedAudience,
@@ -343,34 +324,8 @@ export default function AdminBroadcastPage() {
             {t('admin.broadcast.buttonsTitle')}
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">{t('admin.broadcast.buttonsHint')}</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <AdminCheckboxField
-              checked={buttons.buy}
-              onChange={(checked) => setButtons((prev) => ({ ...prev, buy: checked }))}
-              label={t('admin.broadcast.buttons.buy')}
-            />
-            <AdminCheckboxField
-              checked={buttons.connect}
-              onChange={(checked) => setButtons((prev) => ({ ...prev, connect: checked }))}
-              label={t('admin.broadcast.buttons.connect')}
-            />
-            <AdminCheckboxField
-              checked={buttons.promo}
-              onChange={(checked) => setButtons((prev) => ({ ...prev, promo: checked }))}
-              label={t('admin.broadcast.buttons.promo')}
-            />
-            <AdminCheckboxField
-              checked={buttons.main_menu}
-              onChange={(checked) => setButtons((prev) => ({ ...prev, main_menu: checked }))}
-              label={t('admin.broadcast.buttons.mainMenu')}
-            />
-          </div>
 
-          <BroadcastLinkPicker
-            selected={buttons.links}
-            onToggle={toggleLink}
-            onClear={() => setButtons((prev) => ({ ...prev, links: [] }))}
-          />
+          <BroadcastButtonsPicker buttons={buttons} onChange={setButtons} />
         </div>
 
         {previewVisible && previewCount !== null && (
