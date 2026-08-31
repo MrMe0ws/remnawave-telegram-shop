@@ -1886,7 +1886,7 @@
         "title": "Broadcast",
         "subtitle": "Mass messaging via Telegram",
         "audienceTitle": "Audience",
-        "recipients": "recipients",
+        "recipients": "Recipients",
         "audience": {
           "all": "All",
           "testBroadcast": "Test broadcast",
@@ -1898,9 +1898,10 @@
           "inactiveTrial": "Inactive trial"
         },
         "audienceGroup": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "other": "Other"
+          "active": "Active subscription",
+          "inactive": "Subscription ended",
+          "other": "Other",
+          "common": "Everyone and testing"
         },
         "editor": {
           "bold": "Bold",
@@ -1909,7 +1910,14 @@
           "quote": "Quote",
           "link": "Link",
           "enterUrl": "Enter URL",
-          "telegramHTML": "Supports Telegram HTML markup: <b>bold</b>, <i>italic</i>, <code>code</code>, <blockquote>quote</blockquote>, <a href=\"url\">link</a>"
+          "underline": "Underline",
+          "strike": "Strikethrough",
+          "spoiler": "Spoiler",
+          "mono": "Monospace",
+          "quoteExpandable": "Expandable quote",
+          "clear": "Clear formatting",
+          "toolbar": "Text formatting",
+          "badUrl": "A link must start with https:// or tg://"
         },
         "filterTariff": "Filter by tariff",
         "allTariffs": "All tariffs",
@@ -1965,7 +1973,13 @@
         "groupCabinetHint": "Telegram mini app. “My VPN” and “Cabinet home” lead to the same place — one is enough.",
         "groupPlainTitle": "Stay outside the cabinet",
         "groupPlainHint": "Actions in the bot chat and the external support link.",
-        "linksConfigHint": "A button is skipped when its section is off in config: wheel of fortune needs FORTUNE_ENABLED, support needs SUPPORT_URL."
+        "linksConfigHint": "A button is skipped when its section is off in config: wheel of fortune needs FORTUNE_ENABLED, support needs SUPPORT_URL.",
+        "mp4Hint": "Telegram plays videos only in MP4. WebM and MOV arrive as a file the recipient has to download.",
+        "confirmLead": "A broadcast cannot be cancelled once it starts.",
+        "confirmWebOnly": "People without Telegram will not get it — they only have an email login in the cabinet.",
+        "attachment": "Attachment",
+        "attachmentNone": "none, text only",
+        "previewEmpty": "Your broadcast text will appear here"
       },
       "infra": {
         "title": "Infrastructure",

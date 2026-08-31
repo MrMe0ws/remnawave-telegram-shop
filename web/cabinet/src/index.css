@@ -3871,3 +3871,115 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
     display: none;
   }
 }
+
+/*
+ * Форматированный текст рассылки.
+ *
+ * Один набор правил на редактор и предпросмотр: если развести их по разным
+ * местам, «жирный» в поле и «жирный» в пузыре разъедутся первой же правкой, а
+ * смысл редактора ровно в том, что набранное выглядит как отправленное.
+ */
+.cabinet-tg-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cabinet-tg-text b,
+.cabinet-tg-text strong {
+  font-weight: 700;
+}
+
+.cabinet-tg-text u {
+  text-underline-offset: 2px;
+}
+
+.cabinet-tg-text code,
+.cabinet-tg-text pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.88em;
+  background: hsl(var(--foreground) / 0.1);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.cabinet-tg-text a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/*
+ * Скрытый текст. В редакторе он тоже размыт — иначе непонятно, что именно
+ * уйдёт под спойлером; клик раскрывает и там, и в предпросмотре.
+ */
+.cabinet-tg-text .tg-spoiler {
+  background: hsl(var(--foreground) / 0.22);
+  border-radius: 4px;
+  cursor: pointer;
+  filter: blur(3.5px);
+  transition:
+    filter 0.2s var(--cabinet-ease),
+    background 0.2s var(--cabinet-ease);
+}
+
+.cabinet-tg-text .tg-spoiler.is-open {
+  filter: none;
+  background: transparent;
+}
+
+.cabinet-tg-text blockquote {
+  margin: 8px 0;
+  padding: 2px 0 2px 11px;
+  border-left: 3px solid hsl(var(--primary));
+  border-radius: 2px;
+}
+
+/*
+ * Сворачиваемую цитату подрезаем только в предпросмотре: в редакторе править
+ * текст, половина которого скрыта, невозможно. Там она помечена штриховой
+ * границей — видно, что цитата свернётся у получателя.
+ */
+.cabinet-tg-text--preview blockquote.is-expandable {
+  position: relative;
+  max-height: 4.5em;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cabinet-tg-text--preview blockquote.is-expandable::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1.6em;
+  background: linear-gradient(transparent, #17212b);
+}
+
+.cabinet-tg-text--preview blockquote.is-expandable.is-open {
+  max-height: none;
+}
+
+.cabinet-tg-text--preview blockquote.is-expandable.is-open::after {
+  content: none;
+}
+
+.cabinet-tg-text--preview a {
+  color: #6ab3f3;
+}
+
+.cabinet-tg-text--preview blockquote {
+  border-left-color: #6ab3f3;
+}
+
+.cabinet-tg-text--preview code,
+.cabinet-tg-text--preview pre {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.cabinet-tg-text--preview .tg-spoiler {
+  background: rgb(255 255 255 / 0.28);
+}
+
+/* В редакторе цитата со сворачиванием помечена, но не подрезана. */
+.cabinet-tg-text:not(.cabinet-tg-text--preview) blockquote.is-expandable {
+  border-left-style: dashed;
+}

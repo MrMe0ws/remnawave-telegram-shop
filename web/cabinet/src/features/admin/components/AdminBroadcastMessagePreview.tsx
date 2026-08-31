@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -5,8 +6,8 @@ import {
   broadcastLinkLabelKey,
   type BroadcastLinkKey,
 } from '../utils/broadcastLinks'
+import { EXPANDABLE_CLASS, SPOILER_CLASS, renderTelegramHtml } from '../utils/telegramHtml'
 import type { AdminBroadcastMediaKind } from '@/lib/types/admin'
-import { renderTelegramHtml } from '../utils/telegramHtml'
 
 interface BroadcastButtons {
   buy: boolean
@@ -17,23 +18,28 @@ interface BroadcastButtons {
 }
 
 interface AdminBroadcastMessagePreviewProps {
-  text: string
+  /** Разметка Telegram — ровно та, что уйдёт в Bot API. */
+  html: string
   mediaUrl?: string | null
   mediaKind?: AdminBroadcastMediaKind
   buttons: BroadcastButtons
-  audienceLabel: string
-  recipientCount: number
 }
 
+/**
+ * Пузырь сообщения так, как его увидит получатель.
+ *
+ * Разметку показываем разобранной: превью с «<b>» на экране не отвечало на
+ * вопрос, ради которого его открывают. Спойлер закрыт и раскрывается кликом,
+ * сворачиваемая цитата подрезана — как в самом Telegram.
+ */
 export function AdminBroadcastMessagePreview({
-  text,
+  html,
   mediaUrl,
   mediaKind,
   buttons,
-  audienceLabel,
-  recipientCount,
 }: AdminBroadcastMessagePreviewProps) {
   const { t } = useTranslation()
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   // Порядок повторяет BuildReplyMarkup: купить, мой VPN, разделы кабинета, промокод, меню.
   const inlineButtons = [
@@ -46,55 +52,60 @@ export function AdminBroadcastMessagePreview({
     buttons.main_menu ? t('admin.broadcast.buttons.mainMenu') : null,
   ].filter(Boolean) as string[]
 
-  const caption = text.trim()
+  /*
+   * Спойлер и разворот цитаты вешаем делегированием на контейнер: содержимое
+   * приходит строкой и переписывается на каждый ввод, так что слушатели на
+   * самих элементах пришлось бы навешивать заново после каждой правки.
+   */
+  useEffect(() => {
+    const node = bodyRef.current
+    if (!node) return
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const spoiler = target.closest(`.${SPOILER_CLASS}`)
+      if (spoiler) spoiler.classList.toggle('is-open')
+      const quote = target.closest(`blockquote.${EXPANDABLE_CLASS}`)
+      if (quote) quote.classList.toggle('is-open')
+    }
+    node.addEventListener('click', onClick)
+    return () => node.removeEventListener('click', onClick)
+  }, [])
+
+  const caption = html.trim()
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-        <span>{t('admin.broadcast.previewAudience', { audience: audienceLabel })}</span>
-        <span>{t('admin.broadcast.previewCount', { count: recipientCount })}</span>
-      </div>
+    <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#17212b] text-[#f2f5f8]">
+      {mediaUrl &&
+        (mediaKind === 'video' ? (
+          <video src={mediaUrl} className="aspect-video w-full object-cover" controls muted playsInline />
+        ) : (
+          <img src={mediaUrl} alt="" className="aspect-video w-full object-cover" />
+        ))}
 
-      <div className="mx-auto max-w-md">
-        <div className="overflow-hidden rounded-2xl border border-border/60 bg-[#18222d] text-[#f5f5f5] shadow-sm dark:bg-[#0e1621]">
-          {mediaUrl &&
-            (mediaKind === 'video' ? (
-              <video src={mediaUrl} className="max-h-80 w-full object-cover" controls muted playsInline />
-            ) : (
-              <img src={mediaUrl} alt="" className="max-h-80 w-full object-cover" />
-            ))}
-          {caption && (
-            /*
-             * Разметку показываем разобранной, а не тегами: текст уходит
-             * получателю с parse_mode=HTML, и превью с «<b>» на экране не
-             * отвечало на вопрос, ради которого его открывают, — как это
-             * будет выглядеть в чате.
-             */
-            <p
-              className="whitespace-pre-wrap px-3 py-2.5 text-[15px] leading-snug [&_a]:text-[#6ab3f3] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-white/30 [&_blockquote]:pl-2 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:font-mono [&_code]:text-[13px]"
-              dangerouslySetInnerHTML={{ __html: renderTelegramHtml(caption) }}
-            />
-          )}
-          {!mediaUrl && !caption && (
-            <p className="px-3 py-2.5 text-sm text-white/50">{t('admin.broadcast.previewNoText')}</p>
-          )}
-          {inlineButtons.length > 0 && (
-            <div className="space-y-1 border-t border-white/10 p-2">
-              {inlineButtons.map((label) => (
-                <div
-                  key={label}
-                  className="rounded-lg bg-[#2b5278]/80 px-3 py-2 text-center text-sm font-medium text-[#6ab3f3]"
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          {t('admin.broadcast.previewButtonsHint')}
+      {caption ? (
+        <div
+          ref={bodyRef}
+          className="cabinet-tg-text cabinet-tg-text--preview px-3 py-2.5 text-[15px] leading-snug"
+          dangerouslySetInnerHTML={{ __html: renderTelegramHtml(caption) }}
+        />
+      ) : (
+        <p className="px-3 py-2.5 text-sm text-white/45">
+          {mediaUrl ? t('admin.broadcast.previewNoText') : t('admin.broadcast.previewEmpty')}
         </p>
-      </div>
+      )}
+
+      {inlineButtons.length > 0 && (
+        <div className="space-y-1.5 border-t border-white/10 p-2">
+          {inlineButtons.map((label) => (
+            <div
+              key={label}
+              className="rounded-lg bg-[#2b5278]/80 px-3 py-2 text-center text-sm font-medium text-[#6ab3f3]"
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

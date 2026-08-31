@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Loader2, type LucideIcon } from 'lucide-react'
 
@@ -10,7 +11,8 @@ interface AdminConfirmModalProps {
   onClose: () => void
   onConfirm: () => void
   title: string
-  message: string
+  /** Строка для простых подтверждений; узел — где нужен разбор по строкам. */
+  message: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'default' | 'destructive'
@@ -69,7 +71,11 @@ export function AdminConfirmModal({
         </div>
       }
     >
-      <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>
+      {typeof message === 'string' ? (
+        <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>
+      ) : (
+        message
+      )}
     </AdminModal>
   )
 }

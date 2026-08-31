@@ -1,5 +1,6 @@
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, LayoutGrid } from 'lucide-react'
+import { Check, ChevronDown, ExternalLink, LayoutGrid } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import {
@@ -30,14 +31,12 @@ const BOT_ACTIONS: { key: BotActionKey; labelKey: string }[] = [
 /**
  * Кнопки под сообщением, разложенные по тому, куда они ведут.
  *
- * Раньше группы были другие: «кнопки» и «разделы», — и в первой сидел «Мой
- * VPN», который открывает кабинет мини-приложением, ровно как разделы во
- * второй. Админ выбирал вслепую: по названию группы нельзя было понять, уйдёт
- * получатель в кабинет или останется в чате.
+ * Деление именно по этому признаку: раньше «Мой VPN» лежал рядом с «Купить»,
+ * хотя открывает кабинет мини-приложением ровно как разделы, и по названию
+ * группы нельзя было понять, уйдёт получатель в кабинет или останется в чате.
  *
- * Теперь деление ровно по этому признаку. Внутри всё одинаковые чипы: раньше
- * половина была чекбоксами, половина чипами, и это само по себе читалось как
- * «здесь другое», хотя разницы не было.
+ * Обе группы свёрнуты по умолчанию и показывают счётчик выбранного: кнопки
+ * нужны не в каждой рассылке, а развёрнутыми они занимали пол-экрана.
  */
 export function BroadcastButtonsPicker({
   buttons,
@@ -48,8 +47,8 @@ export function BroadcastButtonsPicker({
 }) {
   const { t } = useTranslation()
 
-  // Порядок ключей в links держим как в BROADCAST_LINK_KEYS: бэкенд всё равно
-  // приведёт к своему, и расхождение сбивало бы предпросмотр.
+  // Порядок ключей держим как в BROADCAST_LINK_KEYS: бэкенд всё равно приведёт
+  // к своему, и расхождение сбивало бы предпросмотр.
   const toggleLink = (key: BroadcastLinkKey) => {
     const next = buttons.links.includes(key)
       ? buttons.links.filter((item) => item !== key)
@@ -57,39 +56,30 @@ export function BroadcastButtonsPicker({
     onChange({ ...buttons, links: [...next] })
   }
 
-  const cabinetSelected =
+  const cabinetCount =
     (buttons.connect ? 1 : 0) + CABINET_LINK_KEYS.filter((k) => buttons.links.includes(k)).length
-  const plainSelected =
+  const plainCount =
     BOT_ACTIONS.filter((a) => buttons[a.key]).length +
     EXTERNAL_LINK_KEYS.filter((k) => buttons.links.includes(k)).length
 
-  const clearCabinet = () =>
-    onChange({
-      ...buttons,
-      connect: false,
-      links: buttons.links.filter((k) => !CABINET_LINK_KEYS.includes(k as never)),
-    })
-
-  const clearPlain = () =>
-    onChange({
-      ...buttons,
-      buy: false,
-      promo: false,
-      main_menu: false,
-      links: buttons.links.filter((k) => !EXTERNAL_LINK_KEYS.includes(k as never)),
-    })
-
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Group
         icon={<LayoutGrid className="size-4 shrink-0 text-muted-foreground" />}
         title={t('admin.broadcast.groupCabinetTitle')}
         hint={t('admin.broadcast.groupCabinetHint')}
-        selected={cabinetSelected}
-        onClear={clearCabinet}
+        selected={cabinetCount}
+        total={CABINET_LINK_KEYS.length + 1}
+        onClear={() =>
+          onChange({
+            ...buttons,
+            connect: false,
+            links: buttons.links.filter((k) => !CABINET_LINK_KEYS.includes(k as never)),
+          })
+        }
       >
         {/* «Мой VPN» ведёт на главную кабинета — туда же, куда «Главная
-            кабинета» из разделов. Стоит рядом, чтобы дубль был виден. */}
+            кабинета» из разделов. Стоит первым, чтобы дубль был виден. */}
         <Chip
           active={buttons.connect}
           label={t('admin.broadcast.buttons.connect')}
@@ -109,8 +99,17 @@ export function BroadcastButtonsPicker({
         icon={<ExternalLink className="size-4 shrink-0 text-muted-foreground" />}
         title={t('admin.broadcast.groupPlainTitle')}
         hint={t('admin.broadcast.groupPlainHint')}
-        selected={plainSelected}
-        onClear={clearPlain}
+        selected={plainCount}
+        total={BOT_ACTIONS.length + EXTERNAL_LINK_KEYS.length}
+        onClear={() =>
+          onChange({
+            ...buttons,
+            buy: false,
+            promo: false,
+            main_menu: false,
+            links: buttons.links.filter((k) => !EXTERNAL_LINK_KEYS.includes(k as never)),
+          })
+        }
       >
         {BOT_ACTIONS.map((action) => (
           <Chip
@@ -130,7 +129,9 @@ export function BroadcastButtonsPicker({
         ))}
       </Group>
 
-      <p className="text-xs text-muted-foreground">{t('admin.broadcast.linksConfigHint')}</p>
+      <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+        {t('admin.broadcast.linksConfigHint')}
+      </p>
     </div>
   )
 }
@@ -140,64 +141,80 @@ function Group({
   title,
   hint,
   selected,
+  total,
   onClear,
   children,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   title: string
   hint: string
   selected: number
+  total: number
   onClear: () => void
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+
   return (
-    <div className="rounded-md border border-border/50 p-3">
-      <div className="mb-2.5 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          {icon}
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{title}</p>
-            <p className="text-xs text-muted-foreground">{hint}</p>
-          </div>
+    <div className="overflow-hidden rounded-lg border border-border/50">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex min-h-12 w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/40"
+      >
+        {icon}
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">{title}</span>
+          <span className="block truncate text-xs text-muted-foreground">{hint}</span>
+        </span>
+        <span
+          className={cn(
+            'ml-auto shrink-0 rounded-full px-2 py-0.5 text-xs tabular-nums',
+            selected > 0 ? 'bg-primary/15 font-semibold text-primary' : 'bg-muted text-muted-foreground',
+          )}
+        >
+          {selected} / {total}
+        </span>
+        <ChevronDown
+          className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+        />
+      </button>
+
+      {open && (
+        <div className="space-y-2.5 border-t border-border/50 p-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+          {selected > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {t('admin.broadcast.linksClear')}
+            </button>
+          )}
         </div>
-        {selected > 0 && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {t('admin.broadcast.linksClear')}
-          </button>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">{children}</div>
+      )}
     </div>
   )
 }
 
-function Chip({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean
-  label: string
-  onClick: () => void
-}) {
+function Chip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-full border px-3 py-1.5 text-sm transition-colors',
+        'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm transition-colors',
         active
-          ? 'border-primary bg-primary/10 font-medium text-primary'
+          ? 'border-primary/45 bg-primary/10 text-foreground'
           : 'border-border/60 text-muted-foreground hover:bg-accent/50 hover:text-foreground',
       )}
     >
-      {label}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <Check className={cn('size-3.5 shrink-0 text-primary', !active && 'opacity-0')} />
     </button>
   )
 }
