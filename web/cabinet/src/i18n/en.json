@@ -696,8 +696,8 @@
         "firstMonthNote": "first payments only",
         "lastMonth": "Month {{n}}",
         "lastMonthNote": "renewals included",
-        "chartTitle": "Income by month",
-        "chartTotal": "over a year: {{amount}}",
+        "chartTitle": "Cumulative income",
+        "chartTotal": "total: {{amount}}",
         "axisStart": "1 mo.",
         "axisMid": "6 mo.",
         "axisEnd": "12 mo.",
@@ -712,15 +712,13 @@
         "n2sub": "the customer is attached to you for good",
         "n3": "They pay for a subscription",
         "n3sub": "{{first}} of the first payment, {{renewal}} of every renewal",
-        "n4": "Your balance",
-        "n4sub": "available to withdraw after {{days}} d., payouts from {{min}}"
+        "n4": "Your balance"
       },
       "preview": {
         "title": "Not just a link — a working dashboard",
         "subtitle": "A separate stream for every channel — up to {{max}}, each with its own stats. A balance with a {{days}}-day hold for refunds, and payout requests from {{min}}.",
         "p1": "You can see which channel brings paying customers and which brings only clicks.",
         "p2": "History of earnings and payouts — amount, percentage and payment reference.",
-        "p3": "Customers appear under masked labels: contacts are never handed out.",
         "shotTitle": "Partner dashboard",
         "sample": "example",
         "chartLabel": "Earnings, 6 mo.",

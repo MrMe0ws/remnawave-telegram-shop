@@ -54,10 +54,6 @@ export function PartnerOfferPreview({
                 <span className="text-primary">•</span>
                 {t('partnerPage.preview.p2')}
               </li>
-              <li className="flex gap-2">
-                <span className="text-primary">•</span>
-                {t('partnerPage.preview.p3')}
-              </li>
             </ul>
 
             {canApply ? (

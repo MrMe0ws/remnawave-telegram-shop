@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion, useReducedMotion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { HandCoins } from 'lucide-react'
 
@@ -9,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { api, type PartnerTerms } from '@/lib/api'
 
 import { formatMoney, formatPercent } from './format'
+import { PartnerIncomeChart } from './PartnerIncomeChart'
 
 /** Горизонт расчёта: год — тот срок, на котором видно накопление продлений. */
 const MONTHS = 12
@@ -43,7 +43,6 @@ export function PartnerOfferCalculator({
   canApply: boolean
 }) {
   const { t } = useTranslation()
-  const reduceMotion = useReducedMotion()
   const [clients, setClients] = useState(30)
 
   const { data: tariffs } = useQuery({
@@ -64,8 +63,13 @@ export function PartnerOfferCalculator({
   }, [tariffs])
 
   const series = useMemo(() => monthlyIncome(clients, check, terms), [clients, check, terms])
-  const total = useMemo(() => series.reduce((a, b) => a + b, 0), [series])
-  const chart = useMemo(() => chartPaths(series), [series])
+  // График показывает накопленный доход: помесячный в этой модели прибавляется
+  // на одну и ту же величину и рисуется прямой линией.
+  const cumulative = useMemo(() => {
+    let acc = 0
+    return series.map((v) => (acc += v))
+  }, [series])
+  const total = cumulative[cumulative.length - 1]
 
   const sliderPercent = ((clients - 5) / 195) * 100
 
@@ -146,58 +150,10 @@ export function PartnerOfferCalculator({
               </span>
             </div>
 
-            <svg
-              viewBox="0 0 320 170"
-              preserveAspectRatio="none"
-              // Цвет задан на самом svg: currentColor внутри <defs>
-              // разрешается по элементу градиента, а не по пути, который на
-              // него ссылается, — на пути заливка вышла бы цветом текста карточки.
-              className="mt-3 h-[150px] w-full flex-1 text-emerald-600 dark:text-emerald-400 lg:h-auto"
-              aria-hidden
-            >
-              <defs>
-                <linearGradient id="partner-calc-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
-                  <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              <g stroke="hsl(var(--border))" strokeWidth={1}>
-                <line x1="0" y1="42" x2="320" y2="42" />
-                <line x1="0" y1="85" x2="320" y2="85" />
-                <line x1="0" y1="128" x2="320" y2="128" />
-              </g>
-
-              <motion.path
-                d={chart.area}
-                fill="url(#partner-calc-fill)"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.7, delay: 0.5 }}
-              />
-              <motion.path
-                d={chart.line}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                // Растянутый viewBox утолщал бы линию по горизонтали.
-                vectorEffect="non-scaling-stroke"
-                initial={reduceMotion ? false : { pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-              />
-              <motion.circle
-                cx={chart.tip[0]}
-                cy={chart.tip[1]}
-                r={4}
-                fill="currentColor"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 1.2 }}
-              />
-            </svg>
+            <PartnerIncomeChart
+              values={cumulative}
+              className="relative mt-3 h-[150px] w-full lg:h-auto lg:flex-1"
+            />
 
             <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
               <span>{t('partnerPage.calc.axisStart')}</span>
@@ -226,24 +182,6 @@ function monthlyIncome(clients: number, check: number, terms: PartnerTerms): num
   const first = (terms.first_percent / 100) * check * clients
   const renewal = (terms.renewal_percent / 100) * check * clients
   return Array.from({ length: MONTHS }, (_, i) => first + renewal * i)
-}
-
-/** Пути площади и линии в координатах viewBox 320×170. */
-function chartPaths(values: number[]): { line: string; area: string; tip: [number, number] } {
-  const w = 320
-  const h = 170
-  const max = Math.max(...values) || 1
-  const points = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w
-    const y = h - (v / max) * (h - 14) - 7
-    return [x, y] as [number, number]
-  })
-  const line = `M${points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L')}`
-  return {
-    line,
-    area: `${line} L${w},${h} L0,${h} Z`,
-    tip: points[points.length - 1],
-  }
 }
 
 function OutBox({

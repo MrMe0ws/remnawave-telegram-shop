@@ -1,5 +1,7 @@
+import { useEffect, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowUpRight, Coins, CreditCard, Users } from 'lucide-react'
+import { useReducedMotion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent } from '@/components/ui/card'
@@ -53,10 +55,7 @@ export function PartnerOfferFlow({ terms }: { terms: PartnerTerms }) {
           <FlowNode
             icon={Coins}
             title={t('partnerPage.flow.n4')}
-            text={t('partnerPage.flow.n4sub', {
-              days: terms.hold_days,
-              min: formatMoney(terms.min_payout),
-            })}
+            value={<BalanceTicker />}
             accent
           />
         </div>
@@ -69,11 +68,14 @@ function FlowNode({
   icon: Icon,
   title,
   text,
+  value,
   accent,
 }: {
   icon: LucideIcon
   title: string
-  text: string
+  text?: string
+  /** Вместо пояснения — итог узла: сумма на балансе. */
+  value?: ReactNode
   accent?: boolean
 }) {
   return (
@@ -92,8 +94,38 @@ function FlowNode({
         <Icon size={17} />
       </div>
       <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
+      {value ?? <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>}
     </div>
+  )
+}
+
+/** Стартовая сумма и шаг «прироста» — величины декоративные, не расчётные. */
+const TICKER_START = 24_800
+const TICKER_STEP_MS = 4_000
+
+/**
+ * Набегающая сумма в узле «Ваш баланс».
+ *
+ * Число здесь иллюстративное: это схема механики, а не чей-то настоящий
+ * баланс. Живое число объясняет главное свойство программы — деньги приходят
+ * не один раз, — нагляднее, чем ещё одна строка текста.
+ */
+function BalanceTicker() {
+  const reduceMotion = useReducedMotion()
+  const [amount, setAmount] = useState(TICKER_START)
+
+  useEffect(() => {
+    if (reduceMotion) return
+    const id = window.setInterval(() => {
+      setAmount((v) => v + 40 + Math.round(Math.random() * 260))
+    }, TICKER_STEP_MS)
+    return () => window.clearInterval(id)
+  }, [reduceMotion])
+
+  return (
+    <p className="mt-1.5 text-xl font-bold tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400">
+      {formatMoney(amount)}
+    </p>
   )
 }
 
