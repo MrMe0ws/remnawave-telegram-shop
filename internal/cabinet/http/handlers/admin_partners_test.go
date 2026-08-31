@@ -82,3 +82,23 @@ func TestValidatePartnerPercents(t *testing.T) {
 		})
 	}
 }
+
+func TestParsePartnerStatuses(t *testing.T) {
+	got := parsePartnerStatuses("active, rejected ,active,bogus,")
+	want := []string{"active", "rejected"}
+	if len(got) != len(want) {
+		t.Fatalf("parsePartnerStatuses = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("parsePartnerStatuses = %v, want %v", got, want)
+		}
+	}
+	if len(parsePartnerStatuses("")) != 0 {
+		t.Error("пустая строка должна означать «без фильтра»")
+	}
+	// Из адресной строки в SQL не должно уезжать ничего, кроме известных статусов.
+	if len(parsePartnerStatuses("'; DROP TABLE partner; --")) != 0 {
+		t.Error("неизвестное значение не должно проходить")
+	}
+}

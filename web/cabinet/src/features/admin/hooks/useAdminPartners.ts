@@ -58,7 +58,14 @@ function useAdminPartnerList<T>(
   })
 }
 
-export function useAdminPartners(status?: string) {
+/**
+ * Список партнёров. statuses — какие статусы показывать; пусто значит «все».
+ *
+ * Отбор уходит на сервер: выдача постраничная, и фильтрация уже загруженных
+ * строк теряла бы совпадения со следующих страниц.
+ */
+export function useAdminPartners(statuses?: string[]) {
+  const status = statuses?.length ? statuses.join(',') : undefined
   return useAdminPartnerList(PARTNERS_KEY[0], status ?? 'all', (params) =>
     api.adminPartners({ status, ...params }),
   )

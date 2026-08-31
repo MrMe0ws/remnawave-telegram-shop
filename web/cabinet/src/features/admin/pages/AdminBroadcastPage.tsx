@@ -28,7 +28,7 @@ import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminBroadcastMessagePreview } from '../components/AdminBroadcastMessagePreview'
 import { AdminSelect } from '../components/AdminSelect'
-import { BroadcastTextEditor } from '../components/BroadcastTextEditor'
+import { TelegramHtmlEditor } from '../components/TelegramHtmlEditor'
 import { BroadcastAudienceSelector } from '../components/BroadcastAudienceSelector'
 import {
   BroadcastButtonsPicker,
@@ -316,7 +316,7 @@ export default function AdminBroadcastPage() {
                 </span>
               </div>
 
-              <BroadcastTextEditor
+              <TelegramHtmlEditor
                 resetKey={resetKey}
                 onChange={(next) => {
                   setHtml(next)

@@ -370,10 +370,10 @@ func adminActorID(r *http.Request) int64 {
 // --- чтение ---
 
 func (h *AdminPartnersHandler) list(w http.ResponseWriter, r *http.Request) {
-	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	statuses := parsePartnerStatuses(r.URL.Query().Get("status"))
 	limit, offset := paginationParams(r, 50, 200)
 
-	rows, total, err := h.partners.ListPartnersByStatus(r.Context(), status, limit, offset)
+	rows, total, err := h.partners.ListPartnersByStatus(r.Context(), statuses, limit, offset)
 	if err != nil {
 		slog.Error("admin partners: list", "error", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -809,4 +809,29 @@ func (h *AdminPartnersHandler) adjust(w http.ResponseWriter, r *http.Request, pa
 			"partner_id", partnerID, "amount", amount, "admin_id", adminActorID(r))
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	}
+}
+
+// parsePartnerStatuses разбирает ?status=active,rejected.
+//
+// Неизвестные значения молча отбрасываем: набор статусов задан схемой, и
+// подставлять в запрос что угодно из адресной строки незачем. Пустой результат
+// означает «без фильтра» — ровно как отсутствие параметра.
+func parsePartnerStatuses(raw string) []string {
+	known := map[string]bool{
+		database.PartnerStatusPending:   true,
+		database.PartnerStatusActive:    true,
+		database.PartnerStatusSuspended: true,
+		database.PartnerStatusRejected:  true,
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		value := strings.TrimSpace(part)
+		if value == "" || !known[value] || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	return out
 }

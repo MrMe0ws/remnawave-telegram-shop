@@ -1697,6 +1697,12 @@
             "comment": "Give a reason — without one the operation is unexplainable.",
             "failed": "Could not apply: the balance may be lower than the amount you are debiting."
           }
+        },
+        "filter": {
+          "title": "Filter by status",
+          "all": "All statuses",
+          "reset": "Clear filter",
+          "emptyFiltered": "No partners with the selected statuses. Clear the filter to see the rest."
         }
       },
       "promos": {

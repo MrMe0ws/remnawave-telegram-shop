@@ -345,12 +345,19 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
 
   // Снимок исходной формы — по нему определяем несохранённые правки.
   const initialSnapshot = useRef('')
+  /*
+   * Редакторы описания неуправляемые (contenteditable с управляемым значением
+   * роняет каретку на каждом вводе), поэтому перечитывают текст по смене
+   * ключа — в тот же момент, когда сбрасывается форма.
+   */
+  const [descriptionResetKey, setDescriptionResetKey] = useState(0)
   useEffect(() => {
     if (!open) return
     const initial = tariffToForm(tariff)
     setForm(initial)
     setActiveTab('basic')
     setConfirmCloseOpen(false)
+    setDescriptionResetKey((v) => v + 1)
     initialSnapshot.current = JSON.stringify(initial)
   }, [open, tariff?.id])
 
@@ -722,9 +729,8 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                 <TariffDescriptionEditor
                   value={form.description}
                   onChange={(v) => set('description', v)}
-                  sourceLabel={t('admin.tariffs.descriptionSource')}
-                  previewLabel={t('admin.tariffs.descriptionPreview')}
-                  previewEmptyLabel={t('admin.tariffs.descriptionPreviewEmpty')}
+                  resetKey={descriptionResetKey}
+                  placeholder={t('admin.tariffs.descriptionSource')}
                 />
               </section>
 
@@ -738,9 +744,8 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                 <TariffDescriptionEditor
                   value={form.description_detail}
                   onChange={(v) => set('description_detail', v)}
-                  sourceLabel={t('admin.tariffs.descriptionSource')}
-                  previewLabel={t('admin.tariffs.descriptionPreview')}
-                  previewEmptyLabel={t('admin.tariffs.descriptionDetailPreviewEmpty')}
+                  resetKey={descriptionResetKey}
+                  placeholder={t('admin.tariffs.descriptionSource')}
                 />
               </section>
             </>

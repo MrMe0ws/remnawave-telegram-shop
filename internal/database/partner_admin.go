@@ -108,14 +108,20 @@ SELECT p.id, p.customer_id, p.status, p.first_percent, p.renewal_percent, p.link
 
 // ListPartnersByStatus отдаёт партнёров, при пустом status — всех.
 // Заявки — это тот же список со status='pending'.
-func (r *PartnerRepository) ListPartnersByStatus(ctx context.Context, status string, limit, offset int) ([]PartnerAdminRow, int, error) {
+// ListPartnersByStatus возвращает партнёров с любым из перечисленных статусов.
+//
+// Именно список, а не один статус: админу нужно видеть, например, активных
+// вместе с отозванными, а фильтровать на клиенте нельзя — выдача постраничная,
+// и отбор после выборки терял бы строки со следующих страниц. Пустой список —
+// без фильтра, все подряд.
+func (r *PartnerRepository) ListPartnersByStatus(ctx context.Context, statuses []string, limit, offset int) ([]PartnerAdminRow, int, error) {
 	countQuery := `SELECT COUNT(*) FROM partner`
 	args := []any{}
 	where := ""
-	if status != "" {
-		where = " WHERE p.status = $1"
-		countQuery += ` WHERE status = $1`
-		args = append(args, status)
+	if len(statuses) > 0 {
+		where = " WHERE p.status = ANY($1)"
+		countQuery += ` WHERE status = ANY($1)`
+		args = append(args, statuses)
 	}
 
 	var total int

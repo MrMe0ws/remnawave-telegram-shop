@@ -7,6 +7,11 @@ import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
 import { AdminPartnerModal, PayoutStatusChip, CopyValue } from '../components/AdminPartnerModal'
 import {
+  PartnerStatusFilter,
+  loadPartnerStatusFilter,
+  type PartnerStatus,
+} from '../components/PartnerStatusFilter'
+import {
   useAdminPartners,
   useAdminPartnerApprove,
   useAdminPartnerReject,
@@ -30,8 +35,9 @@ export default function AdminPartnersPage() {
   const [openPartner, setOpenPartner] = useState<number | null>(null)
 
   const pending = useAdminPartnerPending()
-  const applications = useAdminPartners('pending')
-  const partners = useAdminPartners()
+  const applications = useAdminPartners(['pending'])
+  const [statusFilter, setStatusFilter] = useState<PartnerStatus[]>(loadPartnerStatusFilter)
+  const partners = useAdminPartners(statusFilter)
   const applicationItems = applications.data?.pages.flatMap((p) => p.items) ?? []
   const partnerItems = partners.data?.pages.flatMap((p) => p.items) ?? []
 
@@ -106,6 +112,8 @@ export default function AdminPartnersPage() {
             loading={partners.isLoading}
             onOpen={setOpenPartner}
             more={partners}
+            statusFilter={statusFilter}
+            onStatusFilter={setStatusFilter}
           />
         ) : null}
         {tab === 'payouts' ? <PayoutsTab onOpenPartner={setOpenPartner} /> : null}
@@ -310,18 +318,23 @@ function PartnersTab({
   loading,
   onOpen,
   more,
+  statusFilter,
+  onStatusFilter,
 }: {
   items: AdminPartnerDTO[]
   loading: boolean
   onOpen: (id: number) => void
   more: PageQuery
+  statusFilter: PartnerStatus[]
+  onStatusFilter: (next: PartnerStatus[]) => void
 }) {
   const { t } = useTranslation()
   const [grantOpen, setGrantOpen] = useState(false)
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <PartnerStatusFilter value={statusFilter} onChange={onStatusFilter} />
         <button
           type="button"
           onClick={() => setGrantOpen(true)}
@@ -333,7 +346,15 @@ function PartnersTab({
       </div>
 
       {loading ? <LoadingBlock /> : null}
-      {!loading && items.length === 0 ? <EmptyBlock text={t('admin.partners.list.empty')} /> : null}
+      {!loading && items.length === 0 ? (
+        <EmptyBlock
+          text={
+            statusFilter.length
+              ? t('admin.partners.filter.emptyFiltered')
+              : t('admin.partners.list.empty')
+          }
+        />
+      ) : null}
 
       {/* Карточки до sm, таблица начиная с sm: семь колонок в 360 точек не
           помещаются, а горизонтальная прокрутка прячет за краем ровно те
