@@ -547,14 +547,11 @@
       },
       "landing": {
         "title": "Earn from your audience",
-        "subtitle": "Bring in clients with your link and earn a percentage of every payment they make — not once, but for as long as they keep renewing.",
         "firstPayment": "First payment",
         "renewals": "Every renewal",
-        "howTitle": "How it works",
-        "step1": "Get a personal link plus a stream for each channel you use.",
-        "step2": "A client pays for a subscription — you earn your percentage.",
-        "step3": "After {{days}} days the commission becomes available for payout.",
-        "step4": "Request a payout from {{min}} to your own details."
+        "kicker": "For partners",
+        "subtitleShort": "{{first}} of a referred customer's first payment and {{renewal}} of every renewal — for as long as they stay.",
+        "cta": "Become a partner"
       },
       "form": {
         "title": "Partner application",
@@ -692,6 +689,45 @@
           "blocked": "Payouts are unavailable right now.",
           "invalidAmount": "Enter a valid amount."
         }
+      },
+      "calc": {
+        "clients": "Customers per month",
+        "firstMonth": "First month",
+        "firstMonthNote": "first payments only",
+        "lastMonth": "Month {{n}}",
+        "lastMonthNote": "renewals included",
+        "chartTitle": "Income by month",
+        "chartTotal": "over a year: {{amount}}",
+        "axisStart": "1 mo.",
+        "axisMid": "6 mo.",
+        "axisEnd": "12 mo.",
+        "disclaimer": "An estimate at an average check of {{check}} per month, churn not included. Exact amounts live in the partner dashboard."
+      },
+      "flow": {
+        "title": "How it works",
+        "subtitle": "{{first}} of the first payment and {{renewal}} of every one after it — not once, but for as long as the customer keeps renewing.",
+        "n1": "Your audience",
+        "n1sub": "channel, chat, video — up to {{max}} streams, each with its own stats",
+        "n2": "They follow your link",
+        "n2sub": "the customer is attached to you for good",
+        "n3": "They pay for a subscription",
+        "n3sub": "{{first}} of the first payment, {{renewal}} of every renewal",
+        "n4": "Your balance",
+        "n4sub": "available to withdraw after {{days}} d., payouts from {{min}}"
+      },
+      "preview": {
+        "title": "Not just a link — a working dashboard",
+        "subtitle": "A separate stream for every channel — up to {{max}}, each with its own stats. A balance with a {{days}}-day hold for refunds, and payout requests from {{min}}.",
+        "p1": "You can see which channel brings paying customers and which brings only clicks.",
+        "p2": "History of earnings and payouts — amount, percentage and payment reference.",
+        "p3": "Customers appear under masked labels: contacts are never handed out.",
+        "shotTitle": "Partner dashboard",
+        "sample": "example",
+        "chartLabel": "Earnings, 6 mo.",
+        "clicks": "{{n}} clicks",
+        "s1": "Telegram channel",
+        "s2": "YouTube review",
+        "s3": "Chat with friends"
       }
     },
     "referralPage": {
@@ -1076,7 +1112,7 @@
         "linkPromos": "Create and manage promo codes",
         "linkTariffs": "Plans, limits and pricing",
         "linkPartners": "Applications, terms and partner payouts",
-      "linkLoyalty": "XP tiers and recalculation",
+        "linkLoyalty": "XP tiers and recalculation",
         "linkBroadcast": "Mass messages to audience",
         "linkSettings": "Trial, referrals, notifications and more",
         "linkInfra": "Servers, providers and billing",

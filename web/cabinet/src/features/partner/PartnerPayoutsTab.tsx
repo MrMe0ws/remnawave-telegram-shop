@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { api, ApiError, type PartnerAccountDTO } from '@/lib/api'
 
-import { PARTNER_STATE_KEY } from './PartnerProgramPage'
+import { PARTNER_STATE_KEY } from './partnerKeys'
 import { formatMoney, formatDayMonth, formatDayShort } from './format'
 import { PARTNER_MOBILE_ROW, PARTNER_MOBILE_BADGE, PARTNER_INPUT } from './layout'
 

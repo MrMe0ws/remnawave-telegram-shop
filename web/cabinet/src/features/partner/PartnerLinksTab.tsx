@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { api, ApiError, type PartnerAccountDTO, type PartnerLinkDTO } from '@/lib/api'
 
-import { PARTNER_STATE_KEY } from './PartnerProgramPage'
+import { PARTNER_STATE_KEY } from './partnerKeys'
 import { formatMoney } from './format'
 import { PARTNER_INPUT } from './layout'
 
