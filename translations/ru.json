@@ -437,5 +437,16 @@
   "partner_payout_approved": "💸 <b>Заявка на вывод одобрена</b>\n\nСумма: %s. Сообщим, когда перевод уйдёт.",
   "partner_payout_paid": "✅ <b>Выплата отправлена</b>\n\nСумма: %s\nЧек: <code>%s</code>",
   "partner_payout_rejected": "💸 <b>Заявка на вывод отклонена</b>\n\n%s вернулись на баланс — заявку можно создать заново.\n\nПричина: %s",
-  "partner_notify_open_link": "Открыть кабинет партнёра"
+  "partner_notify_open_link": "Открыть кабинет партнёра",
+  "broadcast_link_tariffs": "📦 Тарифы",
+  "broadcast_link_profile": "👤 Профиль",
+  "broadcast_link_accounts": "➕ Доп. аккаунты",
+  "broadcast_link_payments": "🧾 История платежей",
+  "broadcast_link_promocodes": "🎟 Промокоды",
+  "broadcast_link_referral": "🤝 Рефералы",
+  "broadcast_link_partner": "💼 Партнёрам",
+  "broadcast_link_loyalty": "⭐ Лояльность",
+  "broadcast_link_dashboard": "🏠 Главная кабинета",
+  "broadcast_link_connections": "🔗 Подключения",
+  "broadcast_link_fortune": "🎰 Колесо фортуны"
 }

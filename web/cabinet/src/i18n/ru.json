@@ -1167,7 +1167,10 @@
         "invalidId": "Некорректный ID.",
         "noValidFields": "Нет полей для обновления.",
         "promoCodeRequired": "Укажите код и тип промокода.",
-        "slugRequired": "Укажите slug тарифа."
+        "slugRequired": "Укажите slug тарифа.",
+        "payloadTooLarge": "Файл слишком большой для загрузки. Уменьшите изображение или поднимите client_max_body_size в nginx.",
+        "testBroadcastNoAdmin": "Тестовая рассылка уходит админу — задайте ADMIN_TELEGRAM_ID в .env и перезапустите бота.",
+        "broadcastNoRecipients": "В выбранной аудитории нет получателей в Telegram."
       },
       "feedback": {
         "saved": "Изменения сохранены.",
@@ -1942,7 +1945,26 @@
         "started": "Рассылка запущена для {{count}} получателей. Итог придёт в Telegram админу.",
         "alreadyInProgress": "Рассылка уже выполняется. Дождитесь завершения.",
         "sentTo": "Рассылка отправлена {{count}} получателям",
-        "previewError": "Не удалось построить предпросмотр"
+        "previewError": "Не удалось построить предпросмотр",
+        "linksTitle": "Разделы и ссылки",
+        "linksHint": "Кнопки на разделы кабинета и чат поддержки",
+        "linksSelected": "Выбрано разделов: {{count}}",
+        "linksClear": "Снять все",
+        "linksConfigHint": "Кнопка не появится, если раздел выключен в конфиге: колесо фортуны — без FORTUNE_ENABLED, поддержка — без SUPPORT_URL.",
+        "links": {
+          "dashboard": "🏠 Главная кабинета",
+          "tariffs": "📦 Тарифы",
+          "connections": "🔗 Подключения",
+          "accounts": "➕ Доп. аккаунты",
+          "profile": "👤 Профиль",
+          "payments": "🧾 История платежей",
+          "promocodes": "🎟 Промокоды",
+          "referral": "🤝 Рефералы",
+          "partner": "💼 Партнёрам",
+          "loyalty": "⭐ Лояльность",
+          "fortune": "🎰 Колесо фортуны",
+          "support": "🆘 Поддержка"
+        }
       },
       "infra": {
         "title": "Инфраструктура",

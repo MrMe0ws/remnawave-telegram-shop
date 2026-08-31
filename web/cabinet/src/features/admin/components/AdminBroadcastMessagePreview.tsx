@@ -1,10 +1,17 @@
 import { useTranslation } from 'react-i18next'
 
+import {
+  BROADCAST_LINK_KEYS,
+  broadcastLinkLabelKey,
+  type BroadcastLinkKey,
+} from '../utils/broadcastLinks'
+
 interface BroadcastButtons {
   buy: boolean
   connect: boolean
   promo: boolean
   main_menu: boolean
+  links: BroadcastLinkKey[]
 }
 
 interface AdminBroadcastMessagePreviewProps {
@@ -24,9 +31,13 @@ export function AdminBroadcastMessagePreview({
 }: AdminBroadcastMessagePreviewProps) {
   const { t } = useTranslation()
 
+  // Порядок повторяет BuildReplyMarkup: купить, мой VPN, разделы кабинета, промокод, меню.
   const inlineButtons = [
     buttons.buy ? t('admin.broadcast.buttons.buy') : null,
     buttons.connect ? t('admin.broadcast.buttons.connect') : null,
+    ...BROADCAST_LINK_KEYS.filter((key) => buttons.links.includes(key)).map((key) =>
+      t(broadcastLinkLabelKey(key)),
+    ),
     buttons.promo ? t('admin.broadcast.buttons.promo') : null,
     buttons.main_menu ? t('admin.broadcast.buttons.mainMenu') : null,
   ].filter(Boolean) as string[]

@@ -9,6 +9,8 @@ const BODY_KEY_MAP: Record<string, string> = {
   'sync already in progress': 'admin.errors.syncInProgress',
   'recalc already in progress': 'admin.errors.recalcInProgress',
   'broadcast already in progress': 'admin.errors.broadcastInProgress',
+  'test broadcast requires admin_telegram_id': 'admin.errors.testBroadcastNoAdmin',
+  'no recipients': 'admin.errors.broadcastNoRecipients',
   'method not allowed': 'admin.errors.methodNotAllowed',
   'invalid id': 'admin.errors.invalidId',
   'no valid fields': 'admin.errors.noValidFields',
@@ -45,6 +47,9 @@ export function formatAdminApiError(err: unknown, t: TFunction): string {
         return t('admin.errors.notFound')
       case 409:
         return t('admin.errors.conflict')
+      case 413:
+        // Отдаёт nginx (client_max_body_size), а не бэкенд — тело будет HTML-страницей.
+        return t('admin.errors.payloadTooLarge')
       case 429:
         return t('admin.errors.tooManyRequests')
       case 501:

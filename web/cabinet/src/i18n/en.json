@@ -1149,7 +1149,10 @@
         "invalidId": "Invalid ID.",
         "noValidFields": "No fields to update.",
         "promoCodeRequired": "Promo code and type are required.",
-        "slugRequired": "Tariff slug is required."
+        "slugRequired": "Tariff slug is required.",
+        "payloadTooLarge": "File is too large to upload. Shrink the image or raise client_max_body_size in nginx.",
+        "testBroadcastNoAdmin": "Test broadcast goes to the admin — set ADMIN_TELEGRAM_ID in .env and restart the bot.",
+        "broadcastNoRecipients": "The selected audience has no Telegram recipients."
       },
       "feedback": {
         "saved": "Changes saved.",
@@ -1925,7 +1928,26 @@
         "started": "Broadcast started for {{count}} recipients. Stats will arrive in the admin Telegram chat.",
         "alreadyInProgress": "A broadcast is already running. Please wait until it finishes.",
         "sentTo": "Broadcast sent to {{count}} recipients",
-        "previewError": "Failed to build preview"
+        "previewError": "Failed to build preview",
+        "linksTitle": "Sections & links",
+        "linksHint": "Buttons to cabinet sections and the support chat",
+        "linksSelected": "Sections selected: {{count}}",
+        "linksClear": "Clear all",
+        "linksConfigHint": "A button is skipped when its section is off in config: wheel of fortune needs FORTUNE_ENABLED, support needs SUPPORT_URL.",
+        "links": {
+          "dashboard": "🏠 Cabinet home",
+          "tariffs": "📦 Plans",
+          "connections": "🔗 Connections",
+          "accounts": "➕ Extra accounts",
+          "profile": "👤 Profile",
+          "payments": "🧾 Payment history",
+          "promocodes": "🎟 Promo codes",
+          "referral": "🤝 Referrals",
+          "partner": "💼 Partners",
+          "loyalty": "⭐ Loyalty",
+          "fortune": "🎰 Wheel of fortune",
+          "support": "🆘 Support"
+        }
       },
       "infra": {
         "title": "Infrastructure",

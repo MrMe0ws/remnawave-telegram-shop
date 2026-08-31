@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/utils"
 	"strings"
 	"time"
@@ -814,8 +815,8 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	case BroadcastAudienceInactiveTrial:
 		buildSelect = buildSelect.Where(sq.And{inactiveVPN, noPaidSubscription})
 	case BroadcastAudienceTestBroadcast:
-		// Test broadcast: send only to users with ID 1 (for testing purposes)
-		buildSelect = buildSelect.Where(sq.Eq{"id": 1})
+		// Тестовая рассылка уходит только админу (ADMIN_TELEGRAM_ID), минуя фильтры аудитории.
+		return cr.testBroadcastRecipients(ctx)
 	default:
 		return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
 	}
@@ -854,6 +855,32 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	}
 
 	return out, nil
+}
+
+// testBroadcastRecipients возвращает единственного получателя тестовой рассылки — админа
+// из ADMIN_TELEGRAM_ID. Запись в customer не обязательна: она нужна только чтобы взять язык
+// для подписей кнопок. Пустой ADMIN_TELEGRAM_ID даёт пустой список получателей.
+func (cr *CustomerRepository) testBroadcastRecipients(ctx context.Context) ([]BroadcastRecipient, error) {
+	adminID := config.GetAdminTelegramId()
+	if adminID == 0 {
+		return nil, nil
+	}
+
+	lang := "en"
+	var dbLang string
+	err := cr.pool.QueryRow(ctx, "SELECT language FROM customer WHERE telegram_id = $1", adminID).Scan(&dbLang)
+	switch {
+	case err == nil:
+		if strings.TrimSpace(dbLang) != "" {
+			lang = dbLang
+		}
+	case errors.Is(err, pgx.ErrNoRows):
+		// Админа нет в customer — шлём на дефолтном языке.
+	default:
+		return nil, fmt.Errorf("failed to query admin language for test broadcast: %w", err)
+	}
+
+	return []BroadcastRecipient{{TelegramID: adminID, Language: lang}}, nil
 }
 
 // FindActiveByCurrentTariffID возвращает клиентов с активной подпиской и указанным current_tariff_id.

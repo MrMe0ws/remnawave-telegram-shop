@@ -1300,6 +1300,10 @@ server {
     }
 
     location /cabinet/api/ {
+        # Загрузка картинки для рассылки в web-админке: с общим лимитом 2m
+        # PNG-скриншоты отбивались 413 ещё на nginx, не доходя до бота.
+        client_max_body_size 4m;
+
         proxy_pass http://127.0.0.1:${port};
         proxy_http_version 1.1;
         proxy_connect_timeout 10s;

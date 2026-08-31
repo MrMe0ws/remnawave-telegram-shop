@@ -16,7 +16,7 @@ const (
 
 // BuildReplyMarkup строит inline-клавиатуру под рассылку для языка получателя.
 func BuildReplyMarkup(tm *translation.Manager, lang string, flags RecipientButtons) models.ReplyMarkup {
-	if tm == nil || (!flags.Buy && !flags.MainMenu && !flags.Promo && !flags.Connect) {
+	if tm == nil || flags.IsEmpty() {
 		return nil
 	}
 	var rows [][]models.InlineKeyboardButton
@@ -28,6 +28,7 @@ func BuildReplyMarkup(tm *translation.Manager, lang string, flags RecipientButto
 	if flags.Connect {
 		rows = append(rows, connectRow(tm, lang))
 	}
+	rows = append(rows, cabinetLinkRows(tm, lang, flags.Links)...)
 	if flags.Promo {
 		rows = append(rows, []models.InlineKeyboardButton{
 			tm.WithButton(lang, "promo_code_button", models.InlineKeyboardButton{CallbackData: callbackEnterPromo + inlineQuerySuffix}),
@@ -38,7 +39,37 @@ func BuildReplyMarkup(tm *translation.Manager, lang string, flags RecipientButto
 			tm.WithButton(lang, "broadcast_inline_main", models.InlineKeyboardButton{CallbackData: callbackStart + inlineQuerySuffix}),
 		})
 	}
+	if len(rows) == 0 {
+		return nil
+	}
 	return models.InlineKeyboardMarkup{InlineKeyboard: rows}
+}
+
+// cabinetLinkRows строит кнопки на выбранные разделы. Раздел без URL пропускается: так
+// отваливаются и разделы кабинета без CABINET_MINI_APP_ENTRY_URL, и выключенные в конфиге
+// (колесо фортуны, поддержка без SUPPORT_URL) — рассылка уйдёт, просто без этой кнопки.
+func cabinetLinkRows(tm *translation.Manager, lang string, keys []string) [][]models.InlineKeyboardButton {
+	var rows [][]models.InlineKeyboardButton
+	for _, key := range NormalizeCabinetLinkKeys(keys) {
+		for _, link := range cabinetLinks {
+			if link.Key != key {
+				continue
+			}
+			u := link.resolveURL()
+			if u == "" {
+				break
+			}
+			button := models.InlineKeyboardButton{URL: u}
+			if link.webApp {
+				button = models.InlineKeyboardButton{WebApp: &models.WebAppInfo{URL: u}}
+			}
+			rows = append(rows, []models.InlineKeyboardButton{
+				tm.WithButton(lang, link.TranslationKey, button),
+			})
+			break
+		}
+	}
+	return rows
 }
 
 func connectRow(tm *translation.Manager, lang string) []models.InlineKeyboardButton {

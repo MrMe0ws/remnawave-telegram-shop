@@ -1482,6 +1482,7 @@ export const api = {
       connect?: boolean
       promo?: boolean
       main_menu?: boolean
+      links?: string[]
     }
     media?: {
       file_id: string

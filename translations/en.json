@@ -390,5 +390,16 @@
   "partner_payout_approved": "💸 <b>Payout request approved</b>\n\nAmount: %s. We will let you know once the transfer is sent.",
   "partner_payout_paid": "✅ <b>Payout sent</b>\n\nAmount: %s\nReference: <code>%s</code>",
   "partner_payout_rejected": "💸 <b>Payout request rejected</b>\n\n%s returned to your balance — you can request a payout again.\n\nReason: %s",
-  "partner_notify_open_link": "Open the partner dashboard"
+  "partner_notify_open_link": "Open the partner dashboard",
+  "broadcast_link_tariffs": "📦 Plans",
+  "broadcast_link_profile": "👤 Profile",
+  "broadcast_link_accounts": "➕ Extra accounts",
+  "broadcast_link_payments": "🧾 Payment history",
+  "broadcast_link_promocodes": "🎟 Promo codes",
+  "broadcast_link_referral": "🤝 Referrals",
+  "broadcast_link_partner": "💼 Partners",
+  "broadcast_link_loyalty": "⭐ Loyalty",
+  "broadcast_link_dashboard": "🏠 Cabinet home",
+  "broadcast_link_connections": "🔗 Connections",
+  "broadcast_link_fortune": "🎰 Wheel of fortune"
 }

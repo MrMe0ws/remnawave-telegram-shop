@@ -175,6 +175,22 @@ server {
         proxy_set_header X-Forwarded-Port  $server_port;
     }
 
+    # Загрузка картинки для рассылки в web-админке.
+    location = /cabinet/api/admin/broadcast/upload-media {
+        client_max_body_size 4m;
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+        proxy_set_header X-Forwarded-Port  $server_port;
+    }
+
     # Остальной трафик кабинета.
     location / {
         limit_req zone=cabinet_api_ip burst=40 nodelay;
@@ -265,7 +281,7 @@ server {
 - `proxy_connect_timeout 10s` — максимум времени на **установку TCP-соединения** nginx → backend (бот). Если бот не отвечает, nginx оборвёт попытку быстрее, чем «висеть» долго.
 - `proxy_send_timeout 60s` — таймаут **отправки запроса** от nginx к upstream (в т.ч. тело POST). Длинные загрузки редки для кабинета; при необходимости увеличьте.
 - `proxy_read_timeout 60s` — таймаут **ожидания ответа** от upstream. Если бот долго обрабатывает запрос (тяжёлый checkout, внешние API), увеличьте значение, иначе клиент получит 502.
-- `client_max_body_size 2m` — максимальный размер **тела запроса** от браузера к nginx (загрузки, большие JSON). Для обычного кабинета 1–4 МБ обычно достаточно; под аватарки/файлы — поднимайте осознанно.
+- `client_max_body_size 2m` — максимальный размер **тела запроса** от браузера к nginx (загрузки, большие JSON). Для обычного кабинета 1–4 МБ обычно достаточно; под аватарки/файлы — поднимайте осознанно. Исключение — загрузка картинки для рассылки (`/cabinet/api/admin/broadcast/upload-media`): на этом location лимит поднят до `4m`. С общими 2m PNG-скриншоты отбивались `413 Request Entity Too Large` ещё на nginx, не доходя до бота (JPEG проходил только потому, что весит меньше). Верхняя граница на стороне бота — 10 MiB, так что при желании `4m` можно поднять и выше.
 
 В минимальном примере выше эти директивы опущены — nginx использует дефолты. Добавляйте их, если нужен явный контроль таймаутов.
 

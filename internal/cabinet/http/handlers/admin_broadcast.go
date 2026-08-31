@@ -115,10 +115,11 @@ func (h *AdminBroadcastHandler) Audiences(w http.ResponseWriter, r *http.Request
 }
 
 type broadcastButtonsReq struct {
-	Buy      bool `json:"buy"`
-	Connect  bool `json:"connect"`
-	Promo    bool `json:"promo"`
-	MainMenu bool `json:"main_menu"`
+	Buy      bool     `json:"buy"`
+	Connect  bool     `json:"connect"`
+	Promo    bool     `json:"promo"`
+	MainMenu bool     `json:"main_menu"`
+	Links    []string `json:"links,omitempty"`
 }
 
 type broadcastMediaReq struct {
@@ -127,9 +128,9 @@ type broadcastMediaReq struct {
 }
 
 type broadcastSendReq struct {
-	Audience string             `json:"audience"`
-	TariffID *int64             `json:"tariff_id,omitempty"`
-	Text     string             `json:"text"`
+	Audience string               `json:"audience"`
+	TariffID *int64               `json:"tariff_id,omitempty"`
+	Text     string               `json:"text"`
 	Buttons  *broadcastButtonsReq `json:"buttons,omitempty"`
 	Media    *broadcastMediaReq   `json:"media,omitempty"`
 }
@@ -143,6 +144,27 @@ func (req *broadcastSendReq) normalize() {
 			req.Media = nil
 		}
 	}
+	if req.Buttons != nil {
+		for i := range req.Buttons.Links {
+			req.Buttons.Links[i] = strings.TrimSpace(req.Buttons.Links[i])
+		}
+	}
+}
+
+// invalidLinkKeys возвращает ключи разделов кабинета, которых нет в реестре broadcast.
+// Порядок и дубли чинит NormalizeCabinetLinkKeys уже при сборке клавиатуры; здесь важно
+// не проглотить опечатку молча, иначе админ отправит рассылку без ожидаемой кнопки.
+func (req *broadcastSendReq) invalidLinkKeys() []string {
+	if req.Buttons == nil {
+		return nil
+	}
+	var bad []string
+	for _, key := range req.Buttons.Links {
+		if !broadcast.IsCabinetLinkKey(key) {
+			bad = append(bad, key)
+		}
+	}
+	return bad
 }
 
 func (req *broadcastSendReq) hasContent() bool {
@@ -158,6 +180,7 @@ func (req *broadcastSendReq) recipientButtons() broadcast.RecipientButtons {
 		Connect:  req.Buttons.Connect,
 		Promo:    req.Buttons.Promo,
 		MainMenu: req.Buttons.MainMenu,
+		Links:    broadcast.NormalizeCabinetLinkKeys(req.Buttons.Links),
 	}
 }
 
@@ -388,6 +411,10 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "text or media required", http.StatusBadRequest)
 		return
 	}
+	if bad := req.invalidLinkKeys(); len(bad) > 0 {
+		http.Error(w, "unknown cabinet link buttons: "+strings.Join(bad, ", "), http.StatusBadRequest)
+		return
+	}
 
 	recipients, err := h.customers.GetBroadcastRecipients(r.Context(), req.Audience, req.TariffID)
 	if err != nil {
@@ -396,6 +423,11 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(recipients) == 0 {
+		if req.Audience == database.BroadcastAudienceTestBroadcast {
+			// Тестовая рассылка идёт админу — пустой список значит только одно.
+			http.Error(w, "test broadcast requires ADMIN_TELEGRAM_ID", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, "no recipients", http.StatusBadRequest)
 		return
 	}
