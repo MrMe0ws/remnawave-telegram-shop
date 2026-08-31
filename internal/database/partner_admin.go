@@ -485,41 +485,44 @@ SELECT po.id, po.partner_id, po.amount, po.status, po.method, po.details_snapsho
 
 // ApprovePayout — «принял в работу, перевожу». Деньги не двигаются: они уже
 // зарезервированы с момента подачи заявки.
-func (r *PartnerRepository) ApprovePayout(ctx context.Context, payoutID int64, comment string, adminID int64) error {
-	tag, err := r.pool.Exec(ctx,
+func (r *PartnerRepository) ApprovePayout(ctx context.Context, payoutID int64, comment string, adminID int64) (*PartnerPayout, error) {
+	payout, err := scanPartnerPayout(r.pool.QueryRow(ctx,
 		`UPDATE partner_payout
 		    SET status = $2, admin_comment = COALESCE($3, admin_comment),
 		        processed_by = $4
-		  WHERE id = $1 AND status = $5`,
-		payoutID, PartnerPayoutApproved, nullableText(comment), adminID, PartnerPayoutPending)
+		  WHERE id = $1 AND status = $5
+	  RETURNING `+partnerPayoutColumns,
+		payoutID, PartnerPayoutApproved, nullableText(comment), adminID, PartnerPayoutPending))
+	// Пустой результат здесь означает не «нет такой заявки», а «статус уже не
+	// pending»: строка существует, под условие WHERE она просто не попала.
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrPartnerPayoutClosed
+	}
 	if err != nil {
-		return fmt.Errorf("failed to approve partner payout: %w", err)
+		return nil, fmt.Errorf("failed to approve partner payout: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		return ErrPartnerPayoutClosed
-	}
-	return nil
+	return payout, nil
 }
 
 // MarkPayoutPaid закрывает заявку: резерв уходит в выплаченное.
 //
 // externalRef — номер перевода. Это единственное доказательство в споре «денег
 // не приходило», поэтому он часть операции, а не необязательная пометка.
-func (r *PartnerRepository) MarkPayoutPaid(ctx context.Context, payoutID int64, externalRef, comment string, adminID int64) error {
+func (r *PartnerRepository) MarkPayoutPaid(ctx context.Context, payoutID int64, externalRef, comment string, adminID int64) (*PartnerPayout, error) {
 	return r.finishPayout(ctx, payoutID, PartnerPayoutPaid, externalRef, comment, adminID)
 }
 
 // RejectPayout возвращает зарезервированную сумму на доступный баланс.
-func (r *PartnerRepository) RejectPayout(ctx context.Context, payoutID int64, comment string, adminID int64) error {
+func (r *PartnerRepository) RejectPayout(ctx context.Context, payoutID int64, comment string, adminID int64) (*PartnerPayout, error) {
 	return r.finishPayout(ctx, payoutID, PartnerPayoutRejected, "", comment, adminID)
 }
 
 // finishPayout — общий хвост для «выплачено» и «отклонено»: обе операции
 // снимают резерв, но по-разному распоряжаются деньгами.
-func (r *PartnerRepository) finishPayout(ctx context.Context, payoutID int64, status, externalRef, comment string, adminID int64) error {
+func (r *PartnerRepository) finishPayout(ctx context.Context, payoutID int64, status, externalRef, comment string, adminID int64) (*PartnerPayout, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin finish payout tx: %w", err)
+		return nil, fmt.Errorf("failed to begin finish payout tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -530,13 +533,13 @@ func (r *PartnerRepository) finishPayout(ctx context.Context, payoutID int64, st
 		`SELECT partner_id, amount, status FROM partner_payout WHERE id = $1 FOR UPDATE`, payoutID).
 		Scan(&partnerID, &amount, &current)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrPartnerPayoutNotFound
+		return nil, ErrPartnerPayoutNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("failed to load partner payout: %w", err)
+		return nil, fmt.Errorf("failed to load partner payout: %w", err)
 	}
 	if current != PartnerPayoutPending && current != PartnerPayoutApproved {
-		return ErrPartnerPayoutClosed
+		return nil, ErrPartnerPayoutClosed
 	}
 
 	// Выплачено — резерв превращается в выплаченное; отклонено — возвращается
@@ -548,23 +551,25 @@ func (r *PartnerRepository) finishPayout(ctx context.Context, payoutID int64, st
 	if _, err := tx.Exec(ctx,
 		`UPDATE partner SET `+moneyMove+`, updated_at = now() WHERE id = $1`,
 		partnerID, amount); err != nil {
-		return fmt.Errorf("failed to move partner payout money: %w", err)
+		return nil, fmt.Errorf("failed to move partner payout money: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx,
+	payout, err := scanPartnerPayout(tx.QueryRow(ctx,
 		`UPDATE partner_payout
 		    SET status = $2, external_ref = COALESCE($3, external_ref),
 		        admin_comment = COALESCE($4, admin_comment),
 		        processed_at = now(), processed_by = $5
-		  WHERE id = $1`,
-		payoutID, status, nullableText(externalRef), nullableText(comment), adminID); err != nil {
-		return fmt.Errorf("failed to finish partner payout: %w", err)
+		  WHERE id = $1
+	  RETURNING `+partnerPayoutColumns,
+		payoutID, status, nullableText(externalRef), nullableText(comment), adminID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to finish partner payout: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit finish payout tx: %w", err)
+		return nil, fmt.Errorf("failed to commit finish payout tx: %w", err)
 	}
-	return nil
+	return payout, nil
 }
 
 // ListOperations — единая лента движения денег партнёра.

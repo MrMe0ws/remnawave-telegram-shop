@@ -214,11 +214,12 @@ func RuntimeSettingsRegistry() []SettingField {
 			Current: func() string { return boolStr(conf.paymentsNotifyEnabled) },
 		},
 		{
+			// Знак не проверяем: у супергруппы chat id отрицательный
+			// (-1001234567890), и запрет на минус делал настройку из админки
+			// пригодной только для личных чатов — при том что из .env то же
+			// значение принималось.
 			Key: "PAYMENTS_NOTIFY_CHAT_ID", Group: "payments_notify", Type: SettingText,
 			Apply: applyInt64Field(func(v int64) error {
-				if v < 0 {
-					return fmt.Errorf("invalid chat id")
-				}
 				conf.paymentsNotifyChatID = v
 				return nil
 			}),
@@ -431,6 +432,27 @@ func RuntimeSettingsRegistry() []SettingField {
 			Key: "PARTNER_COUNT_EXTRA_HWID", Group: "partner", Type: SettingBool, Instant: true,
 			Apply:   applyBoolField(func(v bool) { conf.partnerCountExtraHwid = v }),
 			Current: func() string { return boolStr(conf.partnerCountExtraHwid) },
+		},
+		{
+			Key: "PARTNER_NOTIFY_ENABLED", Group: "partner", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.partnerNotifyEnabled = v }),
+			Current: func() string { return boolStr(conf.partnerNotifyEnabled) },
+		},
+		{
+			// Отрицательные значения допустимы и обязательны: у супергруппы
+			// chat id вида -1001234567890. Ноль — «в личку админу».
+			Key: "PARTNER_NOTIFY_CHAT_ID", Group: "partner", Type: SettingText,
+			Apply:   applyInt64Field(func(v int64) error { conf.partnerNotifyChatID = v; return nil }),
+			Current: func() string { return strconv.FormatInt(conf.partnerNotifyChatID, 10) },
+		},
+		{
+			Key: "PARTNER_NOTIFY_MESSAGE_THREAD_ID", Group: "partner", Type: SettingInt,
+			MinInt: intPtr(0),
+			Apply: applyIntField(func(v int) error {
+				conf.partnerNotifyThreadID = v
+				return nil
+			}),
+			Current: func() string { return strconv.Itoa(conf.partnerNotifyThreadID) },
 		},
 
 		// --- access ---

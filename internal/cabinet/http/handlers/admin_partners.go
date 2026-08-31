@@ -11,6 +11,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/notification"
 )
 
 // AdminPartnersHandler — админка партнёрской программы: /cabinet/api/admin/partners*.
@@ -22,10 +23,23 @@ type AdminPartnersHandler struct {
 	partners  *database.PartnerRepository
 	customers *database.CustomerRepository
 	botURL    string
+	// notify может быть nil: без бота уведомлять некому, а хендлер обязан
+	// работать и в этом случае — решения админа от Telegram не зависят.
+	notify *notification.PartnerNotifier
 }
 
-func NewAdminPartners(partners *database.PartnerRepository, customers *database.CustomerRepository, botURL string) *AdminPartnersHandler {
-	return &AdminPartnersHandler{partners: partners, customers: customers, botURL: strings.TrimSpace(botURL)}
+func NewAdminPartners(
+	partners *database.PartnerRepository,
+	customers *database.CustomerRepository,
+	botURL string,
+	notify *notification.PartnerNotifier,
+) *AdminPartnersHandler {
+	return &AdminPartnersHandler{
+		partners:  partners,
+		customers: customers,
+		botURL:    strings.TrimSpace(botURL),
+		notify:    notify,
+	}
 }
 
 // --- DTO ---
@@ -289,14 +303,17 @@ func (h *AdminPartnersHandler) payoutAction(w http.ResponseWriter, r *http.Reque
 	}
 	adminID := adminActorID(r)
 
-	var err error
+	var (
+		payout *database.PartnerPayout
+		err    error
+	)
 	switch action {
 	case "approve":
-		err = h.partners.ApprovePayout(r.Context(), payoutID, req.Comment, adminID)
+		payout, err = h.partners.ApprovePayout(r.Context(), payoutID, req.Comment, adminID)
 	case "paid":
-		err = h.partners.MarkPayoutPaid(r.Context(), payoutID, req.ExternalRef, req.Comment, adminID)
+		payout, err = h.partners.MarkPayoutPaid(r.Context(), payoutID, req.ExternalRef, req.Comment, adminID)
 	case "reject":
-		err = h.partners.RejectPayout(r.Context(), payoutID, req.Comment, adminID)
+		payout, err = h.partners.RejectPayout(r.Context(), payoutID, req.Comment, adminID)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 		return
@@ -312,7 +329,32 @@ func (h *AdminPartnersHandler) payoutAction(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	default:
 		slog.Info("admin partner payout processed", "action", action, "payout_id", payoutID, "admin_id", adminID)
+		h.notifyPayoutProcessed(r, action, payout, req.ExternalRef, req.Comment)
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	}
+}
+
+// notifyPayoutProcessed сообщает партнёру решение по его заявке на вывод.
+//
+// Партнёра ищем по заявке, а не по пути запроса: в URL лежит id выплаты, а
+// адресат уведомления — владелец этой выплаты, и связь между ними знает только
+// база.
+func (h *AdminPartnersHandler) notifyPayoutProcessed(r *http.Request, action string, payout *database.PartnerPayout, externalRef, comment string) {
+	if h.notify == nil || payout == nil {
+		return
+	}
+	partner, err := h.partners.FindByID(r.Context(), payout.PartnerID)
+	if err != nil || partner == nil {
+		slog.Error("admin partners: notify payout, load partner", "error", err, "partner_id", payout.PartnerID)
+		return
+	}
+	switch action {
+	case "approve":
+		h.notify.PayoutApproved(r.Context(), partner.CustomerID, payout.Amount)
+	case "paid":
+		h.notify.PayoutPaid(r.Context(), partner.CustomerID, payout.Amount, externalRef)
+	case "reject":
+		h.notify.PayoutRejected(r.Context(), partner.CustomerID, payout.Amount, comment)
 	}
 }
 
@@ -593,6 +635,11 @@ func (h *AdminPartnersHandler) approve(w http.ResponseWriter, r *http.Request, p
 	}
 
 	slog.Info("partner application approved", "partner_id", partner.ID, "admin_id", adminActorID(r))
+	if h.notify != nil {
+		h.notify.ApplicationApproved(r.Context(), partner.CustomerID,
+			effectivePercent(partner.FirstPercent, config.PartnerFirstPercent()),
+			effectivePercent(partner.RenewalPercent, config.PartnerRenewalPercent()))
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "status": partner.Status})
 }
 
@@ -616,6 +663,9 @@ func (h *AdminPartnersHandler) reject(w http.ResponseWriter, r *http.Request, pa
 	}
 
 	slog.Info("partner application rejected", "partner_id", partner.ID, "admin_id", adminActorID(r))
+	if h.notify != nil {
+		h.notify.ApplicationRejected(r.Context(), partner.CustomerID, req.Comment)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "status": partner.Status})
 }
 
@@ -717,6 +767,11 @@ func (h *AdminPartnersHandler) grant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("partner granted by admin", "partner_id", partner.ID, "admin_id", adminActorID(r))
+	if h.notify != nil {
+		h.notify.Granted(r.Context(), partner.CustomerID,
+			effectivePercent(partner.FirstPercent, config.PartnerFirstPercent()),
+			effectivePercent(partner.RenewalPercent, config.PartnerRenewalPercent()))
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": partner.ID, "status": partner.Status})
 }
 

@@ -2190,6 +2190,18 @@
             "label": "Count extra device top-ups",
             "hint": "By default a device top-up earns the partner nothing"
           },
+          "PARTNER_NOTIFY_ENABLED": {
+            "label": "Partner notifications",
+            "hint": "Applications and payouts to you, decisions to the partner"
+          },
+          "PARTNER_NOTIFY_CHAT_ID": {
+            "label": "Notification chat ID",
+            "hint": "Empty or 0 sends to the admin DM. Group: -1001234567890"
+          },
+          "PARTNER_NOTIFY_MESSAGE_THREAD_ID": {
+            "label": "Forum topic ID",
+            "hint": "0 is the main chat"
+          },
           "FORWARD_USER_MESSAGES_TO_ADMIN": {
             "label": "Forward messages to admin",
             "hint": "Text and unknown commands"

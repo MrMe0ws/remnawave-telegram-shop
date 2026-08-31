@@ -530,5 +530,9 @@
 
   "admin_ref_root_title": "<b>Рефералы</b>",
   "admin_ref_root_body": "<b>Уникальных рефереров:</b> %d\n<b>Активных рефереров:</b> %d\n<b>Дней начислено реферерам за месяц:</b> %d",
-  "admin_ref_open_full": "📊 Полная партнёрка"
+  "admin_ref_open_full": "📊 Полная партнёрка",
+  "admin_partner_application_new": "🤝 <b>Заявка в партнёры</b>\n\n• Клиент: %s\n• О себе: %s\n• Площадки: %s\n• Ожидает: %s",
+  "admin_partner_application_auto": "🤝 <b>Новый партнёр</b>\n\nЗаявка принята автоматически — модерация выключена.\n\n• Клиент: %s\n• О себе: %s\n• Площадки: %s\n• Ожидает: %s",
+  "admin_partner_payout_request": "💸 <b>Запрос на вывод</b>\n\n• Партнёр: %s\n• Сумма: %s\n• Способ: %s\n• Реквизиты: <code>%s</code>",
+  "admin_partner_notify_open_link": "Открыть раздел «Партнёры»"
 }

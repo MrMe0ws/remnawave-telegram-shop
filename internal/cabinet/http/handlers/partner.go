@@ -14,6 +14,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/notification"
 	"remnawave-tg-shop-bot/utils"
 )
 
@@ -27,6 +28,8 @@ type PartnerHandler struct {
 	partners  *database.PartnerRepository
 	publicURL string
 	botURL    string
+	// notify может быть nil — см. AdminPartnersHandler.notify.
+	notify *notification.PartnerNotifier
 }
 
 func NewPartner(
@@ -35,6 +38,7 @@ func NewPartner(
 	partners *database.PartnerRepository,
 	publicURL string,
 	botURL string,
+	notify *notification.PartnerNotifier,
 ) *PartnerHandler {
 	return &PartnerHandler{
 		boot:      boot,
@@ -42,7 +46,24 @@ func NewPartner(
 		partners:  partners,
 		publicURL: strings.TrimRight(publicURL, "/"),
 		botURL:    strings.TrimSpace(botURL),
+		notify:    notify,
 	}
+}
+
+// adminLabel — подпись партнёра для админского уведомления, без маскирования.
+//
+// Читаем админскую строку, а не Customer: почта живёт в аккаунте кабинета, и у
+// web-only партнёра подпись по одному лишь Customer выродилась бы в прочерк.
+// Пустая строка означает «подпись не получилась» — тогда уведомление лучше не
+// слать вовсе, чем слать безымянное.
+func (h *PartnerHandler) adminLabel(ctx context.Context, partnerID int64) string {
+	row, err := h.partners.GetPartnerAdminRow(ctx, partnerID)
+	if err != nil || row == nil {
+		slog.Error("partner: admin label", "error", err, "partner_id", partnerID)
+		return ""
+	}
+	return adminCustomerLabel(row.CustomerUsername, row.CustomerEmail,
+		row.CustomerTelegramID, row.CustomerIsWebOnly)
 }
 
 // --- DTO ---
@@ -586,6 +607,20 @@ func (h *PartnerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		"partner_id", partner.ID, "status", partner.Status,
 		"customer_id", utils.MaskHalfInt64(customer.ID))
 
+	if h.notify != nil {
+		if label := h.adminLabel(r.Context(), partner.ID); label != "" {
+			h.notify.ApplicationSubmitted(r.Context(), notification.PartnerApplication{
+				Label:    label,
+				About:    req.About,
+				Channels: req.Channels,
+				Expected: req.Expected,
+				// При включённом автоодобрении разбирать нечего: человек уже
+				// партнёр, и уведомление должно сообщать именно это.
+				AutoApproved: partner.Status == database.PartnerStatusActive,
+			})
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{"status": partner.Status})
 }
 
@@ -962,6 +997,13 @@ func (h *PartnerHandler) createPayout(w http.ResponseWriter, r *http.Request, pa
 
 	slog.Info("partner payout requested",
 		"partner_id", partner.ID, "payout_id", payout.ID, "amount", payout.Amount)
+
+	if h.notify != nil {
+		if label := h.adminLabel(r.Context(), partner.ID); label != "" {
+			h.notify.PayoutRequested(r.Context(), label, payout.Amount,
+				ptrString(payout.Method), ptrString(payout.DetailsSnapshot))
+		}
+	}
 
 	writeJSON(w, http.StatusOK, partnerPayoutDTO{
 		ID:          payout.ID,

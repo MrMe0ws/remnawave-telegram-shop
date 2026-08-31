@@ -383,5 +383,12 @@
   "lifecycle_time_expired": "expired",
   "lifecycle_time_hours": "%d h",
   "lifecycle_time_days": "%d d",
-  "torrent_blocked": "⛔️ <b>Server «%s» is temporarily blocked</b>\n\nWe detected torrent traffic from your connection, so access to this server has been temporarily disabled.\n\n⏱️ Block duration: %d minutes\n🔓 Available again: %s at %s\n\nOther servers work as usual.\n\n⚠️ <b>Do not use torrents over VPN to avoid being blocked again.</b>"
+  "torrent_blocked": "⛔️ <b>Server «%s» is temporarily blocked</b>\n\nWe detected torrent traffic from your connection, so access to this server has been temporarily disabled.\n\n⏱️ Block duration: %d minutes\n🔓 Available again: %s at %s\n\nOther servers work as usual.\n\n⚠️ <b>Do not use torrents over VPN to avoid being blocked again.</b>",
+  "partner_application_approved": "🤝 <b>Application approved</b>\n\nYou are a partner now. Your terms: %s of a referred customer's first payment and %s of every payment after that.",
+  "partner_granted": "🤝 <b>You are a partner</b>\n\nAn administrator added you to the partner program. Your terms: %s of a referred customer's first payment and %s of every payment after that.",
+  "partner_application_rejected": "🤝 <b>Application rejected</b>\n\nReason: %s\n\nYou can apply again.",
+  "partner_payout_approved": "💸 <b>Payout request approved</b>\n\nAmount: %s. We will let you know once the transfer is sent.",
+  "partner_payout_paid": "✅ <b>Payout sent</b>\n\nAmount: %s\nReference: <code>%s</code>",
+  "partner_payout_rejected": "💸 <b>Payout request rejected</b>\n\n%s returned to your balance — you can request a payout again.\n\nReason: %s",
+  "partner_notify_open_link": "Open the partner dashboard"
 }

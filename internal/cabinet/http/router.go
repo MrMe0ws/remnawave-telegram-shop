@@ -42,10 +42,12 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/web"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/notification"
 	botpayment "remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/sync"
+	"remnawave-tg-shop-bot/internal/translation"
 )
 
 // Mount регистрирует роуты кабинета в переданном mux. Возвращает ошибку, если
@@ -234,7 +236,10 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	connectInviteHandler := handlers.NewConnectInvite(subscriptionSvc, cabcfg.JWTSecret())
 
 	activityHandler := handlers.NewCabinetActivity(linkRepo, identityRepo, customerRepo, referralRepo, purchaseRepo, cabcfg.PublicURL())
-	partnerHandler := handlers.NewPartner(customerBootstrap, customerRepo, partnerRepo, cabcfg.PublicURL(), config.BotURL())
+	// Уведомления партнёрской программы. Без бота nil — тогда все вызовы
+	// уведомлений становятся no-op, а сама программа работает как прежде.
+	partnerNotifier := notification.NewPartnerNotifier(tgBot, customerRepo, translation.GetInstance(), cabcfg.PublicURL())
+	partnerHandler := handlers.NewPartner(customerBootstrap, customerRepo, partnerRepo, cabcfg.PublicURL(), config.BotURL(), partnerNotifier)
 
 	promoRepo := database.NewPromoRepository(pool)
 	fortuneSvc := cabsvc.NewFortuneService(pool, linkRepo, customerBootstrap, customerRepo, purchaseRepo, promoRepo, fortRepo, rw)
@@ -362,7 +367,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminPromosHandler := handlers.NewAdminPromos(promoRepo)
 	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
-	adminPartnersHandler := handlers.NewAdminPartners(partnerRepo, customerRepo, config.BotURL())
+	adminPartnersHandler := handlers.NewAdminPartners(partnerRepo, customerRepo, config.BotURL(), partnerNotifier)
 	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, broadcastSender, tgBot)
 	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
 	adminSettingsHandler := handlers.NewAdminSettings(runtimeSettingsRepo)

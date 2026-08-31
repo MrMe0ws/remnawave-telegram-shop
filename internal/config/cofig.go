@@ -125,6 +125,13 @@ type config struct {
 	partnerPayoutCooldownDays  int
 	partnerMaxLinks            int
 	partnerCountExtraHwid      bool
+
+	// Уведомления партнёрской программы. Отдельный чат от PAYMENTS_NOTIFY:
+	// заявки и выводы разбирает тот, кто ведёт партнёрку, и мешать их с
+	// потоком платежей — значит потерять их в этом потоке.
+	partnerNotifyEnabled  bool
+	partnerNotifyChatID   int64
+	partnerNotifyThreadID int
 }
 
 var conf config
@@ -291,6 +298,25 @@ func PartnerMaxLinks() int {
 // а не приведённая партнёром продажа.
 func PartnerCountExtraHwid() bool {
 	return conf.partnerCountExtraHwid
+}
+
+// PartnerNotifyEnabled — слать ли уведомления партнёрской программы.
+// Включено по умолчанию: сама программа выключена, а когда её включают,
+// заявки без уведомления просто зависнут в очереди незамеченными.
+func PartnerNotifyEnabled() bool {
+	return conf.partnerNotifyEnabled
+}
+
+// PartnerNotifyChatID — куда слать админскую половину уведомлений. Ноль
+// означает «в личку ADMIN_TELEGRAM_ID»: это рабочий вариант по умолчанию, а
+// не выключенная настройка.
+func PartnerNotifyChatID() int64 {
+	return conf.partnerNotifyChatID
+}
+
+// PartnerNotifyMessageThreadID — тема форума внутри чата; 0 — основной чат.
+func PartnerNotifyMessageThreadID() int {
+	return conf.partnerNotifyThreadID
 }
 
 func HwidAddPrice() int {
@@ -1099,6 +1125,16 @@ func InitConfig() {
 	conf.partnerPayoutCooldownDays = maxInt(envIntDefault("PARTNER_PAYOUT_COOLDOWN_DAYS", 7), 0)
 	conf.partnerMaxLinks = maxInt(envIntDefault("PARTNER_MAX_LINKS", 10), 1)
 	conf.partnerCountExtraHwid = envBoolDefault("PARTNER_COUNT_EXTRA_HWID", false)
+	conf.partnerNotifyEnabled = envBoolDefault("PARTNER_NOTIFY_ENABLED", true)
+	// Chat id супергруппы отрицательный (-100...), поэтому знак не трогаем.
+	if raw := strings.TrimSpace(os.Getenv("PARTNER_NOTIFY_CHAT_ID")); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("invalid PARTNER_NOTIFY_CHAT_ID: %v", err))
+		}
+		conf.partnerNotifyChatID = id
+	}
+	conf.partnerNotifyThreadID = maxInt(envIntDefault("PARTNER_NOTIFY_MESSAGE_THREAD_ID", 0), 0)
 	conf.trialAddsToPaid = envBoolDefault("TRIAL_ADD_TO_PAID", true)
 	conf.hwidAddPrice = mustEnvInt("HWID_ADD_PRICE")
 	conf.hwidAddStarsPrice = envIntDefault("HWID_ADD_STARS_PRICE", conf.hwidAddPrice)

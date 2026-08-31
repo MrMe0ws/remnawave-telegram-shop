@@ -330,8 +330,14 @@ func TestPartnerPayout_lifecycle(t *testing.T) {
 		t.Fatalf("вторая заявка сверх баланса: want ErrPartnerInsufficientBalance, got %v", err)
 	}
 
-	if err := repo.RejectPayout(ctx, payout.ID, "неверные реквизиты", 1); err != nil {
+	rejected, err := repo.RejectPayout(ctx, payout.ID, "неверные реквизиты", 1)
+	if err != nil {
 		t.Fatalf("reject payout: %v", err)
+	}
+	// Заявку возвращают вызывающей стороне ради уведомления партнёру: без неё
+	// пришлось бы читать её повторно, уже после смены статуса.
+	if rejected == nil || rejected.Status != PartnerPayoutRejected || rejected.PartnerID != partner.ID {
+		t.Fatalf("reject payout вернул %+v", rejected)
 	}
 	returned := partnerBalances(t, repo, partner.ID)
 	assertMoney(t, "balance после отказа", returned.Balance, 2000)
@@ -351,8 +357,12 @@ func TestPartnerPayout_lifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second payout: %v", err)
 	}
-	if err := repo.MarkPayoutPaid(ctx, second.ID, "чек #4471", "", 1); err != nil {
+	closed, err := repo.MarkPayoutPaid(ctx, second.ID, "чек #4471", "", 1)
+	if err != nil {
 		t.Fatalf("mark paid: %v", err)
+	}
+	if closed == nil || closed.ExternalRef == nil || *closed.ExternalRef != "чек #4471" {
+		t.Fatalf("mark paid вернул %+v", closed)
 	}
 	paid := partnerBalances(t, repo, partner.ID)
 	assertMoney(t, "balance после выплаты", paid.Balance, 0)
@@ -360,7 +370,7 @@ func TestPartnerPayout_lifecycle(t *testing.T) {
 	assertMoney(t, "total_paid после выплаты", paid.TotalPaid, 2000)
 
 	// Повторная обработка закрытой заявки не должна списать деньги ещё раз.
-	if err := repo.MarkPayoutPaid(ctx, second.ID, "", "", 1); !errors.Is(err, ErrPartnerPayoutClosed) {
+	if _, err := repo.MarkPayoutPaid(ctx, second.ID, "", "", 1); !errors.Is(err, ErrPartnerPayoutClosed) {
 		t.Fatalf("повтор выплаты: want ErrPartnerPayoutClosed, got %v", err)
 	}
 }
@@ -677,7 +687,7 @@ func TestCheckBalances_noDriftAfterFullCycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create payout: %v", err)
 	}
-	if err := repo.MarkPayoutPaid(ctx, payout.ID, "ref", "", 1); err != nil {
+	if _, err := repo.MarkPayoutPaid(ctx, payout.ID, "ref", "", 1); err != nil {
 		t.Fatalf("mark paid: %v", err)
 	}
 	if err := repo.AdjustBalance(ctx, partner.ID, -100, "возврат", 1); err != nil {

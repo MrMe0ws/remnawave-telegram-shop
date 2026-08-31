@@ -530,5 +530,9 @@
 
   "admin_ref_root_title": "<b>Referrals</b>",
   "admin_ref_root_body": "<b>Distinct referrers:</b> %d\n<b>Active referrers:</b> %d\n<b>Referrer bonus days this month:</b> %d",
-  "admin_ref_open_full": "📊 Full referral stats"
+  "admin_ref_open_full": "📊 Full referral stats",
+  "admin_partner_application_new": "🤝 <b>Partner application</b>\n\n• Customer: %s\n• About: %s\n• Channels: %s\n• Expected: %s",
+  "admin_partner_application_auto": "🤝 <b>New partner</b>\n\nThe application was approved automatically — moderation is off.\n\n• Customer: %s\n• About: %s\n• Channels: %s\n• Expected: %s",
+  "admin_partner_payout_request": "💸 <b>Payout request</b>\n\n• Partner: %s\n• Amount: %s\n• Method: %s\n• Details: <code>%s</code>",
+  "admin_partner_notify_open_link": "Open the Partners section"
 }
