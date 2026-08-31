@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"log/slog"
@@ -94,21 +93,26 @@ func buildReferralDisplayList(ctx context.Context, b *bot.Bot, referrals []datab
 }
 
 // TODO(cabinet-web-only): после Этапа 1 добавить раннюю ветку
-//   if utils.IsSyntheticTelegramID(telegramID) { return "web-client" }
+//
+//	if utils.IsSyntheticTelegramID(telegramID) { return "web-client" }
+//
 // чтобы не ходить в Telegram API для web-only рефери.
 // Плюс — продуктовый вопрос: форма реферальной ссылки для web-only клиента
 // (сейчас t.me/<bot>?start=ref_<7e18+N>). См. docs/cabinet/audit-telegram-id.md,
 // разделы 1.5 и 3.3.
+// Имя маскируется: список видит пригласивший, а не админ. Свой реферал
+// узнаётся и по «@i***k», а полный ник ему показывать незачем — то же правило,
+// что и в кабинете (см. maskReferee в cabinet_activity.go).
 func getReferralDisplayName(ctx context.Context, b *bot.Bot, telegramID int64) string {
 	chat, err := b.GetChat(ctx, &bot.GetChatParams{ChatID: telegramID})
 	if err == nil && chat != nil {
 		if chat.Username != "" {
-			return "@" + escapeHTML(chat.Username)
+			return "@" + escapeHTML(utils.MaskEdges(chat.Username))
 		}
 		fullName := strings.TrimSpace(strings.TrimSpace(chat.FirstName + " " + chat.LastName))
 		if fullName != "" {
-			return escapeHTML(fullName)
+			return escapeHTML(utils.MaskEdges(fullName))
 		}
 	}
-	return strconv.FormatInt(telegramID, 10)
+	return utils.MaskHalfInt64(telegramID)
 }

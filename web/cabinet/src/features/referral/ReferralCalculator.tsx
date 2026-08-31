@@ -6,6 +6,7 @@ import { OfferGrowthChart, niceCeil, type OfferGrowthTick } from '@/components/O
 import { Card, CardContent } from '@/components/ui/card'
 import { formatDecimals } from '@/lib/format'
 
+import { ReferralTerms } from './ReferralTerms'
 import {
   cumulative,
   DAYS_IN_FREE_MONTH,
@@ -138,40 +139,9 @@ export function ReferralCalculator({ rules }: { rules: ReferralBonusRules }) {
           {recurring ? t('referralPage.calc.disclaimer') : t('referralPage.calc.disclaimerOnce')}
         </p>
 
-        <div className={`mt-5 grid gap-2.5 ${recurring ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-          <RuleTile
-            value={t('referralPage.days', { n: rules.first })}
-            text={t('referralPage.calc.ruleFirst')}
-          />
-          {recurring ? (
-            <RuleTile
-              value={t('referralPage.days', { n: rules.repeat })}
-              text={t('referralPage.calc.ruleRepeat')}
-            />
-          ) : null}
-          {rules.referee > 0 ? (
-            <RuleTile
-              value={t('referralPage.days', { n: rules.referee })}
-              text={t('referralPage.calc.ruleReferee')}
-            />
-          ) : null}
-        </div>
+        <ReferralTerms rules={rules} className="mt-5" />
+
       </CardContent>
     </Card>
-  )
-}
-
-/**
- * Условие программы: число и что оно значит.
- *
- * Подпись под числом, а не над ним, как в плитках результата: здесь главное —
- * не сама цифра, а за что её дают.
- */
-function RuleTile({ value, text }: { value: string; text: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-muted p-3">
-      <p className="text-lg font-bold tracking-tight text-primary">{value}</p>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
-    </div>
   )
 }

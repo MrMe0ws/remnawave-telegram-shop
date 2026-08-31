@@ -60,19 +60,65 @@ type referralStatsDTO struct {
 }
 
 type refereeRowDTO struct {
-	TelegramIDMasked string  `json:"telegram_id_masked"`
-	TelegramUsername *string `json:"telegram_username,omitempty"`
-	Email            *string `json:"email,omitempty"`
-	Active           bool    `json:"active"`
+	TelegramIDMasked string `json:"telegram_id_masked"`
+	// Готовая к показу подпись: «@i***n», «d***y@mail.ru» или маскированный id.
+	// Раньше здесь ехали полные username и email, а звёздочки рисовал браузер —
+	// то есть настоящие значения лежали в JSON и читались через devtools.
+	Name string `json:"name"`
+	// Сколько дней принёс этот человек. Список без этой цифры отвечал на
+	// «кто у меня есть», но не на «а что мне с них».
+	EarnedDays int  `json:"earned_days"`
+	Active     bool `json:"active"`
+}
+
+// Сколько последних начислений отдаём в ленту. Лента отвечает на вопрос
+// «откуда взялись дни», а не заменяет выгрузку: за пределами десятка строк её
+// уже не читают, а вес ответа растёт у каждого пользователя.
+const referralLedgerLimit = 12
+
+// referralLedgerRowDTO — строка ленты начислений.
+type referralLedgerRowDTO struct {
+	// Кто принёс начисление — в том же замаскированном виде, что и в списке.
+	Actor     string `json:"actor"`
+	Days      int    `json:"days"`
+	Months    int    `json:"months,omitempty"`
+	Kind      string `json:"kind"`
+	CreatedAt string `json:"created_at"`
+}
+
+// maskReferee — как приглашённый показывается пригласившему.
+//
+// Порядок тот же, что был на клиенте: username, иначе почта, иначе
+// маскированный telegram id. Отличие одно — username теперь тоже маскируется:
+// показывать чужой ник целиком незачем, узнаваемости «@i***k» для своего
+// списка достаточно.
+func maskReferee(username, email *string, telegramID int64) string {
+	if username != nil {
+		if u := strings.TrimSpace(*username); u != "" {
+			// Пробел означает, что это имя, а не @username: собаку не приписываем.
+			if strings.Contains(u, " ") {
+				return utils.MaskEdges(u)
+			}
+			return "@" + utils.MaskEdges(u)
+		}
+	}
+	if email != nil {
+		if e := strings.TrimSpace(*email); e != "" {
+			return utils.MaskEmail(e)
+		}
+	}
+	return utils.MaskHalfInt64(telegramID)
 }
 
 type referralsResp struct {
-	ReferrerTelegramID  int64            `json:"referrer_telegram_id"`
-	Stats               referralStatsDTO `json:"stats"`
-	Referees            []refereeRowDTO  `json:"referees"`
-	BotStartLink        string           `json:"bot_start_link,omitempty"`
-	CabinetRegisterLink string           `json:"cabinet_register_link,omitempty"`
-	ReferralMode        string           `json:"referral_mode"`
+	ReferrerTelegramID int64            `json:"referrer_telegram_id"`
+	Stats              referralStatsDTO `json:"stats"`
+	Referees           []refereeRowDTO  `json:"referees"`
+	// Лента начислений: откуда взялись дни из stats.earned_days_total.
+	Ledger              []referralLedgerRowDTO `json:"ledger"`
+	BotStartLink        string                 `json:"bot_start_link,omitempty"`
+	CabinetRegisterLink string                 `json:"cabinet_register_link,omitempty"`
+	ReferralMode        string                 `json:"referral_mode"`
 	// Параметры бонусов как в боте (для подробного UI).
 	ReferralBonusDaysDefault   int `json:"referral_bonus_days_default"`
 	ReferralFirstReferrerDays  int `json:"referral_first_referrer_days,omitempty"`
@@ -100,6 +146,7 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 	if !ok || h.customers == nil || h.referrals == nil {
 		writeJSON(w, http.StatusOK, referralsResp{
 			Referees:                 []refereeRowDTO{},
+			Ledger:                   []referralLedgerRowDTO{},
 			ReferralMode:             config.ReferralMode(),
 			ReferralBonusDaysDefault: config.GetReferralDays(),
 		})
@@ -145,14 +192,41 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Дни по каждому приглашённому — одним запросом на весь список, а не
+	// запросом на строку: иначе список из полусотни рефералов дал бы полсотни
+	// походов в базу на одно открытие страницы.
+	daysByReferee, err := h.referrals.EarnedDaysByReferee(r.Context(), tg)
+	if err != nil {
+		slog.Error("cabinet_activity: referral days by referee", "error", err.Error())
+		daysByReferee = nil
+	}
+
 	referees := make([]refereeRowDTO, 0, len(summaries))
 	for _, s := range summaries {
 		referees = append(referees, refereeRowDTO{
 			TelegramIDMasked: utils.MaskHalfInt64(s.TelegramID),
-			TelegramUsername: s.TelegramUsername,
-			Email:            s.Email,
+			Name:             maskReferee(s.TelegramUsername, s.Email, s.TelegramID),
+			EarnedDays:       daysByReferee[s.TelegramID],
 			Active:           s.Active,
 		})
+	}
+
+	// Лента — дополнение к странице, а не её суть: если журнал не ответил,
+	// показываем остальное, а не пятисотим весь экран.
+	ledger := make([]referralLedgerRowDTO, 0, referralLedgerLimit)
+	feed, err := h.referrals.RecentEarnedBonuses(r.Context(), tg, referralLedgerLimit)
+	if err != nil {
+		slog.Error("cabinet_activity: referral ledger", "error", err.Error())
+	} else {
+		for _, e := range feed {
+			ledger = append(ledger, referralLedgerRowDTO{
+				Actor:     maskReferee(e.RefereeUsername, e.RefereeEmail, e.RefereeTelegramID),
+				Days:      e.Days,
+				Months:    e.Months,
+				Kind:      e.Kind,
+				CreatedAt: e.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+			})
+		}
 	}
 
 	dto := referralStatsDTO{
@@ -169,6 +243,7 @@ func (h *CabinetActivityHandler) GetReferrals(w http.ResponseWriter, r *http.Req
 		ReferrerTelegramID:       tg,
 		Stats:                    dto,
 		Referees:                 referees,
+		Ledger:                   ledger,
 		ReferralMode:             config.ReferralMode(),
 		ReferralBonusDaysDefault: config.GetReferralDays(),
 	}

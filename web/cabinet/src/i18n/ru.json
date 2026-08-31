@@ -851,6 +851,20 @@
       }
     },
     "referralPage": {
+      "ledger": {
+        "title": "Откуда взялись дни",
+        "empty": "Пока ничего не начислено.",
+        "months_one": "{{count}} месяц",
+        "months_few": "{{count}} месяца",
+        "months_many": "{{count}} месяцев",
+        "kind": {
+          "first_referrer": "первая оплата реферала",
+          "repeat_referrer": "продление реферала",
+          "default_referrer": "оплата реферала",
+          "manual": "начисление вручную",
+          "other": "начисление"
+        }
+      },
       "linkBotShort": "Телеграм",
       "linkCabinetShort": "Кабинет",
       "days": "+{{n}} дн.",
@@ -1948,23 +1962,27 @@
         "previewError": "Не удалось построить предпросмотр",
         "linksTitle": "Разделы и ссылки",
         "linksHint": "Кнопки на разделы кабинета и чат поддержки",
-        "linksSelected": "Выбрано разделов: {{count}}",
-        "linksClear": "Снять все",
-        "linksConfigHint": "Кнопка не появится, если раздел выключен в конфиге: колесо фортуны — без FORTUNE_ENABLED, поддержка — без SUPPORT_URL.",
         "links": {
-          "dashboard": "🏠 Главная кабинета",
           "tariffs": "📦 Тарифы",
-          "connections": "🔗 Подключения",
-          "accounts": "➕ Доп. аккаунты",
           "profile": "👤 Профиль",
+          "accounts": "➕ Доп. аккаунты",
           "payments": "🧾 История платежей",
           "promocodes": "🎟 Промокоды",
           "referral": "🤝 Рефералы",
           "partner": "💼 Партнёрам",
           "loyalty": "⭐ Лояльность",
+          "dashboard": "🏠 Главная кабинета",
+          "connections": "🔗 Подключения",
           "fortune": "🎰 Колесо фортуны",
           "support": "🆘 Поддержка"
-        }
+        },
+        "linksSelected": "Выбрано разделов: {{count}}",
+        "linksClear": "Снять все",
+        "groupCabinetTitle": "Открывают кабинет",
+        "groupCabinetHint": "Мини-приложение Telegram. «Мой VPN» и «Главная кабинета» ведут в одно место — хватит одной.",
+        "groupPlainTitle": "Не открывают кабинет",
+        "groupPlainHint": "Действия в чате с ботом и внешняя ссылка на поддержку.",
+        "linksConfigHint": "Кнопка не появится, если раздел выключен в конфиге: колесо фортуны — без FORTUNE_ENABLED, поддержка — без SUPPORT_URL."
       },
       "infra": {
         "title": "Инфраструктура",

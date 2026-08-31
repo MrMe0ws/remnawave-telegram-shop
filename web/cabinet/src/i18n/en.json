@@ -729,6 +729,19 @@
       }
     },
     "referralPage": {
+      "ledger": {
+        "title": "Where the days came from",
+        "empty": "Nothing credited yet.",
+        "months_one": "{{count}} month",
+        "months_other": "{{count}} months",
+        "kind": {
+          "first_referrer": "referral's first payment",
+          "repeat_referrer": "referral's renewal",
+          "default_referrer": "referral's payment",
+          "manual": "manual credit",
+          "other": "credit"
+        }
+      },
       "linkBotShort": "Telegram",
       "linkCabinetShort": "Cabinet",
       "days": "+{{n}} d.",
@@ -1931,23 +1944,27 @@
         "previewError": "Failed to build preview",
         "linksTitle": "Sections & links",
         "linksHint": "Buttons to cabinet sections and the support chat",
-        "linksSelected": "Sections selected: {{count}}",
-        "linksClear": "Clear all",
-        "linksConfigHint": "A button is skipped when its section is off in config: wheel of fortune needs FORTUNE_ENABLED, support needs SUPPORT_URL.",
         "links": {
-          "dashboard": "🏠 Cabinet home",
           "tariffs": "📦 Plans",
-          "connections": "🔗 Connections",
-          "accounts": "➕ Extra accounts",
           "profile": "👤 Profile",
+          "accounts": "➕ Extra accounts",
           "payments": "🧾 Payment history",
           "promocodes": "🎟 Promo codes",
           "referral": "🤝 Referrals",
           "partner": "💼 Partners",
           "loyalty": "⭐ Loyalty",
+          "dashboard": "🏠 Cabinet home",
+          "connections": "🔗 Connections",
           "fortune": "🎰 Wheel of fortune",
           "support": "🆘 Support"
-        }
+        },
+        "linksSelected": "Sections selected: {{count}}",
+        "linksClear": "Clear all",
+        "groupCabinetTitle": "Open the cabinet",
+        "groupCabinetHint": "Telegram mini app. “My VPN” and “Cabinet home” lead to the same place — one is enough.",
+        "groupPlainTitle": "Stay outside the cabinet",
+        "groupPlainHint": "Actions in the bot chat and the external support link.",
+        "linksConfigHint": "A button is skipped when its section is off in config: wheel of fortune needs FORTUNE_ENABLED, support needs SUPPORT_URL."
       },
       "infra": {
         "title": "Infrastructure",

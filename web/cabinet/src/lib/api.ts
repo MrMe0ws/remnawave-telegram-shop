@@ -539,10 +539,29 @@ export interface ReferralsStatsResponse {
   referral_days_per_paid_default: number
 }
 
+/** Одно начисление в ленте «откуда взялись дни». */
+export interface ReferralLedgerRow {
+  /** Кто принёс дни — уже замаскировано сервером: «@i***k», «d***y@mail.ru». */
+  actor: string
+  days: number
+  /** Длина оплаченного периода в месяцах; 0 — неизвестна (строки бэкфилла). */
+  months?: number
+  kind: 'first_referrer' | 'repeat_referrer' | 'default_referrer' | 'manual' | string
+  created_at: string
+}
+
 export interface ReferralsResponse {
   referrer_telegram_id: number
   stats: ReferralsStatsResponse
-  referees: { telegram_id_masked: string; telegram_username?: string | null; email?: string | null; active: boolean }[]
+  /** `name` приходит уже замаскированным: полных ников и почт в ответе нет. */
+  referees: {
+    telegram_id_masked: string
+    name: string
+    /** Сколько дней принёс этот приглашённый. */
+    earned_days: number
+    active: boolean
+  }[]
+  ledger: ReferralLedgerRow[]
   bot_start_link?: string
   cabinet_register_link?: string
   referral_mode: string

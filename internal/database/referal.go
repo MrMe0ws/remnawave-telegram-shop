@@ -21,10 +21,10 @@ type Referral struct {
 }
 
 type RefereeSummary struct {
-	TelegramID        int64
-	Active            bool
-	TelegramUsername  *string
-	Email             *string
+	TelegramID       int64
+	Active           bool
+	TelegramUsername *string
+	Email            *string
 }
 
 type ReferralStats struct {
@@ -200,9 +200,9 @@ func (r *ReferralRepository) FindRefereeSummariesByReferrerPage(ctx context.Cont
 		active := expireAt != nil && expireAt.After(time.Now())
 		list = append(list, RefereeSummary{
 			TelegramID:       refereeID,
-			Active:          active,
+			Active:           active,
 			TelegramUsername: telegramUsername,
-			Email:           email,
+			Email:            email,
 		})
 	}
 	if rows.Err() != nil {
@@ -256,6 +256,19 @@ func (r *ReferralRepository) GetStats(ctx context.Context, referrerID int64) (Re
 		EarnedTotal:     earnedTotal,
 		EarnedLastMonth: earnedLastMonth,
 	}, nil
+}
+
+// RecentEarnedBonuses — лента «откуда взялись дни» для пригласившего.
+//
+// Идёт через тот же журнал, что и сумма в GetStats, поэтому лента и итог не
+// могут разойтись: это один источник, а не две реализации одной формулы.
+func (r *ReferralRepository) RecentEarnedBonuses(ctx context.Context, referrerID int64, limit int) ([]ReferralBonusFeedEntry, error) {
+	return r.ledger.ListRecentByReferrer(ctx, referrerID, limit)
+}
+
+// EarnedDaysByReferee — сколько дней принёс каждый приглашённый.
+func (r *ReferralRepository) EarnedDaysByReferee(ctx context.Context, referrerID int64) (map[int64]int, error) {
+	return r.ledger.SumDaysByReferee(ctx, referrerID)
 }
 
 func (r *ReferralRepository) FindByReferee(ctx context.Context, refereeID int64) (*Referral, error) {

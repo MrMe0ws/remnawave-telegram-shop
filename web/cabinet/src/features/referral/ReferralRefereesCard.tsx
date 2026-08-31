@@ -5,7 +5,18 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { ReferralsResponse } from '@/lib/api'
 
-/** Приглашённые: кто пришёл по ссылке и кто из них ещё с нами. */
+/**
+ * Приглашённые: кто пришёл по ссылке, сколько принёс и с нами ли ещё.
+ *
+ * Дни у каждой строки — то, ради чего список вообще открывают. Без них он
+ * отвечал только на «кто у меня есть», а вопрос у человека другой: «и что мне
+ * с них». Сумма по строкам сходится с «дней бонуса» над списком — считает её
+ * тот же журнал начислений.
+ *
+ * Подписи приходят готовыми и уже замаскированными. Раньше сервер отдавал
+ * полные username и email, а звёздочки дорисовывал этот компонент — то есть
+ * настоящие значения всё равно лежали в ответе и читались через devtools.
+ */
 export function ReferralRefereesCard({ referees }: { referees: ReferralsResponse['referees'] }) {
   const { t } = useTranslation()
 
@@ -21,14 +32,26 @@ export function ReferralRefereesCard({ referees }: { referees: ReferralsResponse
             {t('referralPage.emptyList')}
           </p>
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
+          <ul className="space-y-2">
             {referees.map((r, i) => (
               <li
                 key={`${r.telegram_id_masked}-${i}`}
-                className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm"
+                className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2.5"
               >
-                <span className="font-mono text-xs">{refereeName(r)}</span>
-                <Badge variant={r.active ? 'default' : 'secondary'}>
+                <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                  {r.name || r.telegram_id_masked}
+                </span>
+                {/* Нулевые дни показываем прочерком, а не «+0 дн.»: приглашённый
+                    без оплат — обычное дело, и ноль в столбце дней читается как
+                    сбой начисления. */}
+                {r.earned_days > 0 ? (
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {t('referralPage.days', { n: r.earned_days })}
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-sm text-muted-foreground">—</span>
+                )}
+                <Badge variant={r.active ? 'default' : 'secondary'} className="shrink-0">
                   {r.active ? t('referralPage.badgeActive') : t('referralPage.badgeInactive')}
                 </Badge>
               </li>
@@ -38,24 +61,4 @@ export function ReferralRefereesCard({ referees }: { referees: ReferralsResponse
       </CardContent>
     </Card>
   )
-}
-
-function refereeName(r: ReferralsResponse['referees'][number]): string {
-  if (r.telegram_username) {
-    // Пробел в «имени» означает, что это не username, а имя пользователя:
-    // собаку к нему приписывать нельзя.
-    return r.telegram_username.includes(' ') ? r.telegram_username : `@${r.telegram_username}`
-  }
-  if (r.email) return maskReferralEmail(r.email)
-  return r.telegram_id_masked
-}
-
-function maskReferralEmail(email: string): string {
-  const value = String(email).trim().toLowerCase()
-  const at = value.lastIndexOf('@')
-  if (at <= 0 || at >= value.length - 1) return value
-  const local = value.slice(0, at)
-  const domain = value.slice(at + 1)
-  if (local.length <= 1) return `${local}***@${domain}`
-  return `${local[0]}***${local[local.length - 1]}@${domain}`
 }

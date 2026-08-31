@@ -14,9 +14,10 @@ import { api, type ReferralsResponse } from '@/lib/api'
 import { ReferralCalculator } from './ReferralCalculator'
 import { ReferralFlow } from './ReferralFlow'
 import { ReferralInviteCard, type ReferralLink } from './ReferralInviteCard'
+import { ReferralLedgerCard } from './ReferralLedgerCard'
 import { ReferralProgress } from './ReferralProgress'
 import { ReferralRefereesCard } from './ReferralRefereesCard'
-import { ReferralRulesCard } from './ReferralRulesCard'
+import { ReferralTerms } from './ReferralTerms'
 import { referralBonusRules, type ReferralBonusRules } from './referralModel'
 
 export default function ReferralProgramPage() {
@@ -130,22 +131,37 @@ function ReferralBody({
     </Card>
   )
 
-  const bottom = data.referees.length ? (
-    <RevealItem className="grid gap-6 lg:grid-cols-2">
-      <ReferralRefereesCard referees={data.referees} />
-      <ReferralRulesCard data={data} />
+  /*
+   * Низ страницы — два списка в ряд.
+   *
+   * Список приглашённых и лента начислений отвечают на разные вопросы: «кто у
+   * меня есть» и «откуда взялись дни». Первый пустует у новичка, вторая — пока
+   * никто не оплатил, поэтому пара собирается из того, что реально есть, а не
+   * прибита к колонкам гвоздями: пустая колонка выглядит как поломка вёрстки.
+   *
+   * Карточки «Как начисляются бонусы» здесь больше нет: она пересказывала
+   * словами те же три числа, что стоят в плитках условий, и висела в самом
+   * низу — там, куда за правилами никто не доходил.
+   */
+  const bottomCards = [
+    data.ledger.length ? <ReferralLedgerCard key="ledger" rows={data.ledger} /> : null,
+    data.referees.length ? <ReferralRefereesCard key="referees" referees={data.referees} /> : null,
+  ].filter(Boolean)
+
+  const bottom = bottomCards.length ? (
+    <RevealItem className={bottomCards.length > 1 ? 'grid gap-6 lg:grid-cols-2' : undefined}>
+      {bottomCards}
     </RevealItem>
-  ) : (
-    <RevealItem>
-      <ReferralRulesCard data={data} />
-    </RevealItem>
-  )
+  ) : null
 
   if (started) {
     return (
       <>
         <RevealItem>
           <ReferralProgress stats={data.stats} rules={rules} />
+        </RevealItem>
+        <RevealItem>
+          <ReferralTerms rules={rules} />
         </RevealItem>
         <RevealItem>{invite}</RevealItem>
         {bottom}
