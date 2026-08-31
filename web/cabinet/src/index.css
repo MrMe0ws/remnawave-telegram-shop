@@ -593,6 +593,33 @@
   }
 
   /*
+   * Заполнение кольца анимацией.
+   *
+   * conic-gradient сам по себе не интерполируется: без @property браузер
+   * считает --cabinet-ring-value обычной строкой и переключает её скачком.
+   * Регистрация типа делает переменную анимируемой, и дуга набегает.
+   *
+   * Отдельным модификатором, а не на всех кольцах сразу: у трафика и устройств
+   * значение приходит вместе со страницей, и там набегающая дуга читалась бы
+   * как загрузка данных, которой уже нет.
+   */
+  @property --cabinet-ring-value {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+  }
+
+  .cabinet-ring--animate {
+    transition: --cabinet-ring-value 1.1s var(--cabinet-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cabinet-ring--animate {
+      transition: none;
+    }
+  }
+
+  /*
    * Статичное кольцо со знаком ∞ — для безлимитного трафика. Прогресса там
    * быть не может, но место в сетке показателей занять надо.
    */
@@ -3682,7 +3709,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
  * каждого движка свой. Заполненная часть рисуется градиентом с остановкой в
  * --p, которую компонент пересчитывает при каждом сдвиге.
  */
-.partner-range {
+.cabinet-range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -3697,7 +3724,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   );
 }
 
-.partner-range::-webkit-slider-thumb {
+.cabinet-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
   height: 20px;
@@ -3708,7 +3735,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   cursor: grab;
 }
 
-.partner-range::-moz-range-thumb {
+.cabinet-range::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -3718,7 +3745,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   cursor: grab;
 }
 
-.partner-range:focus-visible {
+.cabinet-range:focus-visible {
   outline: 2px solid hsl(var(--primary));
   outline-offset: 4px;
 }
@@ -3731,12 +3758,32 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
  * брейкпоинт, а не вторая разметка — иначе пришлось бы держать две копии
  * схемы и синхронизировать их руками.
  */
-.partner-flow-link {
+/*
+ * Сетка схемы: узлы и связки в одном потоке.
+ *
+ * Число колонок зависит от числа узлов, поэтому шаблон приходит переменной
+ * --cabinet-flow-cols из компонента: перечислять в Tailwind варианты на три,
+ * четыре и пять узлов пришлось бы классами вида lg:grid-cols-[1fr_auto_1fr].
+ */
+.cabinet-flow-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .cabinet-flow-grid {
+    grid-template-columns: var(--cabinet-flow-cols);
+    align-items: stretch;
+    gap: 0;
+  }
+}
+
+.cabinet-flow-link {
   position: relative;
   height: 22px;
 }
 
-.partner-flow-line {
+.cabinet-flow-line {
   position: absolute;
   left: 24px;
   top: -14px;
@@ -3745,7 +3792,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   background: hsl(var(--border));
 }
 
-.partner-flow-pulse {
+.cabinet-flow-pulse {
   position: absolute;
   left: 19px;
   top: -6px;
@@ -3754,10 +3801,10 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   border-radius: 50%;
   background: hsl(var(--primary));
   box-shadow: 0 0 14px 3px hsl(var(--primary) / 0.5);
-  animation: partner-flow-pulse-y 2.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  animation: cabinet-flow-pulse-y 2.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 
-@keyframes partner-flow-pulse-y {
+@keyframes cabinet-flow-pulse-y {
   0% {
     top: -18px;
     opacity: 0;
@@ -3772,7 +3819,7 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   }
 }
 
-@keyframes partner-flow-pulse-x {
+@keyframes cabinet-flow-pulse-x {
   0% {
     left: -8px;
     opacity: 0;
@@ -3788,13 +3835,13 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
 }
 
 @media (min-width: 1024px) {
-  .partner-flow-link {
+  .cabinet-flow-link {
     height: auto;
     width: 40px;
     align-self: center;
   }
 
-  .partner-flow-line {
+  .cabinet-flow-line {
     left: 0;
     right: 0;
     top: 50%;
@@ -3803,18 +3850,18 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
     height: 2px;
   }
 
-  .partner-flow-pulse {
+  .cabinet-flow-pulse {
     left: 0;
     top: 50%;
     margin-top: -6px;
-    animation-name: partner-flow-pulse-x;
+    animation-name: cabinet-flow-pulse-x;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   /* Бесконечное движение рядом с формой отвлекает сильнее, чем помогает:
      схема остаётся читаемой и без импульсов. */
-  .partner-flow-pulse {
+  .cabinet-flow-pulse {
     display: none;
   }
 }

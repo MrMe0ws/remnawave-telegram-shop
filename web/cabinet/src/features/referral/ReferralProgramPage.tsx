@@ -1,20 +1,30 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Trans, useTranslation } from 'react-i18next'
-import { Users, BookOpen } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { ChevronDown } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
-import { ReferralCopyRow } from '@/features/referral/ReferralCopyRow'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
+import { api, type ReferralsResponse } from '@/lib/api'
+
+import { ReferralCalculator } from './ReferralCalculator'
+import { ReferralFlow } from './ReferralFlow'
+import { ReferralInviteCard, type ReferralLink } from './ReferralInviteCard'
+import { ReferralProgress } from './ReferralProgress'
+import { ReferralRefereesCard } from './ReferralRefereesCard'
+import { ReferralRulesCard } from './ReferralRulesCard'
+import { referralBonusRules, type ReferralBonusRules } from './referralModel'
 
 export default function ReferralProgramPage() {
   const { t } = useTranslation()
-  const canShare = useMemo(() => typeof navigator !== 'undefined' && typeof navigator.share === 'function', [])
+  const canShare = useMemo(
+    () => typeof navigator !== 'undefined' && typeof navigator.share === 'function',
+    [],
+  )
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['referrals'],
@@ -23,113 +33,30 @@ export default function ReferralProgramPage() {
     retry: 1,
   })
 
-  async function share(text: string) {
+  async function share(url: string) {
     if (!canShare) return
     try {
-      await navigator.share({
-        text: `${t('referralPage.shareInviteText')}\n${text}`,
-      })
+      await navigator.share({ text: `${t('referralPage.shareInviteText')}\n${url}` })
     } catch {
       // user cancelled share sheet
     }
   }
 
-  const stats = data?.stats
-  const bonusClass = 'font-semibold text-emerald-600 dark:text-emerald-400'
-
+  /*
+   * Страница живёт в широкой колонке, в отличие от остального кабинета.
+   *
+   * Её задача — не показать таблицу, а добиться, чтобы ссылкой поделились:
+   * калькулятору и схеме потока нужна ширина, чтобы встать в две колонки, а не
+   * в стопку. В max-w-2xl на десктопе это выглядело вытянутым мобильным
+   * экраном. Списки внизу разведены по двум колонкам, поэтому ширина не
+   * пропадает и на них.
+   */
   return (
     <AppLayout>
-      <PageReveal className="mx-auto w-full max-w-2xl space-y-6">
+      <PageReveal className="mx-auto w-full max-w-5xl space-y-6">
         <RevealItem>
           <PageTitleWithBack title={t('referralPage.title')} />
         </RevealItem>
-        <RevealItem>
-          <p className="text-sm text-muted-foreground">{t('referralPage.intro')}</p>
-        </RevealItem>
-
-        {!isLoading && !error && data && (
-          <RevealItem>
-          <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base font-medium">
-                <BookOpen size={18} className="text-primary" />
-                {t('referralPage.howTitle')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              {data.referral_mode === 'progressive' ? (
-                <>
-                  <p>{t('referralPage.howProgressiveIntro')}</p>
-                  {data.referral_scale_by_months ? (
-                    <>
-                      <ul className="list-disc space-y-1.5 pl-5">
-                        <li>
-                          <Trans
-                            i18nKey="referralPage.howProgressiveMonthlyFirst"
-                            values={{
-                              first: data.referral_first_referrer_days ?? 0,
-                              repeat: data.referral_repeat_referrer_days ?? 0,
-                              referee: data.referral_first_referee_days ?? 0,
-                            }}
-                            components={[
-                              <span className={bonusClass} key="first" />,
-                              <span className={bonusClass} key="repeat" />,
-                              <span className={bonusClass} key="referee" />,
-                            ]}
-                          />
-                        </li>
-                        <li>
-                          <Trans
-                            i18nKey="referralPage.howProgressiveMonthlyNext"
-                            values={{ referee: data.referral_first_referee_days ?? 0 }}
-                            components={[<span className={bonusClass} key="next" />]}
-                          />
-                        </li>
-                      </ul>
-                      {/* Обе ссылки ведут на один аккаунт — без этой строчки
-                          регулярно спрашивают, какую из них «правильную» давать. */}
-                      <p className="text-xs">{t('referralPage.linksHint')}</p>
-                    </>
-                  ) : (
-                    <ul className="list-disc space-y-1.5 pl-5">
-                      <li>
-                        <Trans
-                          i18nKey="referralPage.howProgressiveFirst"
-                          values={{
-                            ref: data.referral_first_referrer_days ?? 0,
-                            referee: data.referral_first_referee_days ?? 0,
-                          }}
-                          components={[
-                            <span className={bonusClass} key="ref" />,
-                            <span className={bonusClass} key="referee" />,
-                          ]}
-                        />
-                      </li>
-                      <li>
-                        <Trans
-                          i18nKey="referralPage.howProgressiveNext"
-                          values={{ n: data.referral_repeat_referrer_days ?? 0 }}
-                          components={[<span className={bonusClass} key="repeat" />]}
-                        />
-                      </li>
-                    </ul>
-                  )}
-                </>
-              ) : (
-                <p>
-                  <Trans
-                    i18nKey="referralPage.howDefault"
-                    values={{
-                      n: data.referral_bonus_days_default ?? data.stats.referral_days_per_paid_default,
-                    }}
-                    components={[<span className={bonusClass} key="default" />]}
-                  />
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          </RevealItem>
-        )}
 
         {isLoading ? (
           <RevealItem>
@@ -139,149 +66,168 @@ export default function ReferralProgramPage() {
           <RevealItem>
             <p className="text-sm text-destructive">{t('errors.unknown')}</p>
           </RevealItem>
-        ) : (
-          <>
-            <RevealItem>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t('referralPage.linksTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {data?.bot_start_link ? (
-                  <ReferralCopyRow
-                    label={t('referralPage.linkBot')}
-                    value={data.bot_start_link}
-                    canShare={canShare}
-                    onShare={() => void share(data.bot_start_link!)}
-                  />
-                ) : null}
-                {data?.cabinet_register_link ? (
-                  <ReferralCopyRow
-                    label={t('referralPage.linkCabinet')}
-                    value={data.cabinet_register_link}
-                    canShare={canShare}
-                    onShare={() => void share(data.cabinet_register_link!)}
-                  />
-                ) : null}
-                {!data?.bot_start_link && !data?.cabinet_register_link ? (
-                  <p className="text-sm text-muted-foreground">{t('referralPage.noLinks')}</p>
-                ) : null}
-              </CardContent>
-            </Card>
-            </RevealItem>
-
-            <RevealItem className="grid gap-3 sm:grid-cols-3">
-              <StatCard label={t('referralPage.statTotal')} value={String(stats?.total ?? 0)} sub={t('referralPage.statActiveSub', { n: stats?.active ?? 0 })} />
-              <StatCard
-                label={t('referralPage.statEarnedDays')}
-                value={String(stats?.earned_days_total ?? 0)}
-                sub={t('referralPage.statLastMonth', { n: stats?.earned_days_last_month ?? 0 })}
-              />
-              <StatCard label={t('referralPage.statConversion')} value={`${stats?.conversion_pct ?? 0}%`} sub={t('referralPage.statPaid', { n: stats?.paid ?? 0 })} />
-            </RevealItem>
-
-            <RevealItem>
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Users size={18} className="text-muted-foreground" />
-                <CardTitle className="text-base">{t('referralPage.listTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!data?.referees?.length ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">{t('referralPage.emptyList')}</p>
-                ) : (
-                  <ul className="divide-y divide-border rounded-lg border border-border">
-                    {data.referees.map((r, i) => (
-                      <li key={`${r.telegram_id_masked}-${i}`} className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm">
-                        <span className="font-mono text-xs">
-                          {r.telegram_username
-                            ? r.telegram_username.includes(' ')
-                              ? r.telegram_username
-                              : `@${r.telegram_username}`
-                            : r.email
-                              ? maskReferralEmail(r.email)
-                              : r.telegram_id_masked}
-                        </span>
-                        <Badge variant={r.active ? 'default' : 'secondary'}>{r.active ? t('referralPage.badgeActive') : t('referralPage.badgeInactive')}</Badge>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-            </RevealItem>
-          </>
-        )}
+        ) : data ? (
+          <ReferralBody data={data} canShare={canShare} onShare={share} />
+        ) : null}
       </PageReveal>
     </AppLayout>
   )
 }
 
-/** Заглушка: карточка ссылок, три плитки статистики и список рефералов. */
+/**
+ * Порядок блоков решает состояние пользователя.
+ *
+ * У кого бонусных дней ещё нет — показывать прогресс нечем: пустое кольцо
+ * читается как «ты ничего не добился». Ему сначала приглашение, потом
+ * калькулятор: показывать нечего, зато есть что пообещать.
+ *
+ * У кого дни уже начислены — наоборот, первым экраном прогресс: он про него и
+ * пришёл. Калькулятор уезжает под кнопку «а если позвать ещё», потому что
+ * уговаривать того, кто уже участвует, незачем.
+ *
+ * Набор блоков один и тот же — меняется только первый экран. Это дешевле, чем
+ * держать две страницы.
+ */
+function ReferralBody({
+  data,
+  canShare,
+  onShare,
+}: {
+  data: ReferralsResponse
+  canShare: boolean
+  onShare: (url: string) => void
+}) {
+  const { t } = useTranslation()
+
+  const rules = referralBonusRules(data)
+  const earnedDays = data.stats.earned_days_total ?? 0
+  const started = earnedDays > 0
+
+  const links: ReferralLink[] = []
+  if (data.bot_start_link) {
+    links.push({ key: 'bot', label: t('referralPage.linkBotShort'), url: data.bot_start_link })
+  }
+  if (data.cabinet_register_link) {
+    links.push({
+      key: 'cabinet',
+      label: t('referralPage.linkCabinetShort'),
+      url: data.cabinet_register_link,
+    })
+  }
+
+  const invite = links.length ? (
+    <ReferralInviteCard
+      links={links}
+      refereeDays={rules.referee}
+      canShare={canShare}
+      onShare={onShare}
+    />
+  ) : (
+    <Card>
+      <CardContent className="pt-6 text-sm text-muted-foreground">
+        {t('referralPage.noLinks')}
+      </CardContent>
+    </Card>
+  )
+
+  const bottom = data.referees.length ? (
+    <RevealItem className="grid gap-6 lg:grid-cols-2">
+      <ReferralRefereesCard referees={data.referees} />
+      <ReferralRulesCard data={data} />
+    </RevealItem>
+  ) : (
+    <RevealItem>
+      <ReferralRulesCard data={data} />
+    </RevealItem>
+  )
+
+  if (started) {
+    return (
+      <>
+        <RevealItem>
+          <ReferralProgress stats={data.stats} rules={rules} />
+        </RevealItem>
+        <RevealItem>{invite}</RevealItem>
+        {bottom}
+        <RevealItem>
+          <MoreOffer rules={rules} />
+        </RevealItem>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <RevealItem>
+        <p className="text-sm text-muted-foreground">{t('referralPage.intro')}</p>
+      </RevealItem>
+      <RevealItem>{invite}</RevealItem>
+      <RevealItem>
+        <ReferralCalculator rules={rules} />
+      </RevealItem>
+      <RevealItem>
+        <ReferralFlow rules={rules} />
+      </RevealItem>
+      {bottom}
+    </>
+  )
+}
+
+/** Оффер для того, кто уже участвует: по кнопке, а не поперёк его статистики. */
+function MoreOffer({ rules }: { rules: ReferralBonusRules }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+
+  if (!open) {
+    return (
+      <Button variant="outline" className="w-full gap-2" onClick={() => setOpen(true)}>
+        <ChevronDown size={16} />
+        {t('referralPage.moreOffer')}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <ReferralCalculator rules={rules} />
+      <ReferralFlow rules={rules} />
+    </div>
+  )
+}
+
+/** Заглушка: приглашение с QR, калькулятор и списки. */
 function ReferralSkeleton() {
   return (
     <div className="space-y-6" aria-hidden>
       <Card>
-        <CardHeader>
-          <Skeleton className="h-4 w-32" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-16 w-full rounded-lg" />
-          <Skeleton className="h-16 w-full rounded-lg" />
+        <CardContent className="pt-6">
+          <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-6">
+            <Skeleton className="mx-auto size-[168px] rounded-xl sm:mx-0" />
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-7 w-64" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <Card key={i}>
-            <CardContent className="pt-4">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="mt-1.5 h-7 w-14" />
-              <Skeleton className="mt-1.5 h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Skeleton className="size-4 rounded" />
-          <Skeleton className="h-4 w-36" />
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y divide-border rounded-lg border border-border">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between gap-2 px-3 py-2.5">
-                <Skeleton className="h-3.5 w-32" />
-                <Skeleton className="h-5 w-16 rounded-full" />
+        <CardContent className="pt-6">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-6 w-full rounded-full" />
+              <div className="grid grid-cols-2 gap-2.5">
+                <Skeleton className="h-20 w-full rounded-xl" />
+                <Skeleton className="h-20 w-full rounded-xl" />
               </div>
-            ))}
+            </div>
+            <Skeleton className="h-[200px] w-full rounded-xl" />
           </div>
         </CardContent>
       </Card>
     </div>
   )
 }
-
-function maskReferralEmail(email: string): string {
-  const value = String(email).trim().toLowerCase()
-  const at = value.lastIndexOf('@')
-  if (at <= 0 || at >= value.length - 1) return value
-  const local = value.slice(0, at)
-  const domain = value.slice(at + 1)
-  if (local.length <= 1) return `${local}***@${domain}`
-  return `${local[0]}***${local[local.length - 1]}@${domain}`
-}
-
-function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-4">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-semibold mt-1">{value}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
-      </CardContent>
-    </Card>
-  )
-}
-

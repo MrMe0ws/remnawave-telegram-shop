@@ -10,18 +10,21 @@ const DRAW_MS = 1800
 const HOLD_MS = 2200
 
 /**
- * График накопленного дохода с зациклённой отрисовкой.
+ * График накопленного результата с зациклённой отрисовкой.
  *
  * Рисуется слева направо, впереди линии бежит точка, следом проявляется
  * заливка; в конце пауза и повтор. Сдвиг ползунка перезапускает цикл, поэтому
  * график откликается на ввод, а не просто пересчитывается.
  *
- * Показываем именно накопленный доход, а не доход месяца. Доход месяца в этой
+ * Показываем именно накопленный итог, а не прибавку месяца. Прибавка в этой
  * модели растёт на одну и ту же величину, то есть рисуется строго прямой
  * линией — и никакая анимация её не изогнёт. Накопленная сумма даёт выпуклую
  * кривую на тех же самых числах.
+ *
+ * Чистый SVG, а не recharts: тот весит около полумегабайта и живёт только в
+ * админке — тянуть его в кабинет ради одной ломаной незачем.
  */
-export function PartnerIncomeChart({ values, className }: { values: number[]; className?: string }) {
+export function OfferGrowthChart({ values, className }: { values: number[]; className?: string }) {
   const reduceMotion = useReducedMotion()
 
   const lineRef = useRef<SVGPathElement>(null)
@@ -91,11 +94,11 @@ export function PartnerIncomeChart({ values, className }: { values: number[]; cl
         aria-hidden
       >
         <defs>
-          <linearGradient id="partner-calc-fill" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="cabinet-growth-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
             <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
           </linearGradient>
-          <clipPath id="partner-calc-clip">
+          <clipPath id="cabinet-growth-clip">
             <rect ref={clipRef} x="0" y="0" width="0" height={H} />
           </clipPath>
         </defs>
@@ -106,7 +109,7 @@ export function PartnerIncomeChart({ values, className }: { values: number[]; cl
           <line x1="0" y1="128" x2={W} y2="128" />
         </g>
 
-        <path ref={areaRef} fill="url(#partner-calc-fill)" clipPath="url(#partner-calc-clip)" d="" />
+        <path ref={areaRef} fill="url(#cabinet-growth-fill)" clipPath="url(#cabinet-growth-clip)" d="" />
         <path
           ref={lineRef}
           fill="none"

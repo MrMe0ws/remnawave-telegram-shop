@@ -5,10 +5,11 @@ import { HandCoins } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { OfferGrowthChart } from '@/components/OfferGrowthChart'
+import { OfferOutBox, OfferTermTile } from '@/components/OfferTiles'
 import { api, type PartnerTerms } from '@/lib/api'
 
 import { formatMoney, formatPercent } from './format'
-import { PartnerIncomeChart } from './PartnerIncomeChart'
 
 /** Горизонт расчёта: год — тот срок, на котором видно накопление продлений. */
 const MONTHS = 12
@@ -103,19 +104,19 @@ export function PartnerOfferCalculator({
                 step={5}
                 value={clients}
                 onChange={(e) => setClients(Number(e.target.value))}
-                className="partner-range"
+                className="cabinet-range"
                 style={{ ['--p' as string]: `${sliderPercent}%` }}
                 aria-label={t('partnerPage.calc.clients')}
               />
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <OutBox
+              <OfferOutBox
                 label={t('partnerPage.calc.firstMonth')}
                 value={formatMoney(series[0])}
                 note={t('partnerPage.calc.firstMonthNote')}
               />
-              <OutBox
+              <OfferOutBox
                 label={t('partnerPage.calc.lastMonth', { n: MONTHS })}
                 value={formatMoney(series[MONTHS - 1])}
                 note={t('partnerPage.calc.lastMonthNote')}
@@ -124,11 +125,11 @@ export function PartnerOfferCalculator({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <TermTile
+              <OfferTermTile
                 label={t('partnerPage.landing.firstPayment')}
                 value={formatPercent(terms.first_percent)}
               />
-              <TermTile
+              <OfferTermTile
                 label={t('partnerPage.landing.renewals')}
                 value={formatPercent(terms.renewal_percent)}
               />
@@ -150,7 +151,7 @@ export function PartnerOfferCalculator({
               </span>
             </div>
 
-            <PartnerIncomeChart
+            <OfferGrowthChart
               values={cumulative}
               className="relative mt-3 h-[150px] w-full lg:h-auto lg:flex-1"
             />
@@ -182,47 +183,4 @@ function monthlyIncome(clients: number, check: number, terms: PartnerTerms): num
   const first = (terms.first_percent / 100) * check * clients
   const renewal = (terms.renewal_percent / 100) * check * clients
   return Array.from({ length: MONTHS }, (_, i) => first + renewal * i)
-}
-
-function OutBox({
-  label,
-  value,
-  note,
-  highlight,
-}: {
-  label: string
-  value: string
-  note: string
-  highlight?: boolean
-}) {
-  return (
-    <div
-      className={
-        highlight
-          ? 'rounded-xl border border-emerald-500/35 bg-emerald-500/10 p-3'
-          : 'rounded-xl border border-border bg-muted/40 p-3'
-      }
-    >
-      <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p
-        className={
-          highlight
-            ? 'mt-0.5 text-xl font-bold tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400'
-            : 'mt-0.5 text-xl font-bold tabular-nums tracking-tight'
-        }
-      >
-        {value}
-      </p>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">{note}</p>
-    </div>
-  )
-}
-
-export function TermTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-muted/40 p-3">
-      <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold tracking-tight text-primary">{value}</p>
-    </div>
-  )
 }
