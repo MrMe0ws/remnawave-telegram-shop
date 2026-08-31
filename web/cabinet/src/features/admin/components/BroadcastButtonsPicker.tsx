@@ -165,7 +165,7 @@ function Group({
         className="flex min-h-12 w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/40"
       >
         {icon}
-        <span className="min-w-0">
+        <span className="block min-w-0 flex-1">
           <span className="block text-sm font-medium">{title}</span>
           <span className="block truncate text-xs text-muted-foreground">{hint}</span>
         </span>
@@ -210,7 +210,7 @@ function Chip({ active, label, onClick }: { active: boolean; label: string; onCl
         'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm transition-colors',
         active
           ? 'border-primary/45 bg-primary/10 text-foreground'
-          : 'border-border/60 text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-accent/60 hover:text-foreground',
       )}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>

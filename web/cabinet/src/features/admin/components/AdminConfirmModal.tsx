@@ -50,7 +50,7 @@ export function AdminConfirmModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-lg border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             {cancelLabel ?? t('admin.cancel')}
           </button>

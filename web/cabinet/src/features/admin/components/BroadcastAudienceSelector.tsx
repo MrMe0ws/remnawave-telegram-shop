@@ -98,8 +98,8 @@ export function BroadcastAudienceSelector({
         <span className="grid size-5 shrink-0 place-items-center rounded-md bg-muted font-mono text-[10px] text-muted-foreground">
           1
         </span>
-        <span className="text-sm font-semibold">{t('admin.broadcast.audienceTitle')}</span>
-        <span className="ml-auto truncate text-xs text-muted-foreground">
+        <span className="shrink-0 text-sm font-semibold">{t('admin.broadcast.audienceTitle')}</span>
+        <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
           {isLoading ? t('admin.broadcast.previewLoading') : summary}
         </span>
         <ChevronDown

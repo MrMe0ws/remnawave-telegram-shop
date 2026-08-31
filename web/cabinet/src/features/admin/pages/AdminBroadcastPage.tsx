@@ -1,7 +1,22 @@
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, AlertTriangle, Eye, ImagePlus, Megaphone, PanelBottom, Send, X } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  Eye,
+  Film,
+  Image as ImageIcon,
+  ImagePlus,
+  Megaphone,
+  PanelBottom,
+  Paperclip,
+  Send,
+  Users,
+  UsersRound,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -250,7 +265,7 @@ export default function AdminBroadcastPage() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-          <div className={cn('space-y-4', mobileTab === 'preview' && 'hidden lg:block')}>
+          <div className={cn('min-w-0 space-y-4', mobileTab === 'preview' && 'hidden lg:block')}>
             <BroadcastAudienceSelector
               audiences={data?.audiences ?? []}
               isLoading={isLoading}
@@ -350,24 +365,34 @@ export default function AdminBroadcastPage() {
               )}
 
               {media && (
-                <div className="mx-4 mb-4 flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
-                  {media.kind === 'video' ? (
-                    <video src={media.previewUrl} className="size-16 rounded-md object-cover" muted playsInline />
-                  ) : (
-                    <img src={media.previewUrl} alt={media.name} className="size-16 rounded-md object-cover" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{media.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                /*
+                 * Строкой, а не карточкой с крупным превью: видео без постера
+                 * рисовалось чёрным прямоугольником, и блок выглядел пустой
+                 * дырой. Сам файл всё равно виден в предпросмотре справа.
+                 */
+                <div className="mx-4 mb-4 flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+                  <span
+                    className={cn(
+                      'grid size-9 shrink-0 place-items-center rounded-lg',
+                      media.kind === 'video'
+                        ? 'bg-violet-500/15 text-violet-500'
+                        : 'bg-sky-500/15 text-sky-500',
+                    )}
+                  >
+                    {media.kind === 'video' ? <Film className="size-4" /> : <ImageIcon className="size-4" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{media.name}</span>
+                    <span className="block text-xs text-muted-foreground">
                       {media.kind === 'video'
                         ? t('admin.broadcast.videoAttached')
                         : t('admin.broadcast.photoAttached')}
-                    </p>
-                  </div>
+                    </span>
+                  </span>
                   <button
                     type="button"
                     onClick={clearMedia}
-                    className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     aria-label={t('admin.broadcast.removePhoto')}
                   >
                     <X className="size-4" />
@@ -405,7 +430,7 @@ export default function AdminBroadcastPage() {
 
           <div
             className={cn(
-              'lg:sticky lg:top-4',
+              'min-w-0 lg:sticky lg:top-4',
               mobileTab === 'compose' && 'hidden lg:block',
             )}
           >
@@ -450,18 +475,18 @@ export default function AdminBroadcastPage() {
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t('admin.broadcast.confirmLead')}</p>
             <dl className="divide-y divide-border/60 rounded-lg border border-border/60">
-              <ConfirmRow label={t('admin.broadcast.audienceTitle')}>
+              <ConfirmRow icon={Users} label={t('admin.broadcast.audienceTitle')}>
                 {audienceLabels[selectedAudience] ?? selectedAudience}
               </ConfirmRow>
-              <ConfirmRow label={t('admin.broadcast.recipients')}>
+              <ConfirmRow icon={UsersRound} label={t('admin.broadcast.recipients')}>
                 {recipientCount === null ? '…' : recipientCount}
               </ConfirmRow>
-              <ConfirmRow label={t('admin.broadcast.buttonsTitle')}>
+              <ConfirmRow icon={PanelBottom} label={t('admin.broadcast.buttonsTitle')}>
                 {selectedButtonLabels.length
                   ? selectedButtonLabels.join(', ')
                   : t('admin.broadcast.buttons.none')}
               </ConfirmRow>
-              <ConfirmRow label={t('admin.broadcast.attachment')}>
+              <ConfirmRow icon={Paperclip} label={t('admin.broadcast.attachment')}>
                 {media ? (
                   <>
                     {media.name}
@@ -496,10 +521,21 @@ function SummaryRow({ label, children }: { label: string; children: React.ReactN
   )
 }
 
-function ConfirmRow({ label, children }: { label: string; children: React.ReactNode }) {
+function ConfirmRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: LucideIcon
+  label: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
+    <div className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-3 px-3 py-2 text-sm">
+      <dt className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="size-3.5 shrink-0" />
+        <span className="min-w-0 truncate">{label}</span>
+      </dt>
       <dd className="min-w-0 font-semibold">{children}</dd>
     </div>
   )

@@ -134,7 +134,13 @@ export function AdminSelect<T extends string | number = string>({
         zIndex: 9999,
         ...(position.openUp ? { bottom: position.bottom } : { top: position.top }),
       }}
-      className="cabinet-elevated-card max-h-60 overflow-auto rounded-lg border border-border/60 bg-card py-1 shadow-lg"
+      /*
+         * Без cabinet-elevated-card: в тёмной теме он даёт полупрозрачный
+         * фон (card / 0.72), и список, висящий над содержимым страницы,
+         * просвечивал насквозь. Селектор у него специфичнее утилиты, так
+         * что bg-card его не перебивал.
+         */
+        className="max-h-60 overflow-auto rounded-lg border border-border/60 bg-card py-1 shadow-xl"
     >
       {allowEmpty && (
         <li role="option" aria-selected={value == null || value === ''}>
