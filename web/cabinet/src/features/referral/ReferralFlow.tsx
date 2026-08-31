@@ -27,15 +27,23 @@ export function ReferralFlow({ rules }: { rules: ReferralBonusRules }) {
     {
       icon: UserPlus,
       title: t('referralPage.flow.n2'),
-      text:
-        rules.referee > 0
-          ? t('referralPage.flow.n2sub', { n: rules.referee })
-          : t('referralPage.flow.n2subNoGift'),
+      text: t('referralPage.flow.n2sub'),
     },
+    /*
+     * Бонус приглашённому висит на первой оплате, а не на регистрации.
+     *
+     * Раньше он стоял в узле «Друг регистрируется» и обещал дни за сам факт
+     * прихода по ссылке — при том, что начисление происходит внутри
+     * isFirstPayment (см. applyProgressiveReferralBonus). Схема обещала то,
+     * чего продукт не делает.
+     */
     {
       icon: CreditCard,
       title: t('referralPage.flow.n3'),
-      text: t('referralPage.flow.n3sub', { n: rules.first }),
+      text:
+        rules.referee > 0
+          ? t('referralPage.flow.n3subWithReferee', { first: rules.first, referee: rules.referee })
+          : t('referralPage.flow.n3sub', { n: rules.first }),
       accent: !recurring,
     },
   ]

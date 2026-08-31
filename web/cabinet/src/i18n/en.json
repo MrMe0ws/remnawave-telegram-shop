@@ -752,8 +752,8 @@
         "linkLabel": "The link your friend will see",
         "switchLabel": "Which link to show",
         "bothLinks": "Both lead to your account — pick either one.",
-        "refereeBadge_one": "+{{count}} day for your friend",
-        "refereeBadge_other": "+{{count}} days for your friend"
+        "refereeBadge_one": "+{{count}} day for your friend's first payment",
+        "refereeBadge_other": "+{{count}} days for your friend's first payment"
       },
       "calc": {
         "kicker": "Counted in subscription days",
@@ -768,10 +768,10 @@
         "disclaimerOnce": "A forecast, not a promise: we assume every invited friend pays for a subscription. Churn is not included.",
         "payoffDays": "bonus days",
         "payoffMonths": "That's {{months}} months of subscription for free",
-        "refereeGift": "And every friend gets {{days}} on sign-up",
+        "refereeGift": "And every friend gets {{days}} for their first payment",
         "ruleFirst": "to you for a friend's first paid month",
         "ruleRepeat": "to you for every renewal after that",
-        "ruleReferee": "to the friend right at sign-up"
+        "ruleReferee": "to the friend for their first payment"
       },
       "progress": {
         "ofDays": "of {{n}} days",
@@ -794,8 +794,8 @@
         "n1": "Your link",
         "n1sub": "Send it to a friend or show the QR code",
         "n2": "Friend signs up",
-        "n2sub": "They instantly get +{{n}} welcome days",
-        "n2subNoGift": "They are added to your invitees",
+        "n2sub": "Nothing is credited yet — they are just linked to you",
+        "n3subWithReferee": "You get +{{first}} days, your friend +{{referee}} days",
         "n3": "First payment",
         "n3sub": "You get +{{n}} days of subscription",
         "n4": "Every renewal",
@@ -829,7 +829,7 @@
       "howProgressiveMonthlyNext": "Your referral gets <0>+{{referee}} days</0> as a one-time welcome bonus.",
       "howProgressiveMonthlyExample": "For example, if your referral pays for 6 months at once: you get {{example}} days, they get {{referee}} days.",
       "howLinksHint": "Share the bot link or the cabinet sign-up link — both are tied to your account.",
-      "shareInviteText": "Join VPN MEOWS using my link and get bonus days after registration 🔥"
+      "shareInviteText": "Join VPN MEOWS using my link — you get bonus days on your first subscription payment 🔥"
     },
     "promocodes": {
       "title": "Promo codes",
