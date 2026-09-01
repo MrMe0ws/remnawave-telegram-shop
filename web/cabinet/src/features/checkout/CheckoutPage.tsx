@@ -40,8 +40,8 @@ const PROVIDER_ORDER: Provider[] = [
   'platega_worldwide',
   'platega_crypto',
   'cryptopay',
-  'heleket',
   'telegram',
+  'heleket',
 ]
 
 function openPaymentUrl(url: string): void {
@@ -376,15 +376,12 @@ export default function CheckoutPage() {
                 description="CryptoPay"
               />
             )}
-            {availableProviders.includes('heleket') && (
-              <ProviderMethodButton
-                selected={selectedProvider === 'heleket'}
-                onClick={() => setProvider('heleket')}
-                icon={<HeleketBrandIcon className="h-[18px] w-[18px]" />}
-                label={t('checkout.otherCrypto')}
-                description="Heleket"
-              />
-            )}
+            <PlategaPaymentExpand
+              enabled={providerEnabled}
+              selected={provider}
+              onSelect={(id: PlategaMethodId) => setProvider(id)}
+              variant="checkout"
+            />
             {availableProviders.includes('telegram') && (
               <ProviderMethodButton
                 selected={selectedProvider === 'telegram'}
@@ -394,12 +391,15 @@ export default function CheckoutPage() {
                 description="Telegram Stars"
               />
             )}
-            <PlategaPaymentExpand
-              enabled={providerEnabled}
-              selected={provider}
-              onSelect={(id: PlategaMethodId) => setProvider(id)}
-              variant="checkout"
-            />
+            {availableProviders.includes('heleket') && (
+              <ProviderMethodButton
+                selected={selectedProvider === 'heleket'}
+                onClick={() => setProvider('heleket')}
+                icon={<HeleketBrandIcon className="h-[18px] w-[18px]" />}
+                label={t('checkout.otherCrypto')}
+                description="Heleket"
+              />
+            )}
             {availableProviders.length === 0 && (
               <p className="text-sm text-muted-foreground">{t('checkout.notAvailable')}</p>
             )}

@@ -43,8 +43,8 @@ const HWID_PROVIDER_ORDER: Provider[] = [
   'platega_worldwide',
   'platega_crypto',
   'cryptopay',
-  'heleket',
   'telegram',
+  'heleket',
 ]
 
 type Props = {
@@ -374,13 +374,12 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     hint={t('checkout.providerHintCryptopay')}
                   />
                 )}
-                {providerEnabled.heleket && (
-                  <HwidProviderPayButton
-                    selected={provider === 'heleket'}
-                    onClick={() => setProvider('heleket')}
-                    icon={<HeleketBrandIcon className="h-[14px] w-[14px]" />}
-                    label={t('checkout.otherCrypto')}
-                    hint={t('checkout.providerHintHeleket')}
+                {enabledPlategaMethods(providerEnabled).length > 0 && (
+                  <PlategaPaymentExpand
+                    enabled={providerEnabled}
+                    selected={provider}
+                    onSelect={(id: PlategaMethodId) => setProvider(id)}
+                    variant="compact"
                   />
                 )}
                 {providerEnabled.telegram && (
@@ -392,12 +391,13 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     hint={t('checkout.providerHintTelegram')}
                   />
                 )}
-                {enabledPlategaMethods(providerEnabled).length > 0 && (
-                  <PlategaPaymentExpand
-                    enabled={providerEnabled}
-                    selected={provider}
-                    onSelect={(id: PlategaMethodId) => setProvider(id)}
-                    variant="compact"
+                {providerEnabled.heleket && (
+                  <HwidProviderPayButton
+                    selected={provider === 'heleket'}
+                    onClick={() => setProvider('heleket')}
+                    icon={<HeleketBrandIcon className="h-[14px] w-[14px]" />}
+                    label={t('checkout.otherCrypto')}
+                    hint={t('checkout.providerHintHeleket')}
                   />
                 )}
               </div>
