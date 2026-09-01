@@ -76,7 +76,7 @@ export function ReferralInviteCard({
          * порядок в DOM, нужный телефону, ломал бы двухколоночную сетку.
          */}
         <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-x-6 sm:gap-y-4">
-          <h2 className="order-1 text-balance text-center text-base font-bold tracking-tight sm:order-none sm:col-start-2 sm:row-start-1 sm:text-left sm:text-xl">
+          <h2 className="order-1 text-balance text-xl font-bold tracking-tight sm:order-none sm:col-start-2 sm:row-start-1">
             {t('referralPage.invite.title')}
           </h2>
 
