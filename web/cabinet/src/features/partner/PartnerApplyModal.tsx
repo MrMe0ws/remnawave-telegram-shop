@@ -155,13 +155,21 @@ export function PartnerApplyModal({
             <FieldLabel htmlFor="partner-about" icon={<PenLine size={14} />}>
               {t('partnerPage.form.about')}
             </FieldLabel>
+            {/*
+              Без autoFocus намеренно. На iOS фокус поля с font-size меньше 16px
+              заставляет WebKit приблизить страницу, и с autoFocus это
+              происходило само в момент открытия модалки: клавиатура вылезала
+              сразу, а страница оставалась увеличенной и уезжала за правый край
+              экрана даже после закрытия формы. Масштаб на время ввода теперь
+              фиксирует lib/ios-input-zoom, но открывать клавиатуру за
+              пользователя всё равно незачем — сначала он читает форму.
+            */}
             <textarea
               id="partner-about"
               value={about}
               onChange={(e) => setAbout(e.target.value)}
               rows={4}
               maxLength={2000}
-              autoFocus
               className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm focus:border-primary focus:outline-none"
               placeholder={t('partnerPage.form.aboutPlaceholder')}
             />

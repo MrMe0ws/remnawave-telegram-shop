@@ -5,6 +5,7 @@ import './index.css'
 import { initCabinetI18n } from './i18n'
 import { loadTelegramWebAppScriptIfNeeded } from '@/lib/telegram-web-app-loader'
 import { configureTelegramViewport } from '@/lib/telegram-web-app'
+import { preventIosInputZoom } from '@/lib/ios-input-zoom'
 import { useAuthStore } from '@/store/auth'
 
 // Применяем тему до первого рендера (избегаем мигания).
@@ -24,6 +25,10 @@ function bootTelegramWebAppShell(): void {
 }
 
 bootTelegramWebAppShell()
+
+// До первого рендера: слушатели должны стоять раньше, чем пользователь доберётся
+// до первого поля, иначе первый же фокус успеет приблизить страницу.
+preventIosInputZoom()
 
 void initCabinetI18n().then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
