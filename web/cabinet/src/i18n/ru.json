@@ -870,11 +870,9 @@
       "days": "+{{n}} дн.",
       "moreOffer": "А если позвать ещё",
       "invite": {
-        "title": "Покажите QR или отправьте ссылку",
         "qrAlt": "QR-код вашей реферальной ссылки",
         "linkLabel": "Ссылка, которую увидит друг",
         "switchLabel": "Какую ссылку показать",
-        "bothLinks": "Обе ведут на ваш аккаунт — выбирайте любую.",
         "refereeBadge_one": "Другу +{{count}} день за первую оплату",
         "refereeBadge_few": "Другу +{{count}} дня за первую оплату",
         "refereeBadge_many": "Другу +{{count}} дней за первую оплату"
@@ -899,20 +897,21 @@
         "ruleReferee": "другу за его первую оплату"
       },
       "progress": {
-        "ofDays": "из {{n}} дней",
-        "earned": "Всего начислено: {{n}} дн.",
-        "title": "До следующего бесплатного месяца — {{n}} дн.",
-        "hintBoth": "Это ещё {{friends}} или {{renewals}}.",
-        "hintFriends": "Это ещё {{friends}}.",
-        "hintRenewals": "Это ещё {{renewals}}.",
         "friends_one": "{{count}} друг",
         "friends_few": "{{count}} друга",
         "friends_many": "{{count}} друзей",
         "renewals_one": "{{count}} продление",
         "renewals_few": "{{count}} продления",
         "renewals_many": "{{count}} продлений",
-        "trackNote": "Каждые 30 бонусных дней — месяц подписки бесплатно",
-        "trackMonth": "{{n}} мес"
+        "toFreeMonth": "До бесплатного месяца",
+        "daysLeft_one": "{{count}} день",
+        "daysLeft_few": "{{count}} дня",
+        "daysLeft_many": "{{count}} дней",
+        "barProgress": "{{n}} из {{total}} дн.",
+        "needBoth": "{{friends}} или {{renewals}}",
+        "freeMonthsEarned_one": "{{count}} бесплатный месяц уже заработан",
+        "freeMonthsEarned_few": "{{count}} бесплатных месяца уже заработаны",
+        "freeMonthsEarned_many": "{{count}} бесплатных месяцев уже заработано"
       },
       "flow": {
         "title": "Как это работает",
@@ -956,7 +955,8 @@
       "howProgressiveMonthlyNext": "Рефералу <0>+{{referee}} дней</0> приветственных единовременно.",
       "howProgressiveMonthlyExample": "Например, реферал оплатил сразу 6 месяцев: вы получите {{example}} дн., он — {{referee}} дн.",
       "howLinksHint": "Делитесь ссылкой на бота или на регистрацию в кабинете — обе привязаны к вашему аккаунту.",
-      "shareInviteText": "Заходи в VPN MEOWS по моей ссылке — за первую оплату подписки получишь бонусные дни 🔥"
+      "shareInviteText": "Заходи в VPN MEOWS по моей ссылке — за первую оплату подписки получишь бонусные дни 🔥",
+      "termsTitle": "Как начисляются дни"
     },
     "promocodes": {
       "title": "Промокоды",

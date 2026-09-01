@@ -1,9 +1,9 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { Gift } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 import type { ReferralsStatsResponse } from '@/lib/api'
 
 import {
@@ -13,16 +13,23 @@ import {
   type ReferralBonusRules,
 } from './referralModel'
 
-/** Сколько месяцев показывать в дорожке: закрытые, текущий и пара впереди. */
-const TRACK_LENGTH = 5
-
 /**
  * Прогресс до следующего бесплатного месяца.
  *
  * Число «43 дня бонуса» само по себе ничего не значит: человек не считает в
- * уме, много это или мало. Кольцо переводит его в единицу, в которой подписка
- * и продаётся, — в месяцы, а подпись превращает остаток в действие: «ещё два
- * друга» понятнее, чем «ещё 17 дней».
+ * уме, много это или мало. Поэтому главное здесь — остаток до месяца, набранный
+ * крупно, а всё остальное подчинено ему.
+ *
+ * Кольца тут больше нет, хотя оно и совпадало по языку с трафиком и
+ * устройствами на главной. На типичных значениях дуга почти пустая (2 из 30) и
+ * читается как «ты ничего не набрал», а число в её центре спорило с числом в
+ * заголовке: «2» внутри кольца и «28 дн.» рядом — про одно и то же, но
+ * человеку приходилось соображать, какое из них его. Полоса говорит ровно то
+ * же самое одной строкой и экономит около 70px высоты на телефоне.
+ *
+ * Заодно отсюда убраны: бейдж «Всего начислено», повторявший плитку «Дней
+ * бонуса» в этой же карточке, и дорожка из пяти месяцев с подписью — вместо
+ * неё один чип с числом уже заработанных бесплатных месяцев.
  *
  * Никаких новых механик здесь нет: веха — это те же 30 дней, а не придуманный
  * тир с наградой, которой бэкенд не умеет выдавать.
@@ -43,17 +50,17 @@ export function ReferralProgress({
   const target = (remainder / DAYS_IN_FREE_MONTH) * 100
 
   /*
-   * Дуга набегает от нуля: значение выставляется после монтирования, чтобы
-   * сработал transition на --cabinet-ring-value. При prefers-reduced-motion
-   * стартуем сразу с итогового — иначе получился бы скачок вместо анимации.
+   * Полоса набегает от нуля: значение выставляется после монтирования, чтобы
+   * сработал transition на width. При prefers-reduced-motion стартуем сразу с
+   * итогового — иначе получился бы скачок вместо анимации.
    */
-  const [ringValue, setRingValue] = useState(reduceMotion ? target : 0)
+  const [barValue, setBarValue] = useState(reduceMotion ? target : 0)
   useEffect(() => {
     if (reduceMotion) {
-      setRingValue(target)
+      setBarValue(target)
       return
     }
-    const id = window.requestAnimationFrame(() => setRingValue(target))
+    const id = window.requestAnimationFrame(() => setBarValue(target))
     return () => window.cancelAnimationFrame(id)
   }, [target, reduceMotion])
 
@@ -64,97 +71,72 @@ export function ReferralProgress({
   const renewalsText =
     needRenewals != null ? t('referralPage.progress.renewals', { count: needRenewals }) : null
 
+  // Начисления, которых в режиме нет, в подсказке не упоминаем: обещать «ещё
+  // три продления» там, где платят только за первую оплату, — это обман,
+  // который человек заметит через месяц.
   let hint = ''
   if (friendsText && renewalsText) {
-    hint = t('referralPage.progress.hintBoth', { friends: friendsText, renewals: renewalsText })
+    hint = t('referralPage.progress.needBoth', { friends: friendsText, renewals: renewalsText })
   } else if (friendsText) {
-    hint = t('referralPage.progress.hintFriends', { friends: friendsText })
+    hint = friendsText
   } else if (renewalsText) {
-    hint = t('referralPage.progress.hintRenewals', { renewals: renewalsText })
+    hint = renewalsText
   }
-
-  // Дорожка едет за прогрессом: у кого закрыто восемь месяцев, первые семь
-  // уже неинтересны, а текущий должен остаться в кадре.
-  const trackStart = Math.max(0, months - 2)
 
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-7">
-          <div
-            className="cabinet-ring cabinet-ring--animate mx-auto shrink-0 sm:mx-0"
-            style={
-              {
-                width: 140,
-                ['--cabinet-ring-value']: ringValue,
-              } as CSSProperties
-            }
-          >
-            <div className="text-center leading-none">
-              <p className="text-3xl font-bold tabular-nums">{remainder}</p>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                {t('referralPage.progress.ofDays', { n: DAYS_IN_FREE_MONTH })}
-              </p>
-            </div>
-          </div>
-
+        <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              {t('referralPage.progress.earned', { n: earned })}
-            </span>
-            <h2 className="mt-2 text-balance text-xl font-bold tracking-tight">
-              {t('referralPage.progress.title', { n: remaining })}
-            </h2>
-            {/* Начисления, которых в режиме нет, в подсказке не упоминаем:
-                обещать «ещё три продления» там, где платят только за первую
-                оплату, — это обман, который человек заметит через месяц. */}
-            {hint ? <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p> : null}
-
-            {/* aria-hidden: дорожка дублирует заголовок и подпись под ней,
-                и для скринридера это лишний поток из пяти чисел. */}
-            <div className="mt-4 flex gap-1.5" aria-hidden>
-              {Array.from({ length: TRACK_LENGTH }, (_, i) => {
-                const index = trackStart + i
-                const done = index < months
-                const now = index === months
-                return (
-                  <span
-                    key={index}
-                    className={cn(
-                      'flex h-8 flex-1 items-center justify-center rounded-lg border text-[11px] font-semibold tabular-nums',
-                      done && 'border-primary/40 bg-primary/15 text-primary',
-                      now && 'border-dashed border-primary bg-transparent text-foreground',
-                      !done && !now && 'border-border bg-muted/40 text-muted-foreground',
-                    )}
-                  >
-                    {t('referralPage.progress.trackMonth', { n: index + 1 })}
-                  </span>
-                )
-              })}
-            </div>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              {t('referralPage.progress.trackNote')}
+            <p className="text-[12.5px] text-muted-foreground sm:text-sm">
+              {t('referralPage.progress.toFreeMonth')}
+            </p>
+            <p className="mt-1 text-3xl font-extrabold leading-none tracking-tight tabular-nums sm:text-4xl">
+              {t('referralPage.progress.daysLeft', { count: remaining })}
             </p>
           </div>
+
+          {/* Чип есть только у того, кто уже закрыл хотя бы один месяц: у
+              остальных он показывал бы ноль, а ноль в награде читается как
+              «не получилось». */}
+          {months > 0 ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <Gift size={13} />
+              {t('referralPage.progress.freeMonthsEarned', { count: months })}
+            </span>
+          ) : null}
+        </div>
+
+        {/* aria-hidden: полоса дублирует подпись под ней, и для скринридера
+            это лишний процент без единиц. */}
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            style={{ width: `${barValue}%` }}
+          />
+        </div>
+
+        <div className="mt-2 flex items-baseline justify-between gap-3 text-[11.5px] text-muted-foreground sm:text-xs">
+          <span className="shrink-0 tabular-nums">
+            {t('referralPage.progress.barProgress', {
+              n: remainder,
+              total: DAYS_IN_FREE_MONTH,
+            })}
+          </span>
+          {hint ? <span className="min-w-0 truncate text-right">{hint}</span> : null}
         </div>
 
         {/* Три в ряд и на телефоне: это одна сводка, а не три независимых
-            карточки, и в столбик она занимает пол-экрана ни за чем. */}
+            карточки, и в столбик она занимает пол-экрана ни за чем.
+            Вторых строк («активных: 1», «за месяц: 32», «оплатили: 1») здесь
+            больше нет — девять чисел на сводку не читаются, а те же данные
+            стоят поимённо в списках ниже. */}
         <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
-          <StatTile
-            label={t('referralPage.statTotal')}
-            value={String(stats.total ?? 0)}
-            sub={t('referralPage.statActiveSub', { n: stats.active ?? 0 })}
-          />
-          <StatTile
-            label={t('referralPage.statEarnedDays')}
-            value={String(earned)}
-            sub={t('referralPage.statLastMonth', { n: stats.earned_days_last_month ?? 0 })}
-          />
+          <StatTile label={t('referralPage.statTotal')} value={String(stats.total ?? 0)} />
+          <StatTile label={t('referralPage.statEarnedDays')} value={String(earned)} />
           <StatTile
             label={t('referralPage.statConversion')}
             value={`${stats.conversion_pct ?? 0}%`}
-            sub={t('referralPage.statPaid', { n: stats.paid ?? 0 })}
           />
         </div>
       </CardContent>
@@ -162,14 +144,11 @@ export function ReferralProgress({
   )
 }
 
-function StatTile({ label, value, sub }: { label: string; value: string; sub: string }) {
+function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-muted p-2.5 sm:p-3">
-      <p className="text-[10px] uppercase leading-tight tracking-wide text-muted-foreground sm:text-[10.5px]">
-        {label}
-      </p>
-      <p className="mt-0.5 text-xl font-semibold tabular-nums sm:text-2xl">{value}</p>
-      <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground sm:text-[11px]">{sub}</p>
+      <p className="text-xl font-semibold leading-none tabular-nums sm:text-2xl">{value}</p>
+      <p className="mt-1.5 text-[11px] leading-tight text-muted-foreground sm:text-xs">{label}</p>
     </div>
   )
 }

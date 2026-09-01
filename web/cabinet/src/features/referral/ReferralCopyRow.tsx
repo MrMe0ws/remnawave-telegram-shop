@@ -9,20 +9,72 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
  *
  * Состояние копирования живёт внутри: раньше каждая страница вела свой `copiedKey`
  * и свою async-функцию с `navigator.clipboard.writeText` без обработки ошибок.
+ *
+ * `compact` — вариант для карточки приглашения: лейбл уходит в aria-label, а
+ * кнопки становятся квадратными по 44px. Там строка стоит под QR-кодом, где
+ * подпись «Ссылка, которую увидит друг» и два текстовых батона занимали две
+ * лишние строки. В партнёрке и профиле, где ссылок несколько подряд и их надо
+ * различать, остаётся обычный вид с подписью.
  */
 export function ReferralCopyRow({
   label,
   value,
   canShare,
   onShare,
+  compact = false,
 }: {
   label: string
   value: string
   canShare: boolean
   onShare: () => void
+  compact?: boolean
 }) {
   const { t } = useTranslation()
   const { state, copy } = useCopyToClipboard()
+
+  const copyLabel = state === 'done' ? t('subscriptionPage.copied') : t('subscriptionPage.copyLink')
+
+  if (compact) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <div
+            className="min-w-0 flex-1 truncate rounded-xl bg-muted px-3 py-3 font-mono text-[11.5px] leading-tight"
+            aria-label={label}
+          >
+            {value}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-11 shrink-0 rounded-xl"
+            aria-label={copyLabel}
+            title={copyLabel}
+            onClick={() => void copy(value)}
+          >
+            {state === 'done' ? <Check className="text-primary" /> : <Copy />}
+          </Button>
+          {canShare ? (
+            <Button
+              type="button"
+              size="icon"
+              className="size-11 shrink-0 rounded-xl"
+              aria-label={t('common.share')}
+              title={t('common.share')}
+              onClick={onShare}
+            >
+              <Upload strokeWidth={1.5} />
+            </Button>
+          ) : null}
+        </div>
+        <p aria-live="polite" className="sr-only">
+          {state === 'done' ? t('subscriptionPage.copied') : ''}
+        </p>
+        {state === 'failed' && <p className="text-xs text-destructive">{t('common.copyFailed')}</p>}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-1.5">
@@ -38,7 +90,7 @@ export function ReferralCopyRow({
             onClick={() => void copy(value)}
           >
             {state === 'done' ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
-            {state === 'done' ? t('subscriptionPage.copied') : t('subscriptionPage.copyLink')}
+            {copyLabel}
           </Button>
           {canShare ? (
             <Button

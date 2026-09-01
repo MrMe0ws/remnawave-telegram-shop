@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, History, Percent, Users } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
@@ -14,10 +14,11 @@ import { api, type ReferralsResponse } from '@/lib/api'
 import { ReferralCalculator } from './ReferralCalculator'
 import { ReferralFlow } from './ReferralFlow'
 import { ReferralInviteCard, type ReferralLink } from './ReferralInviteCard'
-import { ReferralLedgerCard } from './ReferralLedgerCard'
+import { ReferralLedgerList } from './ReferralLedgerList'
 import { ReferralProgress } from './ReferralProgress'
-import { ReferralRefereesCard } from './ReferralRefereesCard'
-import { ReferralTerms } from './ReferralTerms'
+import { ReferralRefereesList } from './ReferralRefereesList'
+import { ReferralSection } from './ReferralSection'
+import { ReferralTerms, referralTermsHint } from './ReferralTerms'
 import { referralBonusRules, type ReferralBonusRules } from './referralModel'
 
 export default function ReferralProgramPage() {
@@ -78,12 +79,14 @@ export default function ReferralProgramPage() {
 /**
  * Порядок блоков решает состояние пользователя.
  *
- * У кого бонусных дней ещё нет — показывать прогресс нечем: пустое кольцо
+ * У кого бонусных дней ещё нет — показывать прогресс нечем: пустая полоса
  * читается как «ты ничего не добился». Ему сначала приглашение, потом
  * калькулятор: показывать нечего, зато есть что пообещать.
  *
  * У кого дни уже начислены — наоборот, первым экраном прогресс: он про него и
- * пришёл. Калькулятор уезжает под кнопку «а если позвать ещё», потому что
+ * пришёл. Сразу под ним приглашение, а справки и списки — свёрнутыми
+ * секциями, чтобы до кнопки «Поделиться» не пришлось прокручивать три экрана
+ * на телефоне. Калькулятор уезжает под кнопку «а если позвать ещё», потому что
  * уговаривать того, кто уже участвует, незачем.
  *
  * Набор блоков один и тот же — меняется только первый экран. Это дешевле, чем
@@ -138,14 +141,28 @@ function ReferralBody({
    * меня есть» и «откуда взялись дни». Первый пустует у новичка, вторая — пока
    * никто не оплатил, поэтому пара собирается из того, что реально есть, а не
    * прибита к колонкам гвоздями: пустая колонка выглядит как поломка вёрстки.
-   *
-   * Карточки «Как начисляются бонусы» здесь больше нет: она пересказывала
-   * словами те же три числа, что стоят в плитках условий, и висела в самом
-   * низу — там, куда за правилами никто не доходил.
    */
   const bottomCards = [
-    data.ledger.length ? <ReferralLedgerCard key="ledger" rows={data.ledger} /> : null,
-    data.referees.length ? <ReferralRefereesCard key="referees" referees={data.referees} /> : null,
+    data.ledger.length ? (
+      <ReferralSection
+        key="ledger"
+        icon={History}
+        title={t('referralPage.ledger.title')}
+        hint={String(data.ledger.length)}
+      >
+        <ReferralLedgerList rows={data.ledger} />
+      </ReferralSection>
+    ) : null,
+    data.referees.length ? (
+      <ReferralSection
+        key="referees"
+        icon={Users}
+        title={t('referralPage.listTitle')}
+        hint={String(data.referees.length)}
+      >
+        <ReferralRefereesList referees={data.referees} />
+      </ReferralSection>
+    ) : null,
   ].filter(Boolean)
 
   const bottom = bottomCards.length ? (
@@ -160,10 +177,19 @@ function ReferralBody({
         <RevealItem>
           <ReferralProgress stats={data.stats} rules={rules} />
         </RevealItem>
-        <RevealItem>
-          <ReferralTerms rules={rules} />
-        </RevealItem>
         <RevealItem>{invite}</RevealItem>
+        {/* Условия — тоже секцией: сумма «+7 · +3 · +7» видна в шапке, а за
+            формулировками разворачивают. Раньше три плитки стояли поперёк
+            страницы между прогрессом и приглашением. */}
+        <RevealItem>
+          <ReferralSection
+            icon={Percent}
+            title={t('referralPage.termsTitle')}
+            hint={referralTermsHint(rules)}
+          >
+            <ReferralTerms rules={rules} />
+          </ReferralSection>
+        </RevealItem>
         {bottom}
         <RevealItem>
           <MoreOffer rules={rules} />
@@ -211,36 +237,35 @@ function MoreOffer({ rules }: { rules: ReferralBonusRules }) {
   )
 }
 
-/** Заглушка: приглашение с QR, калькулятор и списки. */
+/** Заглушка: сводка прогресса и приглашение с QR. */
 function ReferralSkeleton() {
   return (
     <div className="space-y-6" aria-hidden>
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-6">
-            <Skeleton className="mx-auto size-[168px] rounded-xl sm:mx-0" />
-            <div className="space-y-3">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-7 w-64" />
-              <Skeleton className="h-10 w-full rounded-lg" />
+          <div className="flex items-end justify-between gap-3">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-9 w-32" />
             </div>
+            <Skeleton className="h-6 w-40 rounded-full" />
+          </div>
+          <Skeleton className="mt-4 h-2 w-full rounded-full" />
+          <Skeleton className="mt-2 h-3 w-56" />
+          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
+            <Skeleton className="h-[68px] w-full rounded-xl" />
+            <Skeleton className="h-[68px] w-full rounded-xl" />
+            <Skeleton className="h-[68px] w-full rounded-xl" />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-5 lg:grid-cols-2">
-            <div className="space-y-3">
-              <Skeleton className="h-8 w-56" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-6 w-full rounded-full" />
-              <div className="grid grid-cols-2 gap-2.5">
-                <Skeleton className="h-20 w-full rounded-xl" />
-                <Skeleton className="h-20 w-full rounded-xl" />
-              </div>
-            </div>
-            <Skeleton className="h-[200px] w-full rounded-xl" />
+          <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6">
+            <Skeleton className="h-12 w-full rounded-2xl sm:order-2" />
+            <Skeleton className="mx-auto size-[196px] rounded-xl sm:order-1 sm:mx-0 sm:size-[168px]" />
+            <Skeleton className="h-11 w-full rounded-xl sm:order-3" />
           </div>
         </CardContent>
       </Card>

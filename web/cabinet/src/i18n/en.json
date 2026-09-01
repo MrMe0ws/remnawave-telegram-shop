@@ -747,11 +747,9 @@
       "days": "+{{n}} d.",
       "moreOffer": "What if I invite more",
       "invite": {
-        "title": "Show the QR or send the link",
         "qrAlt": "QR code of your referral link",
         "linkLabel": "The link your friend will see",
         "switchLabel": "Which link to show",
-        "bothLinks": "Both lead to your account — pick either one.",
         "refereeBadge_one": "+{{count}} day for your friend's first payment",
         "refereeBadge_other": "+{{count}} days for your friend's first payment"
       },
@@ -774,18 +772,17 @@
         "ruleReferee": "to the friend for their first payment"
       },
       "progress": {
-        "ofDays": "of {{n}} days",
-        "earned": "Earned in total: {{n}} d.",
-        "title": "{{n}} days until your next free month",
-        "hintBoth": "That's {{friends}} or {{renewals}} more.",
-        "hintFriends": "That's {{friends}} more.",
-        "hintRenewals": "That's {{renewals}} more.",
         "friends_one": "{{count}} friend",
         "friends_other": "{{count}} friends",
         "renewals_one": "{{count}} renewal",
         "renewals_other": "{{count}} renewals",
-        "trackNote": "Every 30 bonus days is one free month of subscription",
-        "trackMonth": "mo. {{n}}"
+        "toFreeMonth": "Until your next free month",
+        "daysLeft_one": "{{count}} day",
+        "daysLeft_other": "{{count}} days",
+        "barProgress": "{{n}} of {{total}} d.",
+        "needBoth": "{{friends}} or {{renewals}}",
+        "freeMonthsEarned_one": "{{count}} free month already earned",
+        "freeMonthsEarned_other": "{{count}} free months already earned"
       },
       "flow": {
         "title": "How it works",
@@ -829,7 +826,8 @@
       "howProgressiveMonthlyNext": "Your referral gets <0>+{{referee}} days</0> as a one-time welcome bonus.",
       "howProgressiveMonthlyExample": "For example, if your referral pays for 6 months at once: you get {{example}} days, they get {{referee}} days.",
       "howLinksHint": "Share the bot link or the cabinet sign-up link — both are tied to your account.",
-      "shareInviteText": "Join VPN MEOWS using my link — you get bonus days on your first subscription payment 🔥"
+      "shareInviteText": "Join VPN MEOWS using my link — you get bonus days on your first subscription payment 🔥",
+      "termsTitle": "How days are credited"
     },
     "promocodes": {
       "title": "Promo codes",
