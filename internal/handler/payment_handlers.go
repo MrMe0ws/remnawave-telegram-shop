@@ -639,6 +639,13 @@ func (h Handler) appendPlategaPaymentRows(keyboard [][]models.InlineKeyboardButt
 			})
 		}
 	}
+	if config.IsHeleketEnabled() {
+		keyboard = append(keyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
+				CallbackData: paymentCallbackQuery(tidStr, month, string(database.InvoiceTypeHeleket), amount, extraCount),
+			}),
+		})
+	}
 	return keyboard
 }
 
@@ -662,6 +669,13 @@ func (h Handler) appendPlategaAddDevicePaymentRows(keyboard [][]models.InlineKey
 			})
 		}
 	}
+	if config.IsHeleketEnabled() {
+		keyboard = append(keyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
+				CallbackData: fmt.Sprintf("%s?target=%d&invoiceType=%s", CallbackAddDevicePayment, target, database.InvoiceTypeHeleket),
+			}),
+		})
+	}
 	return keyboard
 }
 
@@ -684,6 +698,13 @@ func (h Handler) appendPlategaRenewExtraRows(keyboard [][]models.InlineKeyboardB
 				}),
 			})
 		}
+	}
+	if config.IsHeleketEnabled() {
+		keyboard = append(keyboard, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
+				CallbackData: fmt.Sprintf("%s?extra=%d&months=%d&invoiceType=%s", CallbackRenewExtraHwid, extra, months, database.InvoiceTypeHeleket),
+			}),
+		})
 	}
 	return keyboard
 }

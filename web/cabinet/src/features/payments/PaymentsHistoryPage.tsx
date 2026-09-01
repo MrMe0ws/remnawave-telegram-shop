@@ -24,6 +24,8 @@ function invoiceLabel(t: (k: string) => string, invoiceType: string): string {
       return t('payments.methodCard')
     case 'plt_crypto':
       return t('payments.methodPlategaCrypto')
+    case 'heleket':
+      return t('payments.methodHeleket')
     default:
       return invoiceType
   }

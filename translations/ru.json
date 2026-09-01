@@ -110,6 +110,9 @@
   "platega_crypto_button": {
     "text": "₿ Крипта - Platega"
   },
+  "heleket_button": {
+    "text": "₿ Другая крипта"
+  },
   "pay_button": "💸 Оплатить",
   "payment_provider_unavailable": "Платежная система временно не доступна 😔\nПопробуйте позже или используйте другой способ оплаты",
   "subscription_active": "📅 Подписка действует до <b><i>%s</i></b>",
@@ -304,6 +307,7 @@
   "purchase_history_method_platega_sbp": "СБП",
   "purchase_history_method_platega_card": "Карта",
   "purchase_history_method_platega_crypto": "Крипта",
+  "purchase_history_method_heleket": "Другая крипта",
   "purchase_history_method_stars": "ТГ звезды",
   "purchase_history_method_crypto": "Крипто",
   "purchase_history_method_tribute": "Tribute",

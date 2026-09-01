@@ -10,6 +10,7 @@ import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PlategaPaymentExpand, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { ProviderMethodButton } from '@/components/ProviderMethodButton'
+import { HeleketBrandIcon } from '@/components/BrandIcons'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ type Provider =
   | 'platega_acquiring'
   | 'platega_worldwide'
   | 'platega_crypto'
+  | 'heleket'
 
 const PROVIDER_ORDER: Provider[] = [
   'yookassa',
@@ -38,6 +40,7 @@ const PROVIDER_ORDER: Provider[] = [
   'platega_worldwide',
   'platega_crypto',
   'cryptopay',
+  'heleket',
   'telegram',
 ]
 
@@ -100,6 +103,7 @@ export default function CheckoutPage() {
     platega_acquiring: bootstrap?.payment_providers?.platega_acquiring ?? false,
     platega_worldwide: bootstrap?.payment_providers?.platega_worldwide ?? false,
     platega_crypto: bootstrap?.payment_providers?.platega_crypto ?? false,
+    heleket: bootstrap?.payment_providers?.heleket ?? false,
   }
   const defaultPreviewProvider =
     PROVIDER_ORDER.find((p) => providerEnabled[p]) ?? ('yookassa' as Provider)
@@ -370,6 +374,15 @@ export default function CheckoutPage() {
                 icon={<Bitcoin size={18} className="text-orange-500" />}
                 label={t('checkout.crypto')}
                 description="CryptoPay"
+              />
+            )}
+            {availableProviders.includes('heleket') && (
+              <ProviderMethodButton
+                selected={selectedProvider === 'heleket'}
+                onClick={() => setProvider('heleket')}
+                icon={<HeleketBrandIcon className="h-[18px] w-[18px]" />}
+                label={t('checkout.otherCrypto')}
+                description="Heleket"
               />
             )}
             {availableProviders.includes('telegram') && (

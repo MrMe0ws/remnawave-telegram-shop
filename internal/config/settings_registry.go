@@ -161,6 +161,12 @@ func RuntimeSettingsRegistry() []SettingField {
 				func(v bool) { conf.isPlategaCryptoEnabled = v }),
 			Current: func() string { return boolStr(conf.isPlategaCryptoEnabled) },
 		},
+		{
+			Key: "HELEKET_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Apply: applyPaymentToggle(HeleketHasCredentials, heleketCredentialsHint,
+				func(v bool) { conf.isHeleketEnabled = v }),
+			Current: func() string { return boolStr(conf.isHeleketEnabled) },
+		},
 
 		// --- moynalog ---
 		//
@@ -656,6 +662,8 @@ func floatStr(v float64) string {
 }
 
 const plategaCredentialsHint = "set PLATEGA_MERCHANT_ID and PLATEGA_SECRET in .env first"
+
+const heleketCredentialsHint = "set HELEKET_MERCHANT_ID and HELEKET_API_KEY in .env first"
 
 // applyPaymentToggle — переключатель способа оплаты, который нельзя включить
 // без реквизитов. Выключить можно всегда: если ключи из .env убрали, метод

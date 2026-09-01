@@ -101,6 +101,9 @@
   "platega_crypto_button": {
     "text": "₿ Crypto"
   },
+  "heleket_button": {
+    "text": "₿ Other crypto"
+  },
   "pay_button": "💸 Pay",
   "payment_provider_unavailable": "Payments are temporarily unavailable :( Please try again later or use another payment method.",
   "subscription_active": "📅 Subscription active until <b><i>%s</i></b>",
@@ -255,6 +258,7 @@
   "purchase_history_method_platega_sbp": "SBP",
   "purchase_history_method_platega_card": "Card",
   "purchase_history_method_platega_crypto": "Crypto",
+  "purchase_history_method_heleket": "Other crypto",
   "purchase_history_method_stars": "Telegram Stars",
   "purchase_history_method_crypto": "Crypto",
   "purchase_history_method_tribute": "Tribute",

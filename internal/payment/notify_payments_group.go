@@ -39,6 +39,8 @@ func invoiceTypeTitle(t database.InvoiceType) string {
 	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return "Platega"
+	case database.InvoiceTypeHeleket:
+		return "Heleket"
 	default:
 		return string(t)
 	}
@@ -113,6 +115,10 @@ func paymentLinkBlock(p *database.Purchase) string {
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		if p.PlategaID != nil && strings.TrimSpace(*p.PlategaID) != "" {
 			return "🔗 платёж Platega: " + htmlCode(strings.TrimSpace(*p.PlategaID))
+		}
+	case database.InvoiceTypeHeleket:
+		if p.HeleketID != nil && strings.TrimSpace(*p.HeleketID) != "" {
+			return "🔗 платёж Heleket: " + htmlCode(strings.TrimSpace(*p.HeleketID))
 		}
 	}
 	return "🔗 платёж: —"
@@ -363,6 +369,28 @@ func buildCancelGroupMessage(ctx context.Context, p *database.Purchase, c *datab
 
 func (s *PaymentService) sendPaymentsGroupText(ctx context.Context, text string) {
 	s.sendPaymentsGroupHTML(ctx, text, nil)
+}
+
+// NotifyHeleketNeedsAttention зовёт админа на счёт Heleket, который нельзя
+// закрыть автоматически: деньги в крипте необратимы, поэтому вместо догадок
+// (зачесть? отменить?) показываем ситуацию человеку.
+func (s *PaymentService) NotifyHeleketNeedsAttention(ctx context.Context, purchase *database.Purchase, heleketUUID, status, reason string) {
+	if s == nil || purchase == nil {
+		return
+	}
+	var b strings.Builder
+	b.WriteString("⚠️ <b>Heleket: нужен ручной разбор</b>\n\n")
+	b.WriteString(reason)
+	b.WriteString("\n\n")
+	b.WriteString(fmt.Sprintf("🧾 покупка #%d, статус в базе: %s\n", purchase.ID, htmlCode(string(purchase.Status))))
+	b.WriteString("💠 статус в Heleket: " + htmlCode(status) + "\n")
+	if strings.TrimSpace(heleketUUID) != "" {
+		b.WriteString("🔗 платёж Heleket: " + htmlCode(strings.TrimSpace(heleketUUID)) + "\n")
+	}
+	b.WriteString(amountPeriodLine(purchase))
+	b.WriteString("\n\nАвтозачисления не было — проверьте и закройте вручную.")
+
+	s.sendPaymentsGroupHTML(ctx, b.String(), s.paymentsNotifyToUserReplyMarkup(purchase.CustomerID))
 }
 
 func (s *PaymentService) sendPaymentsGroupHTML(ctx context.Context, text string, replyMarkup models.ReplyMarkup) {

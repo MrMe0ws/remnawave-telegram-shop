@@ -193,6 +193,8 @@ func purchaseInvoiceLabel(langCode string, invoiceType database.InvoiceType) str
 		return tm.GetText(langCode, "purchase_history_method_platega_card")
 	case database.InvoiceTypePlategaCrypto:
 		return tm.GetText(langCode, "purchase_history_method_platega_crypto")
+	case database.InvoiceTypeHeleket:
+		return tm.GetText(langCode, "purchase_history_method_heleket")
 	default:
 		return tm.GetText(langCode, "purchase_history_method_unknown")
 	}

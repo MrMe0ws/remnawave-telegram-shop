@@ -21,6 +21,7 @@ const (
 	CheckoutProviderPlategaAcquiring = "platega_acquiring"
 	CheckoutProviderPlategaWorldwide = "platega_worldwide"
 	CheckoutProviderPlategaCrypto    = "platega_crypto"
+	CheckoutProviderHeleket          = "heleket"
 )
 
 // CheckoutStatus — enum cabinet_checkout.status.

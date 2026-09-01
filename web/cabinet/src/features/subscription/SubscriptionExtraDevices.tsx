@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Smartphone, Star, X } from 'lucide-react'
 
+import { HeleketBrandIcon } from '@/components/BrandIcons'
 import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
 import { PlategaPaymentExpand, enabledPlategaMethods, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ type Provider =
   | 'platega_acquiring'
   | 'platega_worldwide'
   | 'platega_crypto'
+  | 'heleket'
 
 function hwidSubpanelGridCls(open: boolean) {
   return cn(
@@ -41,6 +43,7 @@ const HWID_PROVIDER_ORDER: Provider[] = [
   'platega_worldwide',
   'platega_crypto',
   'cryptopay',
+  'heleket',
   'telegram',
 ]
 
@@ -136,6 +139,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
     platega_acquiring: bootstrap?.payment_providers?.platega_acquiring ?? false,
     platega_worldwide: bootstrap?.payment_providers?.platega_worldwide ?? false,
     platega_crypto: bootstrap?.payment_providers?.platega_crypto ?? false,
+    heleket: bootstrap?.payment_providers?.heleket ?? false,
   }
   const firstHwidProvider = HWID_PROVIDER_ORDER.find((p) => providerEnabled[p]) ?? 'yookassa'
 
@@ -368,6 +372,15 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     icon={<Bitcoin size={14} />}
                     label={t('checkout.crypto')}
                     hint={t('checkout.providerHintCryptopay')}
+                  />
+                )}
+                {providerEnabled.heleket && (
+                  <HwidProviderPayButton
+                    selected={provider === 'heleket'}
+                    onClick={() => setProvider('heleket')}
+                    icon={<HeleketBrandIcon className="h-[14px] w-[14px]" />}
+                    label={t('checkout.otherCrypto')}
+                    hint={t('checkout.providerHintHeleket')}
                   />
                 )}
                 {providerEnabled.telegram && (

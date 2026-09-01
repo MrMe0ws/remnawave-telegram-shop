@@ -261,6 +261,8 @@ export interface AdminPaymentDetailDTO extends AdminPaymentListItemDTO {
   yookasa_url?: string | null
   platega_id?: string | null
   platega_url?: string | null
+  heleket_id?: string | null
+  heleket_url?: string | null
   provider_txn_id?: string | null
   idempotency_key?: string | null
   checkout_provider?: string | null

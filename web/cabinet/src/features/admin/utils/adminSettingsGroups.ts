@@ -302,7 +302,7 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'providers',
       titleKey: 'admin.settings.subsections.payments.providers',
       icon: Wallet,
-      keys: ['YOOKASA_ENABLED', 'CRYPTO_PAY_ENABLED', 'TELEGRAM_STARS_ENABLED'],
+      keys: ['YOOKASA_ENABLED', 'CRYPTO_PAY_ENABLED', 'HELEKET_ENABLED', 'TELEGRAM_STARS_ENABLED'],
     },
     {
       id: 'platega',

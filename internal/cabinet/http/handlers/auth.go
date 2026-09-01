@@ -156,6 +156,7 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 			"platega_acquiring": botcfg.IsPlategaEnabled() && botcfg.IsPlategaAcquiringEnabled(),
 			"platega_worldwide": botcfg.IsPlategaEnabled() && botcfg.IsPlategaWorldwideEnabled(),
 			"platega_crypto":    botcfg.IsPlategaEnabled() && botcfg.IsPlategaCryptoEnabled(),
+			"heleket":           botcfg.IsHeleketEnabled(),
 		},
 	}
 	if cabcfg.TurnstileEnabled() && strings.TrimSpace(cabcfg.TurnstileSiteKey()) != "" {
