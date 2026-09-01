@@ -69,11 +69,15 @@ export function OfferGrowthChart({
 
     /** t — доля отрисованной длины, 0..1. */
     const frame = (t: number) => {
-      clip.setAttribute('width', (W * t).toFixed(2))
-      const p = line.getPointAtLength(length * t)
+      // Ширина обрезки не может быть отрицательной: <rect width="-10"> браузер
+      // отбрасывает с ошибкой в консоль. Зажимаем здесь, в единственном месте,
+      // где значение попадает в DOM.
+      const clamped = Math.min(1, Math.max(0, t))
+      clip.setAttribute('width', (W * clamped).toFixed(2))
+      const p = line.getPointAtLength(length * clamped)
       dot.style.left = `${(p.x / W) * 100}%`
       dot.style.top = `${(p.y / H) * 100}%`
-      dot.style.opacity = t > 0.02 ? '1' : '0'
+      dot.style.opacity = clamped > 0.02 ? '1' : '0'
     }
 
     if (reduceMotion) {
@@ -82,8 +86,15 @@ export function OfferGrowthChart({
     }
 
     let raf = 0
-    let start = performance.now()
+    /*
+     * Отсчёт начинается с первого кадра, а не с момента подписки.
+     * requestAnimationFrame отдаёт время начала кадра, и оно бывает раньше
+     * performance.now(), снятого парой строк выше: elapsed уходил в минус, а
+     * вместе с ним и доля отрисовки.
+     */
+    let start: number | null = null
     const step = (now: number) => {
+      if (start === null) start = now
       const elapsed = now - start
       if (elapsed <= DRAW_MS) {
         // Замедление к концу: линейная скорость читается механически.
