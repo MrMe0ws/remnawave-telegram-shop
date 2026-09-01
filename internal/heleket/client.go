@@ -41,6 +41,7 @@ type Client struct {
 	apiKey      string
 	callbackURL string
 	currency    string
+	orderPrefix string
 	lifetime    int
 	httpClient  *http.Client
 }
@@ -49,7 +50,7 @@ type Client struct {
 //
 // callbackURL — полный https-адрес вебхука; пустой означает «Heleket не зовёт
 // нас обратно», и подтверждение оплаты остаётся целиком на поллинге.
-func NewClient(merchantID, apiKey, callbackURL, currency string, lifetime int) *Client {
+func NewClient(merchantID, apiKey, callbackURL, currency, orderPrefix string, lifetime int) *Client {
 	currency = strings.ToUpper(strings.TrimSpace(currency))
 	if currency == "" {
 		currency = DefaultCurrency
@@ -69,6 +70,7 @@ func NewClient(merchantID, apiKey, callbackURL, currency string, lifetime int) *
 		apiKey:      strings.TrimSpace(apiKey),
 		callbackURL: strings.TrimSpace(callbackURL),
 		currency:    currency,
+		orderPrefix: normalizePrefix(orderPrefix),
 		lifetime:    lifetime,
 		httpClient:  &http.Client{Timeout: DefaultTimeout},
 	}
@@ -76,6 +78,23 @@ func NewClient(merchantID, apiKey, callbackURL, currency string, lifetime int) *
 
 func (c *Client) IsConfigured() bool {
 	return c != nil && c.merchantID != "" && c.apiKey != ""
+}
+
+// OrderPrefix — префикс order_id, отделяющий счета этого стенда от чужих
+// на том же мерчанте.
+func (c *Client) OrderPrefix() string {
+	if c == nil {
+		return DefaultOrderPrefix
+	}
+	return c.orderPrefix
+}
+
+// Lifetime — сколько живёт счёт, секунды.
+func (c *Client) Lifetime() int {
+	if c == nil || c.lifetime <= 0 {
+		return DefaultLifetime
+	}
+	return c.lifetime
 }
 
 // Currency — валюта счёта, в которой считается amount.
@@ -210,7 +229,7 @@ func (c *Client) GetPaymentInfo(ctx context.Context, uuid, orderID string) (*Pay
 	var payment Payment
 	if err := c.post(ctx, "/v1/payment/info", req, &payment); err != nil {
 		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.IsNotFound() {
+		if errors.As(err, &apiErr) && apiErr.IsPaymentNotFound() {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get heleket payment info failed: %w", err)
@@ -245,47 +264,19 @@ func VerifyCallback(rawBody []byte, sign, apiKey string) bool {
 
 // stripSignField убирает пару "sign":"…" вместе с одной прилегающей запятой,
 // оставляя остальные байты нетронутыми.
+//
+// Ключ ищется строго на верхнем уровне объекта: наивный поиск первого вхождения
+// подстроки "sign" вырезал бы вложенный ключ (например {"a":{"sign":…},"sign":…})
+// и ломался бы о строковое значение "sign" в соседнем поле.
 func stripSignField(body []byte) ([]byte, bool) {
-	key := []byte("\"sign\"")
-	start := bytes.Index(body, key)
-	if start < 0 {
+	keyStart, valueEnd, ok := findTopLevelSign(body)
+	if !ok {
 		return nil, false
 	}
-	i := start + len(key)
-	for i < len(body) && isJSONSpace(body[i]) {
-		i++
-	}
-	if i >= len(body) || body[i] != ':' {
-		return nil, false
-	}
-	i++
-	for i < len(body) && isJSONSpace(body[i]) {
-		i++
-	}
-	if i >= len(body) || body[i] != '"' {
-		return nil, false
-	}
-	i++
-	for i < len(body) {
-		if body[i] == '\\' {
-			i += 2
-			continue
-		}
-		if body[i] == '"' {
-			break
-		}
-		i++
-	}
-	if i >= len(body) {
-		return nil, false
-	}
-	end := i + 1
+	start, end := keyStart, valueEnd
 
 	// Снимаем ровно одну запятую — идущую следом, иначе предшествующую.
-	j := end
-	for j < len(body) && isJSONSpace(body[j]) {
-		j++
-	}
+	j := skipJSONSpace(body, end)
 	if j < len(body) && body[j] == ',' {
 		end = j + 1
 	} else {
@@ -302,6 +293,136 @@ func stripSignField(body []byte) ([]byte, bool) {
 	out = append(out, body[:start]...)
 	out = append(out, body[end:]...)
 	return out, true
+}
+
+// findTopLevelSign возвращает границы пары "sign": <значение> на верхнем уровне.
+// Попутно проверяет, что тело — синтаксически целый JSON-объект.
+func findTopLevelSign(body []byte) (keyStart, valueEnd int, ok bool) {
+	i := skipJSONSpace(body, 0)
+	if i >= len(body) || body[i] != '{' {
+		return 0, 0, false
+	}
+	i++
+
+	found := false
+	i = skipJSONSpace(body, i)
+	if i < len(body) && body[i] == '}' {
+		return 0, 0, false
+	}
+
+	for {
+		i = skipJSONSpace(body, i)
+		if i >= len(body) || body[i] != '"' {
+			return 0, 0, false
+		}
+		ks := i
+		ke, okStr := scanJSONString(body, i)
+		if !okStr {
+			return 0, 0, false
+		}
+		isSign := string(body[ks:ke]) == `"sign"`
+
+		i = skipJSONSpace(body, ke)
+		if i >= len(body) || body[i] != ':' {
+			return 0, 0, false
+		}
+		i = skipJSONSpace(body, i+1)
+
+		ve, okVal := skipJSONValue(body, i)
+		if !okVal {
+			return 0, 0, false
+		}
+		if isSign && !found {
+			keyStart, valueEnd, found = ks, ve, true
+		}
+
+		i = skipJSONSpace(body, ve)
+		if i >= len(body) {
+			return 0, 0, false
+		}
+		switch body[i] {
+		case ',':
+			i++
+		case '}':
+			return keyStart, valueEnd, found
+		default:
+			return 0, 0, false
+		}
+	}
+}
+
+// scanJSONString принимает индекс открывающей кавычки и возвращает индекс сразу
+// за закрывающей.
+func scanJSONString(b []byte, i int) (int, bool) {
+	if i >= len(b) || b[i] != '"' {
+		return 0, false
+	}
+	i++
+	for i < len(b) {
+		switch b[i] {
+		case '\\':
+			i += 2
+		case '"':
+			return i + 1, true
+		default:
+			i++
+		}
+	}
+	return 0, false
+}
+
+// skipJSONValue пропускает одно значение любого типа и возвращает индекс за ним.
+func skipJSONValue(b []byte, i int) (int, bool) {
+	if i >= len(b) {
+		return 0, false
+	}
+	switch b[i] {
+	case '"':
+		return scanJSONString(b, i)
+	case '{', '[':
+		open, closeCh := b[i], byte('}')
+		if open == '[' {
+			closeCh = ']'
+		}
+		depth := 0
+		for i < len(b) {
+			switch b[i] {
+			case '"':
+				ne, ok := scanJSONString(b, i)
+				if !ok {
+					return 0, false
+				}
+				i = ne
+				continue
+			case open:
+				depth++
+			case closeCh:
+				depth--
+				if depth == 0 {
+					return i + 1, true
+				}
+			}
+			i++
+		}
+		return 0, false
+	default:
+		// Число, true/false/null — читаем до разделителя.
+		start := i
+		for i < len(b) && b[i] != ',' && b[i] != '}' && b[i] != ']' && !isJSONSpace(b[i]) {
+			i++
+		}
+		if i == start {
+			return 0, false
+		}
+		return i, true
+	}
+}
+
+func skipJSONSpace(b []byte, i int) int {
+	for i < len(b) && isJSONSpace(b[i]) {
+		i++
+	}
+	return i
 }
 
 func isJSONSpace(b byte) bool {

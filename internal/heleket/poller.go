@@ -3,11 +3,16 @@ package heleket
 import (
 	"context"
 	"log/slog"
-	"strconv"
 	"strings"
+	"time"
 
 	"remnawave-tg-shop-bot/internal/database"
 )
+
+// staleGrace — запас поверх lifetime счёта. Раньше этого срока покупка не
+// отменяется, даже если Heleket отвечает «нет такого платежа»: пользователь
+// может прямо сейчас переводить крипту, а перевод необратим.
+const staleGrace = 15 * time.Minute
 
 // PollPending обходит pending-счета Heleket и приводит их к текущему статусу.
 //
@@ -33,13 +38,16 @@ func (r *Reconciler) PollPending(ctx context.Context) {
 	}
 
 	for i := range *pending {
+		if ctx.Err() != nil {
+			return
+		}
 		purchase := (*pending)[i]
 
 		uuid := ""
 		if purchase.HeleketID != nil {
 			uuid = strings.TrimSpace(*purchase.HeleketID)
 		}
-		orderID := strconv.FormatInt(purchase.ID, 10)
+		orderID := FormatOrderID(r.client.OrderPrefix(), purchase.ID)
 
 		info, err := r.client.GetPaymentInfo(ctx, uuid, orderID)
 		if err != nil {
@@ -47,17 +55,32 @@ func (r *Reconciler) PollPending(ctx context.Context) {
 			continue
 		}
 		if info == nil {
-			// Heleket не знает такого счёта: создание не дошло до конца.
-			// Отменяем, чтобы покупка не висела в pending вечно.
-			slog.Warn("heleket poll: payment not found, canceling purchase", "purchase_id", purchase.ID, "uuid", uuid)
+			// Heleket не знает такого счёта. Отменяем только заведомо
+			// протухшие: свежий «не найден» бывает и транзиентным, а отменить
+			// счёт, по которому идёт перевод, дороже, чем подождать.
+			if !r.expired(&purchase) {
+				slog.Warn("heleket poll: payment not found yet, leaving pending", "purchase_id", purchase.ID, "uuid", uuid)
+				continue
+			}
+			slog.Warn("heleket poll: payment not found and invoice expired, canceling", "purchase_id", purchase.ID, "uuid", uuid)
 			if err := r.canceller.CancelHeleketPayment(purchase.ID); err != nil {
 				slog.Error("heleket poll: cancel purchase", "purchase_id", purchase.ID, "error", err)
 			}
 			continue
 		}
 
-		if err := r.Sync(ctx, &purchase, info); err != nil {
+		if err := r.Sync(ctx, purchase.ID, info); err != nil {
 			slog.Error("heleket poll: sync failed", "purchase_id", purchase.ID, "error", err)
 		}
 	}
+}
+
+// expired — счёт заведомо мёртв: с момента создания прошло больше его времени
+// жизни плюс запас.
+func (r *Reconciler) expired(purchase *database.Purchase) bool {
+	if purchase == nil || purchase.CreatedAt.IsZero() {
+		return false
+	}
+	ttl := time.Duration(r.client.Lifetime())*time.Second + staleGrace
+	return time.Since(purchase.CreatedAt) > ttl
 }

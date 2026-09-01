@@ -30,6 +30,7 @@ type config struct {
 	isPlategaAcquiringEnabled, isPlategaWorldwideEnabled                         bool
 	isPlategaCryptoEnabled                                                       bool
 	heleketMerchantID, heleketAPIKey, heleketWebhookURL, heleketCurrency         string
+	heleketOrderPrefix                                                           string
 	heleketLifetime                                                              int
 	isHeleketEnabled                                                             bool
 	moynalogURL, moynalogUsername, moynalogPassword                              string
@@ -241,6 +242,12 @@ func GetHeleketWebHookURL() string {
 // HeleketCurrency — валюта номинала счёта Heleket (по умолчанию RUB).
 func HeleketCurrency() string {
 	return conf.heleketCurrency
+}
+
+// HeleketOrderPrefix — префикс order_id счетов Heleket. Разделяет стенды,
+// живущие на одном мерчанте: у боевого и тестового он должен отличаться.
+func HeleketOrderPrefix() string {
+	return conf.heleketOrderPrefix
 }
 
 // HeleketLifetime — сколько живёт счёт Heleket, секунды.
@@ -1145,6 +1152,7 @@ func InitConfig() {
 	conf.heleketAPIKey = strings.TrimSpace(os.Getenv("HELEKET_API_KEY"))
 	conf.heleketWebhookURL = strings.TrimSpace(os.Getenv("HELEKET_WEBHOOK_URL"))
 	conf.heleketCurrency = strings.ToUpper(envStringDefault("HELEKET_CURRENCY", "RUB"))
+	conf.heleketOrderPrefix = strings.TrimSpace(envStringDefault("HELEKET_ORDER_PREFIX", "shop"))
 	conf.heleketLifetime = envIntDefault("HELEKET_INVOICE_LIFETIME", 3600)
 	if envBool("HELEKET_ENABLED") {
 		if !credentialsPresent(conf.heleketMerchantID, conf.heleketAPIKey) {

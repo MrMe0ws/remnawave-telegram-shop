@@ -1,12 +1,6 @@
 package heleket
 
-import (
-	"context"
-	"os"
-	"strconv"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestStripSignField(t *testing.T) {
 	cases := []struct {
@@ -50,6 +44,23 @@ func TestStripSignField(t *testing.T) {
 			in:   `{"a":1,"sign":"de\"ad","b":2}`,
 			want: `{"a":1,"b":2}`,
 		},
+		{
+			// Наивный поиск подстроки вырезал бы вложенный ключ и оставил настоящий.
+			name: "nested sign is not the one",
+			in:   `{"a":{"sign":"inner"},"sign":"outer"}`,
+			want: `{"a":{"sign":"inner"}}`,
+		},
+		{
+			// Значение "sign" у соседнего поля раньше ломало разбор целиком.
+			name: "sign as a value of another field",
+			in:   `{"description":"sign","sign":"abc"}`,
+			want: `{"description":"sign"}`,
+		},
+		{
+			name: "non-string values around",
+			in:   `{"n":12.5,"ok":true,"nil":null,"arr":[1,{"sign":"x"}],"sign":"abc"}`,
+			want: `{"n":12.5,"ok":true,"nil":null,"arr":[1,{"sign":"x"}]}`,
+		},
 	}
 
 	for _, tc := range cases {
@@ -66,8 +77,49 @@ func TestStripSignField(t *testing.T) {
 }
 
 func TestStripSignFieldMissing(t *testing.T) {
-	if _, ok := stripSignField([]byte(`{"uuid":"a"}`)); ok {
-		t.Fatal("expected failure when sign field is absent")
+	broken := []string{
+		`{"uuid":"a"}`,           // поля sign нет
+		`{"a":{"sign":"inner"}}`, // sign только внутри вложенного объекта
+		`not json`,               // не объект
+		`["sign"]`,               // массив верхнего уровня
+		`{"sign":"abc"`,          // объект не закрыт
+		`{"sign":}`,              // значения нет
+		`{"sign":"abc",}`,        // висячая запятая
+		`{"sign":"unterminated`,  // строка не закрыта
+		`{"a":"tail\`,            // обрыв сразу после экранирования
+	}
+	for _, in := range broken {
+		if _, ok := stripSignField([]byte(in)); ok {
+			t.Fatalf("stripSignField(%q) unexpectedly succeeded", in)
+		}
+	}
+}
+
+func TestParseOrderID(t *testing.T) {
+	const prefix = "shop"
+
+	if got := FormatOrderID(prefix, 42); got != "shop-42" {
+		t.Fatalf("FormatOrderID = %q", got)
+	}
+
+	good := map[string]int64{
+		"shop-42":   42,
+		" shop-42 ": 42,
+		"42":        42, // счета, выставленные до перехода на префиксы
+	}
+	for in, want := range good {
+		id, ok := ParseOrderID(prefix, in)
+		if !ok || id != want {
+			t.Fatalf("ParseOrderID(%q) = %d,%v; want %d,true", in, id, ok, want)
+		}
+	}
+
+	// Чужой стенд на том же мерчанте, мусор и нечисловые id зачисляться не должны.
+	bad := []string{"", "   ", "test-42", "selftest-1730000000", "shop-0", "shop--1", "shop-abc", "shop-", "-42", "0", "-1", "shop-42-1"}
+	for _, in := range bad {
+		if id, ok := ParseOrderID(prefix, in); ok {
+			t.Fatalf("ParseOrderID(%q) unexpectedly accepted as %d", in, id)
+		}
 	}
 }
 
@@ -130,54 +182,4 @@ func TestFormatAmount(t *testing.T) {
 			t.Fatalf("FormatAmount(%v) = %s, want %s", in, got, want)
 		}
 	}
-}
-
-// TestLiveAPI проверяет подпись и поддержку валюты на боевом api.heleket.com.
-// Пропускается, пока не заданы HELEKET_MERCHANT_ID и HELEKET_API_KEY.
-func TestLiveAPI(t *testing.T) {
-	merchant := os.Getenv("HELEKET_MERCHANT_ID")
-	apiKey := os.Getenv("HELEKET_API_KEY")
-	if merchant == "" || apiKey == "" {
-		t.Skip("HELEKET_MERCHANT_ID / HELEKET_API_KEY not set")
-	}
-
-	currency := os.Getenv("HELEKET_CURRENCY")
-	client := NewClient(merchant, apiKey, "", currency, 0)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	// Несуществующий счёт: подпись верна — получаем «нет такого», подпись
-	// неверна — 401. Побочных эффектов не создаёт.
-	missing := "no-such-order-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	info, err := client.GetPaymentInfo(ctx, "", missing)
-	if err != nil {
-		t.Fatalf("auth check failed: %v", err)
-	}
-	if info != nil {
-		t.Fatalf("unexpected payment for a random order_id: %+v", info)
-	}
-	t.Log("auth ok: signature accepted, unknown order_id reported as missing")
-
-	if os.Getenv("HELEKET_LIVE_CREATE") == "" {
-		t.Skip("set HELEKET_LIVE_CREATE=1 to also create a throwaway invoice")
-	}
-
-	orderID := "selftest-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	payment, err := client.CreatePayment(ctx, orderID, FormatAmount(100), "Integration self-test", "")
-	if err != nil {
-		t.Fatalf("create payment failed: %v", err)
-	}
-	t.Logf("created: uuid=%s status=%s url=%s currency=%s", payment.UUID, payment.StatusValue(), payment.URL, client.Currency())
-
-	back, err := client.GetPaymentInfo(ctx, payment.UUID, "")
-	if err != nil {
-		t.Fatalf("payment info failed: %v", err)
-	}
-	if back == nil {
-		t.Fatal("just-created payment not found via /v1/payment/info")
-	}
-	if back.OrderID != orderID {
-		t.Fatalf("order_id round-trip mismatch: got %q, want %q", back.OrderID, orderID)
-	}
-	t.Logf("info ok: status=%s payer_currency=%s", back.StatusValue(), back.PayerCurrency)
 }

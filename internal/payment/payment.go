@@ -20,7 +20,6 @@ import (
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"remnawave-tg-shop-bot/utils"
-	"strconv"
 	"strings"
 	"time"
 
@@ -1450,7 +1449,7 @@ func (s PaymentService) createHeleketInvoice(ctx context.Context, amount float64
 	desc := buildRubReceiptDescription(months, extraHwid, extras, database.InvoiceTypeHeleket)
 	payment, err := s.heleketClient.CreatePayment(
 		ctx,
-		strconv.FormatInt(purchaseId, 10),
+		heleket.FormatOrderID(s.heleketClient.OrderPrefix(), purchaseId),
 		heleket.FormatAmount(amount),
 		desc,
 		ret,
@@ -1596,7 +1595,26 @@ func (s PaymentService) CancelPlategaPayment(purchaseId int64) error {
 // CancelHeleketPayment закрывает счёт Heleket. Отдельный метод, а не прямая
 // запись статуса из пакета heleket: отмену нужно показать и пользователю, и в
 // группе платежей — этим занимается cancelPurchaseAndNotify.
+//
+// В отличие от остальных касс здесь нужна проверка текущего статуса: вебхук и
+// поллинг Heleket работают параллельно, и поллер может прийти с отменой по уже
+// оплаченной покупке — тогда подписка осталась бы выданной, а покупка ушла бы
+// в cancel вместе с выручкой из статистики.
 func (s PaymentService) CancelHeleketPayment(purchaseId int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	purchase, err := s.purchaseRepository.FindById(ctx, purchaseId)
+	if err != nil {
+		return err
+	}
+	if purchase == nil {
+		return fmt.Errorf("purchase with id %s not found", utils.MaskHalfInt64(purchaseId))
+	}
+	if purchase.Status != database.PurchaseStatusNew && purchase.Status != database.PurchaseStatusPending {
+		slog.Info("heleket: skip cancel, purchase is already finalized",
+			"purchase_id", purchaseId, "status", purchase.Status)
+		return nil
+	}
 	return s.cancelPurchaseAndNotify(purchaseId)
 }
 

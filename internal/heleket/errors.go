@@ -21,15 +21,16 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("heleket API error: status=%d, body=%s", e.StatusCode, e.Body)
 }
 
-// IsNotFound — счёта с таким uuid/order_id у мерчанта нет.
+// IsPaymentNotFound — у мерчанта нет счёта с таким uuid/order_id.
 //
-// Heleket отвечает на это не 404, а 422 с message «Payment not found», поэтому
-// по одному лишь коду статуса «нет счёта» от «кривых параметров» не отличить.
-func (e *APIError) IsNotFound() bool {
-	if e.StatusCode == 404 {
-		return true
-	}
-	return strings.Contains(strings.ToLower(e.Message), "not found")
+// Heleket отвечает на это 422 с message «Payment not found», а не 404, поэтому
+// по коду статуса отличить нельзя и приходится смотреть на сообщение. Сравнение
+// строгое, по всему тексту: подстрока «not found» ловила бы заодно «Merchant not
+// found» (опечатка в merchant id) и любую 404-страницу CDN, а вызывающий код
+// трактует «нет счёта» как повод закрыть покупку — то есть одна ошибка
+// конфигурации отменяла бы все живые счета разом.
+func (e *APIError) IsPaymentNotFound() bool {
+	return strings.EqualFold(strings.TrimSpace(e.Message), "payment not found")
 }
 
 func (e *APIError) IsUnauthorized() bool {

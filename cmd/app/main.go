@@ -157,6 +157,7 @@ func main() {
 		config.HeleketAPIKey(),
 		heleketCallbackURL,
 		config.HeleketCurrency(),
+		config.HeleketOrderPrefix(),
 		config.HeleketLifetime(),
 	)
 	if heleketClient.IsConfigured() {
@@ -849,7 +850,7 @@ func main() {
 	// включить из админки без рестарта, и тогда счета создавались бы, а колбэк
 	// принимать было бы некому.
 	if heleketWebhookPath != "" && heleketClient.IsConfigured() {
-		mux.Handle(heleketWebhookPath, heleket.NewWebhookHandler(heleketReconciler, purchaseRepository, config.HeleketAPIKey()))
+		mux.Handle(heleketWebhookPath, heleket.NewWebhookHandler(heleketReconciler, config.HeleketAPIKey()))
 		slog.Info("heleket webhook mounted", "path", heleketWebhookPath, "url_callback", heleketCallbackURL)
 	}
 	if path := config.GetRemnawaveWebhookPath(); path != "" && config.GetRemnawaveWebhookSecret() != "" {
@@ -1080,6 +1081,10 @@ func initDatabase(ctx context.Context, connString string) (*pgxpool.Pool, error)
 }
 
 // setupInvoiceChecker - настраивает cron-задачи для проверки статуса счетов
+// heleketPollTimeout — потолок на один обход pending-счетов Heleket, чтобы
+// зависший ответ кассы не держал задачу до следующего запуска.
+const heleketPollTimeout = 4 * time.Minute
+
 // Проверяет оплаченные счета в CryptoPay и YooKassa каждые 5 секунд
 // Если счет оплачен, обрабатывает покупку и активирует подписку
 func setupInvoiceChecker(
@@ -1157,9 +1162,13 @@ func setupInvoiceChecker(
 		// Намеренно без проверки IsHeleketEnabled: выключение метода в админке
 		// должно прекращать выдачу новых счетов, а не бросать уже выставленные.
 		// Оплату по ним всё равно не вернуть, поэтому pending дозакрываем всегда.
-		_, err := c.AddFunc(schedule, func() {
-			heleketReconciler.PollPending(context.Background())
-		})
+		// Проходы не должны накладываться: при большом числе pending один обход
+		// длится дольше периода, и два поллера пошли бы по одному списку.
+		_, err := c.AddJob(schedule, cron.NewChain(cron.SkipIfStillRunning(cron.DiscardLogger)).Then(cron.FuncJob(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), heleketPollTimeout)
+			defer cancel()
+			heleketReconciler.PollPending(ctx)
+		})))
 		if err != nil {
 			panic(err)
 		}
