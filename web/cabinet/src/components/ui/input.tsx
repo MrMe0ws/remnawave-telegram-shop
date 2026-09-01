@@ -11,12 +11,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          'flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm',
+          // Собственный фон обязателен: на bg-transparent поле сливалось с
+          // карточкой в тёмной теме. В светлой — как в админке (bg-background
+          // на белой карточке), в тёмной --input светлее --card.
+          'flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground dark:bg-input',
           'placeholder:text-muted-foreground',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'hover:border-[hsl(var(--cabinet-accent)/0.4)]',
+          'focus-visible:border-[hsl(var(--cabinet-accent)/0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           'transition-colors duration-150',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          error && 'border-destructive focus-visible:ring-destructive',
+          error && 'border-destructive hover:border-destructive focus-visible:border-destructive focus-visible:ring-destructive',
           className,
         )}
         ref={ref}
