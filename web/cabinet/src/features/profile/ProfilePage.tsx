@@ -16,13 +16,7 @@ import { ChangePasswordCollapsible, DeleteAccountSection } from '@/features/prof
 import { ProfileLoyaltySection } from '@/features/loyalty/LoyaltyProgramPage'
 import { PaymentsHistoryCard } from '@/features/payments/PaymentsHistoryPage'
 import { ReferralCopyRow } from '@/features/referral/ReferralCopyRow'
-import {
-  ProfileHeaderVariantSwitch,
-  ProfileIdentityHeader,
-  ProfileIdentityTitle,
-  useProfileHeaderVariant,
-  useProfileIdentity,
-} from '@/features/profile/ProfileIdentity'
+import { ProfileIdentityHeader, useProfileIdentity } from '@/features/profile/ProfileIdentity'
 
 type ProfileTab = 'general' | 'bonuses' | 'history'
 
@@ -47,7 +41,6 @@ export default function ProfilePage() {
   const { user, fetchMe } = useAuthStore()
   const [tab, setTab] = useState<ProfileTab>(() => tabFromHash(location.hash))
   const identity = useProfileIdentity()
-  const [headerVariant, setHeaderVariant] = useProfileHeaderVariant()
 
   const { data: referrals, isPending: referralsPending } = useQuery({
     queryKey: ['referrals'],
@@ -114,11 +107,7 @@ export default function ProfilePage() {
     <AppLayout>
       <PageReveal className="mx-auto w-full max-w-xl space-y-4">
         <RevealItem>
-          {headerVariant === 'c' ? (
-            <ProfileIdentityTitle identity={identity} />
-          ) : (
-            <h1 className="text-2xl font-semibold">{t('profile.title')}</h1>
-          )}
+          <h1 className="text-2xl font-semibold">{t('profile.title')}</h1>
         </RevealItem>
 
         <RevealItem>
@@ -156,20 +145,10 @@ export default function ProfilePage() {
         <RevealItem>
         {tab === 'general' && (
           <div className="space-y-4 pt-1">
-            <ProfileHeaderVariantSwitch variant={headerVariant} onChange={setHeaderVariant} />
             <Card>
-              {headerVariant === 'd' ? null : (
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{t('profile.accountInfo')}</CardTitle>
-                </CardHeader>
-              )}
-              <CardContent
-                className={cn('divide-y divide-border', headerVariant === 'd' && 'pt-4 sm:pt-6')}
-              >
-                {headerVariant === 'd' ? <ProfileIdentityHeader identity={identity} /> : null}
-                {headerVariant === 'c' && identity?.username ? (
-                  <ProfileRow label={t('profile.identity.telegramRow')} value={`@${identity.username}`} />
-                ) : null}
+              {/* Шапка с именем работает заголовком карточки — отдельный CardTitle не нужен. */}
+              <CardContent className="divide-y divide-border pt-4 sm:pt-6">
+                <ProfileIdentityHeader identity={identity} />
                 <ProfileRow
                   label={t('profile.telegramId')}
                   value={

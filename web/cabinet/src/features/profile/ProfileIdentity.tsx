@@ -4,14 +4,9 @@
  * Данные приходят из /me уже разрешёнными бэкендом (см. me_identity.go) —
  * здесь остаются только те запасные варианты, которым нужен перевод:
  * «Аккаунт №…», маска почты, подпись про непривязанный Telegram.
- *
- * Пока живут два варианта вёрстки, C и D. Переключатель — временный, чтобы
- * выбрать на живом кабинете; после выбора лишний вариант и весь механизм
- * переключения удаляются (см. useProfileHeaderVariant).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
 
 import { GoogleBrandIcon, TelegramBrandIcon, VKBrandIcon, YandexBrandIcon } from '@/components/BrandIcons'
 import { useAuthStore } from '@/store/auth'
@@ -40,8 +35,6 @@ export type ProfileIdentity = {
   provider?: MeResponse['identity_provider']
   initials: string
   gradient: string
-  /** Ник Telegram без «@» — нужен отдельной строкой в варианте C. */
-  username?: string
 }
 
 /** Первые буквы одного-двух слов. Через spread — чтобы не разрезать эмодзи. */
@@ -100,35 +93,25 @@ export function useProfileIdentity(): ProfileIdentity | null {
       provider: user.identity_provider,
       initials: initialsFrom(displayName || username || email || ''),
       gradient: INITIAL_GRADIENTS[Math.abs(user.id) % INITIAL_GRADIENTS.length],
-      username: username || undefined,
     }
   }, [t, user])
 }
 
-const AVATAR_SIZES = {
-  sm: { box: 'size-10', text: 'text-sm', badge: 'size-4 -right-0.5 -bottom-0.5', icon: 'size-2.5' },
-  md: { box: 'size-14', text: 'text-lg', badge: 'size-5 -right-0.5 -bottom-0.5', icon: 'size-3' },
-} as const
-
-function ProviderBadge({ provider, size }: { provider: ProfileIdentity['provider']; size: 'sm' | 'md' }) {
+function ProviderBadge({ provider }: { provider: ProfileIdentity['provider'] }) {
   if (!provider) return null
-  const s = AVATAR_SIZES[size]
   const icon =
     provider === 'telegram' ? (
-      <TelegramBrandIcon className={s.icon} />
+      <TelegramBrandIcon className="size-3" />
     ) : provider === 'google' ? (
-      <GoogleBrandIcon className={s.icon} />
+      <GoogleBrandIcon className="size-3" />
     ) : provider === 'yandex' ? (
-      <YandexBrandIcon className={s.icon} />
+      <YandexBrandIcon className="size-3" />
     ) : (
-      <VKBrandIcon className={s.icon} />
+      <VKBrandIcon className="size-3" />
     )
   return (
     <span
-      className={cn(
-        'absolute inline-flex items-center justify-center rounded-full border-2 border-card bg-card',
-        s.badge,
-      )}
+      className="absolute -bottom-0.5 -right-0.5 inline-flex size-5 items-center justify-center rounded-full border-2 border-card bg-card"
       aria-hidden
     >
       {icon}
@@ -139,22 +122,19 @@ function ProviderBadge({ provider, size }: { provider: ProfileIdentity['provider
 /** Аватарка с бейджем провайдера и запасными инициалами. */
 export function ProfileAvatar({
   identity,
-  size = 'md',
   className,
 }: {
   identity: ProfileIdentity
-  size?: 'sm' | 'md'
   className?: string
 }) {
   // Запоминаем именно упавший URL: после смены аватарки новую ссылку надо
   // попробовать снова, а не остаться навсегда на инициалах.
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  const s = AVATAR_SIZES[size]
   const url = identity.avatarUrl
   const showImage = Boolean(url) && failedUrl !== url
 
   return (
-    <span className={cn('relative inline-flex shrink-0', s.box, className)}>
+    <span className={cn('relative inline-flex size-14 shrink-0', className)}>
       <span className="size-full overflow-hidden rounded-full bg-secondary">
         {showImage ? (
           <img
@@ -168,9 +148,8 @@ export function ProfileAvatar({
         ) : (
           <span
             className={cn(
-              'flex size-full items-center justify-center bg-gradient-to-br font-semibold text-white',
+              'flex size-full items-center justify-center bg-gradient-to-br text-lg font-semibold text-white',
               identity.gradient,
-              s.text,
             )}
             aria-hidden
           >
@@ -178,132 +157,21 @@ export function ProfileAvatar({
           </span>
         )}
       </span>
-      <ProviderBadge provider={identity.provider} size={size} />
+      <ProviderBadge provider={identity.provider} />
     </span>
   )
 }
 
-/**
- * Вариант C: аватарка встаёт в строку заголовка, «Профиль» уезжает наверх
- * мелкой надписью, имя занимает его место. Страница не становится длиннее.
- */
-export function ProfileIdentityTitle({ identity }: { identity: ProfileIdentity | null }) {
-  const { t } = useTranslation()
-  if (!identity) return <h1 className="text-2xl font-semibold">{t('profile.title')}</h1>
-  return (
-    <div className="flex items-center gap-3">
-      <ProfileAvatar identity={identity} size="sm" />
-      <div className="min-w-0">
-        <p className="text-xs leading-none text-muted-foreground">{t('profile.title')}</p>
-        <h1 className="mt-1 truncate text-2xl font-semibold leading-tight">{identity.name}</h1>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Вариант D: имя становится шапкой карточки «Информация об аккаунте», новых
- * блоков на странице не появляется.
- */
+/** Имя и ник шапкой карточки «Информация об аккаунте». */
 export function ProfileIdentityHeader({ identity }: { identity: ProfileIdentity | null }) {
   if (!identity) return null
   return (
     <div className="flex items-center gap-3 pb-3">
-      <ProfileAvatar identity={identity} size="md" />
+      <ProfileAvatar identity={identity} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[16px] font-semibold leading-snug sm:text-[18px]">{identity.name}</p>
         <p className="mt-0.5 truncate text-sm text-muted-foreground">{identity.secondary}</p>
       </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Временный переключатель вариантов
-// ---------------------------------------------------------------------------
-
-export type ProfileHeaderVariant = 'c' | 'd'
-
-const VARIANT_STORAGE_KEY = 'cabinet:profile-header-variant'
-
-function readStoredVariant(): ProfileHeaderVariant | null {
-  try {
-    const raw = window.localStorage.getItem(VARIANT_STORAGE_KEY)
-    return raw === 'c' || raw === 'd' ? raw : null
-  } catch {
-    // Приватный режим / запрещённые куки — просто работаем со значением по умолчанию.
-    return null
-  }
-}
-
-/**
- * Текущий вариант шапки. Приоритет: ?header=c|d в адресе (чтобы показать
- * коллеге ссылкой) → сохранённый выбор → C.
- */
-export function useProfileHeaderVariant(): [ProfileHeaderVariant, (next: ProfileHeaderVariant) => void] {
-  const location = useLocation()
-  const fromQuery = useMemo(() => {
-    const raw = new URLSearchParams(location.search).get('header')?.toLowerCase()
-    return raw === 'c' || raw === 'd' ? (raw as ProfileHeaderVariant) : null
-  }, [location.search])
-
-  const [variant, setVariant] = useState<ProfileHeaderVariant>(() => fromQuery ?? readStoredVariant() ?? 'c')
-
-  useEffect(() => {
-    if (fromQuery) setVariant(fromQuery)
-  }, [fromQuery])
-
-  const update = useCallback((next: ProfileHeaderVariant) => {
-    setVariant(next)
-    try {
-      window.localStorage.setItem(VARIANT_STORAGE_KEY, next)
-    } catch {
-      // Выбор не переживёт перезагрузку — не повод ломать переключение.
-    }
-  }, [])
-
-  return [variant, update]
-}
-
-/**
- * Переключатель C/D. Показывается администратору либо любому, кто пришёл по
- * ссылке с ?header=. Уедет вместе с проигравшим вариантом.
- */
-export function ProfileHeaderVariantSwitch({
-  variant,
-  onChange,
-}: {
-  variant: ProfileHeaderVariant
-  onChange: (next: ProfileHeaderVariant) => void
-}) {
-  const { t } = useTranslation()
-  const location = useLocation()
-  const isAdmin = useAuthStore((s) => s.user?.is_admin)
-  const forced = new URLSearchParams(location.search).has('header')
-  if (!isAdmin && !forced) return null
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border/80 px-3 py-2">
-      <span className="text-xs text-muted-foreground">{t('profile.identity.variantLabel')}</span>
-      <div className="flex gap-1">
-        {(['c', 'd'] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={variant === id}
-            onClick={() => onChange(id)}
-            className={cn(
-              'rounded-md px-2.5 py-1 text-xs font-medium uppercase transition-colors',
-              variant === id
-                ? 'bg-secondary text-primary'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {id}
-          </button>
-        ))}
-      </div>
-      <span className="text-[11px] text-muted-foreground">{t('profile.identity.variantHint')}</span>
     </div>
   )
 }

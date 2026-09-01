@@ -445,16 +445,12 @@
       "tabHistory": "История",
       "promocodesCardTitle": "Промокоды",
       "promocodesCardHint": "Активируйте промокоды и смотрите историю активаций",
-      "accountInfo": "Информация об аккаунте",
       "telegramId": "Telegram ID",
       "telegramIdUnlinkedHint": "Появится после привязки Telegram в разделе «Привязанные аккаунты».",
       "identity": {
         "fallbackName": "Аккаунт №{{id}}",
         "noLinkHint": "Привяжите Telegram, чтобы видеть имя",
-        "emailLogin": "Вход по почте",
-        "telegramRow": "Telegram",
-        "variantLabel": "Шапка профиля",
-        "variantHint": "черновой переключатель"
+        "emailLogin": "Вход по почте"
       },
       "email": "Email",
       "registeredAt": "Дата регистрации",

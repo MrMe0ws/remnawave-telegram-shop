@@ -325,16 +325,12 @@
       "tabHistory": "History",
       "promocodesCardTitle": "Promo codes",
       "promocodesCardHint": "Activate codes and view activation history",
-      "accountInfo": "Account information",
       "telegramId": "Telegram ID",
       "telegramIdUnlinkedHint": "Shown after you link Telegram under «Linked accounts».",
       "identity": {
         "fallbackName": "Account #{{id}}",
         "noLinkHint": "Link Telegram to show your name",
-        "emailLogin": "Email sign-in",
-        "telegramRow": "Telegram",
-        "variantLabel": "Profile header",
-        "variantHint": "draft switch"
+        "emailLogin": "Email sign-in"
       },
       "email": "Email",
       "registeredAt": "Registered",
