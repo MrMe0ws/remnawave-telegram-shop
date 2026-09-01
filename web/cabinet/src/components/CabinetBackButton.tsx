@@ -35,10 +35,12 @@ export function CabinetBackButton({ className }: CabinetBackButtonProps) {
       className={cn(
         'group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background/70 text-foreground',
         'transition-all duration-200',
-        'hover:border-[hsl(var(--cabinet-accent)/0.5)] hover:bg-secondary hover:text-secondary-foreground hover:shadow-[0_8px_22px_-10px_hsl(var(--cabinet-accent)/0.5)]',
-        'active:scale-[0.94] active:duration-100',
+        // Заливка нейтральная — прозрачное осветление поверх текущего фона,
+        // а не серый bg-secondary: он на тёмном фоне читался как пятно.
+        'hover:border-[hsl(var(--cabinet-accent)/0.5)] hover:bg-foreground/[0.06] hover:shadow-[0_8px_22px_-10px_hsl(var(--cabinet-accent)/0.5)]',
+        'active:scale-[0.94] active:bg-foreground/[0.1] active:duration-100',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        'dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-secondary/80',
+        'dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/[0.12] dark:active:bg-white/[0.16]',
         className,
       )}
     >

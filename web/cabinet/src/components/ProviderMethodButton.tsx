@@ -26,8 +26,10 @@ export function ProviderMethodButton({
       className={cn(
         'w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all duration-150',
         selected
-          ? 'border-primary bg-primary/5 shadow-sm'
-          : 'border-border hover:border-primary/40 hover:bg-secondary/50',
+          ? 'border-primary bg-primary/10 shadow-sm dark:bg-primary/[0.18]'
+          : // Своя лёгкая подложка: без неё кнопка сливалась с карточкой и держалась
+            // на одной рамке. Осветление прозрачное, поэтому работает во всех темах.
+            'border-border bg-foreground/[0.03] hover:border-primary/40 hover:bg-foreground/[0.06] dark:bg-white/[0.05] dark:hover:bg-white/[0.09]',
       )}
     >
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">{icon}</div>
