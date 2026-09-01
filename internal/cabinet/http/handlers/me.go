@@ -17,6 +17,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
+	"remnawave-tg-shop-bot/internal/cabinet/tgprofile"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/payment"
@@ -26,16 +27,19 @@ import (
 
 // MeHandler — эндпоинты /cabinet/api/me/*.
 type MeHandler struct {
-	svc                 *service.Service
-	accounts            *repository.AccountRepo
-	ids                 *repository.IdentityRepo
-	links               *repository.AccountCustomerLinkRepo
-	customers           *database.CustomerRepository
-	bootstrap           *bootstrap.CustomerBootstrap
-	payments            *payment.PaymentService
-	purchases           *database.PurchaseRepository
-	rw                  *remnawave.Client
-	adminChecker        *adminauth.Checker
+	svc          *service.Service
+	accounts     *repository.AccountRepo
+	ids          *repository.IdentityRepo
+	links        *repository.AccountCustomerLinkRepo
+	customers    *database.CustomerRepository
+	bootstrap    *bootstrap.CustomerBootstrap
+	payments     *payment.PaymentService
+	purchases    *database.PurchaseRepository
+	rw           *remnawave.Client
+	adminChecker *adminauth.Checker
+	tgProfiles   *tgprofile.Service
+	// avatarSecret — секрет кабинета: им подписываются ссылки на аватарку.
+	avatarSecret        []byte
 	cookieDomain        string
 	telegramWidgetBot   string // username без @ для Login Widget; "" — виджет недоступен
 	googleOAuthEnabled  bool
@@ -57,6 +61,8 @@ func NewMe(
 	rw *remnawave.Client,
 	customers *database.CustomerRepository,
 	adminChecker *adminauth.Checker,
+	tgProfiles *tgprofile.Service,
+	avatarSecret []byte,
 	cookieDomain string,
 	telegramWidgetBot string,
 	googleOAuthEnabled bool,
@@ -66,7 +72,8 @@ func NewMe(
 ) *MeHandler {
 	return &MeHandler{
 		svc: svc, accounts: accounts, ids: ids, links: links, bootstrap: boot, payments: payments, purchases: purchases, rw: rw,
-		customers: customers, adminChecker: adminChecker, cookieDomain: cookieDomain, telegramWidgetBot: telegramWidgetBot,
+		customers: customers, adminChecker: adminChecker, tgProfiles: tgProfiles, avatarSecret: avatarSecret,
+		cookieDomain: cookieDomain, telegramWidgetBot: telegramWidgetBot,
 		googleOAuthEnabled: googleOAuthEnabled, yandexOAuthEnabled: yandexOAuthEnabled, vkOAuthEnabled: vkOAuthEnabled, telegramOIDCEnabled: telegramOIDCEnabled,
 	}
 }
@@ -124,6 +131,8 @@ type meResp struct {
 	VKMaskedEmail     *string `json:"vk_masked_email,omitempty"`
 	// IsAdmin — true, если linked Telegram identity == ADMIN_TELEGRAM_ID.
 	IsAdmin bool `json:"is_admin"`
+	// identityProfile — имя, ник и аватарка для шапки профиля (поля инлайнятся).
+	identityProfile
 }
 
 // Me — GET /cabinet/api/me.
@@ -156,7 +165,6 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 	providers := make([]string, 0, len(ids))
 	providerSeen := make(map[string]struct{}, len(ids))
 	hasTelegram := false
-	var telegramUserID *int64
 	// После слияния двух аккаунтов с настоящими Telegram на выжившем может
 	// оказаться несколько telegram-привязок (вход работает через любую).
 	// Клиенту показываем ту, по которой его адресует бот, — см. ниже.
@@ -176,9 +184,6 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 			if s != "" {
 				if v, perr := strconv.ParseInt(s, 10, 64); perr == nil {
 					telegramIdentityIDs = append(telegramIdentityIDs, v)
-					if telegramUserID == nil {
-						telegramUserID = &v
-					}
 				}
 			}
 		}
@@ -218,22 +223,7 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if linkedCustomer != nil && !linkedCustomer.IsWebOnly &&
-		!utils.IsSyntheticTelegramID(linkedCustomer.TelegramID) {
-		v := linkedCustomer.TelegramID
-		// Источник истины для бота — customer.telegram_id. Если такая привязка
-		// у аккаунта есть, показываем именно её, а не первую попавшуюся.
-		if telegramUserID == nil {
-			telegramUserID = &v
-		} else if *telegramUserID != v {
-			for _, id := range telegramIdentityIDs {
-				if id == v {
-					telegramUserID = &v
-					break
-				}
-			}
-		}
-	}
+	telegramUserID := pickTelegramID(telegramIdentityIDs, linkedCustomer)
 
 	if hasTelegram {
 		if _, found := providerSeen[repository.ProviderTelegram]; !found {
@@ -297,6 +287,7 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 		YandexMaskedEmail:        yandexMasked,
 		VKMaskedEmail:            vkMasked,
 		IsAdmin:                  isAdmin,
+		identityProfile:          h.resolveIdentityProfile(r.Context(), acc.ID, ids, linkedCustomer, telegramUserID),
 	}
 	if h.telegramWidgetBot != "" {
 		resp.TelegramWidgetBot = h.telegramWidgetBot

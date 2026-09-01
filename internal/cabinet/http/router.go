@@ -39,6 +39,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
 	"remnawave-tg-shop-bot/internal/cabinet/supportbot"
+	"remnawave-tg-shop-bot/internal/cabinet/tgprofile"
 	"remnawave-tg-shop-bot/internal/cabinet/web"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -227,8 +228,13 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminChecker := adminauth.NewChecker(identityRepo)
 
 	contentHandler := handlers.NewCabinetContentHandler()
+	// Профили Telegram (имя + аватарка) тянутся ботом и кэшируются в процессе.
+	// Без бота сервис nil — кабинет тогда обходится данными OAuth-провайдеров.
+	tgProfiles := tgprofile.New(tgBot)
+	avatarSecret := []byte(cabcfg.JWTSecret())
+
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
-		paymentService, purchaseRepo, rw, customerRepo, adminChecker, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
+		paymentService, purchaseRepo, rw, customerRepo, adminChecker, tgProfiles, avatarSecret, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 	// Приглашения «подключить ещё устройство»: токен подписывается тем же
@@ -630,6 +636,15 @@ func registerAPIRoutes(
 			http.HandlerFunc(auth.ConfirmEmail),
 			middleware.RateLimit(verifyEmailConfirmIPLim, ipKey("email_verify_confirm")),
 		)),
+	)
+
+	// GET /avatar?t=<token> — аватарка владельца токена. Маршрут вне RequireAuth
+	// намеренно: <img> не умеет слать Authorization, доступ открывает
+	// подписанная ссылка из /me (см. пакет avatartoken).
+	api.Handle("/cabinet/api/avatar",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: http.HandlerFunc(me.Avatar),
+		}),
 	)
 
 	// ======== Защищённые эндпоинты (RequireAuth + CSRF для мутирующих) ========

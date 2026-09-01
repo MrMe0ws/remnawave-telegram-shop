@@ -202,6 +202,17 @@ export interface MeResponse {
   vk_masked_email?: string | null
   /** true, если linked Telegram identity == ADMIN_TELEGRAM_ID. */
   is_admin?: boolean
+  /** Имя для шапки профиля: Telegram → OAuth. Пусто — показываем ник или почту. */
+  display_name?: string
+  /** Ник Telegram без «@». */
+  username?: string
+  /**
+   * Аватарка: подписанная ссылка на свой /cabinet/api/avatar (Telegram) либо
+   * прямая ссылка провайдера (Google/Яндекс/VK). Пусто — рисуем инициалы.
+   */
+  avatar_url?: string
+  /** Главный способ входа — бейдж на аватарке. Не всегда источник картинки. */
+  identity_provider?: 'telegram' | 'google' | 'yandex' | 'vk'
 }
 
 export interface MergeCustomerSnapshot {
