@@ -118,7 +118,7 @@ function PartnerOverview({
     <>
       <RevealItem>
         <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
               <Wallet size={13} className="shrink-0 text-primary" />
               {t('partnerPage.overview.available')}

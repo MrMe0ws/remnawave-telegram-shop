@@ -63,7 +63,7 @@ export default function PartnerProgramPage() {
         {data && !data.enabled ? (
           <RevealItem>
             <Card>
-              <CardContent className="pt-6 text-sm text-muted-foreground">
+              <CardContent className="pt-4 sm:pt-6 text-sm text-muted-foreground">
                 {t('partnerPage.disabled')}
               </CardContent>
             </Card>
@@ -110,7 +110,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
       {rejected ? (
         <RevealItem>
           <Card className="border-destructive/40 bg-destructive/5">
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-start gap-3">
                 <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
                 <div className="min-w-0 space-y-1.5">
@@ -161,7 +161,7 @@ function PartnerLanding({ state }: { state: PartnerStateResponse }) {
       {!canApply ? (
         <RevealItem>
           <Card>
-            <CardContent className="pt-6 text-sm text-muted-foreground">
+            <CardContent className="pt-4 sm:pt-6 text-sm text-muted-foreground">
               {t('partnerPage.applicationsClosed')}
             </CardContent>
           </Card>
@@ -230,7 +230,7 @@ function PartnerSkeleton() {
   return (
     <div className="space-y-6" aria-hidden>
       <Card>
-        <CardContent className="space-y-3 pt-6">
+        <CardContent className="space-y-3 pt-4 sm:pt-6">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-full" />
           <div className="grid gap-3 sm:grid-cols-2">
@@ -240,7 +240,7 @@ function PartnerSkeleton() {
         </CardContent>
       </Card>
       <Card>
-        <CardContent className="space-y-2 pt-6">
+        <CardContent className="space-y-2 pt-4 sm:pt-6">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-4 w-full" />
           ))}

@@ -135,7 +135,7 @@ export default function RegisterPage() {
       <div className="space-y-6">
         <Logo size="sm" stacked logoSizePx={48} className="justify-center" />
         <Card>
-          <CardContent className="space-y-4 pt-6">
+          <CardContent className="space-y-4 pt-4 sm:pt-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>

@@ -59,7 +59,7 @@ export function ReferralFlow({ rules }: { rules: ReferralBonusRules }) {
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         <h2 className="text-lg font-semibold tracking-tight">{t('referralPage.flow.title')}</h2>
         <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
           {recurring

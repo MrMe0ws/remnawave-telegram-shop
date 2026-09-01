@@ -85,8 +85,11 @@ export function ReferralProgress({
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-end justify-between gap-3">
+      <CardContent className="pt-4 sm:pt-6">
+        {/* На телефоне чип уходит под число: рядом с «28 дней» ему остаётся
+            полоска в сотню пикселей, и он наезжал на цифры. От sm — в строку,
+            там ширины хватает обоим. */}
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div className="min-w-0">
             <p className="text-[12.5px] text-muted-foreground sm:text-sm">
               {t('referralPage.progress.toFreeMonth')}

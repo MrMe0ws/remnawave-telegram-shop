@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
     return (
       <AuthLayout>
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <Alert variant="destructive">
               <AlertDescription>{t('errors.unknown')}</AlertDescription>
             </Alert>

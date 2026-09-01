@@ -20,7 +20,7 @@ export function PartnerOfferFlow({ terms }: { terms: PartnerTerms }) {
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         <h2 className="text-lg font-semibold tracking-tight">{t('partnerPage.flow.title')}</h2>
         <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
           {t('partnerPage.flow.subtitle', {

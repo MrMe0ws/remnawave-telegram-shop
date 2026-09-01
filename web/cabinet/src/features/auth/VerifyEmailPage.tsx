@@ -132,7 +132,7 @@ export default function VerifyEmailPage() {
     return (
       <AuthLayout>
         <Card>
-          <CardContent className="pt-6 text-center space-y-3">
+          <CardContent className="pt-4 sm:pt-6 text-center space-y-3">
             {error ? (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>

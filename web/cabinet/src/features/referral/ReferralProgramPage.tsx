@@ -55,7 +55,7 @@ export default function ReferralProgramPage() {
    */
   return (
     <AppLayout>
-      <PageReveal className="mx-auto w-full max-w-5xl space-y-6">
+      <PageReveal className="mx-auto w-full max-w-5xl space-y-4 sm:space-y-6">
         <RevealItem>
           <PageTitleWithBack title={t('referralPage.title')} />
         </RevealItem>
@@ -128,7 +128,7 @@ function ReferralBody({
     />
   ) : (
     <Card>
-      <CardContent className="pt-6 text-sm text-muted-foreground">
+      <CardContent className="pt-4 sm:pt-6 text-sm text-muted-foreground">
         {t('referralPage.noLinks')}
       </CardContent>
     </Card>
@@ -146,6 +146,7 @@ function ReferralBody({
     data.ledger.length ? (
       <ReferralSection
         key="ledger"
+        storageKey="ledger"
         icon={History}
         title={t('referralPage.ledger.title')}
         hint={String(data.ledger.length)}
@@ -156,6 +157,7 @@ function ReferralBody({
     data.referees.length ? (
       <ReferralSection
         key="referees"
+        storageKey="referees"
         icon={Users}
         title={t('referralPage.listTitle')}
         hint={String(data.referees.length)}
@@ -166,7 +168,7 @@ function ReferralBody({
   ].filter(Boolean)
 
   const bottom = bottomCards.length ? (
-    <RevealItem className={bottomCards.length > 1 ? 'grid gap-6 lg:grid-cols-2' : undefined}>
+    <RevealItem className={bottomCards.length > 1 ? 'grid gap-4 sm:gap-6 lg:grid-cols-2' : undefined}>
       {bottomCards}
     </RevealItem>
   ) : null
@@ -183,6 +185,7 @@ function ReferralBody({
             страницы между прогрессом и приглашением. */}
         <RevealItem>
           <ReferralSection
+            storageKey="terms"
             icon={Percent}
             title={t('referralPage.termsTitle')}
             hint={referralTermsHint(rules)}
@@ -230,7 +233,7 @@ function MoreOffer({ rules }: { rules: ReferralBonusRules }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <ReferralCalculator rules={rules} />
       <ReferralFlow rules={rules} />
     </div>
@@ -240,9 +243,9 @@ function MoreOffer({ rules }: { rules: ReferralBonusRules }) {
 /** Заглушка: сводка прогресса и приглашение с QR. */
 function ReferralSkeleton() {
   return (
-    <div className="space-y-6" aria-hidden>
+    <div className="space-y-4 sm:space-y-6" aria-hidden>
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4 sm:pt-6">
           <div className="flex items-end justify-between gap-3">
             <div className="space-y-2">
               <Skeleton className="h-4 w-40" />
@@ -261,7 +264,7 @@ function ReferralSkeleton() {
       </Card>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4 sm:pt-6">
           <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6">
             <Skeleton className="h-12 w-full rounded-2xl sm:order-2" />
             <Skeleton className="mx-auto size-[196px] rounded-xl sm:order-1 sm:mx-0 sm:size-[168px]" />

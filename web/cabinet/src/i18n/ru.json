@@ -875,7 +875,8 @@
         "switchLabel": "Какую ссылку показать",
         "refereeBadge_one": "Другу +{{count}} день за первую оплату",
         "refereeBadge_few": "Другу +{{count}} дня за первую оплату",
-        "refereeBadge_many": "Другу +{{count}} дней за первую оплату"
+        "refereeBadge_many": "Другу +{{count}} дней за первую оплату",
+        "title": "Покажите QR или отправьте ссылку"
       },
       "calc": {
         "kicker": "Считаем в днях подписки",
@@ -909,9 +910,9 @@
         "daysLeft_many": "{{count}} дней",
         "barProgress": "{{n}} из {{total}} дн.",
         "needBoth": "{{friends}} или {{renewals}}",
-        "freeMonthsEarned_one": "{{count}} бесплатный месяц уже заработан",
-        "freeMonthsEarned_few": "{{count}} бесплатных месяца уже заработаны",
-        "freeMonthsEarned_many": "{{count}} бесплатных месяцев уже заработано"
+        "freeMonthsEarned_one": "{{count}} месяц уже ваш",
+        "freeMonthsEarned_few": "{{count}} месяца уже ваши",
+        "freeMonthsEarned_many": "{{count}} месяцев уже ваши"
       },
       "flow": {
         "title": "Как это работает",

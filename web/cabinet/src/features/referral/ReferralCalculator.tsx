@@ -62,7 +62,7 @@ export function ReferralCalculator({ rules }: { rules: ReferralBonusRules }) {
 
   return (
     <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
           <Gift size={13} />
           {t('referralPage.calc.kicker')}

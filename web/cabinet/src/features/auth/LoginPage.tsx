@@ -152,7 +152,7 @@ export default function LoginPage() {
       <div className="space-y-6">
         <Logo size="sm" stacked logoSizePx={48} className="justify-center" />
         <Card>
-          <CardContent className="space-y-4 pt-6">
+          <CardContent className="space-y-4 pt-4 sm:pt-6">
           {justVerified && (
             <Alert variant="success">
               <AlertDescription>{t('auth.emailVerifiedOk')}</AlertDescription>

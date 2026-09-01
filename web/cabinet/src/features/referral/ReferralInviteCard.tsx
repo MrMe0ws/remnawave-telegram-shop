@@ -40,10 +40,9 @@ const LINK_ICON: Record<ReferralLink['key'], LucideIcon> = {
  * различались только текстом, и в них приходилось вчитываться. Подпись при
  * иконке осталась: самолётик и глобус без слов угадывают не все.
  *
- * Отсюда убраны заголовок «Покажите QR или отправьте ссылку», подпись «Обе
- * ведут на ваш аккаунт» и лейбл над ссылкой: QR с кнопкой «Поделиться» не
- * нуждаются в объяснении, а на телефоне эти три строки занимали больше места,
- * чем сам код.
+ * Отсюда убраны подпись «Обе ведут на ваш аккаунт» и лейбл над ссылкой — они
+ * пересказывали то, что и так видно. Заголовок остался: без него карточка
+ * читается как «какой-то код», и что с ним делать, приходится догадываться.
  */
 export function ReferralInviteCard({
   links,
@@ -67,18 +66,25 @@ export function ReferralInviteCard({
 
   return (
     <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         {/*
-         * На телефоне — стопка: сначала выбор канала, потом код, который от
-         * него зависит. На sm+ QR уезжает в левую колонку и занимает обе
+         * На телефоне — стопка: заголовок, выбор канала, потом код, который от
+         * него зависит. На sm+ QR уезжает в левую колонку и занимает все её
          * строки, поэтому управление стоит рядом с ним, а не под ним.
+         *
+         * Строки расставлены явно (row-start), а не автоматически: без этого
+         * порядок в DOM, нужный телефону, ломал бы двухколоночную сетку.
          */}
-        <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:grid-rows-[auto_minmax(0,1fr)] sm:items-center sm:gap-x-6 sm:gap-y-4">
+        <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-x-6 sm:gap-y-4">
+          <h2 className="order-1 text-balance text-center text-base font-bold tracking-tight sm:order-none sm:col-start-2 sm:row-start-1 sm:text-left sm:text-xl">
+            {t('referralPage.invite.title')}
+          </h2>
+
           {hasSwitch ? (
             <div
               role="group"
               aria-label={t('referralPage.invite.switchLabel')}
-              className="order-1 flex gap-1 rounded-2xl border border-border bg-secondary p-1 sm:order-none sm:col-start-2 sm:row-start-1"
+              className="order-2 flex gap-1 rounded-2xl border border-border bg-secondary p-1 sm:order-none sm:col-start-2 sm:row-start-2"
             >
               {links.map((link) => {
                 const Icon = LINK_ICON[link.key]
@@ -108,7 +114,12 @@ export function ReferralInviteCard({
               QR сканируют с чужого телефона под углом и при бликах. */}
           {/* Без внутреннего отступа: тихая зона по краям есть у самого кода,
               и внешний padding только удваивал белое поле. */}
-          <div className="order-2 mx-auto w-full max-w-[196px] overflow-hidden rounded-xl bg-white shadow-sm sm:order-none sm:col-start-1 sm:row-start-1 sm:row-span-2 sm:mx-0 sm:max-w-[168px] sm:self-center">
+          <div
+            className={cn(
+              'order-3 mx-auto w-full max-w-[196px] overflow-hidden rounded-xl bg-white shadow-sm sm:order-none sm:col-start-1 sm:row-start-1 sm:mx-0 sm:max-w-[168px] sm:self-center',
+              hasSwitch ? 'sm:row-span-3' : 'sm:row-span-2',
+            )}
+          >
             <QrCode
               value={active.url}
               size={196}
@@ -119,10 +130,10 @@ export function ReferralInviteCard({
 
           <div
             className={cn(
-              'order-3 flex min-w-0 flex-col gap-3 sm:order-none sm:col-start-2',
-              // Без переключателя первая строка сетки пустует — тогда правая
-              // колонка занимает обе и встаёт по центру кода.
-              hasSwitch ? 'sm:row-start-2 sm:self-start' : 'sm:row-start-1 sm:row-span-2 sm:self-center',
+              'order-4 flex min-w-0 flex-col gap-3 sm:order-none sm:col-start-2 sm:self-start',
+              // Без переключателя строки на одну меньше, и подвал колонки
+              // поднимается на его место.
+              hasSwitch ? 'sm:row-start-3' : 'sm:row-start-2',
             )}
           >
             {refereeDays > 0 ? (

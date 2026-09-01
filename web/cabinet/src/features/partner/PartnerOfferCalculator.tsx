@@ -76,7 +76,7 @@ export function PartnerOfferCalculator({
 
   return (
     <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-stretch">
           <div className="flex flex-col">
             <p className="text-xs font-bold uppercase tracking-[0.08em] text-primary">

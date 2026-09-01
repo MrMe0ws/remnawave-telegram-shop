@@ -142,7 +142,7 @@ export function PartnerPayoutsTab({ partner }: { partner: PartnerAccountDTO }) {
     <>
       <RevealItem>
         <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5">
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {t('partnerPage.overview.available')}
             </p>

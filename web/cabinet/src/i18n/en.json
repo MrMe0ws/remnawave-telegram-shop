@@ -751,7 +751,8 @@
         "linkLabel": "The link your friend will see",
         "switchLabel": "Which link to show",
         "refereeBadge_one": "+{{count}} day for your friend's first payment",
-        "refereeBadge_other": "+{{count}} days for your friend's first payment"
+        "refereeBadge_other": "+{{count}} days for your friend's first payment",
+        "title": "Show the QR or send the link"
       },
       "calc": {
         "kicker": "Counted in subscription days",
@@ -781,8 +782,8 @@
         "daysLeft_other": "{{count}} days",
         "barProgress": "{{n}} of {{total}} d.",
         "needBoth": "{{friends}} or {{renewals}}",
-        "freeMonthsEarned_one": "{{count}} free month already earned",
-        "freeMonthsEarned_other": "{{count}} free months already earned"
+        "freeMonthsEarned_one": "{{count}} free month is yours",
+        "freeMonthsEarned_other": "{{count}} free months are yours"
       },
       "flow": {
         "title": "How it works",

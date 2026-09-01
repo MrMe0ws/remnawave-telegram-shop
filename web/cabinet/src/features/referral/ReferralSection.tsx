@@ -1,9 +1,38 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useCallback, useId, useState, type ReactNode } from 'react'
 import { ChevronDown, type LucideIcon } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { cn } from '@/lib/utils'
+
+/** Префикс ключа в localStorage: одна секция — одна запись. */
+const STORAGE_PREFIX = 'cab_ref_section_'
+
+/**
+ * Состояние секции из localStorage.
+ *
+ * Приватный режим и запрет на хранилище кидают прямо на чтении, поэтому всё
+ * обёрнуто: свёрнутая секция — не та вещь, ради которой можно уронить страницу.
+ * Ничего не записано — возвращаем null, и решает умолчание по ширине экрана.
+ */
+function readStored(key: string): boolean | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key)
+    if (raw === '1') return true
+    if (raw === '0') return false
+    return null
+  } catch {
+    return null
+  }
+}
+
+function writeStored(key: string, open: boolean) {
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, open ? '1' : '0')
+  } catch {
+    // приватный режим или переполненное хранилище — не наша беда
+  }
+}
 
 /**
  * Сворачиваемая секция страницы рефералки: условия, лента начислений, список
@@ -18,14 +47,17 @@ import { cn } from '@/lib/utils'
  * начислений отвечают на вопрос целиком, и разворачивать секцию нужно уже
  * только за подробностями.
  *
- * По умолчанию на телефоне свёрнуто, на десктопе раскрыто: там места хватает,
- * а лишний тап только раздражает. Стартовое значение берётся синхронно из
- * matchMedia, поэтому секция не мигает раскрытой на первом кадре.
+ * Выбор запоминается в localStorage по `storageKey`: кто развернул ленту
+ * начислений, тот обычно следит за ней и дальше, и заставлять его тапать при
+ * каждом заходе незачем. Пока выбора не было, работает умолчание — на телефоне
+ * свёрнуто, на десктопе раскрыто, там места хватает. Оба значения берутся
+ * синхронно на первом рендере, поэтому секция не мигает.
  */
 export function ReferralSection({
   icon: Icon,
   title,
   hint,
+  storageKey,
   children,
   className,
 }: {
@@ -33,12 +65,21 @@ export function ReferralSection({
   title: string
   /** Короткая сводка справа в шапке: она и есть ответ, пока секция свёрнута. */
   hint?: string
+  /** Под каким ключом запоминать состояние. */
+  storageKey: string
   children: ReactNode
   className?: string
 }) {
   const isMobile = useIsMobile()
-  const [open, setOpen] = useState(!isMobile)
+  const [open, setOpen] = useState(() => readStored(storageKey) ?? !isMobile)
   const bodyId = useId()
+
+  const toggle = useCallback(() => {
+    setOpen((prev) => {
+      writeStored(storageKey, !prev)
+      return !prev
+    })
+  }, [storageKey])
 
   return (
     <Card className={cn('h-full overflow-hidden', className)}>
@@ -46,7 +87,7 @@ export function ReferralSection({
         type="button"
         aria-expanded={open}
         aria-controls={bodyId}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <Icon size={17} className="shrink-0 text-muted-foreground" />
