@@ -17,6 +17,7 @@ var ValidDecorThemeIDs = []string{
 	"ocean",
 	"new_year",
 	"slate",
+	"carbon",
 	"aurora",
 	"nebula",
 	"violet",

@@ -313,7 +313,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_BRAND_LOGO_URL` / `CABINET_BRAND_LOGO_FILE` / `CABINET_BRAND_LOGO_FILE_BASE` | Логотип |
 | `CABINET_PWA_ENABLED` / `CABINET_PWA_APP_NAME` / `CABINET_PWA_SHORT_NAME` | PWA |
 | `CABINET_LIGHT_THEME_ENABLED` | Светлая тема (`true` по умолчанию) |
-| `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `neon`, `ocean`, `new_year`, `slate`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `sunset`, `orange`, `halloween`, `yellow`, `summer`, `black_friday`. Меняется в админке без рестарта |
+| `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `neon`, `ocean`, `new_year`, `slate`, `carbon`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `sunset`, `orange`, `halloween`, `yellow`, `summer`, `black_friday`. Меняется в админке без рестарта |
 | `CABINET_TARIFF_PRICE_DISPLAY` | Витрина: `monthly` или `marketing` |
 | `CABINET_DEEPLINK_HAPP_ENCRYPT` | Шифровать Happ deep link (`happ://crypt5/`) |
 | `CABINET_DEEPLINK_INCY_ENCRYPT` | Обфусцировать INCY deep link (`incy://crypt1/`) |

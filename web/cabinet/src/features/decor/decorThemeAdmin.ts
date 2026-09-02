@@ -3,7 +3,15 @@ import type { CSSProperties } from 'react'
 import type { DecorThemeId } from './decorThemes'
 
 /** Только акцентные цвета — без частиц, сцен и кастомных иконок. */
-export const DECOR_COLOR_ONLY_THEMES = ['green', 'pink', 'orange', 'yellow', 'violet', 'slate'] as const
+export const DECOR_COLOR_ONLY_THEMES = [
+  'green',
+  'pink',
+  'orange',
+  'yellow',
+  'violet',
+  'slate',
+  'carbon',
+] as const
 
 export type DecorColorOnlyThemeId = (typeof DECOR_COLOR_ONLY_THEMES)[number]
 
@@ -19,6 +27,7 @@ export const DECOR_THEME_ADMIN_LABEL_COLOR: Partial<Record<DecorThemeId, string>
   yellow: 'hsl(38 92% 46%)',
   violet: 'hsl(262 70% 52%)',
   slate: 'hsl(215 16% 46%)',
+  carbon: 'hsl(192 40% 52%)',
   neon: 'hsl(186 100% 42%)',
   new_year: 'hsl(198 85% 52%)',
   summer: 'hsl(38 92% 46%)',

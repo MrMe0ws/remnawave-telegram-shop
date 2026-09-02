@@ -18,6 +18,7 @@ var cabinetDecorThemeIDs = []string{
 	"ocean",
 	"new_year",
 	"slate",
+	"carbon",
 	"aurora",
 	"nebula",
 	"violet",

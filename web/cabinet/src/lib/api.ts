@@ -150,6 +150,7 @@ export interface AuthBootstrapResponse {
     | 'yellow'
     | 'violet'
     | 'slate'
+    | 'carbon'
     | 'new_year'
     | 'summer'
     | 'neon'
