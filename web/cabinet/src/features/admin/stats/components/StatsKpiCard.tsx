@@ -23,7 +23,7 @@ interface StatsKpiCardProps {
  */
 export function StatsKpiCard({ icon, color, label, value, hint, className }: StatsKpiCardProps) {
   return (
-    <div className={cn('cabinet-elevated-card flex flex-col gap-2 px-5 py-4', className)}>
+    <div className={cn('cabinet-elevated-card stats-ring flex flex-col gap-2 p-4 sm:px-5', className)}>
       <div className="flex items-center gap-2.5">
         <StatsIconChip icon={icon} color={color} />
         <span className="min-w-0 truncate text-[13px] text-muted-foreground">{label}</span>
@@ -58,7 +58,7 @@ export function StatsMiniCard({
   className?: string
 }) {
   return (
-    <div className={cn('cabinet-elevated-card px-5 py-4', className)}>
+    <div className={cn('cabinet-elevated-card stats-ring p-4 sm:px-5', className)}>
       <div className="flex items-center gap-2">
         <Icon className="size-4 shrink-0" style={{ color }} aria-hidden />
         <span className="min-w-0 truncate text-[13px] text-muted-foreground">{label}</span>

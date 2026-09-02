@@ -60,7 +60,7 @@ export function TopReferrersTable({
       ) : (
         <>
           <div className="-mx-1 overflow-x-auto px-1">
-            <div className="grid min-w-[24rem] grid-cols-[1.25rem_minmax(0,1fr)_4.5rem_6rem_4rem] items-center gap-x-3 gap-y-2.5">
+            <div className="grid min-w-[27rem] grid-cols-[1.25rem_minmax(8rem,1fr)_4.5rem_6rem_4rem] items-center gap-x-3 gap-y-2.5">
               <div />
               <div className="text-xs text-muted-foreground">{t('admin.stats.refColUser')}</div>
               <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">

@@ -194,6 +194,13 @@ type PromoAdminStatsTopRow struct {
 	Active      bool
 	UsesCount   int
 	Redemptions int
+	// Что код даёт. Без этого в статистике стоит голый код, и понять, за что
+	// его гасят — за дни, скидку или устройства, — нельзя.
+	Type             string
+	SubscriptionDays *int
+	TrialDays        *int
+	ExtraHwidDelta   *int
+	DiscountPercent  *int
 }
 
 // PromoAdminStatsSnapshot — агрегат для админ-статистики промокодов.
@@ -231,7 +238,8 @@ func (r *PromoRepository) AdminStatsSnapshot(ctx context.Context) (PromoAdminSta
 	}
 
 	rows, err := r.pool.Query(ctx, `
-SELECT pc.id, pc.code, pc.active, pc.uses_count, COUNT(pr.id)::int AS redemptions
+SELECT pc.id, pc.code, pc.active, pc.uses_count, COUNT(pr.id)::int AS redemptions,
+       pc.type, pc.subscription_days, pc.trial_days, pc.extra_hwid_delta, pc.discount_percent
 FROM promo_code pc
 LEFT JOIN promo_redemption pr ON pr.promo_code_id = pc.id
 GROUP BY pc.id
@@ -244,7 +252,10 @@ LIMIT 12`)
 
 	for rows.Next() {
 		var row PromoAdminStatsTopRow
-		if err := rows.Scan(&row.ID, &row.Code, &row.Active, &row.UsesCount, &row.Redemptions); err != nil {
+		if err := rows.Scan(
+			&row.ID, &row.Code, &row.Active, &row.UsesCount, &row.Redemptions,
+			&row.Type, &row.SubscriptionDays, &row.TrialDays, &row.ExtraHwidDelta, &row.DiscountPercent,
+		); err != nil {
 			return snap, err
 		}
 		snap.TopByRedemptions = append(snap.TopByRedemptions, row)

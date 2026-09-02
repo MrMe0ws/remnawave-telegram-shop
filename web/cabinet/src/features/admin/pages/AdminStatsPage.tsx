@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, Gift, LayoutGrid, Loader2, RefreshCw, Users, Wallet } from 'lucide-react'
+import { BarChart3, Check, Gift, LayoutGrid, Loader2, RefreshCw, Users, Wallet } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { useAdminShell } from '../layout/AdminShellContext'
@@ -39,6 +39,9 @@ function AdminStatsPageContent() {
   const { mobileHeaderVisible } = useAdminShell()
   useAdminMobileHeaderAutoHide(true)
   const [tab, setTab] = useState<StatsTabKey>('overview')
+  // Галочка вместо иконки на пару секунд после успешного обновления — иначе
+  // по спиннеру, который гаснет за долю секунды, непонятно, случилось ли что-то.
+  const [refreshDone, setRefreshDone] = useState(false)
   const [period, setPeriod] = useState<StatsPeriod>('month')
   const [customRange, setCustomRange] = useState<StatsCustomRange | null>(null)
 
@@ -88,13 +91,20 @@ function AdminStatsPageContent() {
     setPeriod('custom')
   }
 
-  const handleRefresh = () => {
-    void refetch()
-    void refetchTimeseries()
-    void refetchInsights()
-    void refetchFortune()
-    void refetchLoyalty()
-    void refetchPromo()
+  const handleRefresh = async () => {
+    setRefreshDone(false)
+    const results = await Promise.all([
+      refetch(),
+      refetchTimeseries(),
+      refetchInsights(),
+      refetchFortune(),
+      refetchLoyalty(),
+      refetchPromo(),
+    ])
+    if (results.every((r) => !r.isError)) {
+      setRefreshDone(true)
+      setTimeout(() => setRefreshDone(false), 2000)
+    }
   }
 
   const updatedLabel = useMemo(() => {
@@ -122,16 +132,21 @@ function AdminStatsPageContent() {
   // Кнопка «Обновить» — только иконка, ростом ровно с селектором периода и
   // кнопкой календаря: три разновысоких контрола в углу выглядели случайной
   // россыпью.
+  const refreshLabel = refreshDone ? t('admin.stats.refreshDone') : t('admin.stats.refresh')
   const refreshButton = (
     <button
       type="button"
-      onClick={handleRefresh}
+      onClick={() => void handleRefresh()}
       disabled={refreshing}
-      aria-label={t('admin.stats.refresh')}
-      title={t('admin.stats.refresh')}
+      aria-label={refreshLabel}
+      title={refreshLabel}
       className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card transition-colors hover:bg-accent disabled:opacity-50"
     >
-      <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+      {refreshDone ? (
+        <Check className="size-4 animate-fade-in text-emerald-500 dark:text-emerald-400" />
+      ) : (
+        <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+      )}
     </button>
   )
 

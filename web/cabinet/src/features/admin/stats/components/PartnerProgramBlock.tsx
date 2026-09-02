@@ -1,5 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { Briefcase } from 'lucide-react'
+import {
+  Banknote,
+  Briefcase,
+  Clock,
+  HandCoins,
+  UserCheck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 
 import type { AdminPartnerProgramDTO } from '@/lib/types/admin'
 import { cn } from '@/lib/utils'
@@ -35,23 +43,34 @@ export function PartnerProgramBlock({
   const baseShare =
     totalCustomers > 0 ? Math.round((data.customers * 100) / totalCustomers) : 0
 
-  const cells = [
+  const cells: {
+    icon: LucideIcon
+    label: string
+    value: string
+    hint: string
+    separated?: boolean
+    accent?: string
+  }[] = [
     {
+      icon: Briefcase,
       label: t('admin.stats.partnerActive'),
       value: data.partners_active.toLocaleString(numberLocale),
       hint: t('admin.stats.partnerPending', { count: data.partners_pending }),
     },
     {
+      icon: Users,
       label: t('admin.stats.partnerCustomers'),
       value: data.customers.toLocaleString(numberLocale),
       hint: t('admin.stats.partnerBaseShare', { pct: baseShare }),
     },
     {
+      icon: UserCheck,
       label: t('admin.stats.partnerPaying'),
       value: data.paying_customers.toLocaleString(numberLocale),
       hint: t('admin.stats.partnerConversion', { pct: conv }),
     },
     {
+      icon: Banknote,
       label: t('admin.stats.partnerEarnedTotalLabel'),
       value: formatRub(data.earned_total, numberLocale),
       hint: t('admin.stats.partnerEarnedPeriodHint', {
@@ -59,11 +78,13 @@ export function PartnerProgramBlock({
       }),
     },
     {
+      icon: HandCoins,
       label: t('admin.stats.partnerPaidTotal'),
       value: formatRub(data.paid_total, numberLocale),
       hint: t('admin.stats.partnerOpenPayouts', { count: data.open_payouts }),
     },
     {
+      icon: Clock,
       label: t('admin.stats.partnerDue'),
       value: formatRub(data.available_balance, numberLocale),
       hint: t('admin.stats.partnerHoldHint', {
@@ -91,7 +112,10 @@ export function PartnerProgramBlock({
               cell.separated && 'xl:border-l xl:border-border/50 xl:pl-4',
             )}
           >
-            <div className="truncate text-xs text-muted-foreground">{cell.label}</div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <cell.icon className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{cell.label}</span>
+            </div>
             <div
               className="mt-1 truncate text-xl font-semibold tabular-nums"
               style={cell.accent ? { color: cell.accent } : undefined}
@@ -109,7 +133,7 @@ export function PartnerProgramBlock({
             {t('admin.stats.partnerTopTitle')}
           </p>
           <div className="-mx-1 overflow-x-auto px-1">
-            <div className="grid min-w-[22rem] grid-cols-[1.25rem_minmax(0,1fr)_5rem_5rem_6rem] items-center gap-x-3 gap-y-2.5">
+            <div className="grid min-w-[27rem] grid-cols-[1.25rem_minmax(8rem,1fr)_5rem_5rem_6rem] items-center gap-x-3 gap-y-2.5">
               <div />
               <div className="text-xs text-muted-foreground">
                 {t('admin.stats.partnerColPartner')}

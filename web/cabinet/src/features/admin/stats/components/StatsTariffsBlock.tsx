@@ -59,7 +59,7 @@ export function StatsTariffsBlock({
       />
 
       <div className="-mx-1 overflow-x-auto px-1">
-        <div className="grid min-w-[26rem] grid-cols-[minmax(0,1.3fr)_5rem_7rem_minmax(0,1fr)] items-center gap-x-3.5 gap-y-3 text-[13px]">
+        <div className="grid min-w-[28rem] grid-cols-[minmax(7rem,1.3fr)_5rem_7rem_minmax(6rem,1fr)] items-center gap-x-3.5 gap-y-3 text-[13px]">
           <div className="text-xs text-muted-foreground">{t('admin.stats.tariffName')}</div>
           <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
             <Tag className="size-3.5 shrink-0" aria-hidden />

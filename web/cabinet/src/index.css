@@ -465,6 +465,73 @@
   }
 
   /*
+   * То же кольцо, но по явной пометке — для админ-статистики.
+   *
+   * Слой выше ограничен .cabinet-shell намеренно: включать пластику всей
+   * админке разом нельзя, там десятки таблиц и форм, где кольцо на наведении
+   * стало бы шумом. Здесь оно нужно на карточках статистики, поэтому класс
+   * навешивается точечно, а рецепт переиспользуется целиком.
+   */
+  .stats-ring {
+    position: relative;
+    isolation: isolate;
+    transition:
+      border-color 0.4s var(--cabinet-ease),
+      box-shadow 0.4s var(--cabinet-ease);
+    --cabinet-accent: var(--primary);
+    --cabinet-ring-mid: 262 83% 68%;
+  }
+
+  .stats-ring::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--cabinet-accent) / 0.85) 0%,
+      hsl(var(--cabinet-ring-mid) / 0.4) 50%,
+      hsl(var(--cabinet-accent) / 0.85) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s var(--cabinet-ease);
+  }
+
+  .stats-ring:hover,
+  .stats-ring:focus-within {
+    border-color: transparent !important;
+  }
+
+  .stats-ring:hover::before,
+  .stats-ring:focus-within::before {
+    opacity: 1;
+  }
+
+  .dark .stats-ring:hover {
+    box-shadow:
+      0 22px 50px -18px hsl(var(--cabinet-accent) / 0.18),
+      inset 0 1px 0 rgb(255 255 255 / 0.06) !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stats-ring,
+    .stats-ring::before {
+      transition: none;
+    }
+  }
+
+  /*
    * Строка-действие: подсветка фона и сдвиг шеврона на наведении.
    * Цвет берётся из акцента блока, поэтому у каждой строки он свой.
    */

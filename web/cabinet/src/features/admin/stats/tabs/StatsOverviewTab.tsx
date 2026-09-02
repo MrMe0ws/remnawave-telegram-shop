@@ -248,8 +248,18 @@ export function StatsOverviewTab({
               ? '—'
               : `${fortuneNet > 0 ? '+' : fortuneNet < 0 ? '−' : ''}${Math.abs(fortuneNet).toLocaleString(numberLocale)}`
           }
-          valueClassName={fortuneNet !== null && fortuneNet < 0 ? 'text-rose-500' : undefined}
-          hint={t('admin.stats.fortuneNetHint')}
+          valueClassName={
+            fortuneNet === null || fortuneNet === 0
+              ? undefined
+              : fortuneNet < 0
+                ? 'text-rose-500'
+                : 'text-emerald-500'
+          }
+          hint={t(
+            fortuneNet !== null && fortuneNet < 0
+              ? 'admin.stats.fortuneNetLoss'
+              : 'admin.stats.fortuneNetGain',
+          )}
         />
       </div>
 

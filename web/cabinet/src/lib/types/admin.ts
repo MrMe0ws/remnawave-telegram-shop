@@ -250,6 +250,12 @@ export interface AdminPromoStatsTopDTO {
   active: boolean
   uses_count: number
   redemptions: number
+  /** subscription_days | trial | extra_hwid | discount */
+  type: string
+  subscription_days?: number | null
+  trial_days?: number | null
+  extra_hwid_delta?: number | null
+  discount_percent?: number | null
 }
 
 export interface AdminPromoStatsDTO {

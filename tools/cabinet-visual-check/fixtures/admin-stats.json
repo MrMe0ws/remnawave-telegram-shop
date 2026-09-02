@@ -1,0 +1,1589 @@
+{
+  "/admin/stats": {
+    "captured_at": "2026-09-02T14:20:00Z",
+    "total_customers": 3418,
+    "active_subscriptions": 1247,
+    "new_today": 12,
+    "new_week": 61,
+    "new_month": 184,
+    "new_prev_month": 196,
+    "new_half_year": 900,
+    "new_year": 1800,
+    "trial_active": 203,
+    "paid_active": 1044,
+    "inactive": 1968,
+    "inactive_paid": 168,
+    "inactive_unpaid": 1800,
+    "sales_sub_today": 9,
+    "sales_sub_week": 74,
+    "sales_sub_month": 312,
+    "sales_sub_prev_month": 286,
+    "sales_sub_half_year": 1400,
+    "sales_sub_year": 2600,
+    "revenue_month_rub": 486200,
+    "revenue_today_rub": 18400,
+    "revenue_week_rub": 112800,
+    "revenue_half_year_rub": 2400000,
+    "revenue_year_rub": 4100000,
+    "revenue_all_time_rub": 5200000,
+    "revenue_subs_month_rub": 461000,
+    "transactions_today": 12,
+    "transactions_week": 74,
+    "transactions_month": 312,
+    "transactions_half_year": 1400,
+    "transactions_year": 2600,
+    "unique_payers_day": 11,
+    "unique_payers_week": 58,
+    "unique_payers_month": 231,
+    "unique_payers_half_year": 900,
+    "unique_payers_year": 1700,
+    "payment_rub_by_invoice": {
+      "yookasa": 213928,
+      "plt_sbp": 121000,
+      "telegram": 78000,
+      "heleket": 44000,
+      "crypto": 29272
+    },
+    "distinct_referrers": 64,
+    "active_referrers": 23,
+    "ref_bonus_days_all": 418,
+    "ref_bonus_days_today": 4,
+    "ref_bonus_days_week": 26,
+    "ref_bonus_days_month": 96,
+    "ref_bonus_days_half_year": 300,
+    "ref_bonus_days_year": 400,
+    "top_referrers": [
+      {
+        "referrer_id": 1,
+        "customer_id": 1,
+        "telegram_username": "vpn_hunter",
+        "nickname": null,
+        "referees": 24,
+        "paid_referees": 17,
+        "revenue_rub": 28400,
+        "bonus_days": 68
+      },
+      {
+        "referrer_id": 2,
+        "customer_id": 2,
+        "telegram_username": "setevoy",
+        "nickname": null,
+        "referees": 19,
+        "paid_referees": 12,
+        "revenue_rub": 19800,
+        "bonus_days": 48
+      },
+      {
+        "referrer_id": 3,
+        "customer_id": 3,
+        "telegram_username": null,
+        "nickname": "Кирилл",
+        "referees": 15,
+        "paid_referees": 9,
+        "revenue_rub": 14100,
+        "bonus_days": 36
+      },
+      {
+        "referrer_id": 4,
+        "customer_id": 4,
+        "telegram_username": "anon_dev",
+        "nickname": null,
+        "referees": 12,
+        "paid_referees": 7,
+        "revenue_rub": 11200,
+        "bonus_days": 28
+      },
+      {
+        "referrer_id": 5,
+        "customer_id": 5,
+        "telegram_username": "mira",
+        "nickname": null,
+        "referees": 9,
+        "paid_referees": 5,
+        "revenue_rub": 7400,
+        "bonus_days": 20
+      },
+      {
+        "referrer_id": 6,
+        "customer_id": 6,
+        "telegram_username": "oleg",
+        "nickname": null,
+        "referees": 7,
+        "paid_referees": 4,
+        "revenue_rub": 5200,
+        "bonus_days": 16
+      }
+    ],
+    "tariff_breakdown": [
+      {
+        "tariff_id": 1,
+        "display_name": "Оптимальный",
+        "sales_today": 4,
+        "sales_week": 30,
+        "sales_month": 97,
+        "sales_half_year": 500,
+        "sales_year": 900,
+        "subs_revenue_month": 184700,
+        "revenue_today": 7000,
+        "revenue_week": 44000,
+        "revenue_half_year": 900000,
+        "revenue_year": 1600000,
+        "revenue_all": 2000000,
+        "active_paid_users": 420
+      },
+      {
+        "tariff_id": 2,
+        "display_name": "Базовый",
+        "sales_today": 3,
+        "sales_week": 22,
+        "sales_month": 86,
+        "sales_half_year": 400,
+        "sales_year": 700,
+        "subs_revenue_month": 121500,
+        "revenue_today": 4000,
+        "revenue_week": 30000,
+        "revenue_half_year": 600000,
+        "revenue_year": 1000000,
+        "revenue_all": 1300000,
+        "active_paid_users": 310
+      },
+      {
+        "tariff_id": 3,
+        "display_name": "Годовой",
+        "sales_today": 1,
+        "sales_week": 9,
+        "sales_month": 41,
+        "sales_half_year": 200,
+        "sales_year": 380,
+        "subs_revenue_month": 112000,
+        "revenue_today": 5000,
+        "revenue_week": 26000,
+        "revenue_half_year": 500000,
+        "revenue_year": 900000,
+        "revenue_all": 1100000,
+        "active_paid_users": 180
+      },
+      {
+        "tariff_id": 4,
+        "display_name": "Пробный+",
+        "sales_today": 1,
+        "sales_week": 13,
+        "sales_month": 88,
+        "sales_half_year": 300,
+        "sales_year": 620,
+        "subs_revenue_month": 68000,
+        "revenue_today": 2400,
+        "revenue_week": 12800,
+        "revenue_half_year": 400000,
+        "revenue_year": 600000,
+        "revenue_all": 800000,
+        "active_paid_users": 134
+      }
+    ]
+  },
+  "/admin/stats/timeseries": {
+    "captured_at": "2026-09-02T14:20:00Z",
+    "period": "month",
+    "granularity": "day",
+    "from": "2026-09-01",
+    "to": "2026-09-14",
+    "points": [
+      {
+        "date": "2026-09-01",
+        "revenue_rub": 12000,
+        "sales": 8,
+        "new_users": 9,
+        "transactions": 10
+      },
+      {
+        "date": "2026-09-02",
+        "revenue_rub": 16446,
+        "sales": 9,
+        "new_users": 12,
+        "transactions": 11
+      },
+      {
+        "date": "2026-09-03",
+        "revenue_rub": 19973,
+        "sales": 10,
+        "new_users": 15,
+        "transactions": 12
+      },
+      {
+        "date": "2026-09-04",
+        "revenue_rub": 21869,
+        "sales": 11,
+        "new_users": 9,
+        "transactions": 13
+      },
+      {
+        "date": "2026-09-05",
+        "revenue_rub": 21783,
+        "sales": 12,
+        "new_users": 12,
+        "transactions": 14
+      },
+      {
+        "date": "2026-09-06",
+        "revenue_rub": 19804,
+        "sales": 13,
+        "new_users": 15,
+        "transactions": 15
+      },
+      {
+        "date": "2026-09-07",
+        "revenue_rub": 16446,
+        "sales": 14,
+        "new_users": 9,
+        "transactions": 10
+      },
+      {
+        "date": "2026-09-08",
+        "revenue_rub": 12525,
+        "sales": 8,
+        "new_users": 12,
+        "transactions": 11
+      },
+      {
+        "date": "2026-09-09",
+        "revenue_rub": 8986,
+        "sales": 9,
+        "new_users": 15,
+        "transactions": 12
+      },
+      {
+        "date": "2026-09-10",
+        "revenue_rub": 6687,
+        "sales": 10,
+        "new_users": 9,
+        "transactions": 13
+      },
+      {
+        "date": "2026-09-11",
+        "revenue_rub": 6211,
+        "sales": 11,
+        "new_users": 12,
+        "transactions": 14
+      },
+      {
+        "date": "2026-09-12",
+        "revenue_rub": 7735,
+        "sales": 12,
+        "new_users": 15,
+        "transactions": 15
+      },
+      {
+        "date": "2026-09-13",
+        "revenue_rub": 10992,
+        "sales": 13,
+        "new_users": 9,
+        "transactions": 10
+      },
+      {
+        "date": "2026-09-14",
+        "revenue_rub": 15327,
+        "sales": 14,
+        "new_users": 12,
+        "transactions": 11
+      }
+    ],
+    "tariff_series": []
+  },
+  "/admin/stats/insights": {
+    "captured_at": "2026-09-02T14:20:00Z",
+    "period": "month",
+    "from": "2026-09-01",
+    "to": "2026-09-14",
+    "tz_offset_minutes": 180,
+    "funnel": {
+      "registered": 184,
+      "invoiced": 114,
+      "paid": 63,
+      "invoices_created": 390,
+      "invoices_paid": 312
+    },
+    "heatmap": [
+      {
+        "weekday": 1,
+        "hour": 0,
+        "revenue_rub": 270,
+        "sales": 2
+      },
+      {
+        "weekday": 1,
+        "hour": 1,
+        "revenue_rub": 315,
+        "sales": 3
+      },
+      {
+        "weekday": 1,
+        "hour": 2,
+        "revenue_rub": 360,
+        "sales": 4
+      },
+      {
+        "weekday": 1,
+        "hour": 3,
+        "revenue_rub": 405,
+        "sales": 1
+      },
+      {
+        "weekday": 1,
+        "hour": 4,
+        "revenue_rub": 450,
+        "sales": 2
+      },
+      {
+        "weekday": 1,
+        "hour": 5,
+        "revenue_rub": 270,
+        "sales": 3
+      },
+      {
+        "weekday": 1,
+        "hour": 6,
+        "revenue_rub": 315,
+        "sales": 4
+      },
+      {
+        "weekday": 1,
+        "hour": 7,
+        "revenue_rub": 360,
+        "sales": 1
+      },
+      {
+        "weekday": 1,
+        "hour": 8,
+        "revenue_rub": 1350,
+        "sales": 2
+      },
+      {
+        "weekday": 1,
+        "hour": 9,
+        "revenue_rub": 1500,
+        "sales": 3
+      },
+      {
+        "weekday": 1,
+        "hour": 10,
+        "revenue_rub": 900,
+        "sales": 4
+      },
+      {
+        "weekday": 1,
+        "hour": 11,
+        "revenue_rub": 1050,
+        "sales": 1
+      },
+      {
+        "weekday": 1,
+        "hour": 12,
+        "revenue_rub": 1200,
+        "sales": 2
+      },
+      {
+        "weekday": 1,
+        "hour": 13,
+        "revenue_rub": 1350,
+        "sales": 3
+      },
+      {
+        "weekday": 1,
+        "hour": 14,
+        "revenue_rub": 1500,
+        "sales": 4
+      },
+      {
+        "weekday": 1,
+        "hour": 15,
+        "revenue_rub": 900,
+        "sales": 1
+      },
+      {
+        "weekday": 1,
+        "hour": 16,
+        "revenue_rub": 2520,
+        "sales": 2
+      },
+      {
+        "weekday": 1,
+        "hour": 17,
+        "revenue_rub": 2880,
+        "sales": 3
+      },
+      {
+        "weekday": 1,
+        "hour": 18,
+        "revenue_rub": 3240,
+        "sales": 4
+      },
+      {
+        "weekday": 1,
+        "hour": 19,
+        "revenue_rub": 3600,
+        "sales": 1
+      },
+      {
+        "weekday": 1,
+        "hour": 20,
+        "revenue_rub": 2160,
+        "sales": 2
+      },
+      {
+        "weekday": 1,
+        "hour": 21,
+        "revenue_rub": 2520,
+        "sales": 3
+      },
+      {
+        "weekday": 1,
+        "hour": 22,
+        "revenue_rub": 2880,
+        "sales": 4
+      },
+      {
+        "weekday": 1,
+        "hour": 23,
+        "revenue_rub": 3240,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 0,
+        "revenue_rub": 270,
+        "sales": 3
+      },
+      {
+        "weekday": 2,
+        "hour": 1,
+        "revenue_rub": 360,
+        "sales": 4
+      },
+      {
+        "weekday": 2,
+        "hour": 2,
+        "revenue_rub": 450,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 3,
+        "revenue_rub": 315,
+        "sales": 2
+      },
+      {
+        "weekday": 2,
+        "hour": 4,
+        "revenue_rub": 405,
+        "sales": 3
+      },
+      {
+        "weekday": 2,
+        "hour": 5,
+        "revenue_rub": 270,
+        "sales": 4
+      },
+      {
+        "weekday": 2,
+        "hour": 6,
+        "revenue_rub": 360,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 7,
+        "revenue_rub": 450,
+        "sales": 2
+      },
+      {
+        "weekday": 2,
+        "hour": 8,
+        "revenue_rub": 1050,
+        "sales": 3
+      },
+      {
+        "weekday": 2,
+        "hour": 9,
+        "revenue_rub": 1350,
+        "sales": 4
+      },
+      {
+        "weekday": 2,
+        "hour": 10,
+        "revenue_rub": 900,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 11,
+        "revenue_rub": 1200,
+        "sales": 2
+      },
+      {
+        "weekday": 2,
+        "hour": 12,
+        "revenue_rub": 1500,
+        "sales": 3
+      },
+      {
+        "weekday": 2,
+        "hour": 13,
+        "revenue_rub": 1050,
+        "sales": 4
+      },
+      {
+        "weekday": 2,
+        "hour": 14,
+        "revenue_rub": 1350,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 15,
+        "revenue_rub": 900,
+        "sales": 2
+      },
+      {
+        "weekday": 2,
+        "hour": 16,
+        "revenue_rub": 2880,
+        "sales": 3
+      },
+      {
+        "weekday": 2,
+        "hour": 17,
+        "revenue_rub": 3600,
+        "sales": 4
+      },
+      {
+        "weekday": 2,
+        "hour": 18,
+        "revenue_rub": 2520,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 19,
+        "revenue_rub": 3240,
+        "sales": 2
+      },
+      {
+        "weekday": 2,
+        "hour": 20,
+        "revenue_rub": 2160,
+        "sales": 3
+      },
+      {
+        "weekday": 2,
+        "hour": 21,
+        "revenue_rub": 2880,
+        "sales": 4
+      },
+      {
+        "weekday": 2,
+        "hour": 22,
+        "revenue_rub": 3600,
+        "sales": 1
+      },
+      {
+        "weekday": 2,
+        "hour": 23,
+        "revenue_rub": 2520,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 0,
+        "revenue_rub": 270,
+        "sales": 4
+      },
+      {
+        "weekday": 3,
+        "hour": 1,
+        "revenue_rub": 405,
+        "sales": 1
+      },
+      {
+        "weekday": 3,
+        "hour": 2,
+        "revenue_rub": 315,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 3,
+        "revenue_rub": 450,
+        "sales": 3
+      },
+      {
+        "weekday": 3,
+        "hour": 4,
+        "revenue_rub": 360,
+        "sales": 4
+      },
+      {
+        "weekday": 3,
+        "hour": 5,
+        "revenue_rub": 270,
+        "sales": 1
+      },
+      {
+        "weekday": 3,
+        "hour": 6,
+        "revenue_rub": 405,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 7,
+        "revenue_rub": 315,
+        "sales": 3
+      },
+      {
+        "weekday": 3,
+        "hour": 8,
+        "revenue_rub": 1500,
+        "sales": 4
+      },
+      {
+        "weekday": 3,
+        "hour": 9,
+        "revenue_rub": 1200,
+        "sales": 1
+      },
+      {
+        "weekday": 3,
+        "hour": 10,
+        "revenue_rub": 900,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 11,
+        "revenue_rub": 1350,
+        "sales": 3
+      },
+      {
+        "weekday": 3,
+        "hour": 12,
+        "revenue_rub": 1050,
+        "sales": 4
+      },
+      {
+        "weekday": 3,
+        "hour": 13,
+        "revenue_rub": 1500,
+        "sales": 1
+      },
+      {
+        "weekday": 3,
+        "hour": 14,
+        "revenue_rub": 1200,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 15,
+        "revenue_rub": 900,
+        "sales": 3
+      },
+      {
+        "weekday": 3,
+        "hour": 16,
+        "revenue_rub": 3240,
+        "sales": 4
+      },
+      {
+        "weekday": 3,
+        "hour": 17,
+        "revenue_rub": 2520,
+        "sales": 1
+      },
+      {
+        "weekday": 3,
+        "hour": 18,
+        "revenue_rub": 3600,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 19,
+        "revenue_rub": 2880,
+        "sales": 3
+      },
+      {
+        "weekday": 3,
+        "hour": 20,
+        "revenue_rub": 2160,
+        "sales": 4
+      },
+      {
+        "weekday": 3,
+        "hour": 21,
+        "revenue_rub": 3240,
+        "sales": 1
+      },
+      {
+        "weekday": 3,
+        "hour": 22,
+        "revenue_rub": 2520,
+        "sales": 2
+      },
+      {
+        "weekday": 3,
+        "hour": 23,
+        "revenue_rub": 3600,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 0,
+        "revenue_rub": 270,
+        "sales": 1
+      },
+      {
+        "weekday": 4,
+        "hour": 1,
+        "revenue_rub": 450,
+        "sales": 2
+      },
+      {
+        "weekday": 4,
+        "hour": 2,
+        "revenue_rub": 405,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 3,
+        "revenue_rub": 360,
+        "sales": 4
+      },
+      {
+        "weekday": 4,
+        "hour": 4,
+        "revenue_rub": 315,
+        "sales": 1
+      },
+      {
+        "weekday": 4,
+        "hour": 5,
+        "revenue_rub": 270,
+        "sales": 2
+      },
+      {
+        "weekday": 4,
+        "hour": 6,
+        "revenue_rub": 450,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 7,
+        "revenue_rub": 405,
+        "sales": 4
+      },
+      {
+        "weekday": 4,
+        "hour": 8,
+        "revenue_rub": 1200,
+        "sales": 1
+      },
+      {
+        "weekday": 4,
+        "hour": 9,
+        "revenue_rub": 1050,
+        "sales": 2
+      },
+      {
+        "weekday": 4,
+        "hour": 10,
+        "revenue_rub": 900,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 11,
+        "revenue_rub": 1500,
+        "sales": 4
+      },
+      {
+        "weekday": 4,
+        "hour": 12,
+        "revenue_rub": 1350,
+        "sales": 1
+      },
+      {
+        "weekday": 4,
+        "hour": 13,
+        "revenue_rub": 1200,
+        "sales": 2
+      },
+      {
+        "weekday": 4,
+        "hour": 14,
+        "revenue_rub": 1050,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 15,
+        "revenue_rub": 900,
+        "sales": 4
+      },
+      {
+        "weekday": 4,
+        "hour": 16,
+        "revenue_rub": 3600,
+        "sales": 1
+      },
+      {
+        "weekday": 4,
+        "hour": 17,
+        "revenue_rub": 3240,
+        "sales": 2
+      },
+      {
+        "weekday": 4,
+        "hour": 18,
+        "revenue_rub": 2880,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 19,
+        "revenue_rub": 2520,
+        "sales": 4
+      },
+      {
+        "weekday": 4,
+        "hour": 20,
+        "revenue_rub": 2160,
+        "sales": 1
+      },
+      {
+        "weekday": 4,
+        "hour": 21,
+        "revenue_rub": 3600,
+        "sales": 2
+      },
+      {
+        "weekday": 4,
+        "hour": 22,
+        "revenue_rub": 3240,
+        "sales": 3
+      },
+      {
+        "weekday": 4,
+        "hour": 23,
+        "revenue_rub": 2880,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 0,
+        "revenue_rub": 405,
+        "sales": 2
+      },
+      {
+        "weekday": 5,
+        "hour": 1,
+        "revenue_rub": 405,
+        "sales": 3
+      },
+      {
+        "weekday": 5,
+        "hour": 2,
+        "revenue_rub": 405,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 3,
+        "revenue_rub": 405,
+        "sales": 1
+      },
+      {
+        "weekday": 5,
+        "hour": 4,
+        "revenue_rub": 405,
+        "sales": 2
+      },
+      {
+        "weekday": 5,
+        "hour": 5,
+        "revenue_rub": 405,
+        "sales": 3
+      },
+      {
+        "weekday": 5,
+        "hour": 6,
+        "revenue_rub": 405,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 7,
+        "revenue_rub": 405,
+        "sales": 1
+      },
+      {
+        "weekday": 5,
+        "hour": 8,
+        "revenue_rub": 1350,
+        "sales": 2
+      },
+      {
+        "weekday": 5,
+        "hour": 9,
+        "revenue_rub": 1350,
+        "sales": 3
+      },
+      {
+        "weekday": 5,
+        "hour": 10,
+        "revenue_rub": 1350,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 11,
+        "revenue_rub": 1350,
+        "sales": 1
+      },
+      {
+        "weekday": 5,
+        "hour": 12,
+        "revenue_rub": 1350,
+        "sales": 2
+      },
+      {
+        "weekday": 5,
+        "hour": 13,
+        "revenue_rub": 1350,
+        "sales": 3
+      },
+      {
+        "weekday": 5,
+        "hour": 14,
+        "revenue_rub": 1350,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 15,
+        "revenue_rub": 1350,
+        "sales": 1
+      },
+      {
+        "weekday": 5,
+        "hour": 16,
+        "revenue_rub": 3240,
+        "sales": 2
+      },
+      {
+        "weekday": 5,
+        "hour": 17,
+        "revenue_rub": 3240,
+        "sales": 3
+      },
+      {
+        "weekday": 5,
+        "hour": 18,
+        "revenue_rub": 3240,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 19,
+        "revenue_rub": 3240,
+        "sales": 1
+      },
+      {
+        "weekday": 5,
+        "hour": 20,
+        "revenue_rub": 3240,
+        "sales": 2
+      },
+      {
+        "weekday": 5,
+        "hour": 21,
+        "revenue_rub": 3240,
+        "sales": 3
+      },
+      {
+        "weekday": 5,
+        "hour": 22,
+        "revenue_rub": 3240,
+        "sales": 4
+      },
+      {
+        "weekday": 5,
+        "hour": 23,
+        "revenue_rub": 3240,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 0,
+        "revenue_rub": 405,
+        "sales": 3
+      },
+      {
+        "weekday": 6,
+        "hour": 1,
+        "revenue_rub": 473,
+        "sales": 4
+      },
+      {
+        "weekday": 6,
+        "hour": 2,
+        "revenue_rub": 540,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 3,
+        "revenue_rub": 608,
+        "sales": 2
+      },
+      {
+        "weekday": 6,
+        "hour": 4,
+        "revenue_rub": 675,
+        "sales": 3
+      },
+      {
+        "weekday": 6,
+        "hour": 5,
+        "revenue_rub": 405,
+        "sales": 4
+      },
+      {
+        "weekday": 6,
+        "hour": 6,
+        "revenue_rub": 473,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 7,
+        "revenue_rub": 540,
+        "sales": 2
+      },
+      {
+        "weekday": 6,
+        "hour": 8,
+        "revenue_rub": 2025,
+        "sales": 3
+      },
+      {
+        "weekday": 6,
+        "hour": 9,
+        "revenue_rub": 2250,
+        "sales": 4
+      },
+      {
+        "weekday": 6,
+        "hour": 10,
+        "revenue_rub": 1350,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 11,
+        "revenue_rub": 1575,
+        "sales": 2
+      },
+      {
+        "weekday": 6,
+        "hour": 12,
+        "revenue_rub": 1800,
+        "sales": 3
+      },
+      {
+        "weekday": 6,
+        "hour": 13,
+        "revenue_rub": 2025,
+        "sales": 4
+      },
+      {
+        "weekday": 6,
+        "hour": 14,
+        "revenue_rub": 2250,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 15,
+        "revenue_rub": 1350,
+        "sales": 2
+      },
+      {
+        "weekday": 6,
+        "hour": 16,
+        "revenue_rub": 3780,
+        "sales": 3
+      },
+      {
+        "weekday": 6,
+        "hour": 17,
+        "revenue_rub": 4320,
+        "sales": 4
+      },
+      {
+        "weekday": 6,
+        "hour": 18,
+        "revenue_rub": 4860,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 19,
+        "revenue_rub": 5400,
+        "sales": 2
+      },
+      {
+        "weekday": 6,
+        "hour": 20,
+        "revenue_rub": 3240,
+        "sales": 3
+      },
+      {
+        "weekday": 6,
+        "hour": 21,
+        "revenue_rub": 3780,
+        "sales": 4
+      },
+      {
+        "weekday": 6,
+        "hour": 22,
+        "revenue_rub": 4320,
+        "sales": 1
+      },
+      {
+        "weekday": 6,
+        "hour": 23,
+        "revenue_rub": 4860,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 0,
+        "revenue_rub": 405,
+        "sales": 4
+      },
+      {
+        "weekday": 7,
+        "hour": 1,
+        "revenue_rub": 540,
+        "sales": 1
+      },
+      {
+        "weekday": 7,
+        "hour": 2,
+        "revenue_rub": 675,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 3,
+        "revenue_rub": 473,
+        "sales": 3
+      },
+      {
+        "weekday": 7,
+        "hour": 4,
+        "revenue_rub": 608,
+        "sales": 4
+      },
+      {
+        "weekday": 7,
+        "hour": 5,
+        "revenue_rub": 405,
+        "sales": 1
+      },
+      {
+        "weekday": 7,
+        "hour": 6,
+        "revenue_rub": 540,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 7,
+        "revenue_rub": 675,
+        "sales": 3
+      },
+      {
+        "weekday": 7,
+        "hour": 8,
+        "revenue_rub": 1575,
+        "sales": 4
+      },
+      {
+        "weekday": 7,
+        "hour": 9,
+        "revenue_rub": 2025,
+        "sales": 1
+      },
+      {
+        "weekday": 7,
+        "hour": 10,
+        "revenue_rub": 1350,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 11,
+        "revenue_rub": 1800,
+        "sales": 3
+      },
+      {
+        "weekday": 7,
+        "hour": 12,
+        "revenue_rub": 2250,
+        "sales": 4
+      },
+      {
+        "weekday": 7,
+        "hour": 13,
+        "revenue_rub": 1575,
+        "sales": 1
+      },
+      {
+        "weekday": 7,
+        "hour": 14,
+        "revenue_rub": 2025,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 15,
+        "revenue_rub": 1350,
+        "sales": 3
+      },
+      {
+        "weekday": 7,
+        "hour": 16,
+        "revenue_rub": 4320,
+        "sales": 4
+      },
+      {
+        "weekday": 7,
+        "hour": 17,
+        "revenue_rub": 5400,
+        "sales": 1
+      },
+      {
+        "weekday": 7,
+        "hour": 18,
+        "revenue_rub": 3780,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 19,
+        "revenue_rub": 4860,
+        "sales": 3
+      },
+      {
+        "weekday": 7,
+        "hour": 20,
+        "revenue_rub": 3240,
+        "sales": 4
+      },
+      {
+        "weekday": 7,
+        "hour": 21,
+        "revenue_rub": 4320,
+        "sales": 1
+      },
+      {
+        "weekday": 7,
+        "hour": 22,
+        "revenue_rub": 5400,
+        "sales": 2
+      },
+      {
+        "weekday": 7,
+        "hour": 23,
+        "revenue_rub": 3780,
+        "sales": 3
+      }
+    ],
+    "lifetime": {
+      "paying_customers": 1212,
+      "avg_lifetime_days": 146,
+      "avg_paid_months": 4.2,
+      "avg_purchases": 2.4
+    },
+    "renewals": {
+      "first_count": 115,
+      "first_revenue": 179900,
+      "renewal_count": 197,
+      "renewal_revenue": 306300
+    },
+    "gateways": [
+      {
+        "invoice_type": "yookasa",
+        "revenue_rub": 213928,
+        "payments": 141
+      },
+      {
+        "invoice_type": "plt_sbp",
+        "revenue_rub": 121000,
+        "payments": 78
+      },
+      {
+        "invoice_type": "telegram",
+        "revenue_rub": 78000,
+        "payments": 52
+      },
+      {
+        "invoice_type": "heleket",
+        "revenue_rub": 44000,
+        "payments": 26
+      },
+      {
+        "invoice_type": "crypto",
+        "revenue_rub": 29272,
+        "payments": 15
+      }
+    ],
+    "current": {
+      "revenue_rub": 486200,
+      "sales": 312,
+      "new_users": 184,
+      "transactions": 312,
+      "unique_payers": 231
+    },
+    "previous": {
+      "revenue_rub": 412000,
+      "sales": 286,
+      "new_users": 196,
+      "transactions": 290,
+      "unique_payers": 214
+    },
+    "partners": {
+      "partners_total": 13,
+      "partners_active": 9,
+      "partners_pending": 4,
+      "partners_suspended": 0,
+      "customers": 341,
+      "paying_customers": 128,
+      "active_customers": 96,
+      "earned_total": 74300,
+      "earned_period": 18400,
+      "earned_first": 12100,
+      "earned_renewal": 6300,
+      "hold_balance": 8400,
+      "available_balance": 23100,
+      "reserved_balance": 0,
+      "paid_total": 51200,
+      "open_payouts": 3,
+      "open_payouts_amount": 14200,
+      "top": [
+        {
+          "partner_id": 1,
+          "customer_id": 11,
+          "telegram_id": 1,
+          "telegram_username": "trafficman",
+          "nickname": null,
+          "customers": 128,
+          "paying_customers": 51,
+          "earned": 28400
+        },
+        {
+          "partner_id": 2,
+          "customer_id": 12,
+          "telegram_id": 2,
+          "telegram_username": "blogger_vpn",
+          "nickname": null,
+          "customers": 87,
+          "paying_customers": 33,
+          "earned": 19100
+        },
+        {
+          "partner_id": 3,
+          "customer_id": 13,
+          "telegram_id": 3,
+          "telegram_username": null,
+          "nickname": "Алина",
+          "customers": 61,
+          "paying_customers": 22,
+          "earned": 12800
+        },
+        {
+          "partner_id": 4,
+          "customer_id": 14,
+          "telegram_id": 4,
+          "telegram_username": "seo_guy",
+          "nickname": null,
+          "customers": 39,
+          "paying_customers": 14,
+          "earned": 8600
+        },
+        {
+          "partner_id": 5,
+          "customer_id": 15,
+          "telegram_id": 5,
+          "telegram_username": "tgads",
+          "nickname": null,
+          "customers": 26,
+          "paying_customers": 8,
+          "earned": 5400
+        }
+      ]
+    }
+  },
+  "/admin/stats/fortune": {
+    "captured_at": "2026-09-02T14:20:00Z",
+    "month": {
+      "distinct_users": 640,
+      "total_spins": 1842,
+      "free_spins": 1460,
+      "paid_spins": 382,
+      "paid_cost_days_sum": 382,
+      "won_subs_days_sum": 596,
+      "won_loyalty_xp_sum": 8400,
+      "won_discount_pct_sum": 1200,
+      "by_reward": {
+        "days_3": 210,
+        "xp_50": 640,
+        "discount_10": 380,
+        "days_7": 96,
+        "micro_xp": 516
+      }
+    },
+    "today": {
+      "distinct_users": 41,
+      "total_spins": 96,
+      "free_spins": 74,
+      "paid_spins": 22,
+      "paid_cost_days_sum": 22,
+      "won_subs_days_sum": 31,
+      "won_loyalty_xp_sum": 400,
+      "won_discount_pct_sum": 60,
+      "by_reward": {
+        "days_3": 11,
+        "xp_50": 34
+      }
+    },
+    "all_time": {
+      "distinct_users": 1900,
+      "total_spins": 9100,
+      "free_spins": 7200,
+      "paid_spins": 1900,
+      "paid_cost_days_sum": 1900,
+      "won_subs_days_sum": 2600,
+      "won_loyalty_xp_sum": 41000,
+      "won_discount_pct_sum": 6100,
+      "by_reward": {
+        "days_3": 1100,
+        "xp_50": 3200,
+        "discount_10": 1900,
+        "days_7": 480,
+        "micro_xp": 2420
+      }
+    }
+  },
+  "/admin/stats/loyalty": {
+    "captured_at": "2026-09-02T14:20:00Z",
+    "enabled": true,
+    "tiers": [
+      {
+        "sort_order": 1,
+        "xp_min": 0,
+        "discount_percent": 0,
+        "display_name": "Новичок",
+        "user_count": 1820
+      },
+      {
+        "sort_order": 2,
+        "xp_min": 100,
+        "discount_percent": 5,
+        "display_name": "Свой",
+        "user_count": 940
+      },
+      {
+        "sort_order": 3,
+        "xp_min": 400,
+        "discount_percent": 10,
+        "display_name": "Постоянный",
+        "user_count": 480
+      },
+      {
+        "sort_order": 4,
+        "xp_min": 1000,
+        "discount_percent": 15,
+        "display_name": "Легенда",
+        "user_count": 178
+      }
+    ]
+  },
+  "/admin/stats/promos": {
+    "captured_at": "2026-09-02T14:20:00Z",
+    "total": 31,
+    "active": 12,
+    "inactive": 19,
+    "total_redemptions": 148,
+    "redemptions_today": 6,
+    "top_by_redemptions": [
+      {
+        "id": 1,
+        "code": "AUTUMN25",
+        "active": true,
+        "uses_count": 200,
+        "redemptions": 61,
+        "type": "discount",
+        "discount_percent": 25
+      },
+      {
+        "id": 2,
+        "code": "WELCOME",
+        "active": true,
+        "uses_count": 500,
+        "redemptions": 34,
+        "type": "subscription_days",
+        "subscription_days": 7
+      },
+      {
+        "id": 3,
+        "code": "BLOGGER",
+        "active": false,
+        "uses_count": 100,
+        "redemptions": 22,
+        "type": "trial",
+        "trial_days": 14
+      },
+      {
+        "id": 4,
+        "code": "RETURN10",
+        "active": true,
+        "uses_count": 150,
+        "redemptions": 17,
+        "type": "discount",
+        "discount_percent": 10
+      },
+      {
+        "id": 5,
+        "code": "SUMMER",
+        "active": false,
+        "uses_count": 300,
+        "redemptions": 9,
+        "type": "extra_hwid",
+        "extra_hwid_delta": 2
+      },
+      {
+        "id": 6,
+        "code": "TG5",
+        "active": true,
+        "uses_count": 80,
+        "redemptions": 5,
+        "type": "subscription_days",
+        "subscription_days": 5
+      }
+    ]
+  }
+}

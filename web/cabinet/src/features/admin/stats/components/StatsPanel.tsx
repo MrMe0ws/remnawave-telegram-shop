@@ -48,9 +48,9 @@ export function StatsPanel({ children, className, padding = 'default' }: StatsPa
   return (
     <div
       className={cn(
-        'cabinet-elevated-card flex flex-col',
-        padding === 'default' && 'p-5 sm:px-6',
-        padding === 'compact' && 'px-5 py-4',
+        'cabinet-elevated-card stats-ring flex flex-col',
+        padding === 'default' && 'p-4 sm:p-5 sm:px-6',
+        padding === 'compact' && 'p-4 sm:px-5 sm:py-4',
         className,
       )}
     >

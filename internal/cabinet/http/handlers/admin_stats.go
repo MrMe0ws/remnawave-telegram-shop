@@ -453,11 +453,16 @@ func (h *AdminStatsHandler) LoyaltyStats(w http.ResponseWriter, r *http.Request)
 }
 
 type adminPromoStatsTopDTO struct {
-	ID          int64  `json:"id"`
-	Code        string `json:"code"`
-	Active      bool   `json:"active"`
-	UsesCount   int    `json:"uses_count"`
-	Redemptions int    `json:"redemptions"`
+	ID               int64  `json:"id"`
+	Code             string `json:"code"`
+	Active           bool   `json:"active"`
+	UsesCount        int    `json:"uses_count"`
+	Redemptions      int    `json:"redemptions"`
+	Type             string `json:"type"`
+	SubscriptionDays *int   `json:"subscription_days"`
+	TrialDays        *int   `json:"trial_days"`
+	ExtraHwidDelta   *int   `json:"extra_hwid_delta"`
+	DiscountPercent  *int   `json:"discount_percent"`
 }
 
 type adminPromoStatsResp struct {
@@ -491,11 +496,16 @@ func (h *AdminStatsHandler) PromoStats(w http.ResponseWriter, r *http.Request) {
 	top := make([]adminPromoStatsTopDTO, 0, len(snap.TopByRedemptions))
 	for _, row := range snap.TopByRedemptions {
 		top = append(top, adminPromoStatsTopDTO{
-			ID:          row.ID,
-			Code:        row.Code,
-			Active:      row.Active,
-			UsesCount:   row.UsesCount,
-			Redemptions: row.Redemptions,
+			ID:               row.ID,
+			Code:             row.Code,
+			Active:           row.Active,
+			UsesCount:        row.UsesCount,
+			Redemptions:      row.Redemptions,
+			Type:             row.Type,
+			SubscriptionDays: row.SubscriptionDays,
+			TrialDays:        row.TrialDays,
+			ExtraHwidDelta:   row.ExtraHwidDelta,
+			DiscountPercent:  row.DiscountPercent,
 		})
 	}
 

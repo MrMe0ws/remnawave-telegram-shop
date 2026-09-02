@@ -16,7 +16,7 @@ import type { AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import { cn } from '@/lib/utils'
 
 import { formatRub, statsNumberLocale } from '../utils/statsFormat'
-import { STATS_ACCENT } from '../utils/statsPalette'
+import { accentTint, STATS_ACCENT } from '../utils/statsPalette'
 import { formatTimeseriesLabel } from '../utils/timeseriesFormat'
 import { statsPeriodLabel, type StatsCustomRange, type StatsPeriod } from '../utils/statsPeriod'
 import { StatsPanel, StatsPanelHead } from './StatsPanel'
@@ -153,9 +153,10 @@ export function StatsMainChart({
                     className={cn(
                       'flex-1 rounded-[10px] px-2.5 py-1.5 text-xs font-medium transition-colors sm:flex-none sm:px-3',
                       active
-                        ? 'bg-card text-foreground shadow-sm'
+                        ? 'text-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground',
                     )}
+                    style={active ? { backgroundColor: accentTint(METRIC_COLOR[m.key], 0.22) } : undefined}
                   >
                     {m.label}
                   </button>

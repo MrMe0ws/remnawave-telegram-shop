@@ -16,11 +16,12 @@ interface StatsTabsProps<K extends string> {
 }
 
 /**
- * Вкладки статистики: подчёркивание активной, а не панель из таблеток.
+ * Вкладки статистики.
  *
- * Таблетки во всю ширину съедали целую полосу первого экрана и спорили по весу
- * с карточками под ними — переключатель разделов не должен выглядеть тяжелее
- * самих данных. Линия снизу связывает вкладки с содержимым.
+ * Не таблетки во всю ширину — те съедали целую полосу первого экрана и весили
+ * больше карточек под ними. Но и не голый текст: без подложки лента вкладок
+ * терялась на фоне страницы. Компромисс — своя поверхность со скруглением,
+ * внутри которой активная вкладка подсвечена и подчёркнута.
  *
  * На узком экране лента прокручивается горизонтально: перенос превратил бы
  * четыре вкладки в две строки.
@@ -29,11 +30,11 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
   return (
     <div
       className={cn(
-        '-mx-3 overflow-x-auto border-b border-border/60 px-3 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden',
+        'overflow-x-auto rounded-2xl border border-border/60 bg-card/60 px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
-      <div role="tablist" className="flex w-max min-w-full gap-5 sm:gap-6">
+      <div role="tablist" className="flex w-max min-w-full gap-1 sm:gap-2">
         {items.map((item) => {
           const Icon = item.icon
           const active = item.key === value
@@ -45,10 +46,10 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
               aria-selected={active}
               onClick={() => onChange(item.key)}
               className={cn(
-                'flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-0.5 pb-3 pt-1 text-[15px] font-medium transition-colors',
+                'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border-b-2 px-3 pb-2.5 pt-3 text-[15px] font-medium transition-colors',
                 active
-                  ? 'border-primary text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground',
               )}
             >
               <Icon className={cn('size-4 shrink-0', active && 'text-primary')} />

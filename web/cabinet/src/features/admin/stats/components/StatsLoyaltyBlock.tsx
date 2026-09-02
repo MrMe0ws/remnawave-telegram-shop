@@ -44,9 +44,10 @@ export function StatsLoyaltyBlock({ data, className }: StatsLoyaltyBlockProps) {
           <div className="flex flex-col gap-3">
             {data.tiers.map((tier, i) => {
               const share = total > 0 ? (tier.user_count * 100) / total : 0
-              const name =
-                tier.display_name?.trim() ||
-                t('admin.stats.loyaltyLevelN', { n: tier.sort_order })
+              // Всегда «Уровень N», без display_name: в него админ пишет
+              // маркетинговое имя («Капитан»), и в сводке уровни перестают
+              // читаться как шкала.
+              const name = t('admin.stats.loyaltyLevelN', { n: tier.sort_order })
               return (
                 <div key={tier.sort_order} className="flex flex-col gap-1.5">
                   <div className="flex items-baseline justify-between gap-3 text-[13px]">
