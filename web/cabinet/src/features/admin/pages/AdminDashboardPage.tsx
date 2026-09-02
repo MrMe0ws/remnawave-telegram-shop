@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
+  Banknote,
   CalendarDays,
   CalendarRange,
   Check,
+  CircleCheck,
   CircleSlash,
   Clock,
   Cpu,
@@ -17,9 +18,12 @@ import {
   LayoutGrid,
   Loader2,
   Radio,
+  Receipt,
   RefreshCw,
   Server,
   ShieldCheck,
+  ShoppingCart,
+  UserRoundX,
   UsersRound,
   Wallet,
   type LucideIcon,
@@ -27,15 +31,24 @@ import {
 
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { AdminBandwidthDTO } from '@/lib/types/admin'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { useAdminOverview } from '../hooks/useAdminOverview'
-import { StatsIconChip, StatsPanel, StatsPanelHead } from '../stats/components/StatsPanel'
-import { StatsKpiCard, StatsMiniCard } from '../stats/components/StatsKpiCard'
+import { StatsIconChip } from '../stats/components/StatsPanel'
 import { formatRub, statsNumberLocale } from '../stats/utils/statsFormat'
 import { STATS_ACCENT } from '../stats/utils/statsPalette'
+
+/** Уровень срочности дела. Цвет плашки — по худшему из них. */
+type Severity = 'info' | 'warn' | 'crit'
+
+interface AttentionItem {
+  key: string
+  count: number
+  to: string
+  label: string
+  severity: Severity
+}
 
 export default function AdminDashboardPage() {
   return (
@@ -52,6 +65,11 @@ export default function AdminDashboardPage() {
  * бокового меню. Разделение со «Статистикой» — по горизонту: здесь «сейчас и
  * сегодня», там «как шёл период».
  *
+ * Вес распределён намеренно неравномерно: одно число-герой сверху, под ним
+ * полоса дел во всю ширину, и только потом три колонки подробностей мелким
+ * кеглем. Когда все блоки одного веса, экран читается как обои и у глаза нет
+ * точки входа.
+ *
  * Панель Remnawave — внешняя зависимость. Числа магазина показываются всегда;
  * если панель не отвечает, вместо её блоков стоит честная плашка, а не спиннер
  * и не нули, выдающие себя за данные.
@@ -60,8 +78,6 @@ function AdminDashboardContent() {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const { data, isLoading, error, refetch, isFetching } = useAdminOverview()
-  // Галочка на пару секунд после успешного обновления — как на «Статистике»:
-  // спиннер гаснет за долю секунды, и без неё непонятно, случилось ли что-то.
   const [refreshDone, setRefreshDone] = useState(false)
 
   const handleRefresh = async () => {
@@ -74,51 +90,63 @@ function AdminDashboardContent() {
   }
 
   const panel = data?.panel
-  const attention = data?.attention
+  const a = data?.attention
 
-  const attentionItems = [
+  // Уровень задаёт не размер числа, а цена промедления: неоплаченный сервер
+  // выключится, заявка на выплату — это чужие деньги, которые уже ждут.
+  // Заявка в партнёры или висящий счёт подождут до завтра.
+  const attentionItems: AttentionItem[] = [
     {
-      key: 'partnerApplications',
-      count: attention?.partner_applications ?? 0,
-      to: '/admin/partners',
-      label: t('admin.overview.attentionPartnerApplications', {
-        count: attention?.partner_applications ?? 0,
-      }),
+      key: 'billingOverdue',
+      count: a?.billing_overdue ?? 0,
+      to: '/admin/infra',
+      severity: 'crit' as const,
+      label: t('admin.overview.attentionBillingOverdue', { count: a?.billing_overdue ?? 0 }),
+    },
+    {
+      key: 'billingDueUrgent',
+      count: a?.billing_due_urgent ?? 0,
+      to: '/admin/infra',
+      severity: 'crit' as const,
+      label: t('admin.overview.attentionBillingUrgent', { count: a?.billing_due_urgent ?? 0 }),
     },
     {
       key: 'partnerPayouts',
-      count: attention?.partner_payouts ?? 0,
+      count: a?.partner_payouts ?? 0,
       to: '/admin/partners',
-      label: t('admin.overview.attentionPartnerPayouts', {
-        count: attention?.partner_payouts ?? 0,
+      severity: 'crit' as const,
+      label: t('admin.overview.attentionPartnerPayouts', { count: a?.partner_payouts ?? 0 }),
+    },
+    {
+      key: 'billingDueSoon',
+      count: a?.billing_due_soon ?? 0,
+      to: '/admin/infra',
+      severity: 'warn' as const,
+      label: t('admin.overview.attentionBillingDueSoon', { count: a?.billing_due_soon ?? 0 }),
+    },
+    {
+      key: 'partnerApplications',
+      count: a?.partner_applications ?? 0,
+      to: '/admin/partners',
+      severity: 'warn' as const,
+      label: t('admin.overview.attentionPartnerApplications', {
+        count: a?.partner_applications ?? 0,
       }),
     },
     {
       key: 'openInvoices',
-      count: attention?.open_invoices ?? 0,
+      count: a?.open_invoices ?? 0,
       to: '/admin/payments',
-      label: t('admin.overview.attentionOpenInvoices', {
-        count: attention?.open_invoices ?? 0,
-      }),
-    },
-    {
-      key: 'billingOverdue',
-      count: attention?.billing_overdue ?? 0,
-      to: '/admin/infra',
-      urgent: true,
-      label: t('admin.overview.attentionBillingOverdue', {
-        count: attention?.billing_overdue ?? 0,
-      }),
-    },
-    {
-      key: 'billingDueSoon',
-      count: attention?.billing_due_soon ?? 0,
-      to: '/admin/infra',
-      label: t('admin.overview.attentionBillingDueSoon', {
-        count: attention?.billing_due_soon ?? 0,
-      }),
+      severity: 'info' as const,
+      label: t('admin.overview.attentionOpenInvoices', { count: a?.open_invoices ?? 0 }),
     },
   ].filter((item) => item.count > 0)
+
+  const worst: Severity | null = attentionItems.some((i) => i.severity === 'crit')
+    ? 'crit'
+    : attentionItems.length > 0
+      ? 'warn'
+      : null
 
   return (
     <div className="space-y-4">
@@ -159,84 +187,9 @@ function AdminDashboardContent() {
 
       {data && (
         <>
-          {/* 1. Сейчас */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-            <StatsKpiCard
-              icon={Radio}
-              color={STATS_ACCENT.green}
-              label={t('admin.overview.onlineNow')}
-              value={
-                panel?.available ? panel.online.now.toLocaleString(numberLocale) : '—'
-              }
-              hint={
-                <span className="text-muted-foreground">
-                  {t('admin.overview.onlineNowHint')}
-                </span>
-              }
-            />
-            <StatsKpiCard
-              icon={ShieldCheck}
-              color={STATS_ACCENT.cyan}
-              label={t('admin.overview.activeSubscriptions')}
-              value={data.shop.active_subscriptions.toLocaleString(numberLocale)}
-              hint={
-                <span className="text-muted-foreground">
-                  {t('admin.overview.ofCustomers', {
-                    value: data.shop.total_customers.toLocaleString(numberLocale),
-                  })}
-                </span>
-              }
-            />
-            <StatsKpiCard
-              icon={Server}
-              color={STATS_ACCENT.blue}
-              label={t('admin.overview.nodesOnline')}
-              value={
-                panel?.available ? panel.system.nodes_online.toLocaleString(numberLocale) : '—'
-              }
-              hint={
-                <span className="text-muted-foreground">
-                  {t('admin.overview.nodesOnlineHint')}
-                </span>
-              }
-            />
-            <StatsKpiCard
-              icon={Gauge}
-              color={STATS_ACCENT.amber}
-              label={t('admin.overview.trafficToday')}
-              value={panel?.available ? panel.traffic.today.current : '—'}
-              hint={
-                panel?.available ? (
-                  <TrafficDelta value={panel.traffic.today.difference} note={t('admin.overview.vsYesterday')} />
-                ) : undefined
-              }
-            />
-          </div>
+          <HeroBlock data={data} numberLocale={numberLocale} t={t} />
 
-          {/* 2. Требует внимания */}
-          {attentionItems.length > 0 && (
-            <Card className="cabinet-elevated-card stats-ring flex flex-wrap items-center gap-x-4 gap-y-2 p-4 sm:px-5">
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <StatsIconChip icon={AlertTriangle} color={STATS_ACCENT.amber} size="sm" />
-                {t('admin.overview.attentionTitle')}
-              </span>
-              {attentionItems.map((item) => (
-                <Link
-                  key={item.key}
-                  to={item.to}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors',
-                    item.urgent
-                      ? 'border-rose-500/50 bg-rose-500/10 text-rose-500 hover:border-rose-500'
-                      : 'border-border/60 bg-muted/20 hover:border-primary/50 hover:text-primary',
-                  )}
-                >
-                  {item.label}
-                  <ArrowRight className="size-3.5 shrink-0" />
-                </Link>
-              ))}
-            </Card>
-          )}
+          <AttentionBar items={attentionItems} worst={worst} t={t} />
 
           {!panel?.available && (
             <Card className="flex items-center gap-3 border-amber-500/40 p-4 text-sm sm:px-5">
@@ -249,155 +202,103 @@ function AdminDashboardContent() {
             </Card>
           )}
 
-          {/* 3. Трафик */}
-          {panel?.available && (
-            <StatsPanel>
-              <StatsPanelHead
+          <div className="grid gap-4 lg:grid-cols-3">
+            {panel?.available && (
+              <DetailCard
+                title={t('admin.overview.trafficTitle')}
                 icon={Gauge}
                 color={STATS_ACCENT.cyan}
-                title={t('admin.overview.trafficTitle')}
-                subtitle={t('admin.overview.trafficSubtitle')}
+                rows={[
+                  {
+                    icon: CalendarRange,
+                    label: t('admin.overview.periodWeek'),
+                    value: panel.traffic.last_seven_days.current || '—',
+                  },
+                  {
+                    icon: CalendarRange,
+                    label: t('admin.overview.periodThirty'),
+                    value: panel.traffic.last_thirty_days.current || '—',
+                  },
+                  {
+                    icon: CalendarDays,
+                    label: t('admin.overview.periodCalendarMonth'),
+                    value: panel.traffic.calendar_month.current || '—',
+                  },
+                  {
+                    icon: CalendarRange,
+                    label: t('admin.overview.periodYear'),
+                    value: panel.traffic.current_year.current || '—',
+                  },
+                ]}
               />
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
-                <TrafficCell
-                  icon={CalendarDays}
-                  color={STATS_ACCENT.cyan}
-                  label={t('admin.overview.periodToday')}
-                  data={panel.traffic.today}
-                />
-                <TrafficCell
-                  icon={CalendarRange}
-                  color={STATS_ACCENT.green}
-                  label={t('admin.overview.periodWeek')}
-                  data={panel.traffic.last_seven_days}
-                />
-                <TrafficCell
-                  icon={CalendarRange}
-                  color={STATS_ACCENT.blue}
-                  label={t('admin.overview.periodThirty')}
-                  data={panel.traffic.last_thirty_days}
-                />
-                <TrafficCell
-                  icon={CalendarDays}
-                  color={STATS_ACCENT.orange}
-                  label={t('admin.overview.periodCalendarMonth')}
-                  data={panel.traffic.calendar_month}
-                />
-                <TrafficCell
-                  icon={CalendarRange}
-                  color={STATS_ACCENT.violet}
-                  label={t('admin.overview.periodYear')}
-                  data={panel.traffic.current_year}
-                />
-              </div>
-            </StatsPanel>
-          )}
+            )}
 
-          {/* 4. Онлайн и система */}
-          {panel?.available && (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <StatsPanel>
-                <StatsPanelHead
-                  icon={Activity}
-                  color={STATS_ACCENT.green}
-                  title={t('admin.overview.onlineTitle')}
-                  subtitle={t('admin.overview.onlineSubtitle')}
-                />
-                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                  <PlainCell
-                    icon={Radio}
-                    label={t('admin.overview.onlineNow')}
-                    value={panel.online.now.toLocaleString(numberLocale)}
-                  />
-                  <PlainCell
-                    icon={Clock}
-                    label={t('admin.overview.onlineToday')}
-                    value={panel.online.today.toLocaleString(numberLocale)}
-                  />
-                  <PlainCell
-                    icon={UsersRound}
-                    label={t('admin.overview.onlineWeek')}
-                    value={panel.online.week.toLocaleString(numberLocale)}
-                  />
-                  <PlainCell
-                    icon={CircleSlash}
-                    label={t('admin.overview.onlineNever')}
-                    value={panel.online.never_online.toLocaleString(numberLocale)}
-                    muted
-                  />
-                </div>
-              </StatsPanel>
+            {panel?.available && (
+              <DetailCard
+                title={t('admin.overview.systemTitle')}
+                icon={Server}
+                color={STATS_ACCENT.blue}
+                rows={[
+                  {
+                    icon: HardDrive,
+                    label: t('admin.overview.totalTraffic'),
+                    value: formatBytes(panel.system.total_bytes_lifetime, numberLocale),
+                  },
+                  {
+                    icon: Cpu,
+                    label: t('admin.overview.memory'),
+                    value: `${formatGiB(panel.system.memory_used)} / ${formatGiB(panel.system.memory_total)}`,
+                  },
+                  {
+                    icon: Clock,
+                    label: t('admin.overview.uptime'),
+                    value: formatUptime(panel.system.uptime_seconds, t),
+                  },
+                  {
+                    icon: UsersRound,
+                    label: t('admin.overview.inPanel'),
+                    value: panel.panel_users.total.toLocaleString(numberLocale),
+                  },
+                ]}
+              />
+            )}
 
-              <StatsPanel>
-                <StatsPanelHead
-                  icon={Server}
-                  color={STATS_ACCENT.blue}
-                  title={t('admin.overview.systemTitle')}
-                  subtitle={t('admin.overview.systemSubtitle', {
-                    total: panel.panel_users.total.toLocaleString(numberLocale),
-                  })}
-                />
-                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                  <PlainCell
-                    icon={Server}
-                    label={t('admin.overview.nodesOnline')}
-                    value={panel.system.nodes_online.toLocaleString(numberLocale)}
-                  />
-                  <PlainCell
-                    icon={HardDrive}
-                    label={t('admin.overview.totalTraffic')}
-                    value={panel.system.total_bytes_lifetime || '—'}
-                  />
-                  <PlainCell
-                    icon={Cpu}
-                    label={t('admin.overview.memory')}
-                    value={`${formatGiB(panel.system.memory_used)} / ${formatGiB(panel.system.memory_total)}`}
-                  />
-                  <PlainCell
-                    icon={Clock}
-                    label={t('admin.overview.uptime')}
-                    value={formatUptime(panel.system.uptime_seconds, t)}
-                  />
-                </div>
-              </StatsPanel>
-            </div>
-          )}
-
-          {/* 5. Деньги коротко */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-            <StatsMiniCard
-              icon={Wallet}
-              color={STATS_ACCENT.cyan}
-              label={t('admin.overview.revenueToday')}
-              value={formatRub(data.shop.revenue_today_rub, numberLocale)}
-              hint={t('admin.overview.salesToday', { count: data.shop.sales_today })}
-            />
-            <StatsMiniCard
+            <DetailCard
+              title={t('admin.overview.moneyTitle')}
               icon={Wallet}
               color={STATS_ACCENT.green}
-              label={t('admin.overview.revenueMonth')}
-              value={formatRub(data.shop.revenue_month_rub, numberLocale)}
-              hint={t('admin.overview.revenueMonthHint')}
+              rows={[
+                {
+                  icon: Banknote,
+                  label: t('admin.overview.today'),
+                  value: formatRub(data.shop.revenue_today_rub, numberLocale),
+                },
+                {
+                  icon: Banknote,
+                  label: t('admin.overview.thisMonth'),
+                  value: formatRub(data.shop.revenue_month_rub, numberLocale),
+                },
+                {
+                  icon: ShoppingCart,
+                  label: t('admin.overview.salesTodayRow'),
+                  value: data.shop.sales_today.toLocaleString(numberLocale),
+                },
+                {
+                  icon: Receipt,
+                  label: t('admin.overview.payersTodayRow'),
+                  value: data.shop.payers_today.toLocaleString(numberLocale),
+                },
+              ]}
+              footer={
+                <Link
+                  to="/admin/stats"
+                  className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"
+                >
+                  {t('admin.overview.moreStatsLink')}
+                  <ArrowRight className="size-3.5 shrink-0" />
+                </Link>
+              }
             />
-            <StatsMiniCard
-              icon={UsersRound}
-              color={STATS_ACCENT.blue}
-              label={t('admin.overview.payersToday')}
-              value={data.shop.payers_today.toLocaleString(numberLocale)}
-              hint={t('admin.overview.payersTodayHint')}
-            />
-            <Link
-              to="/admin/stats"
-              className="cabinet-elevated-card stats-ring flex flex-col justify-center gap-1 p-4 transition-colors hover:text-primary sm:px-5"
-            >
-              <span className="text-[13px] text-muted-foreground">
-                {t('admin.overview.moreStats')}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[17px] font-semibold">
-                {t('admin.overview.moreStatsLink')}
-                <ArrowRight className="size-4 shrink-0" />
-              </span>
-            </Link>
           </div>
         </>
       )}
@@ -405,82 +306,309 @@ function AdminDashboardContent() {
   )
 }
 
-/** Разница за период. Знак приходит от панели, цвет ставим по нему. */
-function TrafficDelta({ value, note }: { value: string; note?: string }) {
-  const trimmed = value.trim()
-  const down = trimmed.startsWith('-') || trimmed.startsWith('−')
-  const up = trimmed.length > 0 && !down && trimmed !== '0'
+/**
+ * Герой: одно число во всю ширину.
+ *
+ * Справа — не график, а разбивка онлайна. Почасового ряда панель не отдаёт
+ * (только «сейчас», «за сутки», «за неделю» и «ни разу»), и рисовать линию по
+ * четырём точкам, растянув их на сутки, значило бы выдумать данные.
+ */
+function HeroBlock({
+  data,
+  numberLocale,
+  t,
+}: {
+  data: NonNullable<ReturnType<typeof useAdminOverview>['data']>
+  numberLocale: string
+  t: TFunction
+}) {
+  const panel = data.panel
+  const online = panel.available ? panel.online : null
+  const scaleBase = Math.max(online?.now ?? 0, online?.today ?? 0, online?.week ?? 0, 1)
+
+  const breakdown = [
+    {
+      icon: Radio,
+      label: t('admin.overview.onlineNow'),
+      value: online?.now ?? 0,
+      color: STATS_ACCENT.green,
+    },
+    {
+      icon: Clock,
+      label: t('admin.overview.onlineToday'),
+      value: online?.today ?? 0,
+      color: STATS_ACCENT.cyan,
+    },
+    {
+      icon: UsersRound,
+      label: t('admin.overview.onlineWeek'),
+      value: online?.week ?? 0,
+      color: STATS_ACCENT.blue,
+    },
+  ]
+
   return (
-    <span className="tabular-nums">
-      <span
-        className={cn(
-          'font-semibold',
-          up && 'text-emerald-500',
-          down && 'text-rose-500',
-          !up && !down && 'text-muted-foreground',
-        )}
-      >
-        {trimmed || '—'}
-      </span>
-      {note && <span className="ml-1.5 font-normal text-muted-foreground">{note}</span>}
-    </span>
+    <Card className="cabinet-elevated-card stats-ring p-5 sm:p-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="relative flex size-2.5 shrink-0">
+              <span
+                className="absolute inline-flex size-full rounded-full opacity-40"
+                style={{ backgroundColor: STATS_ACCENT.green }}
+              />
+              <span
+                className="relative inline-flex size-2.5 rounded-full"
+                style={{ backgroundColor: STATS_ACCENT.green }}
+              />
+            </span>
+            <span className="text-sm text-muted-foreground">{t('admin.overview.onlineNow')}</span>
+          </div>
+
+          <div className="mt-2 font-heading text-6xl font-extrabold leading-none tracking-tight tabular-nums sm:text-7xl">
+            {panel.available ? (online?.now ?? 0).toLocaleString(numberLocale) : '—'}
+          </div>
+
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="size-3.5 shrink-0" aria-hidden />
+              {t('admin.overview.heroToday', { count: online?.today ?? 0 })}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <UsersRound className="size-3.5 shrink-0" aria-hidden />
+              {t('admin.overview.heroWeek', { count: online?.week ?? 0 })}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <UserRoundX className="size-3.5 shrink-0" aria-hidden />
+              {t('admin.overview.heroNever', { count: online?.never_online ?? 0 })}
+            </span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <HeroStat
+              icon={Gauge}
+              color={STATS_ACCENT.amber}
+              label={t('admin.overview.trafficToday')}
+              value={panel.available ? panel.traffic.today.current || '—' : '—'}
+            />
+            <HeroStat
+              icon={ShieldCheck}
+              color={STATS_ACCENT.cyan}
+              label={t('admin.overview.activeSubscriptions')}
+              value={data.shop.active_subscriptions.toLocaleString(numberLocale)}
+            />
+            <HeroStat
+              icon={UsersRound}
+              color={STATS_ACCENT.blue}
+              label={t('admin.overview.totalCustomers')}
+              value={data.shop.total_customers.toLocaleString(numberLocale)}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border/50 bg-muted/20 p-4 sm:p-5">
+          <p className="mb-3.5 flex items-center gap-2 text-[13px] text-muted-foreground">
+            <Radio className="size-3.5 shrink-0" aria-hidden />
+            {t('admin.overview.onlineBreakdown')}
+          </p>
+          {panel.available ? (
+            <>
+              <div className="flex flex-col gap-3">
+                {breakdown.map((row) => {
+                  const Icon = row.icon
+                  return (
+                    <div key={row.label} className="flex flex-col gap-1.5">
+                      <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                        <span className="inline-flex min-w-0 items-center gap-2">
+                          <Icon
+                            className="size-3.5 shrink-0"
+                            style={{ color: row.color }}
+                            aria-hidden
+                          />
+                          <span className="truncate">{row.label}</span>
+                        </span>
+                        <span className="shrink-0 font-semibold tabular-nums">
+                          {row.value.toLocaleString(numberLocale)}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.max((row.value * 100) / scaleBase, row.value > 0 ? 3 : 0)}%`,
+                            backgroundColor: row.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-4 flex items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
+                <UserRoundX className="size-3.5 shrink-0" aria-hidden />
+                {t('admin.overview.neverOnlineNote', {
+                  count: online?.never_online ?? 0,
+                  total: panel.panel_users.total.toLocaleString(numberLocale),
+                })}
+              </p>
+            </>
+          ) : (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {t('admin.overview.panelUnreachableShort')}
+            </p>
+          )}
+        </div>
+      </div>
+    </Card>
   )
 }
 
-function TrafficCell({
-  icon,
+function HeroStat({
+  icon: Icon,
   color,
   label,
-  data,
+  value,
 }: {
   icon: LucideIcon
   color: string
   label: string
-  data: AdminBandwidthDTO
+  value: string
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-      <div className="flex items-center gap-2">
-        <StatsIconChip icon={icon} color={color} size="sm" />
-        <span className="min-w-0 truncate text-xs text-muted-foreground">{label}</span>
+    <div className="min-w-0">
+      <div className="flex min-h-[2.1rem] items-start gap-1.5">
+        <Icon className="mt-0.5 size-3.5 shrink-0" style={{ color }} aria-hidden />
+        <span className="text-xs leading-tight text-muted-foreground">{label}</span>
       </div>
-      <p className="mt-1.5 truncate font-heading text-xl font-bold tabular-nums">
-        {data.current || '—'}
-      </p>
-      <p className="mt-0.5 truncate text-xs">
-        <TrafficDelta value={data.difference} />
+      <p className="mt-1 truncate font-heading text-xl font-bold tabular-nums sm:text-[22px]">
+        {value}
       </p>
     </div>
   )
 }
 
-function PlainCell({
-  icon: Icon,
-  label,
-  value,
-  muted,
+/**
+ * Полоса дел во всю ширину, сразу под героем.
+ *
+ * Цвет плашки — по худшему делу в списке, а не по их количеству: одна
+ * просроченная оплата сервера важнее пяти висящих счетов. Когда чинить нечего,
+ * полоса не исчезает, а становится зелёной: «дел нет» — это тоже ответ, и его
+ * лучше увидеть, чем гадать, загрузилось ли вообще.
+ */
+function AttentionBar({
+  items,
+  worst,
+  t,
 }: {
+  items: AttentionItem[]
+  worst: Severity | null
+  t: TFunction
+}) {
+  if (worst === null) {
+    return (
+      <Card className="flex items-center gap-3 border-emerald-500/40 bg-emerald-500/5 p-4 sm:px-5">
+        <CircleCheck className="size-5 shrink-0 text-emerald-500" />
+        <span className="text-sm font-medium">{t('admin.overview.attentionClear')}</span>
+      </Card>
+    )
+  }
+
+  return (
+    <Card
+      className={cn(
+        'flex flex-wrap items-center gap-x-4 gap-y-2.5 p-4 sm:px-5',
+        worst === 'crit' ? 'border-rose-500/40 bg-rose-500/5' : 'border-amber-500/40 bg-amber-500/5',
+      )}
+    >
+      <span className="flex items-center gap-2 text-sm font-semibold">
+        <AlertTriangle
+          className={cn('size-4 shrink-0', worst === 'crit' ? 'text-rose-500' : 'text-amber-500')}
+        />
+        {t('admin.overview.attentionTitle')}
+      </span>
+      {items.map((item) => (
+        <Link
+          key={item.key}
+          to={item.to}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors',
+            item.severity === 'crit' &&
+              'border-rose-500/50 bg-rose-500/10 text-rose-500 hover:border-rose-500',
+            item.severity === 'warn' &&
+              'border-amber-500/50 bg-amber-500/10 text-amber-600 hover:border-amber-500 dark:text-amber-400',
+            item.severity === 'info' &&
+              'border-border/60 bg-muted/20 hover:border-primary/50 hover:text-primary',
+          )}
+        >
+          {item.label}
+          <ArrowRight className="size-3.5 shrink-0" />
+        </Link>
+      ))}
+    </Card>
+  )
+}
+
+function DetailCard({
+  title,
+  icon,
+  color,
+  rows,
+  footer,
+}: {
+  title: string
   icon: LucideIcon
-  label: string
-  value: string
-  muted?: boolean
+  color: string
+  rows: { icon: LucideIcon; label: string; value: string }[]
+  footer?: React.ReactNode
 }) {
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-2">
-        <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="min-w-0 truncate text-[13px] text-muted-foreground">{label}</span>
+    <Card className="cabinet-elevated-card stats-ring flex flex-col p-4 sm:px-5">
+      <div className="mb-1 flex items-center gap-2.5">
+        <StatsIconChip icon={icon} color={color} size="sm" />
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </h2>
       </div>
-      <p
-        className={cn(
-          'mt-1 truncate text-[22px] font-semibold tabular-nums',
-          muted && 'text-muted-foreground',
-        )}
-      >
-        {value}
-      </p>
-    </div>
+      {rows.map((row, i) => {
+        const RowIcon = row.icon
+        return (
+          <div
+            key={row.label}
+            className={cn(
+              'flex items-baseline justify-between gap-3 py-2.5',
+              i < rows.length - 1 && 'border-b border-border/40',
+            )}
+          >
+            <span className="inline-flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
+              <RowIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{row.label}</span>
+            </span>
+            <span className="shrink-0 text-[15px] font-semibold tabular-nums">{row.value}</span>
+          </div>
+        )
+      })}
+      {footer}
+    </Card>
   )
+}
+
+/**
+ * totalBytesLifetime приходит строкой с сырыми байтами — в отличие от блоков
+ * трафика, которые панель форматирует сама. Из-за этого на экране висело
+ * «132114059095594» вместо «120.12 TiB».
+ */
+function formatBytes(raw: string, locale: string): string {
+  const bytes = Number(raw)
+  if (!Number.isFinite(bytes) || bytes <= 0) return '—'
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+  let value = bytes
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit++
+  }
+  const digits = value >= 100 ? 1 : 2
+  return `${value.toLocaleString(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${units[unit]}`
 }
 
 function formatGiB(bytes: number): string {

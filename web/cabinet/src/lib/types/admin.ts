@@ -111,6 +111,7 @@ export interface AdminOverviewDTO {
     partner_payouts: number
     open_invoices: number
     billing_overdue: number
+    billing_due_urgent: number
     billing_due_soon: number
   }
   panel: {

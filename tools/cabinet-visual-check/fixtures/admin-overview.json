@@ -14,7 +14,8 @@
       "partner_payouts": 3,
       "open_invoices": 12,
       "billing_overdue": 1,
-      "billing_due_soon": 2
+      "billing_due_soon": 2,
+      "billing_due_urgent": 1
     },
     "panel": {
       "available": true,
@@ -53,7 +54,7 @@
       },
       "system": {
         "nodes_online": 70,
-        "total_bytes_lifetime": "120.12 TiB",
+        "total_bytes_lifetime": "132114059095594",
         "memory_used": 1524713062,
         "memory_total": 2061584302,
         "cpu_cores": 4,

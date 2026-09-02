@@ -38,10 +38,13 @@ type panelSnapshot struct {
 	at        time.Time
 }
 
-// billingSoonWindow — за сколько до списания сервер попадает в «требует
-// внимания». Неделя: этого хватает, чтобы успеть пополнить счёт у провайдера,
-// и не настолько много, чтобы строка висела там постоянно.
-const billingSoonWindow = 7 * 24 * time.Hour
+// Пороги по оплате серверов. Неделя — чтобы успеть пополнить счёт у
+// провайдера и чтобы строка не висела там постоянно; трое суток — когда
+// напоминание превращается в срочное дело.
+const (
+	billingSoonWindow   = 7 * 24 * time.Hour
+	billingUrgentWindow = 3 * 24 * time.Hour
+)
 
 // AdminOverviewHandler — обработчик дашборда.
 type AdminOverviewHandler struct {
@@ -125,9 +128,11 @@ type adminOverviewResp struct {
 		PartnerApplications int   `json:"partner_applications"`
 		PartnerPayouts      int   `json:"partner_payouts"`
 		OpenInvoices        int64 `json:"open_invoices"`
-		// Оплата серверов: просрочена и подходит в ближайшую неделю.
-		BillingOverdue int `json:"billing_overdue"`
-		BillingDueSoon int `json:"billing_due_soon"`
+		// Оплата серверов: просрочена, горит (меньше трёх суток) и подходит
+		// в ближайшую неделю.
+		BillingOverdue   int `json:"billing_overdue"`
+		BillingDueUrgent int `json:"billing_due_urgent"`
+		BillingDueSoon   int `json:"billing_due_soon"`
 	} `json:"attention"`
 
 	Panel adminOverviewPanelDTO `json:"panel"`
@@ -248,11 +253,14 @@ func (h *AdminOverviewHandler) Overview(w http.ResponseWriter, r *http.Request) 
 
 	if snap.billing != nil {
 		now := time.Now()
+		urgent := now.Add(billingUrgentWindow)
 		soon := now.Add(billingSoonWindow)
 		for _, node := range snap.billing.BillingNodes {
 			switch {
 			case node.NextBillingAt.Before(now):
 				resp.Attention.BillingOverdue++
+			case node.NextBillingAt.Before(urgent):
+				resp.Attention.BillingDueUrgent++
 			case node.NextBillingAt.Before(soon):
 				resp.Attention.BillingDueSoon++
 			}
