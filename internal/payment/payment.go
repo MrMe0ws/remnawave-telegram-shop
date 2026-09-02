@@ -11,6 +11,7 @@ import (
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/heleket"
 	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/promo"
@@ -105,6 +106,7 @@ type PaymentService struct {
 	cryptoPayClient       *cryptopay.Client
 	yookasaClient         *yookasa.Client
 	plategaClient         *platega.Client
+	heleketClient         *heleket.Client
 	referralRepository    *database.ReferralRepository
 	referralLedger        *database.ReferralBonusLedgerRepository
 	partnerRepository     *database.PartnerRepository
@@ -130,6 +132,7 @@ func NewPaymentService(
 	cryptoPayClient *cryptopay.Client,
 	yookasaClient *yookasa.Client,
 	plategaClient *platega.Client,
+	heleketClient *heleket.Client,
 	referralRepository *database.ReferralRepository,
 	referralLedger *database.ReferralBonusLedgerRepository,
 	partnerRepository *database.PartnerRepository,
@@ -148,6 +151,7 @@ func NewPaymentService(
 		cryptoPayClient:       cryptoPayClient,
 		yookasaClient:         yookasaClient,
 		plategaClient:         plategaClient,
+		heleketClient:         heleketClient,
 		referralRepository:    referralRepository,
 		referralLedger:        referralLedger,
 		partnerRepository:     partnerRepository,
@@ -1135,6 +1139,8 @@ func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, mont
 	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return s.createPlategaInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras, invoiceType)
+	case database.InvoiceTypeHeleket:
+		return s.createHeleketInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTelegram:
 		return s.createTelegramInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTribute:
@@ -1159,6 +1165,8 @@ func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount floa
 	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return s.createPlategaInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras, invoiceType)
+	case database.InvoiceTypeHeleket:
+		return s.createHeleketInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTelegram:
 		return s.createTelegramInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeTribute:
@@ -1183,6 +1191,8 @@ func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, 
 	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return s.createPlategaInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil, invoiceType)
+	case database.InvoiceTypeHeleket:
+		return s.createHeleketInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeTelegram:
 		return s.createTelegramInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeTribute:
@@ -1401,6 +1411,66 @@ func (s PaymentService) createPlategaInvoice(ctx context.Context, amount float64
 	return redirectURL, purchaseId, nil
 }
 
+// createHeleketInvoice — счёт в Heleket («Другая крипта»).
+//
+// Конкретную монету и сеть выбирает плательщик на странице Heleket; мы задаём
+// только фиатный номинал. order_id счёта — id покупки: он же делает повторный
+// запрос идемпотентным и по нему вебхук находит покупку обратно.
+func (s PaymentService) createHeleketInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
+	if s.heleketClient == nil || !s.heleketClient.IsConfigured() {
+		return "", 0, fmt.Errorf("heleket client not configured")
+	}
+	pur := &database.Purchase{
+		InvoiceType: database.InvoiceTypeHeleket,
+		Status:      database.PurchaseStatusNew,
+		Amount:      amount,
+		Currency:    s.heleketClient.Currency(),
+		CustomerID:  customer.ID,
+		Month:       months,
+		ExtraHwid:   extraHwid,
+		TariffID:    tariffID,
+	}
+	applyTariffPurchaseExtras(pur, extras)
+	ensurePurchaseKindExtraHwidOnly(pur)
+	if meta != nil {
+		pur.PromoCodeID = meta.PromoCodeID
+		pur.DiscountPercentApplied = meta.DiscountPercentApplied
+	}
+	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
+	if err != nil {
+		slog.Error("Error creating purchase", "error", err)
+		return "", 0, err
+	}
+
+	ret := heleket.ReturnURLFromCtx(ctx)
+	if ret == "" {
+		ret = config.BotURL()
+	}
+	desc := buildRubReceiptDescription(months, extraHwid, extras, database.InvoiceTypeHeleket)
+	payment, err := s.heleketClient.CreatePayment(
+		ctx,
+		heleket.FormatOrderID(s.heleketClient.OrderPrefix(), purchaseId),
+		heleket.FormatAmount(amount),
+		desc,
+		ret,
+	)
+	if err != nil {
+		slog.Error("Error creating heleket invoice", "error", err, "purchase_id", purchaseId)
+		return "", 0, err
+	}
+
+	updates := map[string]interface{}{
+		"heleket_id":  payment.UUID,
+		"heleket_url": payment.URL,
+		"status":      database.PurchaseStatusPending,
+	}
+	if err := s.purchaseRepository.UpdateFields(ctx, purchaseId, updates); err != nil {
+		slog.Error("Error updating purchase", "error", err)
+		return "", 0, err
+	}
+	return payment.URL, purchaseId, nil
+}
+
 func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	pur := &database.Purchase{
 		InvoiceType: database.InvoiceTypeTelegram,
@@ -1519,6 +1589,37 @@ func (s PaymentService) CancelYookassaPayment(purchaseId int64) error {
 }
 
 func (s PaymentService) CancelPlategaPayment(purchaseId int64) error {
+	return s.cancelPurchaseAndNotify(purchaseId)
+}
+
+// CancelHeleketPayment закрывает счёт Heleket. Отдельный метод, а не прямая
+// запись статуса из пакета heleket: отмену нужно показать и пользователю, и в
+// группе платежей — этим занимается cancelPurchaseAndNotify.
+//
+// В отличие от остальных касс здесь нужна проверка текущего статуса: вебхук и
+// поллинг Heleket работают параллельно, и поллер может прийти с отменой по уже
+// оплаченной покупке — тогда подписка осталась бы выданной, а покупка ушла бы
+// в cancel вместе с выручкой из статистики.
+func (s PaymentService) CancelHeleketPayment(purchaseId int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	purchase, err := s.purchaseRepository.FindById(ctx, purchaseId)
+	if err != nil {
+		return err
+	}
+	if purchase == nil {
+		return fmt.Errorf("purchase with id %s not found", utils.MaskHalfInt64(purchaseId))
+	}
+	if purchase.Status != database.PurchaseStatusNew && purchase.Status != database.PurchaseStatusPending {
+		slog.Info("heleket: skip cancel, purchase is already finalized",
+			"purchase_id", purchaseId, "status", purchase.Status)
+		return nil
+	}
+	return s.cancelPurchaseAndNotify(purchaseId)
+}
+
+// cancelPurchaseAndNotify переводит покупку в cancel и рассылает уведомления.
+func (s PaymentService) cancelPurchaseAndNotify(purchaseId int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	purchase, err := s.purchaseRepository.FindById(ctx, purchaseId)

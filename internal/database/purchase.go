@@ -26,6 +26,8 @@ const (
 	InvoiceTypePlategaAcquiring InvoiceType = "plt_acq"
 	InvoiceTypePlategaWorldwide InvoiceType = "plt_ww"
 	InvoiceTypePlategaCrypto    InvoiceType = "plt_crypto"
+	// Heleket (https://heleket.com) — криптоплатежи, в интерфейсе «Другая крипта».
+	InvoiceTypeHeleket InvoiceType = "heleket"
 )
 
 // PlategaInvoiceTypes перечисляет все invoice_type Platega (поллинг, статистика).
@@ -90,6 +92,8 @@ type Purchase struct {
 	YookasaID              *uuid.UUID     `db:"yookasa_id"`
 	PlategaID              *string        `db:"platega_id"`
 	PlategaURL             *string        `db:"platega_url"`
+	HeleketID              *string        `db:"heleket_id"`
+	HeleketURL             *string        `db:"heleket_url"`
 	ExtraHwid              int            `db:"extra_hwid"`
 	PromoCodeID            *int64         `db:"promo_code_id"`
 	DiscountPercentApplied *int           `db:"discount_percent_applied"`
@@ -119,6 +123,7 @@ func purchaseScanArgs(p *Purchase) []interface{} {
 		&p.PromoCodeID, &p.DiscountPercentApplied,
 		&p.TariffID, &p.PurchaseKind, &p.IsEarlyDowngrade,
 		&p.PlategaID, &p.PlategaURL,
+		&p.HeleketID, &p.HeleketURL,
 	}
 }
 
@@ -127,8 +132,8 @@ func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (i
 		purchase.PurchaseKind = PurchaseKindSubscription
 	}
 	buildInsert := sq.Insert("purchase").
-		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "platega_id", "platega_url", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade").
-		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.PlategaID, purchase.PlategaURL, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade).
+		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "platega_id", "platega_url", "heleket_id", "heleket_url", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade").
+		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.PlategaID, purchase.PlategaURL, purchase.HeleketID, purchase.HeleketURL, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 
@@ -177,6 +182,64 @@ func (cr *PurchaseRepository) FindByInvoiceTypeAndStatus(ctx context.Context, in
 	}
 
 	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return &purchases, nil
+}
+
+// FindOpenByInvoiceTypeOrdered — незакрытые счета одного типа: самые старые
+// первыми и порцией ограниченного размера.
+//
+// Отдельно от FindByInvoiceTypeAndStatus, потому что тому пользуются поллеры
+// остальных касс, которым порядок и лимит не нужны. Здесь они принципиальны:
+// проход поллера ограничен по времени, и без ORDER BY хвост выборки мог бы не
+// проверяться вовсе — порядок строк без него не определён.
+func (cr *PurchaseRepository) FindOpenByInvoiceTypeOrdered(
+	ctx context.Context,
+	invoiceType InvoiceType,
+	statuses []PurchaseStatus,
+	limit uint64,
+) (*[]Purchase, error) {
+	if len(statuses) == 0 {
+		empty := []Purchase{}
+		return &empty, nil
+	}
+	raw := make([]string, 0, len(statuses))
+	for _, s := range statuses {
+		raw = append(raw, string(s))
+	}
+
+	buildSelect := sq.Select("*").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"invoice_type": invoiceType},
+			sq.Eq{"status": raw},
+		}).
+		OrderBy("created_at ASC").
+		Limit(limit).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := cr.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query purchases: %w", err)
+	}
+	defer rows.Close()
+
+	purchases := []Purchase{}
+	for rows.Next() {
+		purchase := Purchase{}
+		if err := rows.Scan(purchaseScanArgs(&purchase)...); err != nil {
+			return nil, fmt.Errorf("failed to scan purchase: %w", err)
+		}
+		purchases = append(purchases, purchase)
+	}
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
@@ -326,6 +389,7 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 				sq.Eq{"invoice_type": InvoiceTypePlategaAcquiring},
 				sq.Eq{"invoice_type": InvoiceTypePlategaWorldwide},
 				sq.Eq{"invoice_type": InvoiceTypePlategaCrypto},
+				sq.Eq{"invoice_type": InvoiceTypeHeleket},
 			},
 		}).
 		OrderBy("paid_at DESC").
@@ -559,6 +623,7 @@ const adminPurchaseSelectCols = `p.id, p.amount, p.customer_id, p.created_at, p.
 	p.promo_code_id, p.discount_percent_applied,
 	p.tariff_id, p.purchase_kind, p.is_early_downgrade,
 	p.platega_id, p.platega_url,
+	p.heleket_id, p.heleket_url,
 	c.telegram_id, c.telegram_username, c.is_web_only`
 
 func scanAdminPurchaseRow(row pgx.Row) (*AdminPurchaseRow, error) {

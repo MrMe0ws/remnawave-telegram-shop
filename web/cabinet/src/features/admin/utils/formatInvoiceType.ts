@@ -10,6 +10,7 @@ const INVOICE_TYPE_KEYS: Record<string, string> = {
   plt_acq: 'admin.users.invoiceTypes.pltAcq',
   plt_ww: 'admin.users.invoiceTypes.pltWw',
   plt_crypto: 'admin.users.invoiceTypes.pltCrypto',
+  heleket: 'admin.users.invoiceTypes.heleket',
 }
 
 export function formatInvoiceType(type: string, t: TFunction): string {

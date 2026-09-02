@@ -108,6 +108,21 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 ---
 
+## Оплата: Heleket («Другая крипта»)
+
+| Переменная | Описание |
+|------------|----------|
+| `HELEKET_ENABLED` | Вкл; при `true` обязательны merchant + api key. Быстрый вкл/выкл без рестарта — тумблер в админке «Платежи» |
+| `HELEKET_MERCHANT_ID` / `HELEKET_API_KEY` | ЛК Heleket → Настройки → API (нужен **payment** API key, не payout) |
+| `HELEKET_WEBHOOK_URL` | Полный URL (`https://домен/heleket-hook`) или путь. Пусто — только поллинг. Поллинг работает как страховка в любом случае |
+| `HELEKET_CURRENCY` | Валюта номинала счёта, по умолчанию `RUB`. Сумма **не конвертируется** |
+| `HELEKET_ORDER_PREFIX` | Префикс `order_id`, по умолчанию `shop`. Обязан отличаться у боевого и тестового стенда, если мерчант Heleket у них общий |
+| `HELEKET_INVOICE_LIFETIME` | Время жизни счёта в секундах, 300…43200 (по умолчанию 3600) |
+
+Чеки в «Мой налог» по оплатам Heleket не отправляются; `MOYNALOG_RECEIPT_FOR` на них не влияет.
+
+---
+
 ## Оплата: CryptoPay и Stars
 
 | Переменная | Описание |

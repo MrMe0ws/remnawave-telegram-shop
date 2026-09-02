@@ -373,6 +373,7 @@
       "methodCard": "Card",
       "methodSbp": "SBP",
       "methodPlategaCrypto": "Crypto",
+      "methodHeleket": "Other crypto",
       "methodCrypto": "CryptoPay",
       "methodTelegram": "Telegram",
       "methodTribute": "Tribute",
@@ -907,9 +908,11 @@
       "pay": "Pay",
       "card": "Card / Bank transfer",
       "crypto": "Cryptocurrency",
+      "otherCrypto": "Other crypto",
       "telegramStars": "Telegram Stars",
       "providerHintYookassa": "YooKassa",
       "providerHintCryptopay": "CryptoPay",
+      "providerHintHeleket": "Heleket",
       "providerHintTelegram": "Telegram Stars",
       "providerHintPlatega": "Platega",
       "plategaSbp": "SBP",
@@ -1457,7 +1460,8 @@
           "pltCards": "Platega cards",
           "pltAcq": "Platega acquiring",
           "pltWw": "Platega worldwide",
-          "pltCrypto": "Platega crypto"
+          "pltCrypto": "Platega crypto",
+          "heleket": "Heleket"
         },
         "monthsShort": "{{count}} mo.",
         "daysShort": "d",
@@ -2221,6 +2225,10 @@
           "PLATEGA_CRYPTO_ENABLED": {
             "label": "Crypto",
             "hint": "Crypto via Platega"
+          },
+          "HELEKET_ENABLED": {
+            "label": "Other crypto",
+            "hint": "Crypto payments via Heleket. Credentials live in .env"
           },
           "MOYNALOG_ENABLED": {
             "label": "Send income to Moy Nalog",

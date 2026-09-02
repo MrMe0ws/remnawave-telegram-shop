@@ -33,6 +33,7 @@ import (
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/heleket"
 	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/platega"
@@ -805,6 +806,10 @@ func (s *CheckoutService) ensureProviderEnabled(provider string) error {
 		if !config.IsPlategaEnabled() || !config.IsPlategaCryptoEnabled() {
 			return fmt.Errorf("%w: platega crypto disabled", ErrProviderDisabled)
 		}
+	case repository.CheckoutProviderHeleket:
+		if !config.IsHeleketEnabled() {
+			return fmt.Errorf("%w: heleket disabled", ErrProviderDisabled)
+		}
 	default:
 		return fmt.Errorf("%w: unknown provider %q", ErrInvalidInput, provider)
 	}
@@ -963,6 +968,10 @@ func (s *CheckoutService) withProviderOverrides(
 		if returnURL != "" {
 			ctx = context.WithValue(ctx, platega.CtxKeyReturnURL, returnURL)
 		}
+	case repository.CheckoutProviderHeleket:
+		if returnURL != "" {
+			ctx = context.WithValue(ctx, heleket.CtxKeyReturnURL, returnURL)
+		}
 	}
 	return ctx
 }
@@ -1029,6 +1038,8 @@ func mapProviderToInvoiceType(provider string) (database.InvoiceType, error) {
 		return database.InvoiceTypePlategaWorldwide, nil
 	case repository.CheckoutProviderPlategaCrypto:
 		return database.InvoiceTypePlategaCrypto, nil
+	case repository.CheckoutProviderHeleket:
+		return database.InvoiceTypeHeleket, nil
 	default:
 		return "", fmt.Errorf("%w: unknown provider %q", ErrInvalidInput, provider)
 	}
@@ -1073,6 +1084,10 @@ func paymentURLFromPurchase(p *database.Purchase) string {
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		if p.PlategaURL != nil {
 			return *p.PlategaURL
+		}
+	case database.InvoiceTypeHeleket:
+		if p.HeleketURL != nil {
+			return *p.HeleketURL
 		}
 	}
 	return ""

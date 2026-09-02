@@ -35,6 +35,18 @@ export function YandexBrandIcon({ className }: BrandIconProps) {
   )
 }
 
+/** Фирменный знак Heleket. В интерфейсе метод называется «Другая крипта». */
+export function HeleketBrandIcon({ className }: BrandIconProps) {
+  return (
+    <svg viewBox="0 0 80 80" className={className} fill="none" aria-hidden>
+      <path
+        fill="#F21818"
+        d="M5 55L30 67.5L21.25 56.25L31.25 28.75H46.25L56.25 57.5L46.25 67.5L35 78.75L73.75 60L52.5 0L46.25 16.25H32.5L25 0L5 55Z"
+      />
+    </svg>
+  )
+}
+
 export function VKBrandIcon({ className }: BrandIconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>

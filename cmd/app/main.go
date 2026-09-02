@@ -19,6 +19,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cryptopay"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/handler"
+	"remnawave-tg-shop-bot/internal/heleket"
 	"remnawave-tg-shop-bot/internal/moynalog"
 	"remnawave-tg-shop-bot/internal/notification"
 	"remnawave-tg-shop-bot/internal/payment"
@@ -148,6 +149,28 @@ func main() {
 	yookasaClient := yookasa.NewClient(config.YookasaUrl(), config.YookasaShopId(), config.YookasaSecretKey())     // YooKassa платежи
 	plategaClient := platega.NewClient(config.PlategaMerchantID(), config.PlategaSecret())
 
+	// Heleket сам не помнит адрес колбэка — он уходит в каждом счёте, поэтому
+	// путь для mux и url_callback разбираем из одной переменной.
+	heleketWebhookPath, heleketCallbackURL := heleket.ResolveWebhook(config.GetHeleketWebHookURL(), cabcfg.PublicURL())
+	heleketClient := heleket.NewClient(
+		config.HeleketMerchantID(),
+		config.HeleketAPIKey(),
+		heleketCallbackURL,
+		config.HeleketCurrency(),
+		config.HeleketOrderPrefix(),
+		config.HeleketLifetime(),
+	)
+	if heleketClient.IsConfigured() {
+		if heleketCallbackURL == "" {
+			slog.Warn("heleket: url_callback пуст — подтверждение оплаты держится только на поллинге",
+				"HELEKET_WEBHOOK_URL", config.GetHeleketWebHookURL())
+		}
+		if heleketClient.Currency() != "RUB" {
+			slog.Warn("heleket: валюта счёта не RUB — сумма НЕ конвертируется, покупателю выставят рублёвое число в другой валюте",
+				"HELEKET_CURRENCY", heleketClient.Currency())
+		}
+	}
+
 	// Создание экземпляра Telegram бота с 3 воркерами для параллельной обработки запросов
 	botOptions := []bot.Option{bot.WithWorkers(3)}
 	if proxyURL := config.TelegramProxyURL(); proxyURL != "" {
@@ -186,11 +209,15 @@ func main() {
 	}
 
 	// Инициализация сервиса платежей, который объединяет все платежные системы
-	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, referralRepository, referralLedgerRepository, partnerRepository, cache, receiptQueue, promoService, loyaltyTierRepository)
+	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, heleketClient, referralRepository, referralLedgerRepository, partnerRepository, cache, receiptQueue, promoService, loyaltyTierRepository)
+
+	// Один Reconciler на вебхук и на поллинг: решение «зачесть / отменить /
+	// позвать админа» принимается в одном месте.
+	heleketReconciler := heleket.NewReconciler(heleketClient, purchaseRepository, paymentService, paymentService, paymentService)
 
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// CryptoPay; YooKassa и Platega — поллинг только если не задан соответствующий WEBHOOK_URL.
-	cronScheduler := setupInvoiceChecker(purchaseRepository, cryptoPayClient, paymentService, yookasaClient, plategaClient)
+	cronScheduler := setupInvoiceChecker(purchaseRepository, cryptoPayClient, paymentService, yookasaClient, plategaClient, heleketReconciler)
 	if cronScheduler != nil {
 		cronScheduler.Start()
 		defer cronScheduler.Stop()
@@ -819,6 +846,13 @@ func main() {
 	if config.IsPlategaEnabled() && strings.TrimSpace(config.GetPlategaWebHookURL()) != "" {
 		mux.Handle(config.GetPlategaWebHookURL(), platega.NewWebhookHandler(purchaseRepository, paymentService, config.PlategaMerchantID(), config.PlategaSecret()))
 	}
+	// Монтируем по наличию реквизитов, а не по тумблеру: способ оплаты можно
+	// включить из админки без рестарта, и тогда счета создавались бы, а колбэк
+	// принимать было бы некому.
+	if heleketWebhookPath != "" && heleketClient.IsConfigured() {
+		mux.Handle(heleketWebhookPath, heleket.NewWebhookHandler(heleketReconciler, config.HeleketAPIKey()))
+		slog.Info("heleket webhook mounted", "path", heleketWebhookPath, "url_callback", heleketCallbackURL)
+	}
 	if path := config.GetRemnawaveWebhookPath(); path != "" && config.GetRemnawaveWebhookSecret() != "" {
 		mux.Handle(path, remnawavewebhook.NewHandler(config.GetRemnawaveWebhookSecret(), customerRepository, b, tm))
 		slog.Info("remnawave webhook mounted", "path", path)
@@ -1047,6 +1081,10 @@ func initDatabase(ctx context.Context, connString string) (*pgxpool.Pool, error)
 }
 
 // setupInvoiceChecker - настраивает cron-задачи для проверки статуса счетов
+// heleketPollTimeout — потолок на один обход pending-счетов Heleket, чтобы
+// зависший ответ кассы не держал задачу до следующего запуска.
+const heleketPollTimeout = 4 * time.Minute
+
 // Проверяет оплаченные счета в CryptoPay и YooKassa каждые 5 секунд
 // Если счет оплачен, обрабатывает покупку и активирует подписку
 func setupInvoiceChecker(
@@ -1055,6 +1093,7 @@ func setupInvoiceChecker(
 	paymentService *payment.PaymentService,
 	yookasaClient *yookasa.Client,
 	plategaClient *platega.Client,
+	heleketReconciler *heleket.Reconciler,
 ) *cron.Cron {
 	// Задачи регистрируем по наличию реквизитов, а включённость проверяем внутри
 	// самой задачи. Способы оплаты переключаются из админки без рестарта: если
@@ -1062,7 +1101,10 @@ func setupInvoiceChecker(
 	// которые никто не проверяет, — оплата зависала бы навсегда.
 	yookPoll := config.YookasaHasCredentials() && strings.TrimSpace(config.GetYookasaWebHookURL()) == ""
 	plategaPoll := config.PlategaHasCredentials() && strings.TrimSpace(config.GetPlategaWebHookURL()) == ""
-	if !config.CryptoPayHasCredentials() && !yookPoll && !plategaPoll {
+	// Heleket опрашиваем всегда, даже когда вебхук настроен: крипта необратима,
+	// и пропущенный колбэк означал бы, что человек заплатил и ничего не получил.
+	heleketPoll := config.HeleketHasCredentials() && heleketReconciler != nil
+	if !config.CryptoPayHasCredentials() && !yookPoll && !plategaPoll && !heleketPoll {
 		return nil
 	}
 	c := cron.New(cron.WithSeconds()) // Включаем поддержку секунд в расписании
@@ -1105,6 +1147,28 @@ func setupInvoiceChecker(
 			ctx := context.Background()
 			checkPlategaInvoice(ctx, purchaseRepository, plategaClient, paymentService)
 		})
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if heleketPoll {
+		// С вебхуком поллинг — лишь страховка, поэтому раз в минуту; без него он
+		// единственный способ узнать об оплате, и частота как у остальных касс.
+		schedule := "*/5 * * * * *"
+		if strings.TrimSpace(config.GetHeleketWebHookURL()) != "" {
+			schedule = "0 * * * * *"
+		}
+		// Намеренно без проверки IsHeleketEnabled: выключение метода в админке
+		// должно прекращать выдачу новых счетов, а не бросать уже выставленные.
+		// Оплату по ним всё равно не вернуть, поэтому pending дозакрываем всегда.
+		// Проходы не должны накладываться: при большом числе pending один обход
+		// длится дольше периода, и два поллера пошли бы по одному списку.
+		_, err := c.AddJob(schedule, cron.NewChain(cron.SkipIfStillRunning(cron.DiscardLogger)).Then(cron.FuncJob(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), heleketPollTimeout)
+			defer cancel()
+			heleketReconciler.PollPending(ctx)
+		})))
 		if err != nil {
 			panic(err)
 		}

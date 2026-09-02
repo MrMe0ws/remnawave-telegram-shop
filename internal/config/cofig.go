@@ -29,6 +29,10 @@ type config struct {
 	isPlategaSBPEnabled, isPlategaCardsEnabled                                   bool
 	isPlategaAcquiringEnabled, isPlategaWorldwideEnabled                         bool
 	isPlategaCryptoEnabled                                                       bool
+	heleketMerchantID, heleketAPIKey, heleketWebhookURL, heleketCurrency         string
+	heleketOrderPrefix                                                           string
+	heleketLifetime                                                              int
+	isHeleketEnabled                                                             bool
 	moynalogURL, moynalogUsername, moynalogPassword                              string
 	moynalogProxyURL                                                             string
 	moynalogRetryCron                                                            string
@@ -171,7 +175,10 @@ func GetTributePaymentUrl() string {
 	return conf.tributePaymentUrl
 }
 
-// GetYookasaWebHookURL — путь или полный URL вебхука YooKassa; пусто = использовать только поллинг.
+// GetYookasaWebHookURL — только путь вебхука YooKassa (например "/yookassa-hook"), без схемы и домена:
+// значение уходит напрямую в mux.Handle. Полный URL не паникует, но регистрируется
+// как хост "https:" и не совпадёт ни с одним запросом (404), при этом поллинг уже
+// выключен — оплаты перестанут подтверждаться вообще. Пусто = только поллинг.
 func GetYookasaWebHookURL() string {
 	return conf.yookasaWebhookURL
 }
@@ -214,6 +221,42 @@ func IsPlategaEnabled() bool {
 	return conf.isPlategaSBPEnabled || conf.isPlategaCardsEnabled ||
 		conf.isPlategaAcquiringEnabled || conf.isPlategaWorldwideEnabled ||
 		conf.isPlategaCryptoEnabled
+}
+
+func HeleketMerchantID() string {
+	return conf.heleketMerchantID
+}
+
+func HeleketAPIKey() string {
+	return conf.heleketAPIKey
+}
+
+// GetHeleketWebHookURL — вебхук Heleket из env. В отличие от остальных касс
+// здесь удобнее полный https-URL: этот же адрес уходит в url_callback при
+// создании счёта, а путь для mux вычисляется из него. Пусто — Heleket не зовёт
+// нас обратно и подтверждение держится на поллинге.
+func GetHeleketWebHookURL() string {
+	return conf.heleketWebhookURL
+}
+
+// HeleketCurrency — валюта номинала счёта Heleket (по умолчанию RUB).
+func HeleketCurrency() string {
+	return conf.heleketCurrency
+}
+
+// HeleketOrderPrefix — префикс order_id счетов Heleket. Разделяет стенды,
+// живущие на одном мерчанте: у боевого и тестового он должен отличаться.
+func HeleketOrderPrefix() string {
+	return conf.heleketOrderPrefix
+}
+
+// HeleketLifetime — сколько живёт счёт Heleket, секунды.
+func HeleketLifetime() int {
+	return conf.heleketLifetime
+}
+
+func IsHeleketEnabled() bool {
+	return conf.isHeleketEnabled
 }
 
 func GetHwidFallbackDeviceLimit() int {
@@ -654,6 +697,11 @@ func YookasaHasCredentials() bool {
 // PlategaHasCredentials — заданы ли реквизиты Platega в .env.
 func PlategaHasCredentials() bool {
 	return credentialsSet(conf.plategaMerchantID, conf.plategaSecret)
+}
+
+// HeleketHasCredentials — заданы ли реквизиты Heleket в .env.
+func HeleketHasCredentials() bool {
+	return credentialsSet(conf.heleketMerchantID, conf.heleketAPIKey)
 }
 
 func IsCryptoPayEnabled() bool {
@@ -1098,6 +1146,20 @@ func InitConfig() {
 		conf.isPlategaAcquiringEnabled = envBool("PLATEGA_ACQUIRING_ENABLED")
 		conf.isPlategaWorldwideEnabled = envBool("PLATEGA_WORLDWIDE_ENABLED")
 		conf.isPlategaCryptoEnabled = envBool("PLATEGA_CRYPTO_ENABLED")
+	}
+
+	conf.heleketMerchantID = strings.TrimSpace(os.Getenv("HELEKET_MERCHANT_ID"))
+	conf.heleketAPIKey = strings.TrimSpace(os.Getenv("HELEKET_API_KEY"))
+	conf.heleketWebhookURL = strings.TrimSpace(os.Getenv("HELEKET_WEBHOOK_URL"))
+	conf.heleketCurrency = strings.ToUpper(envStringDefault("HELEKET_CURRENCY", "RUB"))
+	conf.heleketOrderPrefix = strings.TrimSpace(envStringDefault("HELEKET_ORDER_PREFIX", "shop"))
+	conf.heleketLifetime = envIntDefault("HELEKET_INVOICE_LIFETIME", 3600)
+	if envBool("HELEKET_ENABLED") {
+		if !credentialsPresent(conf.heleketMerchantID, conf.heleketAPIKey) {
+			log.Panicf("HELEKET_ENABLED=true requires HELEKET_MERCHANT_ID and HELEKET_API_KEY")
+		}
+		warnIfPlaceholders("heleket", conf.heleketMerchantID, conf.heleketAPIKey)
+		conf.isHeleketEnabled = true
 	}
 
 	conf.trafficLimit = mustEnvInt("TRAFFIC_LIMIT")

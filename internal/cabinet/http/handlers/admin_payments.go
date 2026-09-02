@@ -80,7 +80,9 @@ type adminPaymentDetailDTO struct {
 	YookasaURL       *string `json:"yookasa_url,omitempty"`
 	PlategaID        *string `json:"platega_id,omitempty"`
 	PlategaURL       *string `json:"platega_url,omitempty"`
-	// ProviderTxnID — унифицированный внешний ID (yookasa/platega/crypto — что применимо).
+	HeleketID        *string `json:"heleket_id,omitempty"`
+	HeleketURL       *string `json:"heleket_url,omitempty"`
+	// ProviderTxnID — унифицированный внешний ID (yookasa/platega/heleket/crypto — что применимо).
 	ProviderTxnID *string `json:"provider_txn_id,omitempty"`
 	// IdempotencyKey/CheckoutProvider — заполнены, только если платёж создан через web-кабинет
 	// (см. cabinet_checkout); для платежей из Telegram-бота остаются пустыми.
@@ -205,6 +207,8 @@ func resolveProviderTxnID(r database.AdminPurchaseRow) *string {
 		return &s
 	case r.PlategaID != nil:
 		return r.PlategaID
+	case r.HeleketID != nil:
+		return r.HeleketID
 	case r.CryptoInvoiceID != nil:
 		s := strconv.FormatInt(*r.CryptoInvoiceID, 10)
 		return &s
@@ -224,6 +228,8 @@ func (h *AdminPaymentsHandler) mapRowToDetailDTO(ctx context.Context, row databa
 		YookasaURL:              row.YookasaURL,
 		PlategaID:               row.PlategaID,
 		PlategaURL:              row.PlategaURL,
+		HeleketID:               row.HeleketID,
+		HeleketURL:              row.HeleketURL,
 		ProviderTxnID:           resolveProviderTxnID(row),
 	}
 	if row.ExpireAt != nil {
@@ -369,6 +375,7 @@ var invoiceTypeCsvLabels = map[database.InvoiceType]string{
 	database.InvoiceTypePlategaAcquiring: "Platega эквайринг",
 	database.InvoiceTypePlategaWorldwide: "Platega worldwide",
 	database.InvoiceTypePlategaCrypto:    "Platega crypto",
+	database.InvoiceTypeHeleket:          "Heleket",
 }
 
 func invoiceTypeCsvLabel(t string) string {
