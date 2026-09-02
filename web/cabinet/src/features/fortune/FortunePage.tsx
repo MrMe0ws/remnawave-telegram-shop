@@ -23,8 +23,8 @@ import { FortuneWinnersMarquee } from '@/features/fortune/fortuneWinnersFeed'
 import {
   buildWheelConicGradient,
   type FortuneDesignVariant,
-  sortFortuneSectorsByIndex,
 } from '@/features/fortune/fortunePrizeVisuals'
+import { arrangeFortuneSlots, slotIndexOfSector } from '@/features/fortune/fortuneWheelLayout'
 import {
   nextSpinRotation,
   sectorIndexUnderPointer,
@@ -187,14 +187,17 @@ export default function FortunePage() {
       setLastResult({ type: res.reward_type, value: res.reward_value, free: res.is_free_spin })
       setShowPrizeModal(false)
       const fresh = qc.getQueryData<FortuneStatusResponse>(['fortune', 'status'])
-      const n = fresh?.sectors?.length ?? status?.sectors?.length ?? 10
+      const slots = arrangeFortuneSlots(fresh?.sectors ?? status?.sectors ?? [])
+      const n = slots.length || 10
+      // Приз определён сервером; сектор стоит не на своём `index`, поэтому целимся в его слот.
+      const winnerSlot = slotIndexOfSector(slots, res.sector_index)
       const target = nextSpinRotation({
         currentRotation: rotation,
-        sectorIndex: res.sector_index,
+        sectorIndex: winnerSlot,
         sectorCount: n,
         fullSpins: 5,
       })
-      const sectorTypes = sortFortuneSectorsByIndex(fresh?.sectors ?? status?.sectors ?? []).map((s) => s.reward_type)
+      const sectorTypes = slots.map((s) => s.reward_type)
       spinTweenRef.current = {
         from: rotation,
         to: target,
@@ -203,7 +206,7 @@ export default function FortunePage() {
         sectorTypes,
       }
       lastWinnerRewardRef.current = res.reward_type
-      setWinnerIndex(res.sector_index)
+      setWinnerIndex(winnerSlot)
       setSpinning(true)
       setRotation(target)
 
@@ -229,7 +232,7 @@ export default function FortunePage() {
         setHubRewardType(lastWinnerRewardRef.current)
         setWinCelebration(true)
         const nSafe = Math.max(1, n)
-        const c = sectorCenterDeg(res.sector_index, nSafe)
+        const c = sectorCenterDeg(winnerSlot, nSafe)
         const finalPointer = -90 + (rotation + (target - rotation)) * -1 + 90
         const overshootDeg = Math.max(2.2, Math.min(6.5, Math.abs(((finalPointer - c) % 360) * 0.03)))
         void wheelFxControls.start({
@@ -271,10 +274,11 @@ export default function FortunePage() {
     },
   })
 
-  const orderedSectors = useMemo(() => sortFortuneSectorsByIndex(status?.sectors ?? []), [status?.sectors])
+  /** Сектора в порядке слотов на диске — вперемешку, а не лесенкой по ценности из API. */
+  const slotSectors = useMemo(() => arrangeFortuneSlots(status?.sectors ?? []), [status?.sectors])
   const gradient = useMemo(
-    () => buildWheelConicGradient(orderedSectors, designVariant),
-    [orderedSectors, designVariant],
+    () => buildWheelConicGradient(slotSectors, designVariant),
+    [slotSectors, designVariant],
   )
 
   const reasonText = useMemo(() => {
@@ -344,7 +348,7 @@ export default function FortunePage() {
       </div>
       <motion.div className="relative aspect-square w-full overflow-hidden rounded-full" animate={wheelFxControls}>
         <FortuneWheelFace
-          sectors={orderedSectors}
+          sectors={slotSectors}
           rotationDeg={rotation}
           spinning={spinning || spinMut.isPending}
           spinMs={FORTUNE_SPIN_MS}
@@ -358,7 +362,7 @@ export default function FortunePage() {
           prize={lastResult?.type ?? null}
           amount={lastResult?.value ?? 0}
           winnerIndex={winnerIndex}
-          sectorCount={orderedSectors.length}
+          sectorCount={slotSectors.length}
           designVariant={designVariant}
         />
       </motion.div>
@@ -523,7 +527,7 @@ export default function FortunePage() {
             <RevealItem className={wheelWrapClassName}>{wheelColumn}</RevealItem>
 
             <RevealItem>
-              <FortunePossiblePrizes sectors={orderedSectors} t={t} />
+              <FortunePossiblePrizes sectors={slotSectors} t={t} />
             </RevealItem>
           </>
         )}

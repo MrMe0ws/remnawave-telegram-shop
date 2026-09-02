@@ -10,7 +10,6 @@ import {
   type FortuneDesignVariant,
   buildOuterRarityRingGradient,
   sectorIconClassWheel,
-  sortFortuneSectorsByIndex,
 } from '@/features/fortune/fortunePrizeVisuals'
 
 /** Радиус до центра чипа (% от ширины квадрата колеса). */
@@ -123,6 +122,7 @@ function SectorSpokes({ n, variant }: { n: number; variant: FortuneDesignVariant
 }
 
 type FortuneWheelFaceProps = {
+  /** В порядке слотов на диске (`arrangeFortuneSlots`), а не `index` из API. */
   sectors: FortuneSectorDTO[]
   rotationDeg: number
   spinning: boolean
@@ -154,7 +154,7 @@ export function FortuneWheelFace({
   hubRewardType,
   className,
 }: FortuneWheelFaceProps) {
-  const ordered = useMemo(() => sortFortuneSectorsByIndex(sectors), [sectors])
+  const ordered = sectors
   const n = ordered.length
   const HubIcon = hubRewardType ? (FORTUNE_SECTOR_ICONS[hubRewardType] ?? Sparkles) : Sparkles
   const hubIconCls = hubRewardType

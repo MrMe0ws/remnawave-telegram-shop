@@ -1,6 +1,0 @@
-import{i as o,ag as e}from"./index-psmgJSqm.js";/**
- * @license lucide-react v0.475.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */const a=[["rect",{width:"20",height:"12",x:"2",y:"6",rx:"2",key:"9lu3g6"}],["circle",{cx:"12",cy:"12",r:"2",key:"1c9p78"}],["path",{d:"M6 12h.01M18 12h.01",key:"113zkx"}]],c=o("Banknote",a);function m(t){const n=Math.round(t*100)%100!==0;return`${t.toLocaleString(e(),{minimumFractionDigits:n?2:0,maximumFractionDigits:2})} ₽`}function u(t){return`${t.toLocaleString(e(),{maximumFractionDigits:2})}%`}function s(t){const[n,r]=t.split("-").map(Number);return!n||!r?t:new Date(Date.UTC(n,r-1,1)).toLocaleDateString(e(),{month:"short"})}function h(t){const[n,r]=t.split("-").map(Number);return!n||!r?t:new Date(Date.UTC(n,r-1,1)).toLocaleDateString(e(),{month:"long",year:"numeric"})}function f(t){if(!t)return"";const n=new Date(t);return Number.isFinite(n.getTime())?n.toLocaleDateString(e(),{day:"numeric",month:"long"}):""}function g(t){if(!t)return"";const n=new Date(t);return Number.isFinite(n.getTime())?n.toLocaleDateString(e(),{day:"numeric",month:"short"}):""}export{c as B,g as a,u as b,f as c,h as d,s as e,m as f};

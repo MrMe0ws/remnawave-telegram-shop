@@ -3,7 +3,7 @@ import type { FortuneSectorDTO } from '@/lib/api'
 /** Варианты дизайна колеса — разные визуальные концепции, не только оттенок заливки. */
 export type FortuneDesignVariant = 'classic' | 'porcelain' | 'void' | 'ledger' | 'bento'
 
-/** Сектора в порядке `index` из API — совпадает с `sector_index` при спине и с дугами conic-gradient. */
+/** Сектора в порядке `index` из API. Порядок слотов на диске задаёт `arrangeFortuneSlots`. */
 export function sortFortuneSectorsByIndex(sectors: FortuneSectorDTO[]): FortuneSectorDTO[] {
   return [...sectors].sort((a, b) => a.index - b.index)
 }
@@ -89,8 +89,9 @@ function wheelSectorBentoFill(rewardType: string, index: number): string {
   return `hsl(${h} 28% 90%)`
 }
 
-export function buildWheelConicGradient(sectors: FortuneSectorDTO[], variant: FortuneDesignVariant = 'classic'): string {
-  const ordered = sortFortuneSectorsByIndex(sectors)
+/** Заливка диска. `slots` — уже в порядке слотов (см. `arrangeFortuneSlots`), не в порядке `index`. */
+export function buildWheelConicGradient(slots: FortuneSectorDTO[], variant: FortuneDesignVariant = 'classic'): string {
+  const ordered = slots
   if (ordered.length === 0) return 'conic-gradient(from 0deg, hsl(var(--muted)) 0deg 360deg)'
   const n = ordered.length
   const step = 360 / n
@@ -133,9 +134,9 @@ export function buildWheelConicGradient(sectors: FortuneSectorDTO[], variant: Fo
   return `conic-gradient(from 0deg, ${parts.join(', ')})`
 }
 
-/** Кольцо редкости на ободе (полный круг conic — маска задаётся в компоненте). */
-export function buildOuterRarityRingGradient(sectors: FortuneSectorDTO[]): string {
-  const ordered = sortFortuneSectorsByIndex(sectors)
+/** Кольцо редкости на ободе (полный круг conic — маска задаётся в компоненте). `slots` — в порядке слотов. */
+export function buildOuterRarityRingGradient(slots: FortuneSectorDTO[]): string {
+  const ordered = slots
   if (ordered.length === 0) return ''
   const step = 360 / ordered.length
   const parts = ordered.map((s, i) => {
