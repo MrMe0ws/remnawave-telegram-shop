@@ -2748,7 +2748,6 @@
         "attentionTitle": "Needs attention",
         "attentionPartnerApplications": "Partner applications: {{count}}",
         "attentionPartnerPayouts": "Payout requests: {{count}}",
-        "attentionOpenInvoices": "Invoices still open: {{count}}",
         "panelUnreachable": "Remnawave panel is not responding — showing shop data only",
         "panelNotConfigured": "Remnawave panel is not connected — showing shop data only",
         "trafficTitle": "Traffic",
@@ -2756,8 +2755,6 @@
         "trafficThirty": "Last 30 days",
         "trafficCalendarMonth": "Calendar month",
         "trafficYear": "Current year",
-        "onlineToday": "Online today",
-        "onlineWeek": "Online this week",
         "systemTitle": "System",
         "totalTraffic": "Total traffic",
         "memory": "Memory",
@@ -2774,7 +2771,6 @@
         "attentionBillingDueSoon": "Server payments due this week: {{count}}",
         "attentionClear": "All clear — nothing to do",
         "attentionBillingUrgent": "Server payments within 3 days: {{count}}",
-        "onlineBreakdown": "When users were last seen",
         "heroToday": "{{count}} today",
         "heroWeek": "{{count}} this week",
         "heroNever": "{{count}} never",
@@ -2786,7 +2782,14 @@
         "today": "Today",
         "thisMonth": "This month",
         "salesTodayRow": "Sales today",
-        "payersTodayRow": "Paid today"
+        "payersTodayRow": "Paid today",
+        "panelUsersTitle": "Users in the panel",
+        "panelStatus": {
+          "ACTIVE": "Active",
+          "EXPIRED": "Expired",
+          "LIMITED": "Limited",
+          "DISABLED": "Disabled"
+        }
       }
     },
     "landing": {

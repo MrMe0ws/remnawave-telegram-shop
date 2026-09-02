@@ -2768,7 +2768,6 @@
         "attentionTitle": "Требует внимания",
         "attentionPartnerApplications": "Заявок партнёров: {{count}}",
         "attentionPartnerPayouts": "Заявок на выплату: {{count}}",
-        "attentionOpenInvoices": "Счетов не закрыто: {{count}}",
         "panelUnreachable": "Панель Remnawave не отвечает — показаны только данные магазина",
         "panelNotConfigured": "Панель Remnawave не подключена — показаны только данные магазина",
         "trafficTitle": "Трафик",
@@ -2776,8 +2775,6 @@
         "trafficThirty": "Последние 30 дней",
         "trafficCalendarMonth": "Календарный месяц",
         "trafficYear": "Текущий год",
-        "onlineToday": "Онлайн сегодня",
-        "onlineWeek": "Онлайн за неделю",
         "systemTitle": "Система",
         "totalTraffic": "Всего трафика",
         "memory": "Память",
@@ -2794,7 +2791,6 @@
         "attentionBillingDueSoon": "Оплата серверов на неделе: {{count}}",
         "attentionClear": "Всё в порядке — дел нет",
         "attentionBillingUrgent": "Оплата серверов в ближайшие 3 дня: {{count}}",
-        "onlineBreakdown": "Когда выходили на связь",
         "heroToday": "{{count}} сегодня",
         "heroWeek": "{{count}} за неделю",
         "heroNever": "{{count}} ни разу",
@@ -2806,7 +2802,14 @@
         "today": "Сегодня",
         "thisMonth": "За месяц",
         "salesTodayRow": "Продаж сегодня",
-        "payersTodayRow": "Платили сегодня"
+        "payersTodayRow": "Платили сегодня",
+        "panelUsersTitle": "Пользователи в панели",
+        "panelStatus": {
+          "ACTIVE": "Активны",
+          "EXPIRED": "Истекли",
+          "LIMITED": "Лимит",
+          "DISABLED": "Отключены"
+        }
       }
     },
     "landing": {

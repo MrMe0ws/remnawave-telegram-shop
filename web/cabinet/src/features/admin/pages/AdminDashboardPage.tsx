@@ -40,7 +40,19 @@ import { formatRub, statsNumberLocale } from '../stats/utils/statsFormat'
 import { STATS_ACCENT } from '../stats/utils/statsPalette'
 
 /** Уровень срочности дела. Цвет плашки — по худшему из них. */
-type Severity = 'info' | 'warn' | 'crit'
+type Severity = 'warn' | 'crit'
+
+/**
+ * Статусы пользователей в панели. Ключи — как их отдаёт Remnawave; набор задаёт
+ * она, поэтому неизвестный статус просто не попадёт в этот список, а не сломает
+ * разбор.
+ */
+const PANEL_STATUSES = [
+  { key: 'ACTIVE', color: STATS_ACCENT.green },
+  { key: 'EXPIRED', color: STATS_ACCENT.orange },
+  { key: 'LIMITED', color: STATS_ACCENT.amber },
+  { key: 'DISABLED', color: STATS_ACCENT.red },
+] as const
 
 interface AttentionItem {
   key: string
@@ -113,7 +125,7 @@ function AdminDashboardContent() {
     {
       key: 'partnerPayouts',
       count: a?.partner_payouts ?? 0,
-      to: '/admin/partners',
+      to: '/admin/partners?tab=payouts',
       severity: 'crit' as const,
       label: t('admin.overview.attentionPartnerPayouts', { count: a?.partner_payouts ?? 0 }),
     },
@@ -127,18 +139,11 @@ function AdminDashboardContent() {
     {
       key: 'partnerApplications',
       count: a?.partner_applications ?? 0,
-      to: '/admin/partners',
+      to: '/admin/partners?tab=applications',
       severity: 'warn' as const,
       label: t('admin.overview.attentionPartnerApplications', {
         count: a?.partner_applications ?? 0,
       }),
-    },
-    {
-      key: 'openInvoices',
-      count: a?.open_invoices ?? 0,
-      to: '/admin/payments',
-      severity: 'info' as const,
-      label: t('admin.overview.attentionOpenInvoices', { count: a?.open_invoices ?? 0 }),
     },
   ].filter((item) => item.count > 0)
 
@@ -326,26 +331,16 @@ function HeroBlock({
   const online = panel.available ? panel.online : null
   const scaleBase = Math.max(online?.now ?? 0, online?.today ?? 0, online?.week ?? 0, 1)
 
-  const breakdown = [
-    {
-      icon: Radio,
-      label: t('admin.overview.onlineNow'),
-      value: online?.now ?? 0,
-      color: STATS_ACCENT.green,
-    },
-    {
-      icon: Clock,
-      label: t('admin.overview.onlineToday'),
-      value: online?.today ?? 0,
-      color: STATS_ACCENT.cyan,
-    },
-    {
-      icon: UsersRound,
-      label: t('admin.overview.onlineWeek'),
-      value: online?.week ?? 0,
-      color: STATS_ACCENT.blue,
-    },
-  ]
+  // Состав пользователей панели. Слева в герое — сколько людей на связи,
+  // справа — что у них с подпиской: это разные вопросы, а не одно и то же
+  // число в другой обёртке. Данные уже приходят в ответе, но нигде не видны.
+  const statusCounts = panel.available ? panel.panel_users.status_counts : {}
+  const statuses = PANEL_STATUSES.map((st) => ({
+    ...st,
+    label: t(`admin.overview.panelStatus.${st.key}`),
+    value: statusCounts[st.key] ?? 0,
+  }))
+  const statusTotal = statuses.reduce((sum, st) => sum + st.value, 0)
 
   return (
     <Card className="cabinet-elevated-card stats-ring p-5 sm:p-6">
@@ -354,7 +349,7 @@ function HeroBlock({
           <div className="flex items-center gap-2">
             <span className="relative flex size-2.5 shrink-0">
               <span
-                className="absolute inline-flex size-full rounded-full opacity-40"
+                className="absolute inline-flex size-full rounded-full opacity-60 motion-safe:animate-ping"
                 style={{ backgroundColor: STATS_ACCENT.green }}
               />
               <span
@@ -407,48 +402,51 @@ function HeroBlock({
         </div>
 
         <div className="rounded-2xl border border-border/50 bg-muted/20 p-4 sm:p-5">
-          <p className="mb-3.5 flex items-center gap-2 text-[13px] text-muted-foreground">
-            <Radio className="size-3.5 shrink-0" aria-hidden />
-            {t('admin.overview.onlineBreakdown')}
-          </p>
+          <div className="mb-3.5 flex items-baseline justify-between gap-3">
+            <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              <UsersRound className="size-3.5 shrink-0" aria-hidden />
+              {t('admin.overview.panelUsersTitle')}
+            </p>
+            <p className="shrink-0 text-[13px] font-semibold tabular-nums">
+              {panel.available ? statusTotal.toLocaleString(numberLocale) : '—'}
+            </p>
+          </div>
+
           {panel.available ? (
             <>
-              <div className="flex flex-col gap-3">
-                {breakdown.map((row) => {
-                  const Icon = row.icon
-                  return (
-                    <div key={row.label} className="flex flex-col gap-1.5">
-                      <div className="flex items-baseline justify-between gap-3 text-[13px]">
-                        <span className="inline-flex min-w-0 items-center gap-2">
-                          <Icon
-                            className="size-3.5 shrink-0"
-                            style={{ color: row.color }}
-                            aria-hidden
-                          />
-                          <span className="truncate">{row.label}</span>
-                        </span>
-                        <span className="shrink-0 font-semibold tabular-nums">
-                          {row.value.toLocaleString(numberLocale)}
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.max((row.value * 100) / scaleBase, row.value > 0 ? 3 : 0)}%`,
-                            backgroundColor: row.color,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="mb-4 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+                {statuses.map((st) => (
+                  <div
+                    key={st.key}
+                    style={{
+                      width: `${statusTotal > 0 ? (st.value * 100) / statusTotal : 0}%`,
+                      backgroundColor: st.color,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                {statuses.map((st) => (
+                  <div key={st.key} className="flex items-center gap-2 text-[13px]">
+                    <span
+                      className="size-2.5 shrink-0 rounded-[3px]"
+                      style={{ backgroundColor: st.color }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                      {st.label}
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      {st.value.toLocaleString(numberLocale)}
+                    </span>
+                  </div>
+                ))}
               </div>
               <p className="mt-4 flex items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
                 <UserRoundX className="size-3.5 shrink-0" aria-hidden />
                 {t('admin.overview.neverOnlineNote', {
                   count: online?.never_online ?? 0,
-                  total: panel.panel_users.total.toLocaleString(numberLocale),
+                  total: statusTotal.toLocaleString(numberLocale),
                 })}
               </p>
             </>
@@ -506,18 +504,20 @@ function AttentionBar({
 }) {
   if (worst === null) {
     return (
-      <Card className="flex items-center gap-3 border-emerald-500/40 bg-emerald-500/5 p-4 sm:px-5">
+      <div className="flex items-center gap-3 rounded-[--radius] border border-emerald-500/40 bg-emerald-500/[0.07] p-4 sm:px-5">
         <CircleCheck className="size-5 shrink-0 text-emerald-500" />
         <span className="text-sm font-medium">{t('admin.overview.attentionClear')}</span>
-      </Card>
+      </div>
     )
   }
 
   return (
-    <Card
+    <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-2.5 p-4 sm:px-5',
-        worst === 'crit' ? 'border-rose-500/40 bg-rose-500/5' : 'border-amber-500/40 bg-amber-500/5',
+        'flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-[--radius] border p-4 sm:px-5',
+        worst === 'crit'
+          ? 'border-rose-500/45 bg-gradient-to-r from-rose-500/[0.16] via-rose-500/[0.07] to-transparent'
+          : 'border-amber-500/45 bg-gradient-to-r from-amber-500/[0.16] via-amber-500/[0.07] to-transparent',
       )}
     >
       <span className="flex items-center gap-2 text-sm font-semibold">
@@ -536,15 +536,13 @@ function AttentionBar({
               'border-rose-500/50 bg-rose-500/10 text-rose-500 hover:border-rose-500',
             item.severity === 'warn' &&
               'border-amber-500/50 bg-amber-500/10 text-amber-600 hover:border-amber-500 dark:text-amber-400',
-            item.severity === 'info' &&
-              'border-border/60 bg-muted/20 hover:border-primary/50 hover:text-primary',
           )}
         >
           {item.label}
           <ArrowRight className="size-3.5 shrink-0" />
         </Link>
       ))}
-    </Card>
+    </div>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Handshake, Check, X, UserPlus, Loader2, AlertTriangle, FileText, Users, Banknote, type LucideIcon } from 'lucide-react'
 
@@ -27,9 +28,29 @@ import type { AdminPartnerDTO, AdminPartnerPayoutDTO } from '@/lib/types/admin'
 
 type TabId = 'applications' | 'partners' | 'payouts'
 
+const TAB_IDS: TabId[] = ['applications', 'partners', 'payouts']
+
+function isTabId(value: string | null): value is TabId {
+  return value !== null && (TAB_IDS as string[]).includes(value)
+}
+
 export default function AdminPartnersPage() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<TabId>('applications')
+  // Вкладка живёт в адресе, чтобы на неё можно было сослаться снаружи:
+  // «Заявок на выплату» с дашборда должно открывать выплаты, а не заявки.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const tab: TabId = isTabId(tabParam) ? tabParam : 'applications'
+  const setTab = (next: TabId) => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        params.set('tab', next)
+        return params
+      },
+      { replace: true },
+    )
+  }
   // Карточка партнёра открывается модалкой поверх очереди: разбор заявки и
   // обработка выплаты — один заход, уходить со страницы незачем.
   const [openPartner, setOpenPartner] = useState<number | null>(null)
