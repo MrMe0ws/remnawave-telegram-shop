@@ -12,18 +12,45 @@
     "attention": {
       "partner_applications": 4,
       "partner_payouts": 3,
-      "open_invoices": 12
+      "open_invoices": 12,
+      "billing_overdue": 1,
+      "billing_due_soon": 2
     },
     "panel": {
       "available": true,
       "traffic": {
-        "today": { "current": "287.01 GiB", "previous": "449.74 GiB", "difference": "-162.73 GiB" },
-        "last_seven_days": { "current": "2.98 TiB", "previous": "3.37 TiB", "difference": "-394.21 GiB" },
-        "last_thirty_days": { "current": "14.24 TiB", "previous": "14.25 TiB", "difference": "-4.75 GiB" },
-        "calendar_month": { "current": "736.75 GiB", "previous": "14.79 TiB", "difference": "-14.07 TiB" },
-        "current_year": { "current": "99.23 TiB", "previous": "20.90 TiB", "difference": "78.33 TiB" }
+        "today": {
+          "current": "287.01 GiB",
+          "previous": "449.74 GiB",
+          "difference": "-162.73 GiB"
+        },
+        "last_seven_days": {
+          "current": "2.98 TiB",
+          "previous": "3.37 TiB",
+          "difference": "-394.21 GiB"
+        },
+        "last_thirty_days": {
+          "current": "14.24 TiB",
+          "previous": "14.25 TiB",
+          "difference": "-4.75 GiB"
+        },
+        "calendar_month": {
+          "current": "736.75 GiB",
+          "previous": "14.79 TiB",
+          "difference": "-14.07 TiB"
+        },
+        "current_year": {
+          "current": "99.23 TiB",
+          "previous": "20.90 TiB",
+          "difference": "78.33 TiB"
+        }
       },
-      "online": { "now": 62, "today": 124, "week": 138, "never_online": 408 },
+      "online": {
+        "now": 62,
+        "today": 124,
+        "week": 138,
+        "never_online": 408
+      },
       "system": {
         "nodes_online": 70,
         "total_bytes_lifetime": "120.12 TiB",
@@ -34,7 +61,12 @@
       },
       "panel_users": {
         "total": 1087,
-        "status_counts": { "ACTIVE": 165, "EXPIRED": 921, "LIMITED": 0, "DISABLED": 1 }
+        "status_counts": {
+          "ACTIVE": 165,
+          "EXPIRED": 921,
+          "LIMITED": 0,
+          "DISABLED": 1
+        }
       }
     }
   }

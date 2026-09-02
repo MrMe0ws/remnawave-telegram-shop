@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -7,6 +8,7 @@ import {
   ArrowRight,
   CalendarDays,
   CalendarRange,
+  Check,
   CircleSlash,
   Clock,
   Cpu,
@@ -58,6 +60,18 @@ function AdminDashboardContent() {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const { data, isLoading, error, refetch, isFetching } = useAdminOverview()
+  // Галочка на пару секунд после успешного обновления — как на «Статистике»:
+  // спиннер гаснет за долю секунды, и без неё непонятно, случилось ли что-то.
+  const [refreshDone, setRefreshDone] = useState(false)
+
+  const handleRefresh = async () => {
+    setRefreshDone(false)
+    const result = await refetch()
+    if (!result.isError) {
+      setRefreshDone(true)
+      setTimeout(() => setRefreshDone(false), 2000)
+    }
+  }
 
   const panel = data?.panel
   const attention = data?.attention
@@ -87,6 +101,23 @@ function AdminDashboardContent() {
         count: attention?.open_invoices ?? 0,
       }),
     },
+    {
+      key: 'billingOverdue',
+      count: attention?.billing_overdue ?? 0,
+      to: '/admin/infra',
+      urgent: true,
+      label: t('admin.overview.attentionBillingOverdue', {
+        count: attention?.billing_overdue ?? 0,
+      }),
+    },
+    {
+      key: 'billingDueSoon',
+      count: attention?.billing_due_soon ?? 0,
+      to: '/admin/infra',
+      label: t('admin.overview.attentionBillingDueSoon', {
+        count: attention?.billing_due_soon ?? 0,
+      }),
+    },
   ].filter((item) => item.count > 0)
 
   return (
@@ -99,13 +130,17 @@ function AdminDashboardContent() {
         actions={
           <button
             type="button"
-            onClick={() => void refetch()}
+            onClick={() => void handleRefresh()}
             disabled={isFetching}
-            aria-label={t('admin.stats.refresh')}
-            title={t('admin.stats.refresh')}
+            aria-label={refreshDone ? t('admin.stats.refreshDone') : t('admin.stats.refresh')}
+            title={refreshDone ? t('admin.stats.refreshDone') : t('admin.stats.refresh')}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card transition-colors hover:bg-accent disabled:opacity-50"
           >
-            <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} />
+            {refreshDone ? (
+              <Check className="size-4 animate-fade-in text-emerald-500 dark:text-emerald-400" />
+            ) : (
+              <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} />
+            )}
           </button>
         }
       />
@@ -189,7 +224,12 @@ function AdminDashboardContent() {
                 <Link
                   key={item.key}
                   to={item.to}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-3 py-1.5 text-[13px] transition-colors hover:border-primary/50 hover:text-primary"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors',
+                    item.urgent
+                      ? 'border-rose-500/50 bg-rose-500/10 text-rose-500 hover:border-rose-500'
+                      : 'border-border/60 bg-muted/20 hover:border-primary/50 hover:text-primary',
+                  )}
                 >
                   {item.label}
                   <ArrowRight className="size-3.5 shrink-0" />

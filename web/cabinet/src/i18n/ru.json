@@ -2809,7 +2809,9 @@
         "periodWeek": "7 дней",
         "periodThirty": "30 дней",
         "periodCalendarMonth": "Календ. месяц",
-        "periodYear": "Текущий год"
+        "periodYear": "Текущий год",
+        "attentionBillingOverdue": "Оплата серверов просрочена: {{count}}",
+        "attentionBillingDueSoon": "Оплата серверов на неделе: {{count}}"
       }
     },
     "landing": {

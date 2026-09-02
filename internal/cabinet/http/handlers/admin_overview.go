@@ -33,9 +33,15 @@ const panelTimeout = 6 * time.Second
 type panelSnapshot struct {
 	stats     *remnawave.SystemStats
 	bandwidth *remnawave.BandwidthStats
+	billing   *remnawave.InfraBillingNodesBody
 	err       error
 	at        time.Time
 }
+
+// billingSoonWindow — за сколько до списания сервер попадает в «требует
+// внимания». Неделя: этого хватает, чтобы успеть пополнить счёт у провайдера,
+// и не настолько много, чтобы строка висела там постоянно.
+const billingSoonWindow = 7 * 24 * time.Hour
 
 // AdminOverviewHandler — обработчик дашборда.
 type AdminOverviewHandler struct {
@@ -119,6 +125,9 @@ type adminOverviewResp struct {
 		PartnerApplications int   `json:"partner_applications"`
 		PartnerPayouts      int   `json:"partner_payouts"`
 		OpenInvoices        int64 `json:"open_invoices"`
+		// Оплата серверов: просрочена и подходит в ближайшую неделю.
+		BillingOverdue int `json:"billing_overdue"`
+		BillingDueSoon int `json:"billing_due_soon"`
 	} `json:"attention"`
 
 	Panel adminOverviewPanelDTO `json:"panel"`
@@ -147,6 +156,13 @@ func (h *AdminOverviewHandler) panelData(ctx context.Context, tz string) panelSn
 			snap.err = bwErr
 		} else {
 			snap.bandwidth = bw
+		}
+		// Биллинг узлов необязателен: он может быть не заведён, и это не
+		// повод считать всю панель недоступной.
+		if billing, bErr := h.rw.GetInfraBillingNodes(callCtx); bErr != nil {
+			slog.Warn("admin overview: infra billing unavailable", "error", bErr.Error())
+		} else {
+			snap.billing = billing
 		}
 	}
 
@@ -229,6 +245,19 @@ func (h *AdminOverviewHandler) Overview(w http.ResponseWriter, r *http.Request) 
 	resp.Panel.System.MemoryTotal = snap.stats.Memory.Total
 	resp.Panel.System.CPUCores = snap.stats.CPU.Cores
 	resp.Panel.System.UptimeSeconds = snap.stats.Uptime
+
+	if snap.billing != nil {
+		now := time.Now()
+		soon := now.Add(billingSoonWindow)
+		for _, node := range snap.billing.BillingNodes {
+			switch {
+			case node.NextBillingAt.Before(now):
+				resp.Attention.BillingOverdue++
+			case node.NextBillingAt.Before(soon):
+				resp.Attention.BillingDueSoon++
+			}
+		}
+	}
 
 	resp.Panel.PanelUsers.Total = snap.stats.Users.TotalUsers
 	resp.Panel.PanelUsers.StatusCounts = snap.stats.Users.StatusCounts

@@ -2789,7 +2789,9 @@
         "periodWeek": "7 days",
         "periodThirty": "30 days",
         "periodCalendarMonth": "Calendar month",
-        "periodYear": "Current year"
+        "periodYear": "Current year",
+        "attentionBillingOverdue": "Server payments overdue: {{count}}",
+        "attentionBillingDueSoon": "Server payments due this week: {{count}}"
       }
     },
     "landing": {

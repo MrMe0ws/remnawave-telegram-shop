@@ -110,6 +110,8 @@ export interface AdminOverviewDTO {
     partner_applications: number
     partner_payouts: number
     open_invoices: number
+    billing_overdue: number
+    billing_due_soon: number
   }
   panel: {
     available: boolean
