@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { statsNumberLocale } from '../utils/statsFormat'
 import { STATS_ACCENT } from '../utils/statsPalette'
 import { useResizableColumns, type ResizableColumn } from '../utils/useResizableColumns'
-import { StatsColumnHandle } from './StatsColumnHandle'
+import { StatsHeaderCell } from './StatsColumnHandle'
 import { StatsMore, StatsPanel, StatsPanelHead } from './StatsPanel'
 
 interface StatsPromosBlockProps {
@@ -28,11 +28,11 @@ const EXPANDED = 10
  * сам — ручкой между заголовками, выбор запомнится.
  */
 const COLUMNS: ResizableColumn[] = [
-  { key: 'code', width: 104, min: 56 },
-  { key: 'gives', width: 132, min: 72 },
-  { key: 'status', width: 92, min: 64 },
-  { key: 'uses', width: 64, min: 48 },
-  { key: 'redemptions', width: 64, min: 48, flex: true },
+  { key: 'code', width: 104, min: 28 },
+  { key: 'gives', width: 132, min: 40 },
+  { key: 'status', width: 92, min: 36 },
+  { key: 'uses', width: 64, min: 32 },
+  { key: 'redemptions', width: 64, min: 32, flex: true },
 ]
 
 /**
@@ -113,21 +113,21 @@ export function StatsPromosBlock({ data, className }: StatsPromosBlockProps) {
               className="grid items-center gap-x-3 gap-y-2.5"
               style={{ gridTemplateColumns: cols.template }}
             >
-              <HeaderCell columnKey="code" cols={cols}>
+              <StatsHeaderCell columnKey="code" cols={cols}>
                 {t('admin.stats.promosColCode')}
-              </HeaderCell>
-              <HeaderCell columnKey="gives" cols={cols} icon={Gift}>
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="gives" cols={cols} icon={Gift}>
                 {t('admin.stats.promosColGives')}
-              </HeaderCell>
-              <HeaderCell columnKey="status" cols={cols}>
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="status" cols={cols}>
                 {t('admin.stats.promosColStatus')}
-              </HeaderCell>
-              <HeaderCell columnKey="uses" cols={cols} icon={Hash} align="right">
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="uses" cols={cols} icon={Hash} align="right">
                 {t('admin.stats.promosColUsesShort')}
-              </HeaderCell>
-              <HeaderCell columnKey="redemptions" cols={cols} icon={Check} align="right" last>
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="redemptions" cols={cols} icon={Check} align="right" last>
                 {t('admin.stats.promosColRedemptionsShort')}
-              </HeaderCell>
+              </StatsHeaderCell>
 
               {visible.map((promo) => (
                 <PromoRow
@@ -159,43 +159,6 @@ export function StatsPromosBlock({ data, className }: StatsPromosBlockProps) {
         </>
       )}
     </StatsPanel>
-  )
-}
-
-function HeaderCell({
-  columnKey,
-  cols,
-  icon: Icon,
-  align = 'left',
-  last,
-  children,
-}: {
-  columnKey: string
-  cols: ReturnType<typeof useResizableColumns>
-  icon?: typeof Gift
-  align?: 'left' | 'right'
-  last?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div className="relative min-w-0">
-      <span
-        className={cn(
-          'flex items-center gap-1.5 text-xs text-muted-foreground',
-          align === 'right' && 'justify-end',
-        )}
-      >
-        {Icon && <Icon className="size-3.5 shrink-0" aria-hidden />}
-        <span className="truncate">{children}</span>
-      </span>
-      {!last && (
-        <StatsColumnHandle
-          columnKey={columnKey}
-          onResize={cols.startResize}
-          onReset={cols.resetColumn}
-        />
-      )}
-    </div>
   )
 }
 

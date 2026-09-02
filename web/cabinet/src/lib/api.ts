@@ -38,6 +38,7 @@ import type {
   AdminPromoListDTO,
   AdminPromoStatsDTO,
   AdminReferralsDTO,
+  AdminOverviewDTO,
   AdminStatsDTO,
   AdminStatsInsightsDTO,
   AdminStatsTimeSeriesDTO,
@@ -1250,6 +1251,10 @@ export const api = {
   adminBootstrap: () =>
     request<AdminBootstrapResponse>('GET', '/admin/bootstrap'),
 
+  adminOverview: (tz?: string) => {
+    const q = tz ? `?tz=${encodeURIComponent(tz)}` : ''
+    return request<AdminOverviewDTO>('GET', `/admin/overview${q}`)
+  },
   adminStats: () => request<AdminStatsDTO>('GET', '/admin/stats'),
   adminStatsTimeSeries: (params: { period: string } | { from: string; to: string }) => {
     const q = new URLSearchParams()

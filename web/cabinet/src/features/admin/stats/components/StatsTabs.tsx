@@ -30,7 +30,7 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
   return (
     <div
       className={cn(
-        'overflow-x-auto border-y border-border/60 bg-card/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        'overflow-x-auto rounded-2xl border border-border/60 bg-card/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >

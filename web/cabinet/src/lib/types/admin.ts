@@ -89,6 +89,60 @@ export interface AdminStatsDTO {
   }[]
 }
 
+export interface AdminBandwidthDTO {
+  /** Панель отдаёт уже отформатированные строки: «287.01 GiB», «-162.73 GiB». */
+  current: string
+  previous: string
+  difference: string
+}
+
+export interface AdminOverviewDTO {
+  captured_at: string
+  shop: {
+    total_customers: number
+    active_subscriptions: number
+    revenue_today_rub: number
+    revenue_month_rub: number
+    sales_today: number
+    payers_today: number
+  }
+  attention: {
+    partner_applications: number
+    partner_payouts: number
+    open_invoices: number
+  }
+  panel: {
+    available: boolean
+    /** not_configured | unreachable */
+    reason?: string
+    traffic: {
+      today: AdminBandwidthDTO
+      last_seven_days: AdminBandwidthDTO
+      last_thirty_days: AdminBandwidthDTO
+      calendar_month: AdminBandwidthDTO
+      current_year: AdminBandwidthDTO
+    }
+    online: {
+      now: number
+      today: number
+      week: number
+      never_online: number
+    }
+    system: {
+      nodes_online: number
+      total_bytes_lifetime: string
+      memory_used: number
+      memory_total: number
+      cpu_cores: number
+      uptime_seconds: number
+    }
+    panel_users: {
+      total: number
+      status_counts: Record<string, number>
+    }
+  }
+}
+
 export interface AdminStatsFunnelDTO {
   registered: number
   invoiced: number

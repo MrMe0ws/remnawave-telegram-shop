@@ -365,6 +365,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	runtimeSettingsRepo := database.NewRuntimeSettingsRepository(pool)
 
 	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo, partnerRepo)
+	adminOverviewHandler := handlers.NewAdminOverview(statsRepo, partnerRepo, rw)
 	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw)
 	// CheckoutRepo — только на чтение (ключ идемпотентности/провайдер в модалке платежа);
 	// не зависит от того, собран ли checkoutSvc (PaymentService может быть nil).
@@ -384,7 +385,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	}
 
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, partnerHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
-		adminChecker, adminBootstrapHandler, adminStatsHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
+		adminChecker, adminBootstrapHandler, adminStatsHandler, adminOverviewHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
@@ -480,6 +481,7 @@ func registerAPIRoutes(
 	adminChecker *adminauth.Checker,
 	adminBootstrap *handlers.AdminBootstrapHandler,
 	adminStats *handlers.AdminStatsHandler,
+	adminOverview *handlers.AdminOverviewHandler,
 	adminUsers *handlers.AdminUsersHandler,
 	adminPayments *handlers.AdminPaymentsHandler,
 	adminPromos *handlers.AdminPromosHandler,
@@ -1270,6 +1272,17 @@ func registerAPIRoutes(
 				middleware.RequireAuth(jwtIssuer),
 				middleware.RequireAdmin(adminChecker),
 				middleware.RateLimit(adminAcctLim, accountKey("admin_squads")),
+			),
+		}),
+	)
+
+	api.Handle("/cabinet/api/admin/overview",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminOverview.Overview),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_overview")),
 			),
 		}),
 	)

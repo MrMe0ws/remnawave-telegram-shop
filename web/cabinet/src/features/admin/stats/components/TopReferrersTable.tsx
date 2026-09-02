@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, RussianRuble, UserPlus, Users } from 'lucide-react'
+import { CalendarDays, RotateCcw, RussianRuble, UserPlus, Users } from 'lucide-react'
 
 import type { AdminStatsDTO } from '@/lib/types/admin'
 
 import { formatAdminCustomerLabel } from '../../utils/formatAdminCustomerLabel'
 import { formatRub, statsNumberLocale } from '../utils/statsFormat'
 import { STATS_ACCENT } from '../utils/statsPalette'
+import { useResizableColumns, type ResizableColumn } from '../utils/useResizableColumns'
+import { StatsHeaderCell } from './StatsColumnHandle'
 import { StatsMore, StatsPanel, StatsPanelHead } from './StatsPanel'
 
 interface TopReferrersTableProps {
@@ -19,6 +21,15 @@ interface TopReferrersTableProps {
 
 const COLLAPSED = 5
 const EXPANDED = 10
+
+/** Ники бывают и короткие, и в тридцать символов — ширины двигаются руками. */
+const COLUMNS: ResizableColumn[] = [
+  { key: 'index', width: 20, min: 16 },
+  { key: 'user', width: 140, min: 40 },
+  { key: 'paid', width: 72, min: 32 },
+  { key: 'brought', width: 96, min: 40 },
+  { key: 'days', width: 64, min: 32, flex: true },
+]
 
 /**
  * Топ пригласивших.
@@ -36,6 +47,7 @@ export function TopReferrersTable({
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const [expanded, setExpanded] = useState(false)
+  const cols = useResizableColumns('referrers', COLUMNS)
 
   const visible = rows.slice(0, expanded ? EXPANDED : COLLAPSED)
   const canExpand = rows.length > COLLAPSED
@@ -51,6 +63,19 @@ export function TopReferrersTable({
           active: activeReferrers.toLocaleString(numberLocale),
           days: bonusDaysAll.toLocaleString(numberLocale),
         })}
+        actions={
+          cols.customized ? (
+            <button
+              type="button"
+              onClick={cols.resetAll}
+              title={t('admin.stats.columnResetAll')}
+              aria-label={t('admin.stats.columnResetAll')}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <RotateCcw className="size-3.5" />
+            </button>
+          ) : undefined
+        }
       />
 
       {rows.length === 0 ? (
@@ -60,21 +85,23 @@ export function TopReferrersTable({
       ) : (
         <>
           <div className="-mx-1 overflow-x-auto px-1">
-            <div className="grid min-w-[27rem] grid-cols-[1.25rem_minmax(8rem,1fr)_4.5rem_6rem_4rem] items-center gap-x-3 gap-y-2.5">
-              <div />
-              <div className="text-xs text-muted-foreground">{t('admin.stats.refColUser')}</div>
-              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-                <Users className="size-3.5 shrink-0" aria-hidden />
+            <div
+              className="grid items-center gap-x-3 gap-y-2.5"
+              style={{ gridTemplateColumns: cols.template }}
+            >
+              <StatsHeaderCell columnKey="index" cols={cols} />
+              <StatsHeaderCell columnKey="user" cols={cols}>
+                {t('admin.stats.refColUser')}
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="paid" cols={cols} icon={Users} align="right">
                 {t('admin.stats.refColPaid')}
-              </div>
-              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-                <RussianRuble className="size-3.5 shrink-0" aria-hidden />
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="brought" cols={cols} icon={RussianRuble} align="right">
                 {t('admin.stats.refColBrought')}
-              </div>
-              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-                <CalendarDays className="size-3.5 shrink-0" aria-hidden />
+              </StatsHeaderCell>
+              <StatsHeaderCell columnKey="days" cols={cols} icon={CalendarDays} align="right" last>
                 {t('admin.stats.refColDays')}
-              </div>
+              </StatsHeaderCell>
 
               {visible.map((row, i) => (
                 <Row
@@ -124,10 +151,14 @@ function Row({
   return (
     <>
       <div className="text-xs tabular-nums text-muted-foreground">{index}</div>
-      <div className="truncate text-[13px]">{name}</div>
-      <div className="text-right text-[13px] font-semibold tabular-nums">{paid}</div>
-      <div className="text-right text-[13px] tabular-nums">{brought}</div>
-      <div className="text-right text-[13px] tabular-nums text-muted-foreground">{days}</div>
+      <div className="truncate text-[13px]" title={name}>
+        {name}
+      </div>
+      <div className="truncate text-right text-[13px] font-semibold tabular-nums">{paid}</div>
+      <div className="truncate text-right text-[13px] tabular-nums">{brought}</div>
+      <div className="truncate text-right text-[13px] tabular-nums text-muted-foreground">
+        {days}
+      </div>
     </>
   )
 }
