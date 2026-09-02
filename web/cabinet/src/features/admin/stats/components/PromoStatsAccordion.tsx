@@ -1,7 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnimatePresence, motion } from 'framer-motion'
-import { BarChart3, ChevronDown, Tag, Ticket, TrendingUp } from 'lucide-react'
+import {
+  BarChart3,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Hash,
+  Tag,
+  Ticket,
+  TrendingUp,
+  Zap,
+} from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -26,6 +36,9 @@ import {
   statsChartTooltipStyle,
 } from '../utils/statsChartTheme'
 
+const PROMO_TABLE_COLLAPSED = 5
+const PROMO_TABLE_EXPANDED = 10
+
 interface PromoStatsAccordionProps {
   data: AdminPromoStatsResponse
 }
@@ -33,7 +46,12 @@ interface PromoStatsAccordionProps {
 export function PromoStatsAccordion({ data }: PromoStatsAccordionProps) {
   const { t, i18n } = useTranslation()
   const [expanded, setExpanded] = useState(false)
+  // Таблица кодов открывается на топ-5 и разворачивается до топ-10: длинный
+  // хвост здесь нужен редко, а место занимает всегда.
+  const [showAllCodes, setShowAllCodes] = useState(false)
   const numberLocale = statsNumberLocale(i18n.language)
+  const visibleCodes = data.top_by_redemptions.slice(0, showAllCodes ? PROMO_TABLE_EXPANDED : PROMO_TABLE_COLLAPSED)
+  const canExpandCodes = data.top_by_redemptions.length > PROMO_TABLE_COLLAPSED
 
   const chartData = useMemo(
     () =>
@@ -165,20 +183,36 @@ export function PromoStatsAccordion({ data }: PromoStatsAccordionProps) {
                   <table className="w-full table-fixed text-xs sm:text-sm md:table-auto">
                     <thead>
                       <tr className="border-b border-border/60 bg-muted/20 text-left text-[11px] text-muted-foreground sm:text-xs">
-                        <th className="w-[38%] px-2 py-2 font-medium sm:px-3 md:w-auto">{t('admin.stats.promosColCode')}</th>
-                        <th className="hidden w-[22%] px-3 py-2 font-medium sm:table-cell md:w-auto">{t('admin.stats.promosColStatus')}</th>
+                        <th className="w-[38%] px-2 py-2 font-medium sm:px-3 md:w-auto">
+                          <span className="flex items-center gap-1.5">
+                            <Tag className="size-3.5 shrink-0" aria-hidden />
+                            {t('admin.stats.promosColCode')}
+                          </span>
+                        </th>
+                        <th className="hidden w-[22%] px-3 py-2 font-medium sm:table-cell md:w-auto">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+                            {t('admin.stats.promosColStatus')}
+                          </span>
+                        </th>
                         <th className="w-[31%] px-1 py-2 text-right font-medium sm:px-3 md:w-auto">
-                          <span className="md:hidden">{t('admin.stats.promosColUsesShort')}</span>
-                          <span className="hidden md:inline">{t('admin.stats.promosColUses')}</span>
+                          <span className="flex items-center justify-end gap-1.5">
+                            <Hash className="size-3.5 shrink-0" aria-hidden />
+                            <span className="md:hidden">{t('admin.stats.promosColUsesShort')}</span>
+                            <span className="hidden md:inline">{t('admin.stats.promosColUses')}</span>
+                          </span>
                         </th>
                         <th className="w-[31%] px-2 py-2 text-right font-medium sm:px-3 md:w-auto">
-                          <span className="md:hidden">{t('admin.stats.promosColRedemptionsShort')}</span>
-                          <span className="hidden md:inline">{t('admin.stats.promosRedemptions')}</span>
+                          <span className="flex items-center justify-end gap-1.5">
+                            <Zap className="size-3.5 shrink-0" aria-hidden />
+                            <span className="md:hidden">{t('admin.stats.promosColRedemptionsShort')}</span>
+                            <span className="hidden md:inline">{t('admin.stats.promosRedemptions')}</span>
+                          </span>
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.top_by_redemptions.map((promo) => (
+                      {visibleCodes.map((promo) => (
                         <tr key={promo.id} className="border-b border-border/40 last:border-0">
                           <td className="px-2 py-2 sm:px-3">
                             <div className="flex min-w-0 items-center gap-1.5">
@@ -212,6 +246,24 @@ export function PromoStatsAccordion({ data }: PromoStatsAccordionProps) {
                       ))}
                     </tbody>
                   </table>
+                  {canExpandCodes && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllCodes((v) => !v)}
+                      className="inline-flex min-h-10 items-center gap-1.5 px-3 text-xs font-medium text-primary hover:underline"
+                    >
+                      {showAllCodes ? (
+                        <ChevronUp className="size-3.5" />
+                      ) : (
+                        <ChevronDown className="size-3.5" />
+                      )}
+                      {showAllCodes
+                        ? t('admin.stats.showTop', { count: PROMO_TABLE_COLLAPSED })
+                        : t('admin.stats.showTop', {
+                            count: Math.min(PROMO_TABLE_EXPANDED, data.top_by_redemptions.length),
+                          })}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

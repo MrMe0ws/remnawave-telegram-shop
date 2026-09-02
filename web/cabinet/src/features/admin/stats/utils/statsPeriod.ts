@@ -197,16 +197,6 @@ export function paidConvPct(data: AdminStatsResponse): string {
   return pctOf(data.paid_active, den)
 }
 
-/** Доля платных и триалов среди активного VPN (как в TG «Сейчас активен VPN»). */
-export function activeVpnBreakdown(data: AdminStatsResponse) {
-  const active = data.trial_active + data.paid_active
-  return {
-    active,
-    totalStates: active + data.inactive,
-    paidShare: paidConvPct(data),
-  }
-}
-
 export function formatPeriodRub(value: number, locale: string): string {
   return formatRub(value, locale)
 }

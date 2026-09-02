@@ -66,7 +66,10 @@ export interface AdminStatsDTO {
     customer_id: number
     telegram_username?: string | null
     nickname?: string | null
+    referees: number
     paid_referees: number
+    revenue_rub: number
+    bonus_days: number
   }[]
   tariff_breakdown: {
     tariff_id: number
@@ -84,6 +87,98 @@ export interface AdminStatsDTO {
     revenue_all: number
     active_paid_users: number
   }[]
+}
+
+export interface AdminStatsFunnelDTO {
+  registered: number
+  invoiced: number
+  paid: number
+  invoices_created: number
+  invoices_paid: number
+}
+
+export interface AdminStatsHeatCellDTO {
+  /** 1 — понедельник, 7 — воскресенье */
+  weekday: number
+  hour: number
+  revenue_rub: number
+  sales: number
+}
+
+export interface AdminStatsLifetimeDTO {
+  paying_customers: number
+  avg_lifetime_days: number
+  avg_paid_months: number
+  avg_purchases: number
+}
+
+export interface AdminStatsRenewalsDTO {
+  first_count: number
+  first_revenue: number
+  renewal_count: number
+  renewal_revenue: number
+}
+
+export interface AdminStatsGatewayDTO {
+  invoice_type: string
+  revenue_rub: number
+  payments: number
+}
+
+export interface AdminStatsWindowDTO {
+  revenue_rub: number
+  sales: number
+  new_users: number
+  transactions: number
+  unique_payers: number
+}
+
+export interface AdminPartnerTopDTO {
+  partner_id: number
+  customer_id: number
+  telegram_id: number
+  telegram_username?: string | null
+  nickname?: string | null
+  customers: number
+  paying_customers: number
+  earned: number
+}
+
+export interface AdminPartnerProgramDTO {
+  partners_total: number
+  partners_active: number
+  partners_pending: number
+  partners_suspended: number
+  customers: number
+  paying_customers: number
+  active_customers: number
+  earned_total: number
+  earned_period: number
+  earned_first: number
+  earned_renewal: number
+  hold_balance: number
+  available_balance: number
+  reserved_balance: number
+  paid_total: number
+  open_payouts: number
+  open_payouts_amount: number
+  top: AdminPartnerTopDTO[]
+}
+
+export interface AdminStatsInsightsDTO {
+  captured_at: string
+  period: string
+  from: string
+  to: string
+  tz_offset_minutes: number
+  funnel: AdminStatsFunnelDTO
+  heatmap: AdminStatsHeatCellDTO[]
+  lifetime: AdminStatsLifetimeDTO
+  renewals: AdminStatsRenewalsDTO
+  gateways: AdminStatsGatewayDTO[]
+  current: AdminStatsWindowDTO
+  previous: AdminStatsWindowDTO
+  partners?: AdminPartnerProgramDTO | null
 }
 
 export interface AdminStatsTimeSeriesPointDTO {

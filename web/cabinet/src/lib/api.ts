@@ -39,6 +39,7 @@ import type {
   AdminPromoStatsDTO,
   AdminReferralsDTO,
   AdminStatsDTO,
+  AdminStatsInsightsDTO,
   AdminStatsTimeSeriesDTO,
   AdminTariffDTO,
   AdminUserPanelDTO,
@@ -1259,6 +1260,19 @@ export const api = {
       q.set('period', params.period)
     }
     return request<AdminStatsTimeSeriesDTO>('GET', `/admin/stats/timeseries?${q.toString()}`)
+  },
+  adminStatsInsights: (
+    params: ({ period: string } | { from: string; to: string }) & { tzOffsetMinutes?: number },
+  ) => {
+    const q = new URLSearchParams()
+    if ('from' in params && 'to' in params) {
+      q.set('from', params.from)
+      q.set('to', params.to)
+    } else {
+      q.set('period', params.period)
+    }
+    if (params.tzOffsetMinutes != null) q.set('tz', String(params.tzOffsetMinutes))
+    return request<AdminStatsInsightsDTO>('GET', `/admin/stats/insights?${q.toString()}`)
   },
   adminFortuneStats: () => request<AdminFortuneStatsDTO>('GET', '/admin/stats/fortune'),
   adminLoyaltyStats: () => request<AdminLoyaltyStatsDTO>('GET', '/admin/stats/loyalty'),

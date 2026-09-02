@@ -26,13 +26,19 @@ const sqlSubPurchase = `p.status = 'paid' AND p.month > 0 AND p.purchase_kind IN
 
 const sqlRubCurrency = `(UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR', '') OR COALESCE(p.currency, '') = '')`
 
-// AdminTopReferrer строка топа рефереров (дни начислений рефереру добиваются в handler через ReferralRepository).
+// AdminTopReferrer строка топа рефереров.
 type AdminTopReferrer struct {
 	ReferrerID       int64
 	CustomerID       int64
 	TelegramUsername *string
 	Nickname         *string
-	PaidReferees     int64
+	// Всего приглашённых и сколько из них хоть раз купили подписку.
+	Referees     int64
+	PaidReferees int64
+	// Сколько приглашённые принесли деньгами и сколько дней начислено самому
+	// пригласившему — без этих двух чисел «10 оплативших» ни о чём не говорят.
+	RevenueRub float64
+	BonusDays  int64
 }
 
 // AdminTariffStat метрики по одному тарифу (SALES_MODE=tariffs).
@@ -626,24 +632,69 @@ func (s *StatsRepository) referralBonusDaysReferrer(ctx context.Context, today0,
 	return today, week, month, all, nil
 }
 
+// topReferrers — топ пригласивших вместе с тем, что они принесли.
+//
+// Раньше здесь считалось COUNT(DISTINCT referee_id) под именем PaidReferees, а
+// отбор шёл по тому, платил ли сам пригласивший. То есть в колонке «оплативших»
+// стояло число всех приглашённых, а из таблицы выпадали активные рефереры,
+// которые сами ничего не покупали. Теперь оплативших считают среди
+// приглашённых, а фильтр по покупкам самого реферера снят.
 func (s *StatsRepository) topReferrers(ctx context.Context, limit int) ([]AdminTopReferrer, error) {
-	q := `
-SELECT r.referrer_id, c.id, c.telegram_username,
+	// Считается в один проход по агрегатам, а не подзапросом на каждого
+	// реферера: коррелированные подзапросы выполнились бы для всей таблицы
+	// рефереров ещё до LIMIT. Подпись (ник) добирается уже после отбора топа —
+	// в отдельном шаге, где строк ровно limit.
+	q := fmt.Sprintf(`
+WITH pairs AS (
+  SELECT DISTINCT r.referrer_id, rc.id AS referee_customer_id
+  FROM referral r
+  JOIN customer rc ON rc.telegram_id = r.referee_id
+),
+referee_money AS (
+  SELECT p.customer_id,
+         COALESCE(SUM(p.amount) FILTER (WHERE %s), 0)::float8 AS revenue,
+         BOOL_OR(p.month > 0) AS has_paid_sub
+  FROM purchase p
+  WHERE p.status = 'paid' AND p.paid_at IS NOT NULL
+  GROUP BY p.customer_id
+),
+agg AS (
+  SELECT pairs.referrer_id,
+         COUNT(*)                                      AS referees,
+         COUNT(*) FILTER (WHERE rm.has_paid_sub)       AS paid_referees,
+         COALESCE(SUM(rm.revenue), 0)::float8          AS revenue_rub
+  FROM pairs
+  LEFT JOIN referee_money rm ON rm.customer_id = pairs.referee_customer_id
+  GROUP BY pairs.referrer_id
+),
+top AS (
+  SELECT agg.*, COALESCE(bl.bonus_days, 0) AS bonus_days
+  FROM agg
+  LEFT JOIN (
+    SELECT recipient_telegram_id, SUM(days)::bigint AS bonus_days
+    FROM referral_bonus_ledger
+    GROUP BY recipient_telegram_id
+  ) bl ON bl.recipient_telegram_id = agg.referrer_id
+  ORDER BY agg.paid_referees DESC, agg.revenue_rub DESC, agg.referees DESC
+  LIMIT $1
+)
+SELECT
+  top.referrer_id,
+  c.id,
+  c.telegram_username,
   (SELECT NULLIF(TRIM(ii.raw_profile_json->>'first_name'), '')
    FROM cabinet_account_customer_link l
    JOIN cabinet_identity ii ON ii.account_id = l.account_id AND ii.unlinked_at IS NULL
    WHERE l.customer_id = c.id AND l.link_status = 'linked'
    ORDER BY ii.created_at DESC
    LIMIT 1) AS nickname,
-  COUNT(DISTINCT r.referee_id) AS n
-FROM referral r
-JOIN customer c ON c.telegram_id = r.referrer_id
-WHERE EXISTS (
-  SELECT 1 FROM purchase p WHERE p.customer_id = c.id AND p.status = 'paid' AND p.month > 0
-)
-GROUP BY r.referrer_id, c.id, c.telegram_username
-ORDER BY n DESC
-LIMIT $1`
+  top.referees,
+  top.paid_referees,
+  top.revenue_rub,
+  top.bonus_days
+FROM top
+JOIN customer c ON c.telegram_id = top.referrer_id
+ORDER BY top.paid_referees DESC, top.revenue_rub DESC, top.referees DESC`, sqlRubCurrency)
 	rows, err := s.pool.Query(ctx, q, limit)
 	if err != nil {
 		return nil, fmt.Errorf("stats top referrers: %w", err)
@@ -652,7 +703,10 @@ LIMIT $1`
 	var list []AdminTopReferrer
 	for rows.Next() {
 		var tr AdminTopReferrer
-		if err := rows.Scan(&tr.ReferrerID, &tr.CustomerID, &tr.TelegramUsername, &tr.Nickname, &tr.PaidReferees); err != nil {
+		if err := rows.Scan(
+			&tr.ReferrerID, &tr.CustomerID, &tr.TelegramUsername, &tr.Nickname,
+			&tr.Referees, &tr.PaidReferees, &tr.RevenueRub, &tr.BonusDays,
+		); err != nil {
 			return nil, err
 		}
 		list = append(list, tr)

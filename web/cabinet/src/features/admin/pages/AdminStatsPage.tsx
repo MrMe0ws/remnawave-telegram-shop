@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, CreditCard, Loader2, RefreshCw } from 'lucide-react'
+import { BarChart3, Gift, LayoutGrid, Loader2, RefreshCw, Users, Wallet } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { useAdminShell } from '../layout/AdminShellContext'
@@ -9,23 +9,22 @@ import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useAdminStats } from '../hooks/useAdminStats'
 import { useAdminStatsTimeSeries } from '../hooks/useAdminStatsTimeSeries'
+import { useAdminStatsInsights } from '../hooks/useAdminStatsInsights'
 import { useAdminFortuneStats } from '../hooks/useAdminFortuneStats'
 import { useAdminLoyaltyStats } from '../hooks/useAdminLoyaltyStats'
 import { useAdminPromoStats } from '../hooks/useAdminPromoStats'
-import { FortuneStatsAccordion } from '../stats/components/FortuneStatsAccordion'
-import { LoyaltyStatsAccordion } from '../stats/components/LoyaltyStatsAccordion'
-import { PromoStatsAccordion } from '../stats/components/PromoStatsAccordion'
-import { ReferralsStatsWidget } from '../stats/components/ReferralsStatsWidget'
-import { RevenueStatsWidget } from '../stats/components/RevenueStatsWidget'
-import { SalesStatsWidget } from '../stats/components/SalesStatsWidget'
 import { StatsCustomRangePicker } from '../stats/components/StatsCustomRangePicker'
 import { StatsPeriodSelector } from '../stats/components/StatsPeriodSelector'
-import { TariffsOverviewChart } from '../stats/components/TariffsOverviewChart'
-import { TariffsStatsTable } from '../stats/components/TariffsStatsTable'
-import { UsersStatsWidget } from '../stats/components/UsersStatsWidget'
-import { formatPeriodRub, type StatsCustomRange, type StatsPeriod } from '../stats/utils/statsPeriod'
+import { StatsTabs, type StatsTabItem } from '../stats/components/StatsTabs'
+import { StatsMechanicsTab } from '../stats/tabs/StatsMechanicsTab'
+import { StatsMoneyTab } from '../stats/tabs/StatsMoneyTab'
+import { StatsOverviewTab } from '../stats/tabs/StatsOverviewTab'
+import { StatsUsersTab } from '../stats/tabs/StatsUsersTab'
+import type { StatsCustomRange, StatsPeriod } from '../stats/utils/statsPeriod'
 import { statsNumberLocale } from '../stats/utils/statsFormat'
 import { useAdminMobileHeaderAutoHide } from '../hooks/useAdminMobileHeaderAutoHide'
+
+type StatsTabKey = 'overview' | 'money' | 'users' | 'mechanics'
 
 export default function AdminStatsPage() {
   return (
@@ -39,8 +38,10 @@ function AdminStatsPageContent() {
   const { t, i18n } = useTranslation()
   const { mobileHeaderVisible } = useAdminShell()
   useAdminMobileHeaderAutoHide(true)
+  const [tab, setTab] = useState<StatsTabKey>('overview')
   const [period, setPeriod] = useState<StatsPeriod>('month')
   const [customRange, setCustomRange] = useState<StatsCustomRange | null>(null)
+
   const { data, isLoading, error, refetch, isFetching } = useAdminStats()
   const {
     data: timeseries,
@@ -48,27 +49,34 @@ function AdminStatsPageContent() {
     isFetching: timeseriesFetching,
   } = useAdminStatsTimeSeries(period, customRange)
   const {
+    data: insights,
+    refetch: refetchInsights,
+    isFetching: insightsFetching,
+  } = useAdminStatsInsights(period, customRange)
+  const {
     data: fortuneData,
-    isLoading: fortuneLoading,
     refetch: refetchFortune,
     isFetching: fortuneFetching,
   } = useAdminFortuneStats()
   const {
     data: loyaltyData,
-    isLoading: loyaltyLoading,
     refetch: refetchLoyalty,
     isFetching: loyaltyFetching,
   } = useAdminLoyaltyStats()
   const {
     data: promoData,
-    isLoading: promoLoading,
     refetch: refetchPromo,
     isFetching: promoFetching,
   } = useAdminPromoStats()
 
-  const refreshing = isFetching || fortuneFetching || timeseriesFetching || loyaltyFetching || promoFetching
+  const refreshing =
+    isFetching ||
+    fortuneFetching ||
+    timeseriesFetching ||
+    insightsFetching ||
+    loyaltyFetching ||
+    promoFetching
   const numberLocale = statsNumberLocale(i18n.language)
-  const tariffRows = data?.tariff_breakdown ?? []
 
   const handlePeriodChange = (next: StatsPeriod) => {
     setCustomRange(null)
@@ -83,6 +91,7 @@ function AdminStatsPageContent() {
   const handleRefresh = () => {
     void refetch()
     void refetchTimeseries()
+    void refetchInsights()
     void refetchFortune()
     void refetchLoyalty()
     void refetchPromo()
@@ -103,19 +112,26 @@ function AdminStatsPageContent() {
     }
   }, [data?.captured_at, numberLocale])
 
-  const refreshButton = (iconOnly: boolean) => (
+  const tabs: StatsTabItem<StatsTabKey>[] = [
+    { key: 'overview', label: t('admin.stats.tabOverview'), icon: LayoutGrid },
+    { key: 'money', label: t('admin.stats.tabMoney'), icon: Wallet },
+    { key: 'users', label: t('admin.stats.tabUsers'), icon: Users },
+    { key: 'mechanics', label: t('admin.stats.tabMechanics'), icon: Gift },
+  ]
+
+  // Кнопка «Обновить» — только иконка, ростом ровно с селектором периода и
+  // кнопкой календаря: три разновысоких контрола в углу выглядели случайной
+  // россыпью.
+  const refreshButton = (
     <button
       type="button"
       onClick={handleRefresh}
       disabled={refreshing}
       aria-label={t('admin.stats.refresh')}
-      className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card font-medium transition-colors hover:bg-accent disabled:opacity-50',
-        iconOnly ? 'size-11 p-2' : 'min-h-11 gap-2 px-3 py-2 text-sm',
-      )}
+      title={t('admin.stats.refresh')}
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card transition-colors hover:bg-accent disabled:opacity-50"
     >
       <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
-      {!iconOnly && t('admin.stats.refresh')}
     </button>
   )
 
@@ -135,11 +151,6 @@ function AdminStatsPageContent() {
     </div>
   )
 
-  const paymentEntries = useMemo(
-    () => Object.entries(data?.payment_rub_by_invoice ?? {}),
-    [data?.payment_rub_by_invoice],
-  )
-
   return (
     <div className="space-y-4">
       <div
@@ -152,7 +163,7 @@ function AdminStatsPageContent() {
       >
         <div className="flex items-center gap-2">
           {periodControls(true)}
-          {refreshButton(true)}
+          {refreshButton}
         </div>
       </div>
 
@@ -164,20 +175,18 @@ function AdminStatsPageContent() {
         actions={
           <div className="hidden flex-wrap items-center gap-2 md:flex">
             {periodControls(false)}
-            {refreshButton(false)}
+            {refreshButton}
           </div>
         }
       />
 
-      <div className="flex items-center justify-between gap-3">
-        {updatedLabel ? (
-          <p className="text-xs text-muted-foreground">
-            {t('admin.stats.updatedAt', { date: updatedLabel })}
-          </p>
-        ) : (
-          <span />
-        )}
-      </div>
+      {updatedLabel && (
+        <p className="text-xs text-muted-foreground">
+          {t('admin.stats.updatedAt', { date: updatedLabel })}
+        </p>
+      )}
+
+      <StatsTabs items={tabs} value={tab} onChange={setTab} />
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
@@ -191,87 +200,44 @@ function AdminStatsPageContent() {
         </Card>
       )}
 
-      {data && (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <UsersStatsWidget
-              data={data}
-              period={period}
-              timeseries={timeseries}
-              customRange={customRange}
-            />
-            <RevenueStatsWidget
-              data={data}
-              period={period}
-              timeseries={timeseries}
-              customRange={customRange}
-            />
-            <ReferralsStatsWidget data={data} period={period} />
-            <SalesStatsWidget
-              data={data}
-              period={period}
-              timeseries={timeseries}
-              customRange={customRange}
-            />
-          </div>
+      {data && tab === 'overview' && (
+        <StatsOverviewTab
+          data={data}
+          insights={insights}
+          timeseries={timeseries}
+          period={period}
+          customRange={customRange}
+        />
+      )}
 
-          {tariffRows.length > 0 && (
-            <>
-              <TariffsOverviewChart
-                rows={tariffRows}
-                period={period}
-                timeseries={timeseries}
-                customRange={customRange}
-              />
-              <TariffsStatsTable
-                rows={tariffRows}
-                period={period}
-                timeseries={timeseries}
-                customRange={customRange}
-              />
-            </>
-          )}
+      {data && tab === 'money' && (
+        <StatsMoneyTab
+          data={data}
+          insights={insights}
+          timeseries={timeseries}
+          period={period}
+          customRange={customRange}
+        />
+      )}
 
-          {paymentEntries.length > 0 && (
-            <Card className="cabinet-elevated-card overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-slate-500 to-zinc-500" />
-              <div className="flex flex-wrap items-center gap-3 px-4 py-4">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-500/10 dark:bg-slate-500/20">
-                  <CreditCard className="size-4 text-slate-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-semibold">{t('admin.stats.paymentByInvoice')}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('admin.stats.paymentByInvoiceHint')}
-                  </p>
-                </div>
-                <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                  {paymentEntries.map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-sm"
-                    >
-                      <p className="text-xs text-muted-foreground">{key}</p>
-                      <p className="font-semibold tabular-nums">
-                        {formatPeriodRub(value, numberLocale)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
+      {data && tab === 'users' && (
+        <StatsUsersTab
+          data={data}
+          insights={insights}
+          timeseries={timeseries}
+          period={period}
+          customRange={customRange}
+        />
+      )}
 
-          {!fortuneLoading && fortuneData && (
-            <FortuneStatsAccordion data={fortuneData} globalPeriod={period} />
-          )}
-
-          {!loyaltyLoading && loyaltyData?.enabled && (
-            <LoyaltyStatsAccordion data={loyaltyData} />
-          )}
-
-          {!promoLoading && promoData && <PromoStatsAccordion data={promoData} />}
-        </div>
+      {data && tab === 'mechanics' && (
+        <StatsMechanicsTab
+          insights={insights}
+          fortune={fortuneData}
+          loyalty={loyaltyData}
+          promo={promoData}
+          period={period}
+        />
       )}
     </div>
   )

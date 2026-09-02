@@ -364,7 +364,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	infraBillingRepo := database.NewInfraBillingRepository(pool)
 	runtimeSettingsRepo := database.NewRuntimeSettingsRepository(pool)
 
-	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo)
+	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo, partnerRepo)
 	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw)
 	// CheckoutRepo — только на чтение (ключ идемпотентности/провайдер в модалке платежа);
 	// не зависит от того, собран ли checkoutSvc (PaymentService может быть nil).
@@ -1292,6 +1292,16 @@ func registerAPIRoutes(
 				middleware.RequireAuth(jwtIssuer),
 				middleware.RequireAdmin(adminChecker),
 				middleware.RateLimit(adminAcctLim, accountKey("admin_stats_timeseries")),
+			),
+		}),
+	)
+	api.Handle("/cabinet/api/admin/stats/insights",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminStats.Insights),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_stats_insights")),
 			),
 		}),
 	)

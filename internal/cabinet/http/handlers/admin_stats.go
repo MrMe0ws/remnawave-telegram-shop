@@ -16,6 +16,7 @@ type AdminStatsHandler struct {
 	loyalty   *database.LoyaltyTierRepository
 	customers *database.CustomerRepository
 	promos    *database.PromoRepository
+	partners  *database.PartnerRepository
 }
 
 // NewAdminStats — конструктор.
@@ -24,12 +25,14 @@ func NewAdminStats(
 	loyalty *database.LoyaltyTierRepository,
 	customers *database.CustomerRepository,
 	promos *database.PromoRepository,
+	partners *database.PartnerRepository,
 ) *AdminStatsHandler {
 	return &AdminStatsHandler{
 		stats:     stats,
 		loyalty:   loyalty,
 		customers: customers,
 		promos:    promos,
+		partners:  partners,
 	}
 }
 
@@ -38,7 +41,10 @@ type adminTopReferrerDTO struct {
 	CustomerID       int64   `json:"customer_id"`
 	TelegramUsername *string `json:"telegram_username"`
 	Nickname         *string `json:"nickname"`
+	Referees         int64   `json:"referees"`
 	PaidReferees     int64   `json:"paid_referees"`
+	RevenueRub       float64 `json:"revenue_rub"`
+	BonusDays        int64   `json:"bonus_days"`
 }
 
 type adminTariffStatDTO struct {
@@ -179,7 +185,10 @@ func (h *AdminStatsHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			CustomerID:       tr.CustomerID,
 			TelegramUsername: tr.TelegramUsername,
 			Nickname:         tr.Nickname,
+			Referees:         tr.Referees,
 			PaidReferees:     tr.PaidReferees,
+			RevenueRub:       tr.RevenueRub,
+			BonusDays:        tr.BonusDays,
 		})
 	}
 
