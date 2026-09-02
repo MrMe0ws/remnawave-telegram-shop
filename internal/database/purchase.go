@@ -188,6 +188,64 @@ func (cr *PurchaseRepository) FindByInvoiceTypeAndStatus(ctx context.Context, in
 	return &purchases, nil
 }
 
+// FindOpenByInvoiceTypeOrdered — незакрытые счета одного типа: самые старые
+// первыми и порцией ограниченного размера.
+//
+// Отдельно от FindByInvoiceTypeAndStatus, потому что тому пользуются поллеры
+// остальных касс, которым порядок и лимит не нужны. Здесь они принципиальны:
+// проход поллера ограничен по времени, и без ORDER BY хвост выборки мог бы не
+// проверяться вовсе — порядок строк без него не определён.
+func (cr *PurchaseRepository) FindOpenByInvoiceTypeOrdered(
+	ctx context.Context,
+	invoiceType InvoiceType,
+	statuses []PurchaseStatus,
+	limit uint64,
+) (*[]Purchase, error) {
+	if len(statuses) == 0 {
+		empty := []Purchase{}
+		return &empty, nil
+	}
+	raw := make([]string, 0, len(statuses))
+	for _, s := range statuses {
+		raw = append(raw, string(s))
+	}
+
+	buildSelect := sq.Select("*").
+		From("purchase").
+		Where(sq.And{
+			sq.Eq{"invoice_type": invoiceType},
+			sq.Eq{"status": raw},
+		}).
+		OrderBy("created_at ASC").
+		Limit(limit).
+		PlaceholderFormat(sq.Dollar)
+
+	sql, args, err := buildSelect.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := cr.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query purchases: %w", err)
+	}
+	defer rows.Close()
+
+	purchases := []Purchase{}
+	for rows.Next() {
+		purchase := Purchase{}
+		if err := rows.Scan(purchaseScanArgs(&purchase)...); err != nil {
+			return nil, fmt.Errorf("failed to scan purchase: %w", err)
+		}
+		purchases = append(purchases, purchase)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return &purchases, nil
+}
+
 func (cr *PurchaseRepository) FindById(ctx context.Context, id int64) (*Purchase, error) {
 	buildSelect := sq.Select("*").
 		From("purchase").
