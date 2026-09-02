@@ -30,11 +30,11 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
   return (
     <div
       className={cn(
-        'overflow-x-auto rounded-2xl border border-border/60 bg-card/60 px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        'overflow-x-auto border-y border-border/60 bg-card/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
-      <div role="tablist" className="flex w-max min-w-full gap-1 sm:gap-2">
+      <div role="tablist" className="flex w-max min-w-full">
         {items.map((item) => {
           const Icon = item.icon
           const active = item.key === value
@@ -46,7 +46,7 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
               aria-selected={active}
               onClick={() => onChange(item.key)}
               className={cn(
-                'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border-b-2 px-3 pb-2.5 pt-3 text-[15px] font-medium transition-colors',
+                'flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 pb-2.5 pt-3 text-[15px] font-medium transition-colors',
                 active
                   ? 'border-primary bg-primary/10 text-foreground'
                   : 'border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground',

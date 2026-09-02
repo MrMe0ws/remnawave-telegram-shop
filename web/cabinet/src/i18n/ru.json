@@ -1493,7 +1493,9 @@
         "promoGivesDevices": "+{{count}} устройств",
         "promoGivesDevicesPlain": "доп. устройства",
         "promoGivesDiscount": "скидка {{pct}}%",
-        "promoGivesDiscountPlain": "скидка"
+        "promoGivesDiscountPlain": "скидка",
+        "columnResizeHint": "Потяните, чтобы изменить ширину. Двойной клик — вернуть как было",
+        "columnResetAll": "Вернуть ширины колонок"
       },
       "users": {
         "title": "Пользователи",

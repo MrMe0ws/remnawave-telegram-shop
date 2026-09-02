@@ -1472,7 +1472,9 @@
         "promoGivesDevices": "+{{count}} devices",
         "promoGivesDevicesPlain": "extra devices",
         "promoGivesDiscount": "{{pct}}% discount",
-        "promoGivesDiscountPlain": "discount"
+        "promoGivesDiscountPlain": "discount",
+        "columnResizeHint": "Drag to resize. Double-click to reset",
+        "columnResetAll": "Reset column widths"
       },
       "users": {
         "title": "Users",

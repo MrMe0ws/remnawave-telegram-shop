@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Check, Gift, Hash, Ticket } from 'lucide-react'
+import { Check, Gift, Hash, RotateCcw, Ticket } from 'lucide-react'
 
 import type {
   AdminPromoStatsResponse,
@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils'
 
 import { statsNumberLocale } from '../utils/statsFormat'
 import { STATS_ACCENT } from '../utils/statsPalette'
+import { useResizableColumns, type ResizableColumn } from '../utils/useResizableColumns'
+import { StatsColumnHandle } from './StatsColumnHandle'
 import { StatsMore, StatsPanel, StatsPanelHead } from './StatsPanel'
 
 interface StatsPromosBlockProps {
@@ -22,10 +24,22 @@ const COLLAPSED = 5
 const EXPANDED = 10
 
 /**
+ * Ширины по умолчанию рассчитаны на короткий код. Длинные коды админ раздвинет
+ * сам — ручкой между заголовками, выбор запомнится.
+ */
+const COLUMNS: ResizableColumn[] = [
+  { key: 'code', width: 104, min: 56 },
+  { key: 'gives', width: 132, min: 72 },
+  { key: 'status', width: 92, min: 64 },
+  { key: 'uses', width: 64, min: 48 },
+  { key: 'redemptions', width: 64, min: 48, flex: true },
+]
+
+/**
  * Что код даёт, одной строкой.
  *
  * Тип и величина живут в разных колонках таблицы promo_code, поэтому подпись
- * собирается здесь: «+30 дней», «−15%», «+2 устройства». Без неё в сводке
+ * собирается здесь: «+30 дней», «скидка 15%», «+2 устройств». Без неё в сводке
  * стоял голый код, и понять, за что его гасят, было нельзя.
  */
 function promoReward(promo: AdminPromoStatsTopItem, t: TFunction): string {
@@ -56,6 +70,7 @@ export function StatsPromosBlock({ data, className }: StatsPromosBlockProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const [expanded, setExpanded] = useState(false)
+  const cols = useResizableColumns('promos', COLUMNS)
 
   const rows = data.top_by_redemptions
   const visible = rows.slice(0, expanded ? EXPANDED : COLLAPSED)
@@ -72,6 +87,19 @@ export function StatsPromosBlock({ data, className }: StatsPromosBlockProps) {
           total: data.total,
           redemptions: data.total_redemptions,
         })}
+        actions={
+          cols.customized ? (
+            <button
+              type="button"
+              onClick={cols.resetAll}
+              title={t('admin.stats.columnResetAll')}
+              aria-label={t('admin.stats.columnResetAll')}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <RotateCcw className="size-3.5" />
+            </button>
+          ) : undefined
+        }
       />
 
       {rows.length === 0 ? (
@@ -81,25 +109,25 @@ export function StatsPromosBlock({ data, className }: StatsPromosBlockProps) {
       ) : (
         <>
           <div className="-mx-1 overflow-x-auto px-1">
-            <div className="grid min-w-[29rem] grid-cols-[minmax(6rem,1fr)_minmax(7rem,1fr)_5.5rem_4.5rem_4.5rem] items-center gap-x-3 gap-y-2.5">
-              <div className="text-xs text-muted-foreground">
+            <div
+              className="grid items-center gap-x-3 gap-y-2.5"
+              style={{ gridTemplateColumns: cols.template }}
+            >
+              <HeaderCell columnKey="code" cols={cols}>
                 {t('admin.stats.promosColCode')}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Gift className="size-3.5 shrink-0" aria-hidden />
+              </HeaderCell>
+              <HeaderCell columnKey="gives" cols={cols} icon={Gift}>
                 {t('admin.stats.promosColGives')}
-              </div>
-              <div className="text-xs text-muted-foreground">
+              </HeaderCell>
+              <HeaderCell columnKey="status" cols={cols}>
                 {t('admin.stats.promosColStatus')}
-              </div>
-              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-                <Hash className="size-3.5 shrink-0" aria-hidden />
+              </HeaderCell>
+              <HeaderCell columnKey="uses" cols={cols} icon={Hash} align="right">
                 {t('admin.stats.promosColUsesShort')}
-              </div>
-              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-                <Check className="size-3.5 shrink-0" aria-hidden />
+              </HeaderCell>
+              <HeaderCell columnKey="redemptions" cols={cols} icon={Check} align="right" last>
                 {t('admin.stats.promosColRedemptionsShort')}
-              </div>
+              </HeaderCell>
 
               {visible.map((promo) => (
                 <PromoRow
@@ -134,6 +162,43 @@ export function StatsPromosBlock({ data, className }: StatsPromosBlockProps) {
   )
 }
 
+function HeaderCell({
+  columnKey,
+  cols,
+  icon: Icon,
+  align = 'left',
+  last,
+  children,
+}: {
+  columnKey: string
+  cols: ReturnType<typeof useResizableColumns>
+  icon?: typeof Gift
+  align?: 'left' | 'right'
+  last?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative min-w-0">
+      <span
+        className={cn(
+          'flex items-center gap-1.5 text-xs text-muted-foreground',
+          align === 'right' && 'justify-end',
+        )}
+      >
+        {Icon && <Icon className="size-3.5 shrink-0" aria-hidden />}
+        <span className="truncate">{children}</span>
+      </span>
+      {!last && (
+        <StatsColumnHandle
+          columnKey={columnKey}
+          onResize={cols.startResize}
+          onReset={cols.resetColumn}
+        />
+      )}
+    </div>
+  )
+}
+
 function PromoRow({
   code,
   gives,
@@ -151,12 +216,16 @@ function PromoRow({
 }) {
   return (
     <>
-      <div className="truncate font-mono text-[13px] tracking-tight">{code}</div>
-      <div className="truncate text-xs text-muted-foreground">{gives}</div>
-      <div>
+      <div className="truncate font-mono text-[13px] tracking-tight" title={code}>
+        {code}
+      </div>
+      <div className="truncate text-xs text-muted-foreground" title={gives}>
+        {gives}
+      </div>
+      <div className="min-w-0">
         <span
           className={cn(
-            'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium',
+            'inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-medium',
             active
               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
               : 'bg-muted text-muted-foreground',
@@ -165,8 +234,12 @@ function PromoRow({
           {activeLabel}
         </span>
       </div>
-      <div className="text-right text-[13px] tabular-nums text-muted-foreground">{uses}</div>
-      <div className="text-right text-[13px] font-semibold tabular-nums">{redemptions}</div>
+      <div className="truncate text-right text-[13px] tabular-nums text-muted-foreground">
+        {uses}
+      </div>
+      <div className="truncate text-right text-[13px] font-semibold tabular-nums">
+        {redemptions}
+      </div>
     </>
   )
 }
