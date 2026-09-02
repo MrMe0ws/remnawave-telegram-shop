@@ -24,6 +24,12 @@ type AdminOverviewCounters struct {
 	// Счета, застрявшие вне терминального статуса: их видно на «Платежах»,
 	// и обычно это или брошенная оплата, или зависший вебхук.
 	OpenInvoices int64
+
+	// Баланс колеса за календарный месяц: собрано дней за платные крутки
+	// против роздано днями подписки. Отрицательная разница — колесо работает
+	// в минус.
+	FortunePaidDays int64
+	FortuneWonDays  int64
 }
 
 // FetchAdminOverviewCounters собирает счётчики дашборда одним запросом.
@@ -54,5 +60,19 @@ SELECT
 	); err != nil {
 		return nil, fmt.Errorf("stats overview counters: %w", err)
 	}
+
+	// Отдельным запросом: колесо может быть выключено, и тогда таблица пуста —
+	// тащить его в общий CTE незачем.
+	fortuneQ := `
+SELECT
+  COALESCE(SUM(cost_days) FILTER (WHERE NOT is_free_spin), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ` + sqlFortuneDayRewards + `), 0)::bigint
+FROM fortune_spins
+WHERE spin_at >= $1 AND spin_at < $2`
+	if err := s.pool.QueryRow(ctx, fortuneQ, monthStart, monthEnd).
+		Scan(&out.FortunePaidDays, &out.FortuneWonDays); err != nil {
+		return nil, fmt.Errorf("stats overview fortune balance: %w", err)
+	}
+
 	return out, nil
 }

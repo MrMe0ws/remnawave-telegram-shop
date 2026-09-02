@@ -2809,7 +2809,8 @@
           "EXPIRED": "Истекли",
           "LIMITED": "Лимит",
           "DISABLED": "Отключены"
-        }
+        },
+        "attentionFortuneLoss": "Колесо в минусе: {{count}} дн. за месяц"
       }
     },
     "landing": {

@@ -26,6 +26,11 @@ const sqlSubPurchase = `p.status = 'paid' AND p.month > 0 AND p.purchase_kind IN
 
 const sqlRubCurrency = `(UPPER(TRIM(COALESCE(p.currency, ''))) IN ('RUB', 'RUR', '') OR COALESCE(p.currency, '') = '')`
 
+// Награды колеса, начисляющие дни подписки. Список нужен и вкладке «Механики»,
+// и балансу колеса на дашборде: разойдись эти два определения — экраны начнут
+// показывать разную «чистую раздачу» за один и тот же месяц.
+const sqlFortuneDayRewards = `('days_3','days_5','days_7','days_15','days_30','days_180')`
+
 // AdminTopReferrer строка топа рефереров.
 type AdminTopReferrer struct {
 	ReferrerID       int64
@@ -43,8 +48,8 @@ type AdminTopReferrer struct {
 
 // AdminTariffStat метрики по одному тарифу (SALES_MODE=tariffs).
 type AdminTariffStat struct {
-	TariffID          int64
-	DisplayName       string
+	TariffID         int64
+	DisplayName      string
 	SalesToday       int64
 	SalesWeek        int64
 	SalesMonth       int64
@@ -56,7 +61,7 @@ type AdminTariffStat struct {
 	RevenueHalfYear  float64
 	RevenueYear      float64
 	RevenueAll       float64
-	ActivePaidUsers   int64
+	ActivePaidUsers  int64
 }
 
 // AdminStatsSnapshot снимок метрик на момент запроса.
@@ -85,34 +90,34 @@ type AdminStatsSnapshot struct {
 	SalesSubHalfYear  int64
 	SalesSubYear      int64
 
-	RevenueMonthRub       float64
-	RevenueTodayRub       float64
-	RevenueWeekRub        float64
-	RevenueHalfYearRub    float64
-	RevenueYearRub        float64
-	RevenueAllTimeRub     float64
-	RevenueSubsMonthRub   float64
-	TransactionsToday     int64
-	TransactionsWeek      int64
-	TransactionsMonth     int64
-	TransactionsHalfYear  int64
-	TransactionsYear      int64
-	UniquePayersDay       int64
-	UniquePayersWeek      int64
-	UniquePayersMonth     int64
-	UniquePayersHalfYear  int64
-	UniquePayersYear      int64
-	PaymentRubByInvoice   map[string]float64
+	RevenueMonthRub      float64
+	RevenueTodayRub      float64
+	RevenueWeekRub       float64
+	RevenueHalfYearRub   float64
+	RevenueYearRub       float64
+	RevenueAllTimeRub    float64
+	RevenueSubsMonthRub  float64
+	TransactionsToday    int64
+	TransactionsWeek     int64
+	TransactionsMonth    int64
+	TransactionsHalfYear int64
+	TransactionsYear     int64
+	UniquePayersDay      int64
+	UniquePayersWeek     int64
+	UniquePayersMonth    int64
+	UniquePayersHalfYear int64
+	UniquePayersYear     int64
+	PaymentRubByInvoice  map[string]float64
 
-	DistinctReferrers int64
-	ActiveReferrers   int64
-	RefBonusDaysAll       int64
-	RefBonusDaysToday     int64
-	RefBonusDaysWeek      int64
-	RefBonusDaysMonth     int64
-	RefBonusDaysHalfYear  int64
-	RefBonusDaysYear      int64
-	TopReferrers      []AdminTopReferrer
+	DistinctReferrers    int64
+	ActiveReferrers      int64
+	RefBonusDaysAll      int64
+	RefBonusDaysToday    int64
+	RefBonusDaysWeek     int64
+	RefBonusDaysMonth    int64
+	RefBonusDaysHalfYear int64
+	RefBonusDaysYear     int64
+	TopReferrers         []AdminTopReferrer
 
 	TariffBreakdown []AdminTariffStat
 }
@@ -170,7 +175,7 @@ func (s *StatsRepository) FetchAdminStatsSnapshot(ctx context.Context) (*AdminSt
 	prevStart, prevEnd := prevMonthRangeUTC(now)
 
 	out := &AdminStatsSnapshot{
-		CapturedAt:        now,
+		CapturedAt:          now,
 		PaymentRubByInvoice: make(map[string]float64),
 	}
 
@@ -727,7 +732,7 @@ SELECT
   COUNT(*) FILTER (WHERE is_free_spin)::bigint,
   COUNT(*) FILTER (WHERE NOT is_free_spin)::bigint,
   COALESCE(SUM(cost_days) FILTER (WHERE NOT is_free_spin), 0)::bigint,
-  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('days_3','days_5','days_7','days_15','days_30','days_180')), 0)::bigint,
+  COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ` + sqlFortuneDayRewards + `), 0)::bigint,
   COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('xp','micro')), 0)::bigint,
   COALESCE(SUM(reward_value) FILTER (WHERE reward_type IN ('discount_3','discount_5')), 0)::bigint
 FROM fortune_spins

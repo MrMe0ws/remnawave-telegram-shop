@@ -113,6 +113,8 @@ export interface AdminOverviewDTO {
     billing_overdue: number
     billing_due_urgent: number
     billing_due_soon: number
+    /** Дни, роздан­ные колесом сверх собранных за месяц. 0 — выключено или в плюсе. */
+    fortune_net_loss_days: number
   }
   panel: {
     available: boolean

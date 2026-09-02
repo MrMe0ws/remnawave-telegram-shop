@@ -2789,7 +2789,8 @@
           "EXPIRED": "Expired",
           "LIMITED": "Limited",
           "DISABLED": "Disabled"
-        }
+        },
+        "attentionFortuneLoss": "Wheel is at a loss: {{count}} days this month"
       }
     },
     "landing": {

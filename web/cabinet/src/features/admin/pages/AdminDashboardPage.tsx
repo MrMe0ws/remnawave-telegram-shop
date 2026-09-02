@@ -137,6 +137,15 @@ function AdminDashboardContent() {
       label: t('admin.overview.attentionBillingDueSoon', { count: a?.billing_due_soon ?? 0 }),
     },
     {
+      key: 'fortuneLoss',
+      count: a?.fortune_net_loss_days ?? 0,
+      to: '/admin/stats?tab=mechanics',
+      severity: 'warn' as const,
+      label: t('admin.overview.attentionFortuneLoss', {
+        count: a?.fortune_net_loss_days ?? 0,
+      }),
+    },
+    {
       key: 'partnerApplications',
       count: a?.partner_applications ?? 0,
       to: '/admin/partners?tab=applications',

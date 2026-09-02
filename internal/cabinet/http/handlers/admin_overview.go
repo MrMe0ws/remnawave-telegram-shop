@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
 )
@@ -133,6 +134,9 @@ type adminOverviewResp struct {
 		BillingOverdue   int `json:"billing_overdue"`
 		BillingDueUrgent int `json:"billing_due_urgent"`
 		BillingDueSoon   int `json:"billing_due_soon"`
+		// Колесо ушло в минус: за месяц роздано днями подписки больше, чем
+		// собрано за платные крутки. Ноль — колесо выключено или в плюсе.
+		FortuneNetLossDays int64 `json:"fortune_net_loss_days"`
 	} `json:"attention"`
 
 	Panel adminOverviewPanelDTO `json:"panel"`
@@ -205,6 +209,14 @@ func (h *AdminOverviewHandler) Overview(w http.ResponseWriter, r *http.Request) 
 	resp.Shop.SalesToday = counters.SalesToday
 	resp.Shop.PayersToday = counters.PayersToday
 	resp.Attention.OpenInvoices = counters.OpenInvoices
+
+	// Колесо считаем только когда оно включено: у выключенного цифры за месяц
+	// остаются от прошлой жизни и висели бы вечным напоминанием.
+	if cabcfg.GetFortuneWheel().Enabled {
+		if net := counters.FortuneWonDays - counters.FortunePaidDays; net > 0 {
+			resp.Attention.FortuneNetLossDays = net
+		}
+	}
 
 	// Партнёрская программа может быть не собрана — тогда просто нет счётчиков.
 	if h.partners != nil {

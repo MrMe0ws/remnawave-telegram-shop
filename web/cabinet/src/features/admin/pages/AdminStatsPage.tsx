@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { BarChart3, Check, Gift, LayoutGrid, Loader2, RefreshCw, Users, Wallet } from 'lucide-react'
 
@@ -26,6 +27,12 @@ import { useAdminMobileHeaderAutoHide } from '../hooks/useAdminMobileHeaderAutoH
 
 type StatsTabKey = 'overview' | 'money' | 'users' | 'mechanics'
 
+const STATS_TAB_KEYS: StatsTabKey[] = ['overview', 'money', 'users', 'mechanics']
+
+function isStatsTab(value: string | null): value is StatsTabKey {
+  return value !== null && (STATS_TAB_KEYS as string[]).includes(value)
+}
+
 export default function AdminStatsPage() {
   return (
     <AdminLayout>
@@ -38,7 +45,21 @@ function AdminStatsPageContent() {
   const { t, i18n } = useTranslation()
   const { mobileHeaderVisible } = useAdminShell()
   useAdminMobileHeaderAutoHide(true)
-  const [tab, setTab] = useState<StatsTabKey>('overview')
+  // Вкладка живёт в адресе: на неё ссылается дашборд («колесо в минусе» ведёт
+  // прямо в «Механики»), и её можно сохранить в закладки.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const tab: StatsTabKey = isStatsTab(tabParam) ? tabParam : 'overview'
+  const setTab = (next: StatsTabKey) => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        params.set('tab', next)
+        return params
+      },
+      { replace: true },
+    )
+  }
   // Галочка вместо иконки на пару секунд после успешного обновления — иначе
   // по спиннеру, который гаснет за долю секунды, непонятно, случилось ли что-то.
   const [refreshDone, setRefreshDone] = useState(false)
