@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarPlus, ChevronDown, ChevronUp, Trophy, User, Users, Wallet } from 'lucide-react'
+import { CalendarDays, RussianRuble, UserPlus, Users } from 'lucide-react'
 
 import type { AdminStatsDTO } from '@/lib/types/admin'
-import { cn } from '@/lib/utils'
 
-import { formatRub, statsNumberLocale } from '../utils/statsFormat'
 import { formatAdminCustomerLabel } from '../../utils/formatAdminCustomerLabel'
-import { StatsWidgetCard } from './StatsWidgetCard'
+import { formatRub, statsNumberLocale } from '../utils/statsFormat'
+import { STATS_ACCENT } from '../utils/statsPalette'
+import { StatsMore, StatsPanel, StatsPanelHead } from './StatsPanel'
 
 interface TopReferrersTableProps {
   rows: AdminStatsDTO['top_referrers']
+  distinctReferrers: number
+  activeReferrers: number
+  bonusDaysAll: number
   className?: string
 }
 
@@ -20,113 +23,111 @@ const EXPANDED = 10
 /**
  * Топ пригласивших.
  *
- * Каждая колонка подписана иконкой и словом: раньше в последнем столбце стояло
- * голое число, и понять, приглашённые это, оплатившие или дни, было нельзя.
+ * У каждой колонки значок и слово: раньше в последнем столбце стояло голое
+ * число, и понять, приглашённые это, оплатившие или дни, было нельзя.
  */
-export function TopReferrersTable({ rows, className }: TopReferrersTableProps) {
+export function TopReferrersTable({
+  rows,
+  distinctReferrers,
+  activeReferrers,
+  bonusDaysAll,
+  className,
+}: TopReferrersTableProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
   const [expanded, setExpanded] = useState(false)
 
-  if (rows.length === 0) return null
-
-  const limit = expanded ? EXPANDED : COLLAPSED
-  const visible = rows.slice(0, limit)
+  const visible = rows.slice(0, expanded ? EXPANDED : COLLAPSED)
   const canExpand = rows.length > COLLAPSED
 
   return (
-    <StatsWidgetCard
-      icon={Trophy}
-      title={t('admin.stats.topReferrers')}
-      gradient="bg-gradient-to-r from-pink-500 to-rose-500"
-      accent="pink"
-      className={className}
-    >
-      <div className="-mx-4 overflow-x-auto px-4">
-        <table className="w-full min-w-[26rem] text-sm">
-          <thead>
-            <tr className="border-b border-border/50 text-xs text-muted-foreground">
-              <th className="py-2 pr-2 text-left font-medium">
-                <span className="flex items-center gap-1.5">
-                  <User className="size-3.5 shrink-0" aria-hidden />
-                  {t('admin.stats.refColUser')}
-                </span>
-              </th>
-              <th className="py-2 px-2 text-right font-medium">
-                <span className="flex items-center justify-end gap-1.5">
-                  <Users className="size-3.5 shrink-0" aria-hidden />
-                  {t('admin.stats.refColInvited')}
-                </span>
-              </th>
-              <th className="py-2 px-2 text-right font-medium">
-                <span className="flex items-center justify-end gap-1.5">
-                  <Wallet className="size-3.5 shrink-0" aria-hidden />
-                  {t('admin.stats.refColPaid')}
-                </span>
-              </th>
-              <th className="py-2 px-2 text-right font-medium">
-                <span className="flex items-center justify-end gap-1.5">
-                  <Wallet className="size-3.5 shrink-0" aria-hidden />
-                  {t('admin.stats.refColBrought')}
-                </span>
-              </th>
-              <th className="py-2 pl-2 text-right font-medium">
-                <span className="flex items-center justify-end gap-1.5">
-                  <CalendarPlus className="size-3.5 shrink-0" aria-hidden />
-                  {t('admin.stats.refColDays')}
-                </span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((row, i) => (
-              <tr key={row.referrer_id} className="border-b border-border/30 last:border-0">
-                <td className="py-2 pr-2">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="w-4 shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {i + 1}
-                    </span>
-                    <span className="truncate">
-                      {formatAdminCustomerLabel({
-                        telegram_username: row.telegram_username,
-                        nickname: row.nickname,
-                        customer_id: row.customer_id,
-                      })}
-                    </span>
-                  </span>
-                </td>
-                <td className="px-2 text-right tabular-nums text-muted-foreground">
-                  {row.referees.toLocaleString(numberLocale)}
-                </td>
-                <td className="px-2 text-right font-medium tabular-nums">
-                  {row.paid_referees.toLocaleString(numberLocale)}
-                </td>
-                <td className="px-2 text-right tabular-nums">
-                  {formatRub(row.revenue_rub, numberLocale)}
-                </td>
-                <td className="pl-2 text-right tabular-nums text-muted-foreground">
-                  {row.bonus_days.toLocaleString(numberLocale)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <StatsPanel className={className}>
+      <StatsPanelHead
+        icon={UserPlus}
+        color={STATS_ACCENT.amber}
+        title={t('admin.stats.referrals')}
+        subtitle={t('admin.stats.referralsSubtitle', {
+          referrers: distinctReferrers.toLocaleString(numberLocale),
+          active: activeReferrers.toLocaleString(numberLocale),
+          days: bonusDaysAll.toLocaleString(numberLocale),
+        })}
+      />
 
-      {canExpand && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className={cn(
-            'mt-2 inline-flex min-h-10 items-center gap-1.5 self-start text-xs font-medium text-primary hover:underline',
+      {rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          {t('admin.stats.referralsEmpty')}
+        </p>
+      ) : (
+        <>
+          <div className="-mx-1 overflow-x-auto px-1">
+            <div className="grid min-w-[24rem] grid-cols-[1.25rem_minmax(0,1fr)_4.5rem_6rem_4rem] items-center gap-x-3 gap-y-2.5">
+              <div />
+              <div className="text-xs text-muted-foreground">{t('admin.stats.refColUser')}</div>
+              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                <Users className="size-3.5 shrink-0" aria-hidden />
+                {t('admin.stats.refColPaid')}
+              </div>
+              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                <RussianRuble className="size-3.5 shrink-0" aria-hidden />
+                {t('admin.stats.refColBrought')}
+              </div>
+              <div className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="size-3.5 shrink-0" aria-hidden />
+                {t('admin.stats.refColDays')}
+              </div>
+
+              {visible.map((row, i) => (
+                <Row
+                  key={row.referrer_id}
+                  index={i + 1}
+                  name={formatAdminCustomerLabel({
+                    telegram_username: row.telegram_username,
+                    nickname: row.nickname,
+                    customer_id: row.customer_id,
+                  })}
+                  paid={row.paid_referees.toLocaleString(numberLocale)}
+                  brought={formatRub(row.revenue_rub, numberLocale)}
+                  days={row.bonus_days.toLocaleString(numberLocale)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {canExpand && (
+            <StatsMore
+              expanded={expanded}
+              onToggle={() => setExpanded((v) => !v)}
+              label={t('admin.stats.showTop', {
+                count: expanded ? COLLAPSED : Math.min(EXPANDED, rows.length),
+              })}
+            />
           )}
-        >
-          {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-          {expanded
-            ? t('admin.stats.showTop', { count: COLLAPSED })
-            : t('admin.stats.showTop', { count: Math.min(EXPANDED, rows.length) })}
-        </button>
+        </>
       )}
-    </StatsWidgetCard>
+    </StatsPanel>
+  )
+}
+
+function Row({
+  index,
+  name,
+  paid,
+  brought,
+  days,
+}: {
+  index: number
+  name: string
+  paid: string
+  brought: string
+  days: string
+}) {
+  return (
+    <>
+      <div className="text-xs tabular-nums text-muted-foreground">{index}</div>
+      <div className="truncate text-[13px]">{name}</div>
+      <div className="text-right text-[13px] font-semibold tabular-nums">{paid}</div>
+      <div className="text-right text-[13px] tabular-nums">{brought}</div>
+      <div className="text-right text-[13px] tabular-nums text-muted-foreground">{days}</div>
+    </>
   )
 }

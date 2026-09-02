@@ -29,3 +29,17 @@ export function formatRub(value: number, locale = 'ru-RU'): string {
 export function statsNumberLocale(lang: string | undefined): string {
   return lang?.startsWith('en') ? 'en-GB' : 'ru-RU'
 }
+
+/** Дробное число в локали интерфейса: «4,8» в русском, «4.8» в английском. */
+export function formatDecimal(value: number, locale = 'ru-RU', digits = 1): string {
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })
+}
+
+/** Доля в процентах, тоже в локали интерфейса. */
+export function formatPct(num: number, den: number, locale = 'ru-RU'): string {
+  if (den <= 0) return formatDecimal(0, locale)
+  return formatDecimal((num * 100) / den, locale)
+}

@@ -2,14 +2,16 @@ import type { AdminStatsInsightsDTO } from '@/lib/types/admin'
 import type { AdminFortuneStatsResponse } from '../../hooks/useAdminFortuneStats'
 import type { AdminLoyaltyStatsResponse } from '../../hooks/useAdminLoyaltyStats'
 import type { AdminPromoStatsResponse } from '../../hooks/useAdminPromoStats'
+import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 
-import { FortuneStatsAccordion } from '../components/FortuneStatsAccordion'
-import { LoyaltyStatsAccordion } from '../components/LoyaltyStatsAccordion'
 import { PartnerProgramBlock } from '../components/PartnerProgramBlock'
-import { PromoStatsAccordion } from '../components/PromoStatsAccordion'
+import { StatsFortuneBlock } from '../components/StatsFortuneBlock'
+import { StatsLoyaltyBlock } from '../components/StatsLoyaltyBlock'
+import { StatsPromosBlock } from '../components/StatsPromosBlock'
 import type { StatsPeriod } from '../utils/statsPeriod'
 
 interface StatsMechanicsTabProps {
+  data: AdminStatsResponse
   insights?: AdminStatsInsightsDTO | null
   fortune?: AdminFortuneStatsResponse | null
   loyalty?: AdminLoyaltyStatsResponse | null
@@ -23,6 +25,7 @@ interface StatsMechanicsTabProps {
  * которая стоит живых денег.
  */
 export function StatsMechanicsTab({
+  data,
   insights,
   fortune,
   loyalty,
@@ -30,11 +33,18 @@ export function StatsMechanicsTab({
   period,
 }: StatsMechanicsTabProps) {
   return (
-    <div className="space-y-4">
-      {insights?.partners && <PartnerProgramBlock data={insights.partners} />}
-      {fortune && <FortuneStatsAccordion data={fortune} globalPeriod={period} />}
-      {loyalty?.enabled && <LoyaltyStatsAccordion data={loyalty} />}
-      {promo && <PromoStatsAccordion data={promo} />}
+    <div className="flex flex-col gap-4">
+      {insights?.partners && (
+        <PartnerProgramBlock
+          data={insights.partners}
+          totalCustomers={data.total_customers}
+        />
+      )}
+      {fortune && <StatsFortuneBlock data={fortune} period={period} />}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        {loyalty?.enabled && <StatsLoyaltyBlock data={loyalty} />}
+        {promo && <StatsPromosBlock data={promo} />}
+      </div>
     </div>
   )
 }

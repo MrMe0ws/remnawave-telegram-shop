@@ -18,14 +18,14 @@ export const STATS_PERIOD_OPTIONS: Exclude<StatsPeriod, 'custom'>[] = [
 ]
 
 /** YYYY-MM-DD → DD.MM.YY */
-export function formatStatsDateShort(isoDate: string, locale = 'ru-RU'): string {
+function formatStatsDateShort(isoDate: string, locale = 'ru-RU'): string {
   const [y, m, d] = isoDate.split('-').map(Number)
   if (!y || !m || !d) return isoDate
   const date = new Date(y, m - 1, d)
   return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-export function formatStatsCustomRangeLabel(range: StatsCustomRange, locale = 'ru-RU'): string {
+function formatStatsCustomRangeLabel(range: StatsCustomRange, locale = 'ru-RU'): string {
   return `${formatStatsDateShort(range.from, locale)} – ${formatStatsDateShort(range.to, locale)}`
 }
 
@@ -100,7 +100,7 @@ export function resolveStatsPeriodSlice(
   return getStatsPeriodSlice(data, period)
 }
 
-export function getStatsPeriodSlice(
+function getStatsPeriodSlice(
   data: AdminStatsResponse,
   period: Exclude<StatsPeriod, 'custom'>,
 ): PeriodSlice {
@@ -180,25 +180,9 @@ export function getStatsPeriodSlice(
   }
 }
 
-export function buildGrowth(cur: number, prev: number | null) {
-  if (prev === null) return undefined
-  return {
-    pct: formatGrowthPct(cur, prev),
-    trend: growthTrend(cur, prev),
-  }
-}
-
-export function activeSubsPct(data: AdminStatsResponse): string {
-  return pctOf(data.active_subscriptions, data.total_customers)
-}
-
 export function paidConvPct(data: AdminStatsResponse): string {
   const den = data.trial_active + data.paid_active
   return pctOf(data.paid_active, den)
-}
-
-export function formatPeriodRub(value: number, locale: string): string {
-  return formatRub(value, locale)
 }
 
 export function tariffPeriodSales(row: AdminStatsTariffRow, period: StatsPeriod): number {
@@ -242,9 +226,4 @@ export function fortunePeriodKey(period: StatsPeriod): 'today' | 'month' | 'all_
   if (period === 'day') return 'today'
   if (period === 'week' || period === 'month' || period === 'custom') return 'month'
   return 'all_time'
-}
-
-/** Пресет для виджетов без timeseries (рефералы и т.п.) при кастомном диапазоне. */
-export function snapshotFallbackPeriod(period: StatsPeriod): Exclude<StatsPeriod, 'custom'> {
-  return period === 'custom' ? 'month' : period
 }

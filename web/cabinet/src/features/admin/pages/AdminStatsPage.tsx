@@ -170,7 +170,9 @@ function AdminStatsPageContent() {
       <AdminPageHeader
         icon={BarChart3}
         title={t('admin.stats.title')}
-        subtitle={t('admin.stats.subtitle')}
+        subtitle={
+          updatedLabel ? t('admin.stats.capturedAt', { date: updatedLabel }) : t('admin.stats.subtitle')
+        }
         accent="blue"
         actions={
           <div className="hidden flex-wrap items-center gap-2 md:flex">
@@ -179,12 +181,6 @@ function AdminStatsPageContent() {
           </div>
         }
       />
-
-      {updatedLabel && (
-        <p className="text-xs text-muted-foreground">
-          {t('admin.stats.updatedAt', { date: updatedLabel })}
-        </p>
-      )}
 
       <StatsTabs items={tabs} value={tab} onChange={setTab} />
 
@@ -205,6 +201,7 @@ function AdminStatsPageContent() {
           data={data}
           insights={insights}
           timeseries={timeseries}
+          fortune={fortuneData}
           period={period}
           customRange={customRange}
         />
@@ -232,6 +229,7 @@ function AdminStatsPageContent() {
 
       {data && tab === 'mechanics' && (
         <StatsMechanicsTab
+          data={data}
           insights={insights}
           fortune={fortuneData}
           loyalty={loyaltyData}

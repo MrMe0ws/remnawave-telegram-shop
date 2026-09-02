@@ -1,23 +1,18 @@
 import { useTranslation } from 'react-i18next'
-import {
-  Banknote,
-  Clock,
-  Handshake,
-  Percent,
-  Send,
-  UserCheck,
-  Users,
-  Wallet,
-} from 'lucide-react'
+import { Briefcase } from 'lucide-react'
 
 import type { AdminPartnerProgramDTO } from '@/lib/types/admin'
+import { cn } from '@/lib/utils'
 
-import { formatRub, statsNumberLocale } from '../utils/statsFormat'
 import { formatAdminCustomerLabel } from '../../utils/formatAdminCustomerLabel'
-import { StatsWidgetCard } from './StatsWidgetCard'
+import { formatRub, statsNumberLocale } from '../utils/statsFormat'
+import { STATS_ACCENT } from '../utils/statsPalette'
+import { StatsPanel, StatsPanelHead } from './StatsPanel'
 
 interface PartnerProgramBlockProps {
   data: AdminPartnerProgramDTO
+  /** Всего клиентов в базе — чтобы показать, какую долю привели партнёры. */
+  totalCustomers: number
   className?: string
 }
 
@@ -28,158 +23,154 @@ interface PartnerProgramBlockProps {
  * итог: сколько партнёров работает, кого они привели, сколько им начислено и
  * сколько из этого ещё лежит в холде.
  */
-export function PartnerProgramBlock({ data, className }: PartnerProgramBlockProps) {
+export function PartnerProgramBlock({
+  data,
+  totalCustomers,
+  className,
+}: PartnerProgramBlockProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
 
-  const conv =
-    data.customers > 0 ? Math.round((data.paying_customers * 100) / data.customers) : 0
+  const conv = data.customers > 0 ? Math.round((data.paying_customers * 100) / data.customers) : 0
+  const baseShare =
+    totalCustomers > 0 ? Math.round((data.customers * 100) / totalCustomers) : 0
 
-  const tiles = [
+  const cells = [
     {
-      icon: Handshake,
       label: t('admin.stats.partnerActive'),
       value: data.partners_active.toLocaleString(numberLocale),
       hint: t('admin.stats.partnerPending', { count: data.partners_pending }),
     },
     {
-      icon: Users,
       label: t('admin.stats.partnerCustomers'),
       value: data.customers.toLocaleString(numberLocale),
-      hint: t('admin.stats.partnerActiveCustomers', { count: data.active_customers }),
+      hint: t('admin.stats.partnerBaseShare', { pct: baseShare }),
     },
     {
-      icon: UserCheck,
       label: t('admin.stats.partnerPaying'),
       value: data.paying_customers.toLocaleString(numberLocale),
       hint: t('admin.stats.partnerConversion', { pct: conv }),
     },
     {
-      icon: Banknote,
-      label: t('admin.stats.partnerEarnedPeriod'),
-      value: formatRub(data.earned_period, numberLocale),
-      hint: t('admin.stats.partnerEarnedTotal', {
-        value: formatRub(data.earned_total, numberLocale),
+      label: t('admin.stats.partnerEarnedTotalLabel'),
+      value: formatRub(data.earned_total, numberLocale),
+      hint: t('admin.stats.partnerEarnedPeriodHint', {
+        value: formatRub(data.earned_period, numberLocale),
       }),
     },
     {
-      icon: Wallet,
       label: t('admin.stats.partnerPaidTotal'),
       value: formatRub(data.paid_total, numberLocale),
-      hint: t('admin.stats.partnerAvailable', {
-        value: formatRub(data.available_balance, numberLocale),
-      }),
+      hint: t('admin.stats.partnerOpenPayouts', { count: data.open_payouts }),
     },
     {
-      icon: Clock,
-      label: t('admin.stats.partnerHold'),
-      value: formatRub(data.hold_balance, numberLocale),
-      hint: t('admin.stats.partnerOpenPayouts', {
-        count: data.open_payouts,
-        value: formatRub(data.open_payouts_amount, numberLocale),
+      label: t('admin.stats.partnerDue'),
+      value: formatRub(data.available_balance, numberLocale),
+      hint: t('admin.stats.partnerHoldHint', {
+        value: formatRub(data.hold_balance, numberLocale),
       }),
+      separated: true,
+      accent: STATS_ACCENT.amber,
     },
   ]
 
   return (
-    <StatsWidgetCard
-      icon={Handshake}
-      title={t('admin.stats.partnerTitle')}
-      gradient="bg-gradient-to-r from-amber-500 to-orange-500"
-      accent="fuchsia"
-      className={className}
-    >
-      <div className="flex flex-1 flex-col gap-3">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {tiles.map((tile) => {
-            const TileIcon = tile.icon
-            return (
-              <div
-                key={tile.label}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2 sm:block"
-              >
-                <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                  <TileIcon className="size-3.5 shrink-0" aria-hidden />
-                  <span className="truncate">{tile.label}</span>
-                </p>
-                <div className="shrink-0 text-right sm:mt-1 sm:text-left">
-                  <p className="text-lg font-semibold tabular-nums">{tile.value}</p>
-                  <p className="truncate text-[11px] leading-tight text-muted-foreground">
-                    {tile.hint}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+    <StatsPanel className={className}>
+      <StatsPanelHead
+        icon={Briefcase}
+        color={STATS_ACCENT.blue}
+        title={t('admin.stats.partnerTitle')}
+        subtitle={t('admin.stats.partnerSubtitle')}
+      />
 
-        {data.top.length > 0 && (
-          <div className="-mx-4 overflow-x-auto px-4">
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-              {t('admin.stats.partnerTopTitle')}
-            </p>
-            <table className="w-full min-w-[22rem] text-sm">
-              <thead>
-                <tr className="border-b border-border/50 text-xs text-muted-foreground">
-                  <th className="py-2 pr-2 text-left font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <Handshake className="size-3.5 shrink-0" aria-hidden />
-                      {t('admin.stats.partnerColPartner')}
-                    </span>
-                  </th>
-                  <th className="px-2 py-2 text-right font-medium">
-                    <span className="flex items-center justify-end gap-1.5">
-                      <Users className="size-3.5 shrink-0" aria-hidden />
-                      {t('admin.stats.partnerColCustomers')}
-                    </span>
-                  </th>
-                  <th className="px-2 py-2 text-right font-medium">
-                    <span className="flex items-center justify-end gap-1.5">
-                      <Percent className="size-3.5 shrink-0" aria-hidden />
-                      {t('admin.stats.partnerColPaying')}
-                    </span>
-                  </th>
-                  <th className="py-2 pl-2 text-right font-medium">
-                    <span className="flex items-center justify-end gap-1.5">
-                      <Banknote className="size-3.5 shrink-0" aria-hidden />
-                      {t('admin.stats.partnerColEarned')}
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.top.slice(0, 5).map((row) => (
-                  <tr key={row.partner_id} className="border-b border-border/30 last:border-0">
-                    <td className="truncate py-2 pr-2">
-                      {formatAdminCustomerLabel({
-                        telegram_username: row.telegram_username,
-                        nickname: row.nickname,
-                        customer_id: row.customer_id,
-                      })}
-                    </td>
-                    <td className="px-2 text-right tabular-nums text-muted-foreground">
-                      {row.customers.toLocaleString(numberLocale)}
-                    </td>
-                    <td className="px-2 text-right font-medium tabular-nums">
-                      {row.paying_customers.toLocaleString(numberLocale)}
-                    </td>
-                    <td className="pl-2 text-right tabular-nums">
-                      {formatRub(row.earned, numberLocale)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
+        {cells.map((cell) => (
+          <div
+            key={cell.label}
+            className={cn(
+              cell.separated && 'xl:border-l xl:border-border/50 xl:pl-4',
+            )}
+          >
+            <div className="truncate text-xs text-muted-foreground">{cell.label}</div>
+            <div
+              className="mt-1 truncate text-xl font-semibold tabular-nums"
+              style={cell.accent ? { color: cell.accent } : undefined}
+            >
+              {cell.value}
+            </div>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">{cell.hint}</div>
           </div>
-        )}
-
-        {data.partners_total === 0 && (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Send className="size-3.5 shrink-0" aria-hidden />
-            {t('admin.stats.partnerEmpty')}
-          </p>
-        )}
+        ))}
       </div>
-    </StatsWidgetCard>
+
+      {data.top.length > 0 && (
+        <div className="mt-5 border-t border-border/50 pt-4">
+          <p className="mb-3 text-[13px] text-muted-foreground">
+            {t('admin.stats.partnerTopTitle')}
+          </p>
+          <div className="-mx-1 overflow-x-auto px-1">
+            <div className="grid min-w-[22rem] grid-cols-[1.25rem_minmax(0,1fr)_5rem_5rem_6rem] items-center gap-x-3 gap-y-2.5">
+              <div />
+              <div className="text-xs text-muted-foreground">
+                {t('admin.stats.partnerColPartner')}
+              </div>
+              <div className="text-right text-xs text-muted-foreground">
+                {t('admin.stats.partnerColCustomers')}
+              </div>
+              <div className="text-right text-xs text-muted-foreground">
+                {t('admin.stats.partnerColPaying')}
+              </div>
+              <div className="text-right text-xs text-muted-foreground">
+                {t('admin.stats.partnerColEarned')}
+              </div>
+
+              {data.top.slice(0, 5).map((row, i) => (
+                <PartnerRow
+                  key={row.partner_id}
+                  index={i + 1}
+                  name={formatAdminCustomerLabel({
+                    telegram_username: row.telegram_username,
+                    nickname: row.nickname,
+                    customer_id: row.customer_id,
+                  })}
+                  customers={row.customers.toLocaleString(numberLocale)}
+                  paying={row.paying_customers.toLocaleString(numberLocale)}
+                  earned={formatRub(row.earned, numberLocale)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </StatsPanel>
+  )
+}
+
+function PartnerRow({
+  index,
+  name,
+  customers,
+  paying,
+  earned,
+}: {
+  index: number
+  name: string
+  customers: string
+  paying: string
+  earned: string
+}) {
+  return (
+    <>
+      <div className="text-xs tabular-nums text-muted-foreground">{index}</div>
+      <div className="truncate text-[13px]">{name}</div>
+      <div className="text-right text-[13px] tabular-nums text-muted-foreground">{customers}</div>
+      <div className="text-right text-[13px] font-semibold tabular-nums">{paying}</div>
+      <div
+        className="text-right text-[13px] tabular-nums"
+        style={{ color: STATS_ACCENT.amber }}
+      >
+        {earned}
+      </div>
+    </>
   )
 }

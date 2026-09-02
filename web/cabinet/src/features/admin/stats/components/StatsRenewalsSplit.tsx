@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { RefreshCcw, Sparkles, Repeat } from 'lucide-react'
+import { RefreshCcw } from 'lucide-react'
 
 import type { AdminStatsInsightsDTO } from '@/lib/types/admin'
 
 import { formatRub, statsNumberLocale } from '../utils/statsFormat'
-import { STATS_CHART_COLORS } from '../utils/statsChartTheme'
-import { StatsWidgetCard } from './StatsWidgetCard'
+import { STATS_ACCENT } from '../utils/statsPalette'
+import { StatsDot, StatsFootnote, StatsPanel, StatsPanelHead } from './StatsPanel'
 
 interface StatsRenewalsSplitProps {
   renewals: AdminStatsInsightsDTO['renewals']
@@ -26,65 +26,57 @@ export function StatsRenewalsSplit({ renewals, className }: StatsRenewalsSplitPr
   const renewalShare = total > 0 ? Math.round((renewals.renewal_count * 100) / total) : 0
   const firstShare = total > 0 ? 100 - renewalShare : 0
 
+  const rows = [
+    {
+      label: t('admin.stats.renewalsRenewal'),
+      color: STATS_ACCENT.green,
+      sum: renewals.renewal_revenue,
+      share: renewalShare,
+    },
+    {
+      label: t('admin.stats.renewalsFirst'),
+      color: STATS_ACCENT.blue,
+      sum: renewals.first_revenue,
+      share: firstShare,
+    },
+  ]
+
   return (
-    <StatsWidgetCard
-      icon={RefreshCcw}
-      title={t('admin.stats.renewalsTitle')}
-      gradient="bg-gradient-to-r from-emerald-500 to-teal-500"
-      accent="emerald"
-      className={className}
-    >
-      <div className="flex flex-1 flex-col gap-3">
-        <div>
-          <p className="text-xs text-muted-foreground">{t('admin.stats.renewalsShare')}</p>
-          <p className="text-3xl font-bold tracking-tight tabular-nums">{renewalShare}%</p>
-        </div>
+    <StatsPanel className={className}>
+      <StatsPanelHead
+        icon={RefreshCcw}
+        color={STATS_ACCENT.green}
+        title={t('admin.stats.renewalsTitle')}
+        subtitle={t('admin.stats.renewalsSubtitle')}
+      />
 
-        <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/40">
-          <div
-            className="h-full"
-            style={{ width: `${renewalShare}%`, backgroundColor: STATS_CHART_COLORS.emerald }}
-          />
-          <div className="h-full w-[2px] shrink-0 bg-card" />
-          <div
-            className="h-full flex-1"
-            style={{ backgroundColor: STATS_CHART_COLORS.blue }}
-          />
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Repeat className="size-3.5 shrink-0" style={{ color: STATS_CHART_COLORS.emerald }} />
-              {t('admin.stats.renewalsRenewal')}
-            </p>
-            <p className="font-semibold tabular-nums">
-              {renewals.renewal_count.toLocaleString(numberLocale)}
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                {renewalShare}%
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {formatRub(renewals.renewal_revenue, numberLocale)}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Sparkles className="size-3.5 shrink-0" style={{ color: STATS_CHART_COLORS.blue }} />
-              {t('admin.stats.renewalsFirst')}
-            </p>
-            <p className="font-semibold tabular-nums">
-              {renewals.first_count.toLocaleString(numberLocale)}
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                {firstShare}%
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {formatRub(renewals.first_revenue, numberLocale)}
-            </p>
-          </div>
-        </div>
+      <div className="mb-4 flex h-6 gap-0.5 overflow-hidden">
+        <div
+          className="rounded-l-md"
+          style={{ width: `${renewalShare}%`, backgroundColor: STATS_ACCENT.green }}
+        />
+        <div
+          className="flex-1 rounded-r-md"
+          style={{ backgroundColor: STATS_ACCENT.blue }}
+        />
       </div>
-    </StatsWidgetCard>
+
+      <div className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center gap-2.5 text-[13px]">
+            <StatsDot color={row.color} />
+            <span className="min-w-0 flex-1 truncate">{row.label}</span>
+            <span className="tabular-nums text-muted-foreground">
+              {formatRub(row.sum, numberLocale)}
+            </span>
+            <span className="w-11 shrink-0 text-right font-semibold tabular-nums">
+              {row.share}%
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <StatsFootnote>{t('admin.stats.renewalsHint')}</StatsFootnote>
+    </StatsPanel>
   )
 }

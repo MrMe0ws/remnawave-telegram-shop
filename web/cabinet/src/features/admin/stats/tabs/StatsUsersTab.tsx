@@ -1,28 +1,23 @@
 import { useTranslation } from 'react-i18next'
-import {
-  CalendarClock,
-  CalendarPlus,
-  Hourglass,
-  Link2,
-  Repeat,
-  UserMinus,
-  UserRoundCheck,
-  Users,
-  Wallet,
-  Zap,
-} from 'lucide-react'
+import { Hourglass, ShieldCheck, UserPlus, Users } from 'lucide-react'
 
 import type { AdminStatsInsightsDTO, AdminStatsTimeSeriesDTO } from '@/lib/types/admin'
 import type { AdminStatsResponse } from '../../hooks/useAdminStats'
 
-import { StatsGroupCard, type StatsGroupItem } from '../components/StatsGroupCard'
+import { StatsBaseComposition } from '../components/StatsBaseComposition'
+import { StatsDelta, StatsKpiCard } from '../components/StatsKpiCard'
+import { StatsMainChart } from '../components/StatsMainChart'
 import { TopReferrersTable } from '../components/TopReferrersTable'
-import { UsersStatsWidget } from '../components/UsersStatsWidget'
-import { pctOf, statsNumberLocale } from '../utils/statsFormat'
 import {
-  getStatsPeriodSlice,
-  snapshotFallbackPeriod,
-  statsPeriodLabel,
+  formatDecimal,
+  formatGrowthPct,
+  formatPct,
+  growthTrend,
+  statsNumberLocale,
+} from '../utils/statsFormat'
+import { STATS_ACCENT } from '../utils/statsPalette'
+import {
+  resolveStatsPeriodSlice,
   type StatsCustomRange,
   type StatsPeriod,
 } from '../utils/statsPeriod'
@@ -44,122 +39,94 @@ export function StatsUsersTab({
 }: StatsUsersTabProps) {
   const { t, i18n } = useTranslation()
   const numberLocale = statsNumberLocale(i18n.language)
-  const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
 
-  const refPeriod = snapshotFallbackPeriod(period)
-  const refSlice = getStatsPeriodSlice(data, refPeriod)
-  const refPeriodLabel = statsPeriodLabel(t, refPeriod, { locale })
+  const slice = resolveStatsPeriodSlice(data, period, timeseries)
+  const newUsers = insights?.current.new_users ?? slice.newUsers
+  const previous = insights?.previous
 
   const lifetime = insights?.lifetime
-  const lifetimeMonths = lifetime ? lifetime.avg_lifetime_days / 30.44 : 0
-
-  const bucketItems: StatsGroupItem[] = [
-    {
-      icon: Zap,
-      label: t('admin.stats.trialActive'),
-      value: data.trial_active.toLocaleString(numberLocale),
-    },
-    {
-      icon: Wallet,
-      label: t('admin.stats.paidActive'),
-      value: data.paid_active.toLocaleString(numberLocale),
-    },
-    {
-      icon: UserMinus,
-      label: t('admin.stats.inactive'),
-      value: data.inactive.toLocaleString(numberLocale),
-      hint: t('admin.stats.inactivePaidOf', { count: data.inactive_paid }),
-    },
-  ]
-
-  const lifetimeItems: StatsGroupItem[] = lifetime
-    ? [
-        {
-          icon: Hourglass,
-          label: t('admin.stats.avgLifetime'),
-          value: t('admin.stats.monthsValue', { value: lifetimeMonths.toFixed(1) }),
-          hint: t('admin.stats.daysValue', { value: Math.round(lifetime.avg_lifetime_days) }),
-        },
-        {
-          icon: CalendarClock,
-          label: t('admin.stats.avgPaidMonths'),
-          value: lifetime.avg_paid_months.toFixed(1),
-        },
-        {
-          icon: Repeat,
-          label: t('admin.stats.avgPurchases'),
-          value: lifetime.avg_purchases.toFixed(1),
-          hint: t('admin.stats.payingCustomers', { count: lifetime.paying_customers }),
-        },
-      ]
-    : []
-
-  const referralItems: StatsGroupItem[] = [
-    {
-      icon: Users,
-      label: t('admin.stats.distinctReferrers'),
-      value: data.distinct_referrers.toLocaleString(numberLocale),
-    },
-    {
-      icon: UserRoundCheck,
-      label: t('admin.stats.activeReferrers'),
-      value: data.active_referrers.toLocaleString(numberLocale),
-      hint: t('admin.stats.ofTotalPct', {
-        pct: pctOf(data.active_referrers, data.distinct_referrers),
-      }),
-    },
-    {
-      icon: CalendarPlus,
-      label: t('admin.stats.bonusDaysPeriod', { period: refPeriodLabel }),
-      value: refSlice.refBonus.toLocaleString(numberLocale),
-      hint: t('admin.stats.bonusDaysAllValue', {
-        value: data.ref_bonus_days_all.toLocaleString(numberLocale),
-      }),
-    },
-  ]
+  const lifetimeMonths = lifetime ? lifetime.avg_lifetime_days / 30.44 : null
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <UsersStatsWidget
-          data={data}
-          period={period}
-          timeseries={timeseries}
-          customRange={customRange}
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatsKpiCard
+          icon={Users}
+          color={STATS_ACCENT.blue}
+          label={t('admin.stats.totalCustomers')}
+          value={data.total_customers.toLocaleString(numberLocale)}
+          hint={
+            <span className="text-muted-foreground">{t('admin.stats.totalCustomersHint')}</span>
+          }
         />
-        <StatsGroupCard
-          icon={Zap}
-          title={t('admin.stats.subscriptions')}
-          accent="emerald"
-          gradient="bg-gradient-to-r from-emerald-500 to-teal-500"
-          items={bucketItems}
+        <StatsKpiCard
+          icon={UserPlus}
+          color={STATS_ACCENT.green}
+          label={t('admin.stats.newInPeriodShort')}
+          value={newUsers.toLocaleString(numberLocale)}
+          hint={
+            previous === undefined ? undefined : (
+              <StatsDelta
+                pct={formatGrowthPct(newUsers, previous.new_users)}
+                trend={growthTrend(newUsers, previous.new_users)}
+                note={t('admin.stats.deltaNote')}
+              />
+            )
+          }
+        />
+        <StatsKpiCard
+          icon={ShieldCheck}
+          color={STATS_ACCENT.cyan}
+          label={t('admin.stats.activeSubscriptions')}
+          value={data.active_subscriptions.toLocaleString(numberLocale)}
+          hint={
+            <span className="text-muted-foreground">
+              {t('admin.stats.activeSubsHint', {
+                base: formatPct(data.active_subscriptions, data.total_customers, numberLocale),
+                paid: formatPct(data.paid_active, data.trial_active + data.paid_active, numberLocale),
+              })}
+            </span>
+          }
+        />
+        <StatsKpiCard
+          icon={Hourglass}
+          color={STATS_ACCENT.amber}
+          label={t('admin.stats.avgLifetime')}
+          value={
+            lifetimeMonths === null
+              ? '—'
+              : t('admin.stats.monthsValue', { value: formatDecimal(lifetimeMonths, numberLocale) })
+          }
+          hint={
+            <span className="text-muted-foreground">
+              {lifetime
+                ? t('admin.stats.avgLifetimeHint', {
+                    months: formatDecimal(lifetime.avg_paid_months, numberLocale),
+                    purchases: formatDecimal(lifetime.avg_purchases, numberLocale),
+                  })
+                : t('admin.stats.lifetimeHint')}
+            </span>
+          }
         />
       </div>
 
-      {lifetimeItems.length > 0 && (
-        <StatsGroupCard
-          icon={Hourglass}
-          title={t('admin.stats.lifetimeTitle')}
-          accent="indigo"
-          gradient="bg-gradient-to-r from-indigo-500 to-violet-500"
-          items={lifetimeItems}
-          footer={
-            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-              {t('admin.stats.lifetimeHint')}
-            </p>
-          }
-        />
-      )}
-
-      <StatsGroupCard
-        icon={Link2}
-        title={t('admin.stats.referrals')}
-        accent="pink"
-        gradient="bg-gradient-to-r from-pink-500 to-rose-500"
-        items={referralItems}
+      <StatsMainChart
+        timeseries={timeseries}
+        period={period}
+        customRange={customRange}
+        only="new_users"
+        title={t('admin.stats.newRegistrations')}
       />
 
-      <TopReferrersTable rows={data.top_referrers} />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        <StatsBaseComposition data={data} />
+        <TopReferrersTable
+          rows={data.top_referrers}
+          distinctReferrers={data.distinct_referrers}
+          activeReferrers={data.active_referrers}
+          bonusDaysAll={data.ref_bonus_days_all}
+        />
+      </div>
     </div>
   )
 }
