@@ -195,7 +195,11 @@ export function AdminSelect<T extends string | number = string>({
         aria-expanded={open}
         aria-label={ariaLabel}
         className={cn(
-          'cabinet-elevated-card flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/40',
+          // Фон на ступень светлее карточки, а не `cabinet-elevated-card`: тот
+          // заливает контрол градиентом card → secondary поверх такой же
+          // карточки-контейнера, и селект сливался с тем, на чём лежит.
+          // Токен, а не цвет: все декор-темы переопределяют --secondary сами.
+          'flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/40',
           open && 'border-primary/40 ring-1 ring-primary/20',
           disabled && 'cursor-not-allowed opacity-60 hover:bg-transparent',
         )}
