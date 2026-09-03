@@ -27,7 +27,7 @@ export const DECOR_THEME_ADMIN_LABEL_COLOR: Partial<Record<DecorThemeId, string>
   yellow: 'hsl(38 92% 46%)',
   violet: 'hsl(262 70% 52%)',
   slate: 'hsl(215 16% 46%)',
-  carbon: 'hsl(192 40% 52%)',
+  carbon: 'hsl(172 60% 42%)',
   neon: 'hsl(186 100% 42%)',
   new_year: 'hsl(198 85% 52%)',
   summer: 'hsl(38 92% 46%)',
