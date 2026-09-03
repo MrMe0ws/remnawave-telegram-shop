@@ -36,6 +36,7 @@ import {
 /** Порядок и иконки секций (синхрон с backend buildAdminSettingsResponse). */
 export const ADMIN_SETTINGS_GROUP_ORDER = [
   'cabinet',
+  'cabinet_connect',
   'tariffs',
   'trial',
   'hwid',
@@ -71,7 +72,8 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   tags: Tag,
   lifecycle: RefreshCw,
   fortune: CircleDot,
-  cabinet: Settings2,
+  cabinet: Sparkles,
+  cabinet_connect: Settings2,
 }
 
 export interface AdminSettingsGroupIconStyle {
@@ -96,6 +98,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   lifecycle: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
   fortune: { box: 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20', icon: 'text-fuchsia-500' },
   cabinet: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
+  cabinet_connect: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
 }
 
 export function adminSettingsGroupIconStyle(id: string): AdminSettingsGroupIconStyle {
@@ -141,7 +144,7 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     id: 'design',
     titleKey: 'admin.settings.categories.design',
     icon: Sparkles,
-    groups: ['cabinet'],
+    groups: ['cabinet', 'cabinet_connect'],
     iconStyle: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
   },
   {
@@ -452,14 +455,22 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME'],
     },
     {
+      id: 'schedule',
+      titleKey: 'admin.settings.subsections.cabinet.schedule',
+      icon: CalendarDays,
+      keys: ['CABINET_DECOR_AUTO_ENABLED', 'CABINET_DECOR_SCHEDULE'],
+    },
+  ],
+  cabinet_connect: [
+    {
       id: 'deeplink',
-      titleKey: 'admin.settings.subsections.cabinet.deeplink',
+      titleKey: 'admin.settings.subsections.cabinet_connect.deeplink',
       icon: Shield,
       keys: ['CABINET_DEEPLINK_HAPP_ENCRYPT', 'CABINET_DEEPLINK_INCY_ENCRYPT'],
     },
     {
       id: 'telegram',
-      titleKey: 'admin.settings.subsections.cabinet.telegram',
+      titleKey: 'admin.settings.subsections.cabinet_connect.telegram',
       icon: Megaphone,
       keys: ['CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON', 'CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON'],
     },

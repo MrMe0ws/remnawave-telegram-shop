@@ -137,12 +137,14 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"partner_nav_visible":  botcfg.PartnerProgramEnabled(),
 		"partner_max_percent":  maxPartnerPercent(),
 		"support_chat_enabled": botcfg.SupportBotAPIEnabled(),
-		"turnstile_enabled":      cabcfg.TurnstileEnabled(),
-		"pwa_enabled":            cabcfg.PWAEnabled(),
-		"pwa_app_name":           cabcfg.PWAAppName(),
-		"pwa_short_name":         cabcfg.PWAShortName(),
-		"light_theme_enabled":    cabcfg.LightThemeEnabled(),
-		"decor_theme":            cabcfg.DecorTheme(),
+		"turnstile_enabled":    cabcfg.TurnstileEnabled(),
+		"pwa_enabled":          cabcfg.PWAEnabled(),
+		"pwa_app_name":         cabcfg.PWAAppName(),
+		"pwa_short_name":       cabcfg.PWAShortName(),
+		"light_theme_enabled":  cabcfg.LightThemeEnabled(),
+		// Уже с учётом авто-расписания (CABINET_DECOR_AUTO_ENABLED): в праздничном
+		// окне отдаём тему окна, вне окон — выбранную админом вручную.
+		"decor_theme": cabcfg.EffectiveDecorTheme(),
 		// Шифрование deep link'ов подключения (см. /me/deeplink): фронт узнаёт,
 		// что для Happ/INCY надо запросить зашифрованную ссылку вместо .../add/.
 		"deeplink_happ_encrypt": cabcfg.DeeplinkHappEncryptEnabled(),

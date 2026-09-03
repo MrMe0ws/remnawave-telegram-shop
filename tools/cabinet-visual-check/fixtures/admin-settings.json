@@ -1,0 +1,95 @@
+{
+  "/admin/settings": {
+    "groups": [
+      {
+        "id": "cabinet",
+        "fields": [
+          {
+            "key": "CABINET_LIGHT_THEME_ENABLED",
+            "type": "bool",
+            "value": "true",
+            "source": "default",
+            "instant": true
+          },
+          {
+            "key": "CABINET_DECOR_THEME",
+            "type": "enum",
+            "value": "carbon",
+            "source": "db",
+            "instant": true,
+            "enum_values": [
+              "off",
+              "green",
+              "spring",
+              "cyber",
+              "neon",
+              "ocean",
+              "new_year",
+              "slate",
+              "carbon",
+              "aurora",
+              "nebula",
+              "violet",
+              "lavender",
+              "pink",
+              "valentine",
+              "sunset",
+              "orange",
+              "halloween",
+              "yellow",
+              "summer",
+              "black_friday"
+            ]
+          },
+          {
+            "key": "CABINET_DECOR_AUTO_ENABLED",
+            "type": "bool",
+            "value": "true",
+            "source": "db",
+            "instant": true
+          },
+          {
+            "key": "CABINET_DECOR_SCHEDULE",
+            "type": "text",
+            "value": "",
+            "source": "default",
+            "instant": false
+          }
+        ]
+      },
+      {
+        "id": "cabinet_connect",
+        "fields": [
+          {
+            "key": "CABINET_DEEPLINK_HAPP_ENCRYPT",
+            "type": "bool",
+            "value": "true",
+            "source": "db",
+            "instant": true
+          },
+          {
+            "key": "CABINET_DEEPLINK_INCY_ENCRYPT",
+            "type": "bool",
+            "value": "false",
+            "source": "default",
+            "instant": true
+          },
+          {
+            "key": "CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON",
+            "type": "bool",
+            "value": "true",
+            "source": "db",
+            "instant": true
+          },
+          {
+            "key": "CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON",
+            "type": "bool",
+            "value": "false",
+            "source": "default",
+            "instant": true
+          }
+        ]
+      }
+    ]
+  }
+}

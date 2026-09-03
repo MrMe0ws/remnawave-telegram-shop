@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { AdminToggleRow } from './AdminToggleSwitch'
 import { AdminSelect } from './AdminSelect'
+import { AdminDecorScheduleEditor } from './AdminDecorScheduleEditor'
 import { SettingsSubsectionTitle } from './SettingsSubsectionTitle'
 import {
   ADMIN_SETTINGS_GROUP_ICONS,
@@ -134,6 +135,21 @@ export function AdminSettingsGroupEditor({
     const label = fieldLabel(t, field.key)
     const hint = fieldHint(t, field.key)
     const value = draft[field.key] ?? field.value
+
+    // Расписание авто-тем — не текстовое поле, а свой редактор окон:
+    // в настройке лежит JSON, руками его никто редактировать не должен.
+    if (field.key === 'CABINET_DECOR_SCHEDULE') {
+      return (
+        <div key={field.key} className="border-b border-border/50 py-3 last:border-0">
+          <AdminDecorScheduleEditor
+            value={value}
+            autoEnabled={parseBool(draft.CABINET_DECOR_AUTO_ENABLED ?? 'false')}
+            disabled={saving}
+            onChange={(next) => onDraftChange(field.key, next)}
+          />
+        </div>
+      )
+    }
 
     if (field.type === 'bool') {
       return (

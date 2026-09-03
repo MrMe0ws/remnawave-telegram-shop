@@ -506,22 +506,34 @@ func RuntimeSettingsRegistry() []SettingField {
 			Current:    cabinetDecorThemeCurrent(),
 		},
 		{
-			Key: "CABINET_DEEPLINK_HAPP_ENCRYPT", Group: "cabinet", Type: SettingBool, Instant: true,
+			Key: "CABINET_DECOR_AUTO_ENABLED", Group: "cabinet", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_DECOR_AUTO_ENABLED"),
+			Current: cabinetBoolCurrent("CABINET_DECOR_AUTO_ENABLED", false),
+		},
+		{
+			Key: "CABINET_DECOR_SCHEDULE", Group: "cabinet", Type: SettingText,
+			Apply:   applyCabinetDecorSchedule(),
+			Current: cabinetDecorScheduleCurrent(),
+		},
+
+		// --- cabinet_connect (подключение и кнопки в Telegram) ---
+		{
+			Key: "CABINET_DEEPLINK_HAPP_ENCRYPT", Group: "cabinet_connect", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("CABINET_DEEPLINK_HAPP_ENCRYPT"),
 			Current: cabinetBoolCurrent("CABINET_DEEPLINK_HAPP_ENCRYPT", false),
 		},
 		{
-			Key: "CABINET_DEEPLINK_INCY_ENCRYPT", Group: "cabinet", Type: SettingBool, Instant: true,
+			Key: "CABINET_DEEPLINK_INCY_ENCRYPT", Group: "cabinet_connect", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("CABINET_DEEPLINK_INCY_ENCRYPT"),
 			Current: cabinetBoolCurrent("CABINET_DEEPLINK_INCY_ENCRYPT", false),
 		},
 		{
-			Key: "CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON", Group: "cabinet", Type: SettingBool, Instant: true,
+			Key: "CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON", Group: "cabinet_connect", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON"),
 			Current: cabinetBoolCurrent("CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON", false),
 		},
 		{
-			Key: "CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON", Group: "cabinet", Type: SettingBool, Instant: true,
+			Key: "CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON", Group: "cabinet_connect", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON"),
 			Current: cabinetBoolCurrent("CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON", false),
 		},

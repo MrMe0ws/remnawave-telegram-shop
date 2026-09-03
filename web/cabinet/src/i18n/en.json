@@ -2239,6 +2239,9 @@
           },
           "cabinet": {
             "decor": "Appearance",
+            "schedule": "Holiday auto-switch"
+          },
+          "cabinet_connect": {
             "deeplink": "Connection deep links",
             "telegram": "Telegram buttons (minimalism)"
           },
@@ -2262,7 +2265,26 @@
           "links": "Bot links",
           "fortune": "Fortune wheel",
           "cabinet": "Cabinet appearance",
+          "cabinet_connect": "Connection and Telegram",
           "tariffs": "Price display"
+        },
+        "decorSchedule": {
+          "from": "From",
+          "to": "To",
+          "day": "Day",
+          "month": "Month",
+          "theme": "Theme",
+          "add": "Add window",
+          "reset": "Restore holiday preset",
+          "remove": "Delete window",
+          "moveUp": "Higher priority",
+          "moveDown": "Lower priority",
+          "ruleEnabled": "Enable window",
+          "ruleActiveBadge": "This window is active today",
+          "activeNow": "Active window: {{theme}}",
+          "noneActive": "No window is active today — the theme selected above is shown",
+          "autoOff": "Auto-switch is off: the schedule is saved but not applied",
+          "priorityHint": "Windows repeat every year. When two windows overlap the upper one wins — reorder them with the arrows. A window may cross December 31 (e.g. December 1 → January 31)"
         },
         "fortune": {
           "basic": "Rules & limits",
@@ -2523,6 +2545,14 @@
           "CABINET_DECOR_THEME": {
             "label": "Decor theme",
             "hint": "Applied to all cabinet users without bot restart"
+          },
+          "CABINET_DECOR_AUTO_ENABLED": {
+            "label": "Holiday auto-switch",
+            "hint": "Inside a scheduled window its theme overrides the one selected above; outside the windows that theme comes back"
+          },
+          "CABINET_DECOR_SCHEDULE": {
+            "label": "Holiday theme schedule",
+            "hint": ""
           },
           "CABINET_DEEPLINK_HAPP_ENCRYPT": {
             "label": "Encrypt Happ deep link",
