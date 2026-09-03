@@ -1,0 +1,62 @@
+{
+  "/tariffs": {
+    "sales_mode": "tariffs",
+    "currency": "RUB",
+    "price_display": "monthly",
+    "tariffs": [
+      {
+        "id": 1,
+        "slug": "base",
+        "name": "Базовый",
+        "description": "2 устройства\nЛимит трафика до 150 ГБ/мес\nНет обхода Белых списков",
+        "device_limit": 1,
+        "traffic_limit_bytes": 214748364800,
+        "prices": [
+          { "months": 1, "amount_rub": 150 },
+          { "months": 3, "amount_rub": 420 },
+          { "months": 12, "amount_rub": 1500 }
+        ]
+      },
+      {
+        "id": 2,
+        "slug": "default-plus",
+        "name": "дефолт+++",
+        "description": "64654",
+        "device_limit": 4,
+        "traffic_limit_bytes": 0,
+        "prices": [
+          { "months": 1, "amount_rub": 200 },
+          { "months": 6, "amount_rub": 1000 }
+        ]
+      },
+      {
+        "id": 3,
+        "slug": "premium",
+        "name": "🔥Премиум",
+        "description": "Обход Белых списков🔥\nБезлимитный трафик для 3 устройств",
+        "device_limit": 3,
+        "traffic_limit_bytes": 0,
+        "prices": [{ "months": 1, "amount_rub": 400 }]
+      },
+      {
+        "id": 4,
+        "slug": "extended",
+        "name": "❤️Расширенный",
+        "description": "низкие цены\n- все четко\n- порвет по скорости\n- офигенный тариф",
+        "device_limit": 5,
+        "traffic_limit_bytes": 107374182400,
+        "prices": [{ "months": 1, "amount_rub": 1000 }]
+      }
+    ]
+  },
+  "/me/subscription": {
+    "expire_at": "2026-10-14T12:00:00Z",
+    "subscription_link": "https://example.invalid/sub/abc",
+    "subscription_period_months": 1,
+    "traffic_used_gb": 42.5,
+    "traffic_limit_gb": 200,
+    "tariff": { "id": 1, "slug": "base", "name": "Базовый", "traffic_gb": 200, "device_limit": 1 },
+    "loyalty_xp": 1240,
+    "loyalty_tier": "silver"
+  }
+}

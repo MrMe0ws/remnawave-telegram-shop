@@ -55,6 +55,7 @@ function parseArgs(argv) {
     fixtures: null,
     viewports: [],
     steps: [],
+    hover: null,
     element: null,
     themes: ['dark'],
     locale: 'ru-RU',
@@ -78,6 +79,7 @@ function parseArgs(argv) {
       case '--timezone': out.timezone = val; i++; break
       case '--port': out.port = Number(val); i++; break
       case '--settle': out.settle = Number(val); i++; break
+      case '--hover': out.hover = val; i++; break
       default:
         if (key.startsWith('--')) {
           console.error(`Неизвестный ключ: ${key}`)
@@ -180,6 +182,19 @@ async function main() {
           timezoneId: args.timezone,
         })
 
+        // Гайд по подключению закрывает экран своим оверлеем и перехватывает
+        // клики шагов: помечаем его пройденным до загрузки приложения.
+        // Тема кабинета живёт в localStorage ('cab_theme'), а не в prefers-color-scheme:
+        // без этого --theme light отдаёт тёмный кадр.
+        await ctx.addInitScript((mode) => {
+          try {
+            localStorage.setItem('onboarding_completed', 'true')
+            localStorage.setItem('cab_theme', mode)
+          } catch {
+            /* ignore */
+          }
+        }, theme === 'light' ? 'light' : 'dark')
+
         // Всё под /cabinet/api отвечает из фикстуры. Неизвестный путь — пустой
         // объект, а не 404: экран не должен падать из-за метрики, которой в
         // фикстуре просто нет.
@@ -212,9 +227,11 @@ async function main() {
           shots.push({
             name: step.replace(/[^\p{L}\p{N}_-]+/gu, '-').toLowerCase(),
             run: async () => {
-              const target = page.getByRole('tab', { name: step }).or(
-                page.getByRole('button', { name: step }),
-              )
+              const target = page
+                .getByRole('tab', { name: step })
+                .or(page.getByRole('button', { name: step }))
+                // Пункты выпадающего меню — role="menuitem", кнопкой их не найти.
+                .or(page.getByRole('menuitem', { name: step }))
               if (await target.count()) {
                 await target.first().click()
                 await page.waitForTimeout(900)
@@ -227,8 +244,14 @@ async function main() {
 
         for (const shot of shots) {
           await shot.run()
-          // Курсор уводится из-под графиков: иначе в кадр попадает подсказка.
-          await page.mouse.move(2, 2)
+          const hoverTarget = args.hover ? page.locator(args.hover) : null
+          if (hoverTarget && (await hoverTarget.count())) {
+            // Наведение проверяется только так: в статичном кадре :hover не виден.
+            await hoverTarget.first().hover()
+          } else {
+            // Курсор уводится из-под графиков: иначе в кадр попадает подсказка.
+            await page.mouse.move(2, 2)
+          }
           await page.waitForTimeout(250)
           const file = path.join(outDir, `${tag}-${shot.name}.png`)
           if (args.element) {

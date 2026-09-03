@@ -1,0 +1,32 @@
+{
+  "/me/purchases": {
+    "items": [
+      { "id": 1, "amount": 147, "currency": "RUB", "status": "paid", "invoice_type": "yookasa", "purchase_kind": "subscription", "month": 1, "paid_at": "2026-08-30T01:07:00Z", "created_at": "2026-08-30T01:05:00Z" },
+      { "id": 2, "amount": 150, "currency": "RUB", "status": "paid", "invoice_type": "plt_sbp", "purchase_kind": "subscription", "month": 1, "paid_at": "2026-08-30T00:52:00Z", "created_at": "2026-08-30T00:50:00Z" },
+      { "id": 3, "amount": 1500, "currency": "RUB", "status": "paid", "invoice_type": "plt_cards", "purchase_kind": "subscription", "month": 12, "paid_at": "2026-08-30T00:26:00Z", "created_at": "2026-08-30T00:24:00Z" },
+      { "id": 4, "amount": 75, "currency": "RUB", "status": "paid", "invoice_type": "yookasa", "purchase_kind": "subscription", "month": 0, "extra_hwid": 1, "paid_at": "2026-08-28T22:32:00Z", "created_at": "2026-08-28T22:30:00Z" },
+      { "id": 5, "amount": 400, "currency": "RUB", "status": "paid", "invoice_type": "crypto", "purchase_kind": "tariff_upgrade", "month": 1, "paid_at": "2026-08-28T22:30:00Z", "created_at": "2026-08-28T22:28:00Z" },
+      { "id": 6, "amount": 990, "currency": "RUB", "status": "paid", "invoice_type": "heleket", "purchase_kind": "subscription", "month": 6, "extra_hwid": 2, "paid_at": "2026-07-11T09:14:00Z", "created_at": "2026-07-11T09:12:00Z" },
+      { "id": 7, "amount": 1, "currency": "XTR", "status": "paid", "invoice_type": "telegram", "purchase_kind": "subscription", "month": 1, "paid_at": "2026-06-19T18:33:00Z", "created_at": "2026-06-19T18:31:00Z" }
+    ]
+  },
+  "/me/loyalty": {
+    "enabled": true,
+    "xp": 1240,
+    "progress_percent": 62,
+    "xp_until_next": 460,
+    "current": { "sort_order": 2, "discount_percent": 5, "name": "Серебро" },
+    "next": { "sort_order": 3, "discount_percent": 10, "name": "Золото" }
+  },
+  "/me/loyalty/history": {
+    "items": [
+      { "purchase_id": 0, "fortune_spin_id": 91, "source": "fortune_wheel", "paid_at": "2026-09-02T15:47:00Z", "xp_gained": 50, "amount": 0, "currency": "", "invoice_type": "", "purchase_kind": "", "running_xp": 1240 },
+      { "purchase_id": 0, "fortune_spin_id": 90, "source": "fortune_wheel", "paid_at": "2026-09-02T15:47:00Z", "xp_gained": 23, "amount": 0, "currency": "", "invoice_type": "", "purchase_kind": "", "running_xp": 1190 },
+      { "purchase_id": 1, "paid_at": "2026-08-30T01:07:00Z", "xp_gained": 147, "amount": 147, "currency": "RUB", "invoice_type": "yookasa", "purchase_kind": "subscription", "running_xp": 1167 },
+      { "purchase_id": 2, "paid_at": "2026-08-30T00:52:00Z", "xp_gained": 150, "amount": 150, "currency": "RUB", "invoice_type": "plt_sbp", "purchase_kind": "subscription", "running_xp": 1020 },
+      { "purchase_id": 3, "paid_at": "2026-08-30T00:26:00Z", "xp_gained": 1500, "amount": 1500, "currency": "RUB", "invoice_type": "plt_cards", "purchase_kind": "subscription", "running_xp": 870 },
+      { "purchase_id": 4, "paid_at": "2026-08-28T22:32:00Z", "xp_gained": 75, "amount": 75, "currency": "RUB", "invoice_type": "yookasa", "purchase_kind": "extra_hwid", "running_xp": 795 },
+      { "purchase_id": 5, "paid_at": "2026-06-19T18:33:00Z", "xp_gained": 1, "amount": 1, "currency": "XTR", "invoice_type": "telegram", "purchase_kind": "subscription", "running_xp": 720 }
+    ]
+  }
+}

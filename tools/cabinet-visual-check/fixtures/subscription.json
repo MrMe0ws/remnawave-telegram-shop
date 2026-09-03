@@ -1,0 +1,46 @@
+{
+  "/me/subscription": {
+    "expire_at": "2026-10-14T12:00:00Z",
+    "subscription_link": "https://example.invalid/sub/abc",
+    "subscription_period_months": 1,
+    "traffic_used_gb": 42.5,
+    "traffic_limit_gb": 200,
+    "tariff": { "id": 1, "slug": "base", "name": "Базовый", "traffic_gb": 200, "device_limit": 3 },
+    "loyalty_xp": 1240,
+    "loyalty_tier": "silver",
+    "hwid_extra": {
+      "current_limit": 3,
+      "base_limit": 1,
+      "max_limit": 5,
+      "extra_active": 2,
+      "can_increase": true,
+      "can_decrease": true,
+      "price_rub_month": 75,
+      "stars_price_month": 40,
+      "days_left": 41
+    }
+  },
+  "/me/devices": {
+    "enabled": true,
+    "device_limit": 3,
+    "connected": 2,
+    "devices": [
+      {
+        "hwid": "hwid-android-1",
+        "platform": "android",
+        "os_version": "14",
+        "device_model": "Pixel 8",
+        "created_at": "2026-08-14T10:12:00Z",
+        "updated_at": "2026-09-01T09:30:00Z"
+      },
+      {
+        "hwid": "hwid-windows-2",
+        "platform": "windows",
+        "os_version": "10",
+        "device_model": "ПК дома",
+        "created_at": "2026-07-02T18:40:00Z",
+        "updated_at": "2026-09-02T21:05:00Z"
+      }
+    ]
+  }
+}
