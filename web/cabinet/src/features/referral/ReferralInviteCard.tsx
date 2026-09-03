@@ -47,14 +47,12 @@ const LINK_ICON: Record<ReferralLink['key'], LucideIcon> = {
 export function ReferralInviteCard({
   links,
   refereeDays,
-  canShare,
   onShare,
 }: {
   links: ReferralLink[]
   /** Сколько дней получит приглашённый. 0 — в этом режиме подарка нет. */
   refereeDays: number
-  canShare: boolean
-  onShare: (url: string) => void
+  onShare: (url: string) => Promise<boolean>
 }) {
   const { t } = useTranslation()
   const [activeKey, setActiveKey] = useState<ReferralLink['key']>(links[0]?.key ?? 'bot')
@@ -147,8 +145,7 @@ export function ReferralInviteCard({
               compact
               label={t('referralPage.invite.linkLabel')}
               value={active.url}
-              canShare={canShare}
-              onShare={() => onShare(active.url)}
+              onShare={onShare}
             />
           </div>
         </div>

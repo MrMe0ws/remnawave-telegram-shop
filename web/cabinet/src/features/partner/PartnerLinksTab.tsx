@@ -12,13 +12,24 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { api, ApiError, type PartnerAccountDTO, type PartnerLinkDTO } from '@/lib/api'
+import { shareLink } from '@/lib/share'
 
 import { PARTNER_STATE_KEY } from './partnerKeys'
 import { formatMoney } from './format'
 import { PARTNER_INPUT } from './layout'
 
+/**
+ * Партнёрскую ссылку заводят ровно затем, чтобы её распространять, поэтому
+ * «Поделиться» здесь такое же, как в партнёрке, — способ выбирает `shareLink`.
+ */
+function useShareStreamLink() {
+  const { t } = useTranslation()
+  return (url: string) => shareLink({ text: t('referralPage.shareInviteText'), url })
+}
+
 export function PartnerLinksTab({ partner }: { partner: PartnerAccountDTO }) {
   const { t } = useTranslation()
+  const share = useShareStreamLink()
   const qc = useQueryClient()
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -108,16 +119,14 @@ export function PartnerLinksTab({ partner }: { partner: PartnerAccountDTO }) {
                 <ReferralCopyRow
                   label={t('partnerPage.links.botLink')}
                   value={mainLink.bot_link}
-                  canShare={false}
-                  onShare={() => {}}
+                  onShare={share}
                 />
               ) : null}
               {mainLink.web_link ? (
                 <ReferralCopyRow
                   label={t('partnerPage.links.webLink')}
                   value={mainLink.web_link}
-                  canShare={false}
-                  onShare={() => {}}
+                  onShare={share}
                 />
               ) : null}
               <p className="text-xs text-muted-foreground">{t('partnerPage.links.mainHint')}</p>
@@ -217,6 +226,7 @@ function StreamCard({
   busy: boolean
 }) {
   const { t } = useTranslation()
+  const share = useShareStreamLink()
 
   return (
     <Card className={cn(link.archived && 'opacity-70')}>
@@ -254,16 +264,14 @@ function StreamCard({
           <ReferralCopyRow
             label={t('partnerPage.links.botLink')}
             value={link.bot_link}
-            canShare={false}
-            onShare={() => {}}
+            onShare={share}
           />
         ) : null}
         {link.web_link ? (
           <ReferralCopyRow
             label={t('partnerPage.links.webLink')}
             value={link.web_link}
-            canShare={false}
-            onShare={() => {}}
+            onShare={share}
           />
         ) : null}
 

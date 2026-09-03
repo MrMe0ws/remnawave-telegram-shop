@@ -48,6 +48,12 @@ declare global {
     offEvent?: (eventType: string, callback: () => void) => void
     /** Открыть https-ссылку во внешнем браузере (нужно для обхода webview Desktop). */
     openLink?: (url: string, options?: { try_instant_view?: boolean }) => void
+    /**
+     * Bot API 6.1+: открыть t.me-ссылку внутри самого Telegram.
+     * Мини-приложение при этом сворачивается — на этом держится «Поделиться»
+     * (`t.me/share/url` открывает родной выбор чата), см. `@/lib/share`.
+     */
+    openTelegramLink?: (url: string) => void
   }
 
   interface TelegramNamespace {

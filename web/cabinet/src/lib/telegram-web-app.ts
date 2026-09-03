@@ -1,3 +1,5 @@
+import { isMobileUserAgent } from '@/lib/utils'
+
 /** Нативные десктоп-клиенты Telegram. */
 const NATIVE_DESKTOP_PLATFORMS = new Set(['tdesktop', 'macos'])
 /** Telegram Web — platform одинаковый на PC и телефоне, нужен доп. фильтр по UA. */
@@ -5,11 +7,6 @@ const WEB_PLATFORMS = new Set(['weba', 'webk', 'web'])
 
 function webApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp
-}
-
-function isMobileUserAgent(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
 }
 
 /** Desktop Mini App (окно с ✕ в углу) — без большого top safe-area. */

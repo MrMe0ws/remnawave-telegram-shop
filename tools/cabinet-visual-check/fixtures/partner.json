@@ -1,0 +1,73 @@
+{
+  "/me/partner": {
+    "enabled": true,
+    "applications_enabled": true,
+    "status": "active",
+    "terms": {
+      "first_percent": 30,
+      "renewal_percent": 15,
+      "hold_days": 14,
+      "min_payout": 1000,
+      "payout_cooldown_days": 7,
+      "max_links": 5,
+      "count_extra_hwid": false
+    },
+    "partner": {
+      "balance": 4820,
+      "hold_balance": 1200,
+      "reserved_balance": 0,
+      "total_earned": 18400,
+      "total_paid": 12380,
+      "first_percent": 30,
+      "renewal_percent": 15,
+      "can_withdraw": true,
+      "has_open_payout": false,
+      "links_used": 2,
+      "links_limit": 5,
+      "summary": {
+        "customers": 42,
+        "customers_last_week": 6,
+        "paying": 19,
+        "active": 15,
+        "conversion_pct": 45.2,
+        "earned_total": 18400,
+        "earned_last_month": 3200
+      },
+      "months": [
+        { "month": "2026-06", "amount": 4100 },
+        { "month": "2026-07", "amount": 5300 },
+        { "month": "2026-08", "amount": 3200 }
+      ],
+      "links": [
+        {
+          "id": 1,
+          "code": "main",
+          "name": "Основной поток",
+          "is_default": true,
+          "archived": false,
+          "bot_link": "https://t.me/vpn_meows_bot?start=p_main",
+          "web_link": "https://cabinet.example.invalid/cabinet/register?p=main",
+          "customers": 30,
+          "paying": 14,
+          "earned": 12400,
+          "can_delete": false,
+          "can_archive": false
+        },
+        {
+          "id": 2,
+          "code": "blog",
+          "name": "Статья в блоге",
+          "is_default": false,
+          "archived": false,
+          "bot_link": "https://t.me/vpn_meows_bot?start=p_blog",
+          "web_link": "https://cabinet.example.invalid/cabinet/register?p=blog",
+          "customers": 12,
+          "paying": 5,
+          "earned": 6000,
+          "can_delete": true,
+          "can_archive": true
+        }
+      ]
+    }
+  }
+}

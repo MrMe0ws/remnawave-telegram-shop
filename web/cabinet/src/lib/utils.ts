@@ -11,6 +11,19 @@ export function getCookie(name: string): string {
   return match ? decodeURIComponent(match[1]) : ''
 }
 
+/**
+ * Телефон или планшет по User-Agent.
+ *
+ * Нужен там, где решение зависит не от ширины экрана, а от того, есть ли у
+ * системы то, чего нет на десктопе: настоящий share-шит, узкая клавиатура,
+ * свой Telegram-клиент. Медиазапрос здесь не подходит — узкое окно на десктопе
+ * не делает браузер мобильным.
+ */
+export function isMobileUserAgent(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
+}
+
 /** Генерирует UUID v4 для Idempotency-Key. */
 export function newIdempotencyKey(): string {
   return crypto.randomUUID()

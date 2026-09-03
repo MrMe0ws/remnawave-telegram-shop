@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
 import { cn, formatDate, maskEmail } from '@/lib/utils'
+import { shareLink } from '@/lib/share'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { ChangePasswordCollapsible, DeleteAccountSection } from '@/features/profile/account-security'
 import { ProfileLoyaltySection } from '@/features/loyalty/LoyaltyProgramPage'
@@ -64,7 +65,6 @@ export default function ProfilePage() {
       : null)
   const botRefUrl = referrals?.bot_start_link ?? null
   const hasReferralLinks = Boolean(botRefUrl || cabinetRefUrl)
-  const canShare = useMemo(() => typeof navigator !== 'undefined' && typeof navigator.share === 'function', [])
 
   function goTab(next: ProfileTab) {
     setTab(next)
@@ -76,15 +76,9 @@ export default function ProfilePage() {
     }
   }
 
-  async function shareRef(text: string) {
-    if (!canShare) return
-    try {
-      await navigator.share({
-        text: `${t('referralPage.shareInviteText')}\n${text}`,
-      })
-    } catch {
-      // user cancelled share sheet
-    }
+  /** Способ выбирает `shareLink`: Mini App, системный шит или вкладка t.me. */
+  function shareRef(url: string): Promise<boolean> {
+    return shareLink({ text: t('referralPage.shareInviteText'), url })
   }
 
   /** Способов входа меньше двух — подсветка CTA «Привязанные аккаунты» как у «Подключить устройство». */
@@ -243,16 +237,14 @@ export default function ProfilePage() {
                       <ReferralCopyRow
                         label={t('referralPage.linkBot')}
                         value={botRefUrl}
-                        canShare={canShare}
-                        onShare={() => void shareRef(botRefUrl)}
+                        onShare={shareRef}
                       />
                     ) : null}
                     {cabinetRefUrl ? (
                       <ReferralCopyRow
                         label={t('referralPage.linkCabinet')}
                         value={cabinetRefUrl}
-                        canShare={canShare}
-                        onShare={() => void shareRef(cabinetRefUrl)}
+                        onShare={shareRef}
                       />
                     ) : null}
                     <p className="text-[11px] leading-snug text-muted-foreground">{t('profile.referralFootnote')}</p>

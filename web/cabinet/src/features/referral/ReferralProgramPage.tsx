@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, History, Percent, Users } from 'lucide-react'
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type ReferralsResponse } from '@/lib/api'
+import { shareLink } from '@/lib/share'
 
 import { ReferralCalculator } from './ReferralCalculator'
 import { ReferralFlow } from './ReferralFlow'
@@ -23,10 +24,6 @@ import { referralBonusRules, type ReferralBonusRules } from './referralModel'
 
 export default function ReferralProgramPage() {
   const { t } = useTranslation()
-  const canShare = useMemo(
-    () => typeof navigator !== 'undefined' && typeof navigator.share === 'function',
-    [],
-  )
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['referrals'],
@@ -35,13 +32,9 @@ export default function ReferralProgramPage() {
     retry: 1,
   })
 
-  async function share(url: string) {
-    if (!canShare) return
-    try {
-      await navigator.share({ text: `${t('referralPage.shareInviteText')}\n${url}` })
-    } catch {
-      // user cancelled share sheet
-    }
+  /** Способ выбирает `shareLink`: Mini App, системный шит или вкладка t.me. */
+  function share(url: string): Promise<boolean> {
+    return shareLink({ text: t('referralPage.shareInviteText'), url })
   }
 
   /*
@@ -69,7 +62,7 @@ export default function ReferralProgramPage() {
             <p className="text-sm text-destructive">{t('errors.unknown')}</p>
           </RevealItem>
         ) : data ? (
-          <ReferralBody data={data} canShare={canShare} onShare={share} />
+          <ReferralBody data={data} onShare={share} />
         ) : null}
       </PageReveal>
     </AppLayout>
@@ -94,12 +87,10 @@ export default function ReferralProgramPage() {
  */
 function ReferralBody({
   data,
-  canShare,
   onShare,
 }: {
   data: ReferralsResponse
-  canShare: boolean
-  onShare: (url: string) => void
+  onShare: (url: string) => Promise<boolean>
 }) {
   const { t } = useTranslation()
 
@@ -123,7 +114,6 @@ function ReferralBody({
     <ReferralInviteCard
       links={links}
       refereeDays={rules.referee}
-      canShare={canShare}
       onShare={onShare}
     />
   ) : (

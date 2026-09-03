@@ -1,0 +1,32 @@
+{
+  "/me/referrals": {
+    "referrer_telegram_id": 100200300,
+    "stats": {
+      "total": 7,
+      "paid": 4,
+      "active": 3,
+      "conversion_pct": 57.1,
+      "earned_days_total": 28,
+      "earned_days_last_month": 7,
+      "referral_days_per_paid_default": 7
+    },
+    "referees": [
+      { "telegram_id_masked": "1***300", "name": "Аня", "earned_days": 14, "active": true },
+      { "telegram_id_masked": "4***871", "name": "Долгое имя приглашённого друга", "earned_days": 7, "active": true },
+      { "telegram_id_masked": "9***112", "name": "Пётр", "earned_days": 0, "active": false }
+    ],
+    "ledger": [
+      { "actor": "a***я", "days": 7, "months": 1, "kind": "first_referrer", "created_at": "2026-08-21T09:15:00Z" },
+      { "actor": "d***y@mail.ru", "days": 14, "months": 3, "kind": "repeat_referrer", "created_at": "2026-08-02T18:40:00Z" },
+      { "actor": "p***r", "days": 7, "months": 1, "kind": "default_referrer", "created_at": "2026-07-11T11:05:00Z" }
+    ],
+    "bot_start_link": "https://t.me/vpn_meows_bot?start=ref_100200300",
+    "cabinet_register_link": "https://cabinet.example.invalid/cabinet/register?ref=ref_100200300",
+    "referral_mode": "first_and_repeat",
+    "referral_bonus_days_default": 7,
+    "referral_first_referrer_days": 7,
+    "referral_first_referee_days": 3,
+    "referral_repeat_referrer_days": 7,
+    "referral_scale_by_months": true
+  }
+}

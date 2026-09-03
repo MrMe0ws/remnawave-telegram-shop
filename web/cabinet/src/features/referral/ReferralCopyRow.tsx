@@ -15,24 +15,34 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
  * подпись «Ссылка, которую увидит друг» и два текстовых батона занимали две
  * лишние строки. В партнёрке и профиле, где ссылок несколько подряд и их надо
  * различать, остаётся обычный вид с подписью.
+ *
+ * «Поделиться» показываем всегда. Раньше кнопка зависела от `navigator.share` и
+ * поэтому исчезала в Mini App — то есть у большинства пользователей; теперь
+ * выбор способа спрятан в `shareLink`, и прятать нечего.
  */
 export function ReferralCopyRow({
   label,
   value,
-  canShare,
   onShare,
   compact = false,
 }: {
   label: string
   value: string
-  canShare: boolean
-  onShare: () => void
+  /** Получает ту же ссылку; `false` — поделиться не вышло (отмена, блокировка). */
+  onShare: (value: string) => Promise<boolean>
   compact?: boolean
 }) {
   const { t } = useTranslation()
   const { state, copy } = useCopyToClipboard()
 
   const copyLabel = state === 'done' ? t('subscriptionPage.copied') : t('subscriptionPage.copyLink')
+
+  // Не вышло поделиться — кладём ссылку в буфер: у нажатия должен остаться хоть
+  // какой-то результат, иначе кнопка читается как сломанная.
+  async function share() {
+    const ok = await onShare(value)
+    if (!ok) await copy(value)
+  }
 
   if (compact) {
     return (
@@ -55,18 +65,16 @@ export function ReferralCopyRow({
           >
             {state === 'done' ? <Check className="text-primary" /> : <Copy />}
           </Button>
-          {canShare ? (
-            <Button
-              type="button"
-              size="icon"
-              className="size-11 shrink-0 rounded-xl"
-              aria-label={t('common.share')}
-              title={t('common.share')}
-              onClick={onShare}
-            >
-              <Upload strokeWidth={1.5} />
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            size="icon"
+            className="size-11 shrink-0 rounded-xl"
+            aria-label={t('common.share')}
+            title={t('common.share')}
+            onClick={() => void share()}
+          >
+            <Upload strokeWidth={1.5} />
+          </Button>
         </div>
         <p aria-live="polite" className="sr-only">
           {state === 'done' ? t('subscriptionPage.copied') : ''}
@@ -92,17 +100,15 @@ export function ReferralCopyRow({
             {state === 'done' ? <Check size={14} className="text-primary" /> : <Copy size={14} />}
             {copyLabel}
           </Button>
-          {canShare ? (
-            <Button
-              type="button"
-              size="sm"
-              className="shrink-0 gap-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
-              onClick={onShare}
-            >
-              <Upload size={14} strokeWidth={1.5} />
-              {t('common.share')}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 gap-1 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
+            onClick={() => void share()}
+          >
+            <Upload size={14} strokeWidth={1.5} />
+            {t('common.share')}
+          </Button>
         </div>
       </div>
       {/* Смена текста кнопки скринридером не объявляется — дублируем в live-регион. */}
