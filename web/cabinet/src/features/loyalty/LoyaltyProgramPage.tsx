@@ -2,16 +2,25 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft, ChevronRight, Gem, Gift, Info } from 'lucide-react'
+import { ChevronRight, Gem, Gift, Info } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
+import {
+  FortuneWheelIcon,
+  HISTORY_PAGE_SIZE,
+  HistoryDateCell,
+  HistoryPagination,
+  PaymentMethodIcon,
+  historyDateInline,
+  purchaseKindLabel,
+} from '@/components/history-list'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
-import { cn, formatDateTimeShort } from '@/lib/utils'
+import { api, type LoyaltyHistoryItem } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { formatNumber } from '@/lib/format'
 
@@ -21,8 +30,6 @@ const HOW_LINES: Array<'loyaltyPage.howBullet1' | 'loyaltyPage.howBullet2' | 'lo
   'loyaltyPage.howBullet3',
   'loyaltyPage.howBullet4',
 ]
-
-const LOYALTY_HISTORY_PAGE_SIZE = 10
 
 export default function LoyaltyProgramPage() {
   const { t } = useTranslation()
@@ -44,8 +51,8 @@ export default function LoyaltyProgramPage() {
     queryKey: ['loyalty-history', historyPage],
     queryFn: () =>
       api.loyaltyHistory({
-        limit: LOYALTY_HISTORY_PAGE_SIZE,
-        offset: historyPage * LOYALTY_HISTORY_PAGE_SIZE,
+        limit: HISTORY_PAGE_SIZE,
+        offset: historyPage * HISTORY_PAGE_SIZE,
       }),
     staleTime: 30_000,
     retry: 1,
@@ -55,7 +62,7 @@ export default function LoyaltyProgramPage() {
 
   const historyItems = history?.items ?? []
   const hasHistoryPrev = historyPage > 0
-  const hasHistoryNext = historyItems.length === LOYALTY_HISTORY_PAGE_SIZE
+  const hasHistoryNext = historyItems.length === HISTORY_PAGE_SIZE
   const showHistoryPagination = hasHistoryPrev || hasHistoryNext
 
   const discount = data?.current?.discount_percent ?? 0
@@ -185,69 +192,59 @@ export default function LoyaltyProgramPage() {
                   <p className="text-sm text-muted-foreground py-4">{t('loyaltyPage.historyEmpty')}</p>
                 ) : (
                   <div className={cn(isHistoryFetching && !isHistoryLoading && 'opacity-60 transition-opacity')}>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border text-left text-muted-foreground">
-                            <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historyDate')}</th>
-                            <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historyAmount')}</th>
-                            <th className="pb-2 font-medium">{t('loyaltyPage.historyXp')}</th>
+                    {/* ПК: дата · источник · начисление. */}
+                    <table className="hidden w-full text-sm sm:table">
+                      <thead>
+                        <tr className="border-b border-border text-left text-muted-foreground">
+                          <th className="w-px pb-2 pr-3 font-medium">{t('loyaltyPage.historyDate')}</th>
+                          <th className="pb-2 pr-3 font-medium">{t('loyaltyPage.historySource')}</th>
+                          <th className="pb-2 text-right font-medium">{t('loyaltyPage.historyXp')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historyItems.map((item) => (
+                          <tr key={historyRowKey(item)} className="border-b border-border/60 last:border-0">
+                            <td className="w-px py-2.5 pr-3 align-middle">
+                              <HistoryDateCell iso={item.paid_at} />
+                            </td>
+                            <td className="py-2.5 pr-3 align-middle">
+                              <LoyaltySource item={item} t={t} lang={lang} />
+                            </td>
+                            <td className="py-2.5 text-right align-middle">
+                              <XpBadge xp={item.xp_gained} />
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {historyItems.map((item) => (
-                            <tr
-                              key={
-                                item.source === 'fortune_wheel' && item.fortune_spin_id
-                                  ? `f-${item.fortune_spin_id}-${item.paid_at ?? ''}`
-                                  : `p-${item.purchase_id}-${item.paid_at ?? 'nopaid'}`
-                              }
-                              className="border-b border-border/60 last:border-0"
-                            >
-                              <td className="py-2.5 pr-3 whitespace-nowrap">
-                                {item.paid_at ? formatDateTimeShort(item.paid_at) : '—'}
-                              </td>
-                              <td className="py-2.5 pr-3 text-muted-foreground">
-                                {item.source === 'fortune_wheel' ? (
-                                  <span className="text-foreground">{t('loyaltyPage.historyFortuneWheel')}</span>
-                                ) : (
-                                  formatMoney(item.amount, item.currency, lang)
-                                )}
-                              </td>
-                              <td className="py-2.5 font-medium text-emerald-500">+{item.xp_gained} XP</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Мобильные: строка-карточка, как в истории оплат. */}
+                    <ul className="sm:hidden">
+                      {historyItems.map((item) => (
+                        <li
+                          key={historyRowKey(item)}
+                          className="flex items-center justify-between gap-3 border-b border-border/60 py-3 last:border-0"
+                        >
+                          <div className="min-w-0">
+                            <LoyaltySource item={item} t={t} lang={lang} showAmount={false} />
+                            <p className="mt-0.5 truncate text-[11px] tabular-nums text-muted-foreground/70">
+                              {loyaltyMetaLine(item, lang)}
+                            </p>
+                          </div>
+                          <XpBadge xp={item.xp_gained} className="shrink-0" />
+                        </li>
+                      ))}
+                    </ul>
+
                     {showHistoryPagination && (
-                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          disabled={!hasHistoryPrev || isHistoryFetching}
-                          onClick={() => setHistoryPage((p) => Math.max(0, p - 1))}
-                        >
-                          <ChevronLeft size={16} aria-hidden />
-                          {t('loyaltyPage.historyPrev')}
-                        </Button>
-                        <span className="text-xs text-muted-foreground">
-                          {t('loyaltyPage.historyPage', { n: historyPage + 1 })}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          disabled={!hasHistoryNext || isHistoryFetching}
-                          onClick={() => setHistoryPage((p) => p + 1)}
-                        >
-                          {t('loyaltyPage.historyNext')}
-                          <ChevronRight size={16} aria-hidden />
-                        </Button>
-                      </div>
+                      <HistoryPagination
+                        page={historyPage}
+                        hasPrev={hasHistoryPrev}
+                        hasNext={hasHistoryNext}
+                        busy={isHistoryFetching}
+                        onPrev={() => setHistoryPage((p) => Math.max(0, p - 1))}
+                        onNext={() => setHistoryPage((p) => p + 1)}
+                      />
                     )}
                   </div>
                 )}
@@ -312,20 +309,85 @@ function LoyaltySkeleton() {
 /** Строки таблицы истории начислений. */
 function LoyaltyHistorySkeleton() {
   return (
-    <div className="space-y-2.5" aria-hidden>
+    <div className="space-y-3" aria-hidden>
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex items-center justify-between gap-3">
+          <Skeleton className="h-7 w-16" />
           <Skeleton className="h-3.5 w-24" />
-          <Skeleton className="h-3.5 w-20" />
-          <Skeleton className="h-3.5 w-14" />
+          <Skeleton className="h-5 w-16 rounded-md" />
         </div>
       ))}
     </div>
   )
 }
 
+/** Ключ строки: начисления с колеса и с оплат живут в одном списке. */
+function historyRowKey(item: LoyaltyHistoryItem): string {
+  return item.source === 'fortune_wheel' && item.fortune_spin_id
+    ? `f-${item.fortune_spin_id}-${item.paid_at ?? ''}`
+    : `p-${item.purchase_id}-${item.paid_at ?? 'nopaid'}`
+}
+
+/**
+ * Источник начисления: значок и подпись, сумма — деталью под ней.
+ * Раньше в колонке смешивались два разных смысла — сумма или «Колесо фортуны».
+ */
+function LoyaltySource({
+  item,
+  t,
+  lang,
+  showAmount = true,
+}: {
+  item: LoyaltyHistoryItem
+  t: (k: string, o?: Record<string, string | number>) => string
+  lang: string
+  /** На мобиле сумма уезжает в строку с датой, чтобы карточка осталась в две строки. */
+  showAmount?: boolean
+}) {
+  const fortune = item.source === 'fortune_wheel'
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {fortune ? <FortuneWheelIcon /> : <PaymentMethodIcon invoiceType={item.invoice_type} />}
+      <span className="min-w-0">
+        <span className="block truncate text-sm text-foreground">
+          {fortune ? t('loyaltyPage.historyFortuneWheel') : purchaseKindLabel(t, { ...item, month: 0 })}
+        </span>
+        {showAmount && !fortune && (
+          <span className="block text-[11px] tabular-nums text-muted-foreground/70">
+            {formatMoney(item.amount, item.currency, lang)}
+          </span>
+        )}
+      </span>
+    </span>
+  )
+}
+
+/** Мета-строка мобильной карточки: дата, время и — для оплат — сумма. */
+function loyaltyMetaLine(item: LoyaltyHistoryItem, lang: string): string {
+  const date = historyDateInline(item.paid_at)
+  if (item.source === 'fortune_wheel') return date
+  return `${date} · ${formatMoney(item.amount, item.currency, lang)}`
+}
+
+function XpBadge({ xp, className }: { xp: number; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center whitespace-nowrap rounded-md bg-emerald-500/15 px-2 py-0.5',
+        'text-sm font-medium tabular-nums text-emerald-500 ring-1 ring-inset ring-emerald-500/25',
+        className,
+      )}
+    >
+      +{formatNumber(xp)} XP
+    </span>
+  )
+}
+
 function formatMoney(amount: number, currency: string, lang: string) {
   const c = (currency || '').toUpperCase()
+  if (c === 'STARS' || c === 'XTR') {
+    return `${amount} ⭐`
+  }
   if (c === 'RUB' || c === 'RUR' || c === '') {
     return `${Math.round(amount).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')} ₽`
   }

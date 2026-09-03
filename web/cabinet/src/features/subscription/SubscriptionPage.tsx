@@ -4,9 +4,9 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ClipboardList, Check, RefreshCw, Smartphone, Trash2 } from 'lucide-react'
 import type { TFunction } from 'i18next'
-import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { ConfirmModal } from '@/components/ConfirmModal'
 import { DevicePlatformIcon } from '@/components/DevicePlatformIcon'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { SubscriptionActions } from '@/components/SubscriptionActions'
@@ -326,43 +326,22 @@ export default function SubscriptionPage() {
               />
             )}
 
-            {deleteConfirmHwid && typeof document !== 'undefined'
-              ? createPortal(
-                  <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm p-4">
-                      <p className="text-base font-medium text-foreground mb-4">
-                        {t('subscriptionPage.deleteDeviceConfirm')}
-                      </p>
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={deleteDevice.isPending}
-                          onClick={() => setDeleteConfirmHwid(null)}
-                        >
-                          {t('common.cancel')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          loading={deleteDevice.isPending}
-                          disabled={deleteDevice.isPending}
-                          onClick={() => {
-                            const hwid = deleteConfirmHwid
-                            setDeleteConfirmHwid(null)
-                            deleteDevice.mutate(hwid)
-                          }}
-                        >
-                          {t('subscriptionPage.deleteDevice')}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body,
-                )
-              : null}
+            <ConfirmModal
+              open={Boolean(deleteConfirmHwid)}
+              tone="danger"
+              icon={Trash2}
+              title={t('subscriptionPage.deleteDeviceConfirm')}
+              description={t('subscriptionPage.deleteDeviceConfirmHint')}
+              confirmLabel={t('subscriptionPage.deleteDevice')}
+              loading={deleteDevice.isPending}
+              onClose={() => setDeleteConfirmHwid(null)}
+              onConfirm={() => {
+                const hwid = deleteConfirmHwid
+                if (!hwid) return
+                setDeleteConfirmHwid(null)
+                deleteDevice.mutate(hwid)
+              }}
+            />
           </>
         )}
       </PageReveal>

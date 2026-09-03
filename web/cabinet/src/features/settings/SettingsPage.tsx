@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, Mail, XCircle } from 'lucide-react'
+import { CheckCircle2, Mail, Unlink, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import { AppLayout } from '@/components/AppLayout'
+import { ConfirmModal } from '@/components/ConfirmModal'
 import { PageReveal } from '@/components/PageReveal'
 import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Button } from '@/components/ui/button'
@@ -426,36 +427,19 @@ export default function SettingsPage() {
         <p className="text-xs text-muted-foreground">{t('accounts.mergeHint')}</p>
       </PageReveal>
 
-      {unlinkConfirmProvider && typeof document !== 'undefined'
-        ? createPortal(
-            <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-sm rounded-2xl border border-border bg-background/95 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm p-4">
-                <p className="text-base font-medium text-foreground mb-4">Точно отвязать?</p>
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={unlinkBusy !== null}
-                    onClick={() => void confirmUnlink(unlinkConfirmProvider)}
-                  >
-                    да
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={unlinkBusy !== null}
-                    onClick={() => setUnlinkConfirmProvider(null)}
-                  >
-                    нет
-                  </Button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
+      <ConfirmModal
+        open={Boolean(unlinkConfirmProvider)}
+        tone="danger"
+        icon={Unlink}
+        title={t('accounts.unlinkConfirmTitle')}
+        description={t('accounts.unlinkConfirmHint')}
+        confirmLabel={t('accounts.unlink')}
+        loading={unlinkBusy !== null}
+        onClose={() => setUnlinkConfirmProvider(null)}
+        onConfirm={() => {
+          if (unlinkConfirmProvider) void confirmUnlink(unlinkConfirmProvider)
+        }}
+      />
     </AppLayout>
   )
 }

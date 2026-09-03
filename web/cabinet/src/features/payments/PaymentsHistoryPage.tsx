@@ -1,99 +1,69 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 
+import {
+  HISTORY_PAGE_SIZE,
+  HistoryDateCell,
+  HistoryPagination,
+  PaymentMethodIcon,
+  historyDateInline,
+  invoiceLabel,
+  purchaseKindLabel,
+} from '@/components/history-list'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
-import { formatDateTimeShort, formatRub } from '@/lib/utils'
+import { api, type PurchaseHistoryItem } from '@/lib/api'
+import { cn, formatRub } from '@/lib/utils'
 
-function invoiceLabel(t: (k: string) => string, invoiceType: string): string {
-  switch (invoiceType) {
-    case 'yookasa':
-      return t('payments.methodCard')
-    case 'crypto':
-      return t('payments.methodCrypto')
-    case 'telegram':
-      return t('payments.methodTelegram')
-    case 'tribute':
-      return t('payments.methodTribute')
-    case 'plt_sbp':
-      return t('payments.methodSbp')
-    case 'plt_cards':
-    case 'plt_acq':
-    case 'plt_ww':
-      return t('payments.methodCard')
-    case 'plt_crypto':
-      return t('payments.methodPlategaCrypto')
-    case 'heleket':
-      return t('payments.methodHeleket')
-    default:
-      return invoiceType
+function formatMoney(amount: number, currency: string) {
+  const c = (currency || '').toUpperCase()
+  if (c === 'STARS' || c === 'XTR') {
+    return `${amount} ⭐`
   }
+  if (c === 'RUB' || c === 'RUR' || c === '') {
+    return formatRub(Math.round(amount))
+  }
+  return `${amount} ${currency}`
 }
 
-function effectivePurchaseKind(p: { purchase_kind: string; month: number; extra_hwid?: number }): string {
-  const raw = p.purchase_kind
-  if (raw === 'tariff_upgrade' || raw === 'extra_hwid') {
-    return raw
-  }
-  const extra = p.extra_hwid ?? 0
-  if (p.month > 0 && extra > 0 && raw === 'subscription') {
-    return 'subscription_with_hwid'
-  }
-  if (p.month <= 0 && extra > 0 && raw === 'subscription') {
-    return 'extra_hwid'
-  }
-  return raw
-}
-
-function kindLabel(
-  t: (k: string, o?: Record<string, string | number>) => string,
-  p: { purchase_kind: string; month: number; extra_hwid?: number },
-): string {
-  const kind = effectivePurchaseKind(p)
-  const extra = p.extra_hwid ?? 0
-  switch (kind) {
-    case 'subscription':
-      return t('payments.kindSubscription')
-    case 'tariff_upgrade':
-      return t('payments.kindUpgrade')
-    case 'extra_hwid':
-      return extra > 0 ? t('payments.kindExtraHwidSlots', { n: extra }) : t('payments.kindExtraHwid')
-    case 'subscription_with_hwid':
-      return t('payments.kindSubscriptionWithHwid', { months: p.month, n: extra })
-    default:
-      return kind || '—'
-  }
+/**
+ * Сумма со значком способа оплаты. Колонки «Способ» больше нет: название
+ * метода дублировало тип покупки по весу, поэтому осталось значком с подписью
+ * для скринридера и подсказкой на наведении.
+ */
+function AmountWithMethod({ item, t }: { item: PurchaseHistoryItem; t: (k: string) => string }) {
+  const method = invoiceLabel(t, item.invoice_type)
+  return (
+    <span className="inline-flex items-center justify-end gap-2">
+      <span role="img" aria-label={method} title={method} className="inline-flex">
+        <PaymentMethodIcon invoiceType={item.invoice_type} />
+      </span>
+      {/* Фиксированная ширина суммы: иначе значки способов пляшут по горизонтали. */}
+      <span className="min-w-[4.25rem] text-right font-medium tabular-nums">
+        {formatMoney(item.amount, item.currency)}
+      </span>
+    </span>
+  )
 }
 
 /** История платежей для встраивания (вкладка «Профиль»). */
 export function PaymentsHistoryCard() {
   const { t } = useTranslation()
+  const [page, setPage] = useState(0)
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['purchases'],
-    queryFn: () => api.purchases({ limit: 100 }),
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['purchases', page],
+    queryFn: () => api.purchases({ limit: HISTORY_PAGE_SIZE, offset: page * HISTORY_PAGE_SIZE }),
     staleTime: 30_000,
     retry: 1,
+    placeholderData: (prev) => prev,
   })
 
   const items = data?.items ?? []
-
-  function formatPaid(iso?: string) {
-    if (!iso) return '—'
-    return formatDateTimeShort(iso)
-  }
-
-  function formatMoney(amount: number, currency: string) {
-    const c = (currency || '').toUpperCase()
-    if (c === 'STARS' || c === 'XTR') {
-      return `${amount} ⭐`
-    }
-    if (c === 'RUB' || c === 'RUR' || c === '') {
-      return formatRub(Math.round(amount))
-    }
-    return `${amount} ${currency}`
-  }
+  const hasPrev = page > 0
+  const hasNext = items.length === HISTORY_PAGE_SIZE
+  const showPagination = hasPrev || hasNext
 
   return (
     <Card>
@@ -109,27 +79,61 @@ export function PaymentsHistoryCard() {
         ) : items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">{t('payments.empty')}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className={cn(isFetching && !isLoading && 'opacity-60 transition-opacity')}>
+            {/* ПК: таблица из трёх колонок. */}
+            <table className="hidden w-full text-sm sm:table">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="pb-2 pr-3 font-medium">{t('payments.colPaidAt')}</th>
-                  <th className="pb-2 pr-3 font-medium">{t('payments.colAmount')}</th>
-                  <th className="pb-2 pr-3 font-medium">{t('payments.colMethod')}</th>
-                  <th className="pb-2 font-medium">{t('payments.colKind')}</th>
+                  <th className="w-px pb-2 pr-3 font-medium">{t('payments.colPaidAt')}</th>
+                  <th className="pb-2 pr-3 font-medium">{t('payments.colKind')}</th>
+                  <th className="pb-2 text-right font-medium">{t('payments.colAmount')}</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((p) => (
                   <tr key={p.id} className="border-b border-border/60 last:border-0">
-                    <td className="py-2.5 pr-3 whitespace-nowrap">{formatPaid(p.paid_at)}</td>
-                    <td className="py-2.5 pr-3 font-medium">{formatMoney(p.amount, p.currency)}</td>
-                    <td className="py-2.5 pr-3">{invoiceLabel(t, p.invoice_type)}</td>
-                    <td className="py-2.5 text-muted-foreground">{kindLabel(t, p)}</td>
+                    <td className="w-px py-2.5 pr-3 align-middle">
+                      <HistoryDateCell iso={p.paid_at} />
+                    </td>
+                    <td className="py-2.5 pr-3 align-middle">{purchaseKindLabel(t, p)}</td>
+                    <td className="py-2.5 text-right align-middle">
+                      <AmountWithMethod item={p} t={t} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* Мобильные: четыре колонки не помещаются — строка-карточка. */}
+            <ul className="sm:hidden">
+              {items.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 border-b border-border/60 py-3 last:border-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{purchaseKindLabel(t, p)}</p>
+                    <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground/70">
+                      {historyDateInline(p.paid_at)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-sm">
+                    <AmountWithMethod item={p} t={t} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {showPagination && (
+              <HistoryPagination
+                page={page}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                busy={isFetching}
+                onPrev={() => setPage((p) => Math.max(0, p - 1))}
+                onNext={() => setPage((p) => p + 1)}
+              />
+            )}
           </div>
         )}
       </CardContent>
@@ -137,16 +141,15 @@ export function PaymentsHistoryCard() {
   )
 }
 
-/** Заглушка таблицы платежей: четыре колонки, как в реальной разметке. */
+/** Заглушка таблицы платежей: три колонки, как в реальной разметке. */
 function PaymentsHistorySkeleton() {
   return (
-    <div className="space-y-2.5" aria-hidden>
+    <div className="space-y-3" aria-hidden>
       {[0, 1, 2, 3, 4].map((i) => (
         <div key={i} className="flex items-center justify-between gap-3">
+          <Skeleton className="h-7 w-16" />
           <Skeleton className="h-3.5 w-24" />
-          <Skeleton className="h-3.5 w-16" />
           <Skeleton className="h-3.5 w-20" />
-          <Skeleton className="h-3.5 w-24" />
         </div>
       ))}
     </div>

@@ -13,7 +13,8 @@ const buttonVariants = cva(
         default:
           'cabinet-btn-primary bg-primary text-primary-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:brightness-110 hover:shadow-[0_10px_26px_-10px_hsl(var(--cabinet-accent)/0.6)]',
         destructive:
-          'bg-destructive text-destructive-foreground shadow hover:brightness-110',
+          // Свой отклик, а не только brightness: на тёмной теме осветление красного почти незаметно.
+          'bg-destructive text-destructive-foreground shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] hover:bg-[color-mix(in_srgb,hsl(var(--destructive))_86%,white)] hover:shadow-[0_10px_26px_-10px_hsl(var(--destructive)/0.75)] active:bg-[color-mix(in_srgb,hsl(var(--destructive))_88%,black)]',
         outline:
           'border border-border bg-transparent hover:border-[hsl(var(--cabinet-accent)/0.5)] hover:bg-secondary hover:text-secondary-foreground hover:shadow-[0_8px_22px_-10px_hsl(var(--cabinet-accent)/0.5)] dark:bg-card/40 dark:hover:bg-secondary/80',
         secondary:

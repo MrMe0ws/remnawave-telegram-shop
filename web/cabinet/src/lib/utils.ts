@@ -84,6 +84,22 @@ export function formatDateTimeShort(iso: string): string {
 }
 
 /**
+ * Дата для таблиц истории: короткий год и время отдельной строкой.
+ * `2026-08-28T22:32:00Z` → `{ date: '28.08.26', time: '22:32' }`.
+ */
+export function splitDateTimeShort(iso?: string): { date: string; time: string } | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return null
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yy = String(d.getFullYear() % 100).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return { date: `${dd}.${mm}.${yy}`, time: `${hh}:${min}` }
+}
+
+/**
  * Форматирует цену в рублях.
  * Реализация — в `@/lib/format` (локаль берётся из i18n); здесь реэкспорт,
  * чтобы не переписывать существующие импорты из `@/lib/utils`.

@@ -56,6 +56,13 @@ export default function TariffsPage() {
     navigate(`/checkout?tariff=${encodeURIComponent(tariff.slug)}&months=${tariff.months}`)
   }
 
+  // Заголовок со стрелкой «назад» должен стоять по левой границе карточек:
+  // сетка центрируется своим max-width, поэтому ту же ширину получает и шапка.
+  const columnClass = useMemo(() => {
+    if (data?.sales_mode !== 'tariffs' || !data.tariffs) return undefined
+    return tariffsColumnClass(buildCardPeriodsBySlug(data.tariffs).length)
+  }, [data])
+
   const classicSorted =
     data?.sales_mode !== 'tariffs' && data?.tariffs
       ? [...data.tariffs].sort((a, b) => a.months - b.months)
@@ -64,7 +71,7 @@ export default function TariffsPage() {
   return (
     <AppLayout>
       <PageReveal className="space-y-6">
-        <RevealItem className={cn(planSlug && 'mx-auto w-full max-w-lg')}>
+        <RevealItem className={cn(planSlug ? 'mx-auto w-full max-w-lg' : columnClass)}>
           <PageTitleWithBack
             title={t('tariffs.title')}
             subtitle={t('tariffs.subtitle')}
@@ -84,7 +91,7 @@ export default function TariffsPage() {
         )}
 
         {data && data.sales_mode === 'tariffs' && !planSlug && (
-          <RevealItem>
+          <RevealItem className={columnClass}>
             <TariffsGrid
               tariffs={data.tariffs}
               priceDisplay={data.price_display ?? 'monthly'}
@@ -127,6 +134,17 @@ export default function TariffsPage() {
 }
 
 // ── Tariffs mode: шаг 1 — только карточки планов ────────────────────────────
+
+/**
+ * Ширина контентной колонки «Тарифов» на ПК: должна совпадать с max-width сетки
+ * карточек, иначе шапка уезжает левее карточек внутри max-w-5xl страницы.
+ * До 500px работает карусель во всю ширину — там ограничение не нужно.
+ */
+function tariffsColumnClass(cardsCount: number): string | undefined {
+  if (cardsCount === 2) return 'mx-auto w-full min-[501px]:max-w-2xl'
+  if (cardsCount >= 3) return 'mx-auto w-full min-[501px]:max-w-4xl'
+  return undefined
+}
 
 function buildCardPeriodsBySlug(tariffs: TariffItem[]): TariffItem[][] {
   const bySlug = new Map<string, TariffItem[]>()
@@ -175,7 +193,6 @@ function TariffsGrid({
   )
 
   const singleGridClass = cn('grid max-w-xs gap-4 mx-auto')
-  const desktopMaxWidth = cardPeriods.length === 2 ? 'max-w-2xl' : 'max-w-4xl'
   const desktopGridClass = cn(
     'gap-4',
     cardPeriods.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2',
@@ -215,7 +232,7 @@ function TariffsGrid({
           <p className="mt-3 text-center text-xs text-muted-foreground">{t('tariffs.annualPriceFootnote')}</p>
         )}
       </div>
-      <div className={cn('hidden min-[501px]:block mx-auto w-full', desktopMaxWidth)}>
+      <div className="hidden w-full min-[501px]:block">
         <div className={cn('grid', desktopGridClass)}>
           {cardPeriods.map((periods) => (
             <TariffPlanCard

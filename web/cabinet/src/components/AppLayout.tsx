@@ -17,6 +17,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 
+import { ConfirmModal } from './ConfirmModal'
 import { Logo } from './Logo'
 import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
@@ -507,27 +508,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
-      {logoutConfirmOpen && (
-        <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => setLogoutConfirmOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-border bg-background/95 p-4 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-4 text-base font-medium text-foreground">{t('nav.logoutConfirmTitle')}</p>
-            <div className="flex items-center justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setLogoutConfirmOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="button" variant="destructive" size="sm" onClick={confirmLogout}>
-                {t('nav.logoutConfirmYes')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={logoutConfirmOpen}
+        tone="danger"
+        icon={LogOut}
+        title={t('nav.logoutConfirmTitle')}
+        confirmLabel={t('nav.logoutConfirmYes')}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={confirmLogout}
+      />
 
       <div className="relative z-10 min-h-0 flex-1 overflow-x-hidden touch-pan-y">
         {/*
