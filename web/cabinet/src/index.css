@@ -2327,15 +2327,15 @@ html.dark[data-cabinet-decor="slate"] {
  * живут под `.dark` и в светлой не сработают, вышла бы каша.
  */
 html[data-cabinet-decor="carbon"] {
-  --primary: 172 70% 34%;
-  --accent: 172 70% 34%;
-  --ring: 172 70% 34%;
+  --primary: 217 85% 48%;
+  --accent: 217 85% 48%;
+  --ring: 217 85% 48%;
 }
 
 html.dark[data-cabinet-decor="carbon"] {
-  --primary: 172 72% 46%;
-  --accent: 172 72% 46%;
-  --ring: 172 72% 46%;
+  --primary: 217 90% 60%;
+  --accent: 217 90% 60%;
+  --ring: 217 90% 60%;
 
   /* Поверхности разведены по lightness: фон → muted → card → secondary → border */
   --background: 220 10% 8%;
