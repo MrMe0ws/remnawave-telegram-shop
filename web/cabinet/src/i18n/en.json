@@ -253,7 +253,7 @@
       "qrAlt": "Connection link QR code",
       "qrHint": "Point the other phone's camera here — it opens the setup instructions",
       "share": "Send invitation",
-      "shareText": "VPN access 🔐\nOpen this link on the device that needs the VPN and follow the instructions on the page:\n{{url}}",
+      "shareText": "VPN access 🔐\nOpen this link on the device that needs the VPN and follow the instructions on the page:",
       "copyInvite": "Copy invitation",
       "inviteCopied": "Copied — send it in a messenger",
       "shareHint": "A link with instructions: the recipient opens it on their device and connects on their own",

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronRight, ChevronDown, Copy, MonitorSmartphone, Plus, X } from 'lucide-react'
+import { Check, ChevronRight, ChevronDown, Copy, MonitorSmartphone, Plus, Upload, X } from 'lucide-react'
 
 import { QrCode } from '@/components/QrCode'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { api, ApiError } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
+import { shareLink } from '@/lib/share'
 
 /**
  * Перенос подписки на устройство, с которого в кабинет не зайти.
@@ -143,13 +144,16 @@ export function ConnectInviteModal({
   })
 
   const inviteUrl = data?.url || ''
-  const shareText = t('connectInvite.shareText', { url: inviteUrl })
-  // Отдельной кнопки «Поделиться» здесь намеренно нет — в отличие от партнёрки,
-  // где она есть везде (`@/lib/share`). Причина не техническая: это не
-  // приглашение другу, а одноразовый токен подключения устройства. Отправлять
-  // его выбором чата незачем — свой второй телефон в этом списке не стоит, — и
-  // цель здесь другая: перенести ссылку на соседний экран. Это закрывают
-  // копирование и QR-код рядом.
+  // Ссылка хранится отдельно от текста: «Поделиться» отдаёт её Telegram
+  // отдельным параметром, а в буфер приглашение уходит одним куском.
+  const inviteMessage = t('connectInvite.shareText')
+  const inviteClipboardText = `${inviteMessage}\n${inviteUrl}`
+
+  /** Не вышло поделиться (отмена, блокировка вкладки) — кладём в буфер. */
+  async function shareInvite() {
+    const ok = await shareLink({ text: inviteMessage, url: inviteUrl })
+    if (!ok) await copyInvite(inviteClipboardText)
+  }
 
   const noSubscription = error instanceof ApiError && error.status === 409
 
@@ -232,19 +236,32 @@ export function ConnectInviteModal({
             </div>
 
             {/* Шаг 2 — устройство не рядом: приглашение уезжает текстом.
-                Копирование стоит отдельной кнопкой, а не запасным путём внутри
-                «Отправить»: системный шит Windows показывает только приложения,
-                зарегистрированные как share target, и Telegram в этот список не
-                попадает — там копирование остаётся единственным рабочим путём. */}
+                Копирование остаётся главной кнопкой: оно работает одинаково
+                всюду и не зависит от того, куда пользователь захочет переслать.
+                «Поделиться» рядом — короткий путь для мессенджера; способ под
+                окружение выбирает `@/lib/share`. */}
             <div className="mt-3 space-y-2">
-              <Button
-                type="button"
-                className="w-full gap-2"
-                onClick={() => void copyInvite(shareText)}
-              >
-                {inviteCopyState === 'done' ? <Check size={15} className="text-primary" /> : <Copy size={15} />}
-                {inviteCopyState === 'done' ? t('connectInvite.inviteCopied') : t('connectInvite.copyInvite')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  className="flex-1 gap-2"
+                  onClick={() => void copyInvite(inviteClipboardText)}
+                >
+                  {inviteCopyState === 'done' ? <Check size={15} className="text-primary" /> : <Copy size={15} />}
+                  {inviteCopyState === 'done' ? t('connectInvite.inviteCopied') : t('connectInvite.copyInvite')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-10 shrink-0"
+                  aria-label={t('connectInvite.share')}
+                  title={t('connectInvite.share')}
+                  onClick={() => void shareInvite()}
+                >
+                  <Upload size={15} strokeWidth={1.5} />
+                </Button>
+              </div>
               {inviteCopyState === 'failed' && (
                 <p className="text-center text-xs text-destructive">{t('common.copyFailed')}</p>
               )}
