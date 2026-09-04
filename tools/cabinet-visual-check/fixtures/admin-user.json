@@ -1,0 +1,137 @@
+{
+  "/admin/bootstrap": {
+    "sales_mode": "tariffs",
+    "loyalty_enabled": true,
+    "partner_enabled": true,
+    "fortune_enabled": true,
+    "version": "dev-visual",
+    "commit": "visual"
+  },
+  "/admin/users/1560": {
+    "id": 1560,
+    "telegram_id": "443907358",
+    "telegram_username": "Lesya_74",
+    "language": "ru",
+    "expire_at": "2026-10-04T11:15:00Z",
+    "created_at": "2026-09-04T09:17:00Z",
+    "subscription_link": "https://example.invalid/sub/abcdef123456",
+    "extra_hwid": 0,
+    "extra_hwid_expires_at": null,
+    "current_tariff_id": 1,
+    "subscription_period_start": "2026-09-04T09:34:00Z",
+    "subscription_period_months": 1,
+    "loyalty_xp": 150,
+    "loyalty_level": 1,
+    "loyalty_discount_percent": 0,
+    "is_web_only": false,
+    "status": "active",
+    "rw_status": "ACTIVE",
+    "avatar_url": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5NiA5NiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNGRhM2Q4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjN2M2OGVlIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSJ1cmwoI2cpIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIzOCIgcj0iMTYiIGZpbGw9IiNmZmYiIG9wYWNpdHk9Ii45Ii8+PHBhdGggZD0iTTIwIDk2YzAtMTYgMTMtMjYgMjgtMjZzMjggMTAgMjggMjZaIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuOSIvPjwvc3ZnPg=="
+  },
+  "/admin/users/1560/panel": {
+    "customer": {
+      "id": 1560,
+      "telegram_id": "443907358",
+      "telegram_username": "Lesya_74",
+      "language": "ru",
+      "expire_at": "2026-10-04T11:15:00Z",
+      "created_at": "2026-09-04T09:17:00Z",
+      "extra_hwid": 0,
+      "current_tariff_id": 1,
+      "loyalty_xp": 150,
+      "is_web_only": false,
+      "status": "active"
+    },
+    "has_rw_user": true,
+    "rw": {
+      "uuid": "1f0f5a6c-4f7a-4a3e-9a6e-1f0b5c2d7a11",
+      "username": "1560_lesya",
+      "status": "ACTIVE",
+      "subscription_url": "https://example.invalid/sub/abcdef123456",
+      "expire_at": "2026-10-04T11:15:00Z",
+      "traffic_used_bytes": 644245094,
+      "traffic_limit_bytes": 214748364800,
+      "traffic_limit_strategy": "MONTH",
+      "hwid_device_limit": 2,
+      "description": "Lesya_74",
+      "tag": "TG_TAG",
+      "last_traffic_reset_at": "2026-09-01T00:00:00Z",
+      "online_at": "2026-09-04T10:52:00Z",
+      "active_squads": [{ "uuid": "sq-default", "name": "Default-Squad" }]
+    },
+    "available_squads": [
+      { "uuid": "sq-default", "name": "Default-Squad" },
+      { "uuid": "sq-premium", "name": "Premium" },
+      { "uuid": "sq-trial", "name": "Trial" },
+      { "uuid": "sq-bridge", "name": "Bridge-Squad" },
+      { "uuid": "sq-rastyan", "name": "Rastyan" }
+    ],
+    "traffic_presets_gb": [5, 10, 50, 100, 200, 500],
+    "strategies": ["DAY", "WEEK", "MONTH", "MONTH_ROLLING", "NO_RESET"],
+    "tariffs": [
+      { "id": 1, "slug": "basic", "name": "Базовый" },
+      { "id": 2, "slug": "premium", "name": "Премиум" },
+      { "id": 3, "slug": "trial", "name": "Пробный" }
+    ]
+  },
+  "/admin/users/1560/devices": {
+    "items": [
+      {
+        "hwid": "D3532A88-F1B1-3893-E69A-B4D9C5B82B28",
+        "platform": "iOS",
+        "os_version": "18.2",
+        "device_model": "iPhone 16 Pro Max",
+        "created_at": "2026-09-04T09:40:00Z"
+      },
+      {
+        "hwid": "cffe2y99491c88e3",
+        "platform": "iOS",
+        "os_version": "18.1",
+        "device_model": "iPhone 16 Pro Max",
+        "created_at": "2026-09-04T10:05:00Z"
+      }
+    ]
+  },
+  "/admin/users/1560/payments": {
+    "items": [
+      {
+        "id": 9014,
+        "amount": 150,
+        "currency": "RUB",
+        "invoice_type": "YOOKASSA",
+        "month": 1,
+        "paid_at": "2026-09-04T09:34:00Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "rub_sum": 150,
+    "rub_count": 1,
+    "stars_sum": 0,
+    "stars_count": 0,
+    "stars_rub_equiv": 0,
+    "rub_per_star": 1.6
+  },
+  "/admin/users/1560/referrals": {
+    "referees": [],
+    "stats": {
+      "total": 0,
+      "paid": 0,
+      "active": 0,
+      "conversion": 0,
+      "earned_total": 0
+    },
+    "page": 1,
+    "limit": 20
+  },
+  "/admin/tariffs": [
+    { "id": 1, "slug": "basic", "name": "Базовый" },
+    { "id": 2, "slug": "premium", "name": "Премиум" },
+    { "id": 3, "slug": "trial", "name": "Пробный" }
+  ],
+  "/admin/loyalty/tiers": [
+    { "id": 1, "name": "Старт", "xp_min": 0, "discount_percent": 0, "sort_order": 1 },
+    { "id": 2, "name": "Серебро", "xp_min": 500, "discount_percent": 5, "sort_order": 2 }
+  ]
+}

@@ -349,6 +349,12 @@ export interface AdminCustomerDTO {
   rw_status?: string | null
   /** Логин web-клиента в панели ("<id>_<local-part email>"). У Telegram-клиентов отсутствует. */
   panel_login?: string | null
+  /**
+   * Подписанная ссылка на аватарку из Telegram. Приходит только в карточке
+   * одного пользователя (GET /admin/users/{id}), в списке её нет. Картинки
+   * может не быть — тогда сам запрос отвечает 404, и UI рисует инициалы.
+   */
+  avatar_url?: string | null
 }
 
 export interface AdminUsersListDTO {

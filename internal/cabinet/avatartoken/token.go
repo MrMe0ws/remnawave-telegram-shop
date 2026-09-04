@@ -31,7 +31,14 @@ import (
 const DefaultTTL = 7 * 24 * time.Hour
 
 const (
-	tokenVersion = 1
+	// Первый байт токена — subject: чей идентификатор лежит дальше. Байт
+	// входит в подпись, поэтому подменить его, не сломав MAC, нельзя — один
+	// ключ на оба вида токенов безопасен.
+	//
+	// subjectAccount исторически назывался версией формата и равен 1: старые
+	// ссылки из /me продолжают разбираться.
+	subjectAccount  = 1
+	subjectTelegram = 2
 
 	macLen     = 12 // 96 бит: подделка нереальна, а токен остаётся коротким
 	payloadLen = 1 + 8 + 4
@@ -59,13 +66,25 @@ func deriveKey(secret []byte) []byte {
 	return sum[:]
 }
 
-// Issue выпускает ссылку на аватарку аккаунта.
+// Issue выпускает ссылку на аватарку аккаунта кабинета.
 func Issue(secret []byte, accountID int64, ttl time.Duration, now time.Time) (string, error) {
+	return issue(secret, subjectAccount, accountID, ttl, now)
+}
+
+// IssueTelegram выпускает ссылку на аватарку по telegram id.
+//
+// Нужна админке: там карточку открывают на пользователя бота, у которого
+// аккаунта в кабинете может не быть вовсе, а telegram id есть всегда.
+func IssueTelegram(secret []byte, telegramID int64, ttl time.Duration, now time.Time) (string, error) {
+	return issue(secret, subjectTelegram, telegramID, ttl, now)
+}
+
+func issue(secret []byte, subject byte, id int64, ttl time.Duration, now time.Time) (string, error) {
 	if len(secret) == 0 {
 		return "", errors.New("avatartoken: empty secret")
 	}
-	if accountID <= 0 {
-		return "", errors.New("avatartoken: invalid account id")
+	if id <= 0 {
+		return "", errors.New("avatartoken: invalid subject id")
 	}
 	if ttl <= 0 {
 		ttl = DefaultTTL
@@ -78,8 +97,8 @@ func Issue(secret []byte, accountID int64, ttl time.Duration, now time.Time) (st
 	}
 
 	raw := make([]byte, tokenLen)
-	raw[0] = tokenVersion
-	binary.BigEndian.PutUint64(raw[1:9], uint64(accountID))
+	raw[0] = subject
+	binary.BigEndian.PutUint64(raw[1:9], uint64(id))
 	binary.BigEndian.PutUint32(raw[9:13], uint32(expiresAt.Unix()))
 	copy(raw[payloadLen:], sign(secret, raw[:payloadLen]))
 
@@ -88,11 +107,20 @@ func Issue(secret []byte, accountID int64, ttl time.Duration, now time.Time) (st
 
 // Parse проверяет подпись и срок, возвращая account_id владельца аватарки.
 func Parse(secret []byte, token string, now time.Time) (int64, error) {
+	return parse(secret, token, subjectAccount, now)
+}
+
+// ParseTelegram — то же для токена, выписанного на telegram id.
+func ParseTelegram(secret []byte, token string, now time.Time) (int64, error) {
+	return parse(secret, token, subjectTelegram, now)
+}
+
+func parse(secret []byte, token string, subject byte, now time.Time) (int64, error) {
 	if len(secret) == 0 {
 		return 0, errors.New("avatartoken: empty secret")
 	}
 	raw, err := encoding.DecodeString(token)
-	if err != nil || len(raw) != tokenLen || raw[0] != tokenVersion {
+	if err != nil || len(raw) != tokenLen || raw[0] != subject {
 		return 0, ErrMalformed
 	}
 	// Подпись проверяем до срока: иначе по разнице ответов «протух» и
@@ -101,15 +129,15 @@ func Parse(secret []byte, token string, now time.Time) (int64, error) {
 		return 0, ErrSignature
 	}
 
-	accountID := int64(binary.BigEndian.Uint64(raw[1:9]))
-	if accountID <= 0 {
+	id := int64(binary.BigEndian.Uint64(raw[1:9]))
+	if id <= 0 {
 		return 0, ErrMalformed
 	}
 	exp := time.Unix(int64(binary.BigEndian.Uint32(raw[9:13])), 0)
 	if !now.Before(exp) {
 		return 0, ErrExpired
 	}
-	return accountID, nil
+	return id, nil
 }
 
 func sign(secret, payload []byte) []byte {

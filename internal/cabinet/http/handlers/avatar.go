@@ -28,23 +28,17 @@ func (h *MeHandler) Avatar(w http.ResponseWriter, r *http.Request) {
 		methodNotAllowed(w, http.MethodGet)
 		return
 	}
-	accountID, err := avatartoken.Parse(h.avatarSecret, r.URL.Query().Get("t"), time.Now())
-	if err != nil {
+	telegramID := h.avatarSubject(r.Context(), r.URL.Query().Get("t"))
+	if telegramID == nil {
 		// Просроченная и поддельная ссылка отвечают одинаково: по разнице
 		// ответов не должно быть видно, существует ли аккаунт.
 		http.NotFound(w, r)
 		return
 	}
 
-	telegramID := h.telegramIDForAccount(r.Context(), accountID)
-	if telegramID == nil {
-		http.NotFound(w, r)
-		return
-	}
-
 	avatar, ok, err := h.tgProfiles.Avatar(r.Context(), *telegramID)
 	if err != nil {
-		slog.Warn("avatar: fetch failed", "account_id", accountID, "error", err.Error())
+		slog.Warn("avatar: fetch failed", "error", err.Error())
 		http.NotFound(w, r)
 		return
 	}
@@ -66,6 +60,22 @@ func (h *MeHandler) Avatar(w http.ResponseWriter, r *http.Request) {
 	h2.Set("Content-Length", strconv.Itoa(len(avatar.Body)))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(avatar.Body)
+}
+
+// avatarSubject — telegram id, на который выписан токен.
+//
+// Токенов два вида: ссылка из /me выписана на аккаунт кабинета (её надо ещё
+// развернуть в telegram id), ссылка из админской карточки — сразу на telegram
+// id, потому что у пользователя бота аккаунта в кабинете может не быть.
+func (h *MeHandler) avatarSubject(ctx context.Context, token string) *int64 {
+	if accountID, err := avatartoken.Parse(h.avatarSecret, token, time.Now()); err == nil {
+		return h.telegramIDForAccount(ctx, accountID)
+	}
+	telegramID, err := avatartoken.ParseTelegram(h.avatarSecret, token, time.Now())
+	if err != nil {
+		return nil
+	}
+	return &telegramID
 }
 
 // matchesETag — разбор If-None-Match: список тегов через запятую, возможен «*»

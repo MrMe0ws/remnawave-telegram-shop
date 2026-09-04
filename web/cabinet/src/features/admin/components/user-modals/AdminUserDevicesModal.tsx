@@ -97,8 +97,7 @@ export function AdminUserDevicesModal({
       title={t('admin.users.subscription.devicesTitle')}
       icon={Smartphone}
       iconAccent="cyan"
-      panelClassName="sm:max-w-2xl"
-      bodyClassName="p-0"
+      size="lg"
       footer={
         <AdminModalSaveFooter
           onCancel={handleClose}
@@ -108,21 +107,17 @@ export function AdminUserDevicesModal({
         />
       }
     >
-      <div className="p-4 sm:p-5">
+      <div className="space-y-4">
         {error && (
-          <p className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
         <AdminDeviceLimitEditor
           userId={userId}
           customer={customer}
-          totalLimit={totalLimit}
           devices={devicesData?.items ?? []}
           devicesLoading={devicesLoading}
-          variant="plain"
-          compact
-          deferSave
           draftBase={draftBase}
           draftExtra={draftExtra}
           onDraftBaseChange={setDraftBase}
@@ -138,4 +133,4 @@ export function AdminUserDevicesModal({
     </AdminModal>
   )
 }
-
+

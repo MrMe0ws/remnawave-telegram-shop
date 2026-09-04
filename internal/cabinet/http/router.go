@@ -366,7 +366,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 
 	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo, partnerRepo)
 	adminOverviewHandler := handlers.NewAdminOverview(statsRepo, partnerRepo, rw)
-	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw)
+	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw, avatarSecret)
 	// CheckoutRepo — только на чтение (ключ идемпотентности/провайдер в модалке платежа);
 	// не зависит от того, собран ли checkoutSvc (PaymentService может быть nil).
 	adminPaymentsCheckoutRepo := repository.NewCheckoutRepo(pool)

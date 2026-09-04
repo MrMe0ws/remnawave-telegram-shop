@@ -10,13 +10,36 @@ import {
   type AdminSectionIconAccent,
 } from '../utils/adminSectionIconAccents'
 
+/**
+ * Шкала ширин окна. Три ступени вместо произвольных `sm:max-w-*` у каждого
+ * вызова: раньше на одном экране жили окна в трёх разных ширинах, и переход
+ * между ними читался как переход в другой раздел.
+ *
+ *  - `sm` — подтверждение или короткий список действий;
+ *  - `md` — одно-два поля: трафик, срок, серверы, описание;
+ *  - `lg` — внутри окна список: устройства.
+ *
+ * Без `size` окно остаётся прежней ширины (448 px) — так старые вызовы не
+ * меняют вид сами по себе; новым лучше указывать ступень явно.
+ */
+const SIZE_CLASS = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-lg',
+  lg: 'sm:max-w-2xl',
+} as const
+
+export type AdminModalSize = keyof typeof SIZE_CLASS
+
 interface AdminModalProps {
   open: boolean
   onClose: () => void
   title: string
+  /** Подпись под заголовком: контекст окна, а не инструкция. */
+  description?: string
   children: ReactNode
   footer?: ReactNode
   className?: string
+  size?: AdminModalSize
   panelClassName?: string
   bodyClassName?: string
   icon?: LucideIcon
@@ -28,9 +51,11 @@ export function AdminModal({
   open,
   onClose,
   title,
+  description,
   children,
   footer,
   className,
+  size,
   panelClassName,
   bodyClassName,
   icon: Icon,
@@ -75,7 +100,10 @@ export function AdminModal({
           onClick={(e) => e.stopPropagation()}
           className={cn(
             'cabinet-elevated-card admin-modal-panel flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden',
-            'rounded-b-none rounded-t-2xl sm:max-w-md sm:rounded-xl',
+            // Ниже sm любое окно — шторка снизу: на телефоне так до кнопок
+            // ближе, чем до центра экрана.
+            'rounded-b-none rounded-t-2xl sm:rounded-xl',
+            size ? SIZE_CLASS[size] : 'sm:max-w-md',
             panelClassName,
           )}
         >
@@ -91,7 +119,12 @@ export function AdminModal({
                   <Icon className={cn('size-4', iconStyles.iconClassName)} />
                 </div>
               )}
-              <h3 className="min-w-0 truncate text-lg font-semibold leading-tight">{title}</h3>
+              <div className="min-w-0">
+                <h3 className="truncate text-lg font-semibold leading-tight">{title}</h3>
+                {description && (
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
+                )}
+              </div>
             </div>
             <button
               type="button"

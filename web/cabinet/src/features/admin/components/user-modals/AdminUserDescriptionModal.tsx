@@ -10,6 +10,9 @@ import {
   type AdminUserPanelResponse,
 } from '../../hooks/useAdminUsers'
 
+/** Столько же принимает поле description в панели Remnawave. */
+const MAX_DESCRIPTION = 300
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -78,9 +81,10 @@ export function AdminUserDescriptionModal({
       open={open}
       onClose={handleClose}
       title={t('admin.users.subscription.description')}
+      description={t('admin.users.subscription.descriptionHint')}
       icon={FileText}
       iconAccent="slate"
-      panelClassName="sm:max-w-lg"
+      size="md"
       footer={
         <AdminModalSaveFooter
           onCancel={handleClose}
@@ -100,9 +104,13 @@ export function AdminUserDescriptionModal({
           value={draftDescription}
           onChange={(e) => setDraftDescription(e.target.value)}
           rows={5}
+          maxLength={MAX_DESCRIPTION}
           className="admin-input w-full resize-y px-3 py-2"
           placeholder={t('admin.users.overview.descriptionEmpty')}
         />
+        <p className="text-end text-xs tabular-nums text-muted-foreground">
+          {draftDescription.length} / {MAX_DESCRIPTION}
+        </p>
       </div>
     </AdminModal>
   )

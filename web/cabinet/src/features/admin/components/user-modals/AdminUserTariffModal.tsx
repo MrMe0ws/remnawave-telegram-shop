@@ -5,6 +5,7 @@ import { Zap } from 'lucide-react'
 import { AdminModal } from '../AdminModal'
 import { AdminModalSaveFooter } from '../AdminModalSaveFooter'
 import { cn } from '@/lib/utils'
+import { surface } from '../Surface'
 import type { AdminCustomerDTO, AdminTariffBriefDTO } from '@/lib/types/admin'
 import { formatAdminApiError } from '../../utils/formatAdminApiError'
 import { useAdminUserSetTariff } from '../../hooks/useAdminUsers'
@@ -74,9 +75,10 @@ export function AdminUserTariffModal({
       open={open}
       onClose={handleClose}
       title={t('admin.users.subscription.tariff')}
+      description={t('admin.users.subscription.tariffHint')}
       icon={Zap}
       iconAccent="teal"
-      panelClassName="sm:max-w-lg"
+      size="md"
       footer={
         <AdminModalSaveFooter
           onCancel={handleClose}
@@ -95,20 +97,48 @@ export function AdminUserTariffModal({
         {tariffs.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('admin.noData')}</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {tariffs.map((tariff) => (
-              <button
-                key={tariff.id}
-                type="button"
-                onClick={() => setDraftTariffId(tariff.id)}
-                className={cn(
-                  'rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-accent',
-                  draftTariffId === tariff.id && 'border-primary bg-primary/10 text-primary',
-                )}
-              >
-                {tariff.name}
-              </button>
-            ))}
+          /*
+            Список строками, а не чипами: у тарифов длинные имена, и в чипах
+            они складывались в мозаику, по которой нельзя было пробежать
+            глазами сверху вниз.
+          */
+          <div className="grid gap-2">
+            {tariffs.map((tariff) => {
+              const selected = draftTariffId === tariff.id
+              return (
+                <button
+                  key={tariff.id}
+                  type="button"
+                  onClick={() => setDraftTariffId(tariff.id)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-start text-sm transition-colors',
+                    selected
+                      ? 'border border-primary/50 bg-primary/10'
+                      : surface('raised', 'hover:bg-accent/50'),
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex size-4 shrink-0 items-center justify-center rounded-full border',
+                      selected ? 'border-primary' : 'border-muted-foreground/50',
+                    )}
+                  >
+                    {selected && <span className="size-2 rounded-full bg-primary" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{tariff.name}</span>
+                    <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                      {tariff.slug}
+                    </span>
+                  </span>
+                  {tariff.id === currentTariffId && (
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                      {t('admin.users.subscription.tariffCurrent')}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

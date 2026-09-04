@@ -78,3 +78,40 @@ func TestIssueRejectsBadInput(t *testing.T) {
 		t.Fatal("zero account id: want error")
 	}
 }
+
+func TestIssueParseTelegramRoundTrip(t *testing.T) {
+	now := time.Now()
+	token, err := IssueTelegram(secret, 443907358, time.Hour, now)
+	if err != nil {
+		t.Fatalf("issue telegram: %v", err)
+	}
+	got, err := ParseTelegram(secret, token, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("parse telegram: %v", err)
+	}
+	if got != 443907358 {
+		t.Fatalf("telegram id = %d, want 443907358", got)
+	}
+}
+
+// Subject входит в подпись, поэтому токен на аккаунт не разбирается как токен
+// на telegram id и наоборот: иначе ссылка из /me открывала бы аватарку
+// пользователя, чей telegram id численно совпал с id аккаунта.
+func TestParseRejectsForeignSubject(t *testing.T) {
+	now := time.Now()
+	account, err := Issue(secret, 42, time.Hour, now)
+	if err != nil {
+		t.Fatalf("issue: %v", err)
+	}
+	if _, err := ParseTelegram(secret, account, now); !errors.Is(err, ErrMalformed) {
+		t.Fatalf("account token: err = %v, want ErrMalformed", err)
+	}
+
+	tg, err := IssueTelegram(secret, 42, time.Hour, now)
+	if err != nil {
+		t.Fatalf("issue telegram: %v", err)
+	}
+	if _, err := Parse(secret, tg, now); !errors.Is(err, ErrMalformed) {
+		t.Fatalf("telegram token: err = %v, want ErrMalformed", err)
+	}
+}

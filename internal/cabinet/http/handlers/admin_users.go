@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"remnawave-tg-shop-bot/internal/cabinet/avatartoken"
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -26,7 +28,15 @@ type AdminUsersHandler struct {
 	tariffs   *database.TariffRepository
 	loyalty   *database.LoyaltyTierRepository
 	rw        *remnawave.Client
+	// avatarSecret — секрет кабинета, которым подписываются ссылки на
+	// аватарку. Пустой — карточка обойдётся инициалами.
+	avatarSecret []byte
 }
+
+// adminAvatarTTL — срок жизни ссылки на аватарку в админской карточке.
+// Сутки: карточка перезапрашивается на каждом заходе и обновляет ссылку, а
+// вкладка, забытая открытой на ночь, доживёт до утра без битой картинки.
+const adminAvatarTTL = 24 * time.Hour
 
 // NewAdminUsers — конструктор.
 func NewAdminUsers(
@@ -36,14 +46,16 @@ func NewAdminUsers(
 	tariffs *database.TariffRepository,
 	loyalty *database.LoyaltyTierRepository,
 	rw *remnawave.Client,
+	avatarSecret []byte,
 ) *AdminUsersHandler {
 	return &AdminUsersHandler{
-		customers: customers,
-		purchases: purchases,
-		referrals: referrals,
-		tariffs:   tariffs,
-		loyalty:   loyalty,
-		rw:        rw,
+		customers:    customers,
+		purchases:    purchases,
+		referrals:    referrals,
+		tariffs:      tariffs,
+		loyalty:      loyalty,
+		rw:           rw,
+		avatarSecret: avatarSecret,
 	}
 }
 
@@ -73,6 +85,31 @@ type adminCustomerDTO struct {
 	// Заполняется отдельно от mapCustomerToDTO, потому что требует запроса
 	// в cabinet_account; собирается пакетно на всю страницу, без N+1.
 	PanelLogin *string `json:"panel_login,omitempty"`
+	// AvatarURL — подписанная ссылка на аватарку из Telegram
+	// (/cabinet/api/avatar). Заполняется только в карточке одного
+	// пользователя: в списке это были бы десятки запросов в Telegram на
+	// страницу. Пусто у web-клиентов; 404 на саму картинку — законный ответ
+	// (аватарки нет или закрыта приватностью), UI рисует инициалы.
+	AvatarURL string `json:"avatar_url,omitempty"`
+}
+
+// avatarURL — ссылка на аватарку пользователя бота.
+//
+// Существование картинки здесь не проверяется намеренно: это стоило бы
+// запроса getChat на каждую карточку, а <img> и так умеет падать в инициалы
+// по onError.
+func (h *AdminUsersHandler) avatarURL(c *database.Customer) string {
+	if c == nil || len(h.avatarSecret) == 0 {
+		return ""
+	}
+	if c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID) {
+		return ""
+	}
+	token, err := avatartoken.IssueTelegram(h.avatarSecret, c.TelegramID, adminAvatarTTL, time.Now())
+	if err != nil {
+		return ""
+	}
+	return "/cabinet/api/avatar?t=" + url.QueryEscape(token)
 }
 
 // fillPanelLogins проставляет логины web-клиентам одной пачкой.
@@ -387,7 +424,9 @@ func (h *AdminUsersHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, h.customerDTOWithStatus(r.Context(), cust))
+	dto := h.customerDTOWithStatus(r.Context(), cust)
+	dto.AvatarURL = h.avatarURL(cust)
+	writeJSON(w, http.StatusOK, dto)
 }
 
 // --- Remnawave lookup (mirrors internal/handler/admin_remnawave_lookup.go) --

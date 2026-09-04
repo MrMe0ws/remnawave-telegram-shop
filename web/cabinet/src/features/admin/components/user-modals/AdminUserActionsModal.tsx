@@ -113,7 +113,7 @@ export function AdminUserActionsModal({
       title={t('admin.users.actionsModal.title')}
       icon={Shield}
       iconAccent="indigo"
-      panelClassName="sm:max-w-sm"
+      size="sm"
     >
       <div className="grid gap-2">
         {!hasRwUser && (
