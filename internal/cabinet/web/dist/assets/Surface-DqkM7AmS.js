@@ -1,0 +1,1 @@
+import"./query-BjwzDfZs.js";import{v as o}from"./index-DT5iv0_2.js";const d={well:"bg-muted",card:"bg-card",raised:"bg-secondary"},a={well:"border border-border/50",card:"border border-border/60",raised:"border border-border"};function s(r,e){return o(d[r],a[r],e)}function n(r,e){return o(d[r],e)}export{n as a,s};

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { surfaceBg } from './Surface'
 
 import {
   EXPANDABLE_CLASS,
@@ -295,7 +296,7 @@ export function TelegramHtmlEditor({
   return (
     <div>
       <div
-        className="flex flex-wrap items-center gap-0.5 border-b border-border/60 bg-muted/40 px-2 py-1.5"
+        className={surfaceBg('well', 'flex flex-wrap items-center gap-0.5 border-b border-border/60 px-2 py-1.5')}
         role="toolbar"
         aria-label={t('admin.broadcast.editor.toolbar')}
       >
@@ -328,6 +329,7 @@ export function TelegramHtmlEditor({
         onKeyDown={onKeyDown}
         onBlur={emit}
         className={cn(
+          surfaceBg('well'),
           'cabinet-tg-text min-h-[132px] px-3 py-3 text-sm leading-relaxed outline-none',
           'focus-visible:ring-2 focus-visible:ring-primary/50',
           'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground',

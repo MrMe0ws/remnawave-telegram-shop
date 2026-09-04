@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ExternalLink, LayoutGrid } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 import {
   BROADCAST_LINK_KEYS,
   CABINET_LINK_KEYS,
@@ -157,7 +158,7 @@ function Group({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/50">
+    <div className={surface('raised', 'overflow-hidden rounded-lg')}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

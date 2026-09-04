@@ -29,6 +29,7 @@ import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminBroadcastMessagePreview } from '../components/AdminBroadcastMessagePreview'
 import { AdminSelect } from '../components/AdminSelect'
 import { TelegramHtmlEditor } from '../components/TelegramHtmlEditor'
+import { surface } from '../components/Surface'
 import { BroadcastAudienceSelector } from '../components/BroadcastAudienceSelector'
 import {
   BroadcastButtonsPicker,
@@ -244,7 +245,7 @@ export default function AdminBroadcastPage() {
 
         {/* На узком экране форма и предпросмотр — две вкладки: иначе за
             результатом приходится листать через весь экран и обратно. */}
-        <div className="flex gap-1 rounded-xl border border-border/50 bg-muted/40 p-1 lg:hidden">
+        <div className={surface('well', 'flex gap-1 rounded-xl p-1 lg:hidden')}>
           {(['compose', 'preview'] as const).map((tab) => (
             <button
               key={tab}
@@ -341,7 +342,7 @@ export default function AdminBroadcastPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadMutation.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-accent disabled:opacity-50"
+                  className={surface('raised', 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-accent disabled:opacity-50')}
                 >
                   <ImagePlus className="size-4" />
                   {uploadMutation.isPending
@@ -370,7 +371,7 @@ export default function AdminBroadcastPage() {
                  * рисовалось чёрным прямоугольником, и блок выглядел пустой
                  * дырой. Сам файл всё равно виден в предпросмотре справа.
                  */
-                <div className="mx-4 mb-4 flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+                <div className={surface('well', 'mx-4 mb-4 flex items-center gap-3 rounded-lg px-3 py-2')}>
                   <span
                     className={cn(
                       'grid size-9 shrink-0 place-items-center rounded-lg',
@@ -474,7 +475,7 @@ export default function AdminBroadcastPage() {
            */
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t('admin.broadcast.confirmLead')}</p>
-            <dl className="divide-y divide-border/60 rounded-lg border border-border/60">
+            <dl className={surface('well', 'divide-y divide-border/60 rounded-lg')}>
               <ConfirmRow icon={Users} label={t('admin.broadcast.audienceTitle')}>
                 {audienceLabels[selectedAudience] ?? selectedAudience}
               </ConfirmRow>

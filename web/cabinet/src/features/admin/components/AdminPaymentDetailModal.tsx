@@ -17,6 +17,7 @@ import type { LucideIcon } from 'lucide-react'
 import { AdminModal } from './AdminModal'
 import { AdminSectionCard } from './AdminSectionCard'
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 import { copyToClipboard } from '@/lib/clipboard'
 import { useAdminPayment } from '../hooks/useAdminPayments'
 import { formatInvoiceType } from '../utils/formatInvoiceType'
@@ -65,7 +66,7 @@ function Row({ label, value, copyValue }: { label: string; value: ReactNode; cop
 
 function MiniTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5 rounded-lg border border-border/60 bg-card/50 p-3">
+    <div className={surface('raised', 'flex min-w-0 items-center gap-2.5 rounded-lg p-3')}>
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
         <Icon className="size-4" />
       </div>
@@ -111,7 +112,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-start">
               {/* Левая колонка: сводка платежа + пользователь */}
               <div className="space-y-4">
-                <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                <div className={surface('raised', 'rounded-xl p-4')}>
                   <div className="flex items-start gap-3">
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
                       <Receipt className="size-5" />
