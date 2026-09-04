@@ -46,6 +46,17 @@ export function AdminSectionCard({
   fillHeight = false,
   level = 'card',
 }: AdminSectionCardProps) {
+  /*
+   * Поднятый уровень нельзя нарисовать на <Card>: она несёт класс
+   * `cabinet-card`, а `.dark .cabinet-card` заливает элемент градиентом с
+   * !important. Любая заливка из Tailwind оказывается под ним, и карточка
+   * внутри модалки красилась ровно как сама модалка. Поэтому на уровнях выше
+   * плоскости берём обычный div со шкалой, а <Card> с её пластикой остаётся
+   * там, где карточка и правда лежит на странице.
+   */
+  const Root = level === 'card' ? Card : 'div'
+  const base = level === 'card' ? 'cabinet-elevated-card' : surface(level)
+
   const iconStyles =
     iconTone !== 'default'
       ? rwIconToneClassNames(iconTone)
@@ -54,11 +65,9 @@ export function AdminSectionCard({
         : rwIconToneClassNames('default')
 
   return (
-    <Card
+    <Root
       className={cn(
-        // На странице оставляем прежнюю пластику; поднятый уровень её
-        // перебить не может — там градиент с !important.
-        level === 'card' ? 'cabinet-elevated-card' : surface(level),
+        base,
         'overflow-hidden',
         fillHeight && 'flex h-full flex-col',
         className,
@@ -101,6 +110,6 @@ export function AdminSectionCard({
         {headerRight && <div className="shrink-0 self-start sm:self-center">{headerRight}</div>}
       </div>
       <div className={cn('min-w-0 p-4 sm:p-5', fillHeight && 'flex flex-1 flex-col')}>{children}</div>
-    </Card>
+    </Root>
   )
 }

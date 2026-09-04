@@ -1,1 +1,0 @@
-import"./query-BjwzDfZs.js";import{v as o}from"./index-DysHFx7h.js";const e={well:"bg-muted",card:"bg-card",raised:"bg-card shadow-sm dark:bg-secondary dark:shadow-none"},a={well:"border border-border/50",card:"border border-border/60",raised:"border border-border"};function c(r,d){return o(e[r],a[r],d)}function n(r,d){return o(e[r],d)}export{n as a,c as s};

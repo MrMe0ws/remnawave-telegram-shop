@@ -227,11 +227,16 @@ async function main() {
           shots.push({
             name: step.replace(/[^\p{L}\p{N}_-]+/gu, '-').toLowerCase(),
             run: async () => {
-              const target = page
-                .getByRole('tab', { name: step })
-                .or(page.getByRole('button', { name: step }))
-                // Пункты выпадающего меню — role="menuitem", кнопкой их не найти.
-                .or(page.getByRole('menuitem', { name: step }))
+              // `css=` — запасной путь для того, у чего нет роли: строк таблицы,
+              // карточек списка. Без него модалку, открывающуюся по клику на
+              // строку, снять нельзя вообще.
+              const target = step.startsWith('css=')
+                ? page.locator(step.slice(4))
+                : page
+                    .getByRole('tab', { name: step })
+                    .or(page.getByRole('button', { name: step }))
+                    // Пункты выпадающего меню — role="menuitem", кнопкой их не найти.
+                    .or(page.getByRole('menuitem', { name: step }))
               if (await target.count()) {
                 await target.first().click()
                 await page.waitForTimeout(900)
