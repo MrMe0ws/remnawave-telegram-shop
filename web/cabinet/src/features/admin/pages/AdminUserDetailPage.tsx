@@ -60,7 +60,7 @@ import { useAdminLoyaltyTiers } from '../hooks/useAdminLoyalty'
 import type { AdminTariffBriefDTO } from '@/lib/types/admin'
 import { AdminModal } from '../components/AdminModal'
 import { AdminTablePagination } from '../components/AdminTablePagination'
-import { formatDecimals, formatNumber } from '@/lib/format'
+import { formatNumber } from '@/lib/format'
 
 const LIST_PAGE_LIMIT = 20
 
@@ -344,6 +344,8 @@ export default function AdminUserDetailPage() {
               icon={CreditCard}
               iconAccent="emerald"
               fillHeight
+              flushHeader
+              headerRightDesktopOnly
               className="min-w-0"
               headerRight={
                 <span className="text-xs text-muted-foreground">
@@ -367,21 +369,43 @@ export default function AdminUserDetailPage() {
                       <p className="text-xs text-muted-foreground">{t('admin.users.paymentsStars')}</p>
                       <p className="text-lg font-semibold tabular-nums">{paymentsData.stars_sum} ⭐</p>
                       <p className="text-xs text-muted-foreground">{paymentsData.stars_count} {t('admin.users.paymentsCount')}</p>
-                      {paymentsData.stars_rub_equiv > 0 && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {t('admin.users.starsRubEquiv', {
-                            value: formatDecimals(paymentsData.stars_rub_equiv, 2),
-                            rate: paymentsData.rub_per_star,
-                          })}
-                        </p>
-                      )}
                     </div>
                   </div>
                   <div className="min-h-0 flex-1">
                     {paymentItems.length === 0 ? (
                       <EmptyBox icon={CreditCard} text={t('admin.users.overview.noPayments')} />
                     ) : (
-                      <div className="overflow-x-auto">
+                      <>
+                      {/*
+                        На телефоне таблица из четырёх колонок не помещается и
+                        уезжает в горизонтальный скролл. Там те же данные —
+                        строкой-карточкой: способ и период сверху, дата под
+                        ними, сумма справа.
+                      */}
+                      <ul className="flex flex-col gap-2 sm:hidden">
+                        {visiblePayments.map((p: AdminPurchaseDTO) => (
+                          <li
+                            key={p.id}
+                            className="flex items-center gap-3 rounded-xl border border-border bg-secondary p-2.5"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium">
+                                {formatInvoiceType(p.invoice_type, t)}
+                                {p.month > 0
+                                  ? ' \u00b7 ' + t('admin.users.monthsShort', { count: p.month })
+                                  : ''}
+                              </p>
+                              <p className="truncate font-mono text-[10px] tabular-nums text-muted-foreground">
+                                {formatAdminDateTime(p.paid_at, dateLocale)}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-sm font-semibold tabular-nums">
+                              {formatPaymentAmount(p.amount, p.currency || '', p.invoice_type).text}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="hidden overflow-x-auto sm:block">
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b text-left text-xs text-muted-foreground">
@@ -405,6 +429,7 @@ export default function AdminUserDetailPage() {
                           </tbody>
                         </table>
                       </div>
+                      </>
                     )}
                   </div>
                   {paymentItems.length > PREVIEW_ROWS && (
@@ -431,6 +456,7 @@ export default function AdminUserDetailPage() {
               icon={Users}
               iconAccent="rose"
               fillHeight
+              flushHeader
               className="min-w-0"
             >
               {referralsLoading ? (
@@ -440,11 +466,10 @@ export default function AdminUserDetailPage() {
               ) : referralsData ? (
                 <div className="flex min-h-0 flex-1 flex-col">
                   <div className="mb-4 flex flex-wrap gap-2">
+                    {/* Приглашено — все приведённые, активные и нет. */}
                     {[
-                      { labelKey: 'admin.users.referralsTotal', value: referralsData.stats.total },
+                      { labelKey: 'admin.users.referralsInvited', value: referralsData.stats.total },
                       { labelKey: 'admin.users.referralsPaid', value: referralsData.stats.paid },
-                      { labelKey: 'admin.users.referralsActive', value: referralsData.stats.active },
-                      { labelKey: 'admin.users.referralsConversion', value: `${referralsData.stats.conversion}%` },
                       { labelKey: 'admin.users.referralsDays', value: referralsData.stats.earned_total },
                     ].map(({ labelKey, value }) => (
                       <div
@@ -464,7 +489,6 @@ export default function AdminUserDetailPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b text-left text-xs text-muted-foreground">
-                              <th className="pb-2 pr-4 font-normal">{t('admin.users.telegramId')}</th>
                               <th className="pb-2 pr-4 font-normal">{t('admin.users.username')}</th>
                               <th className="pb-2 font-normal">{t('admin.users.status')}</th>
                             </tr>
@@ -472,8 +496,10 @@ export default function AdminUserDetailPage() {
                           <tbody className="divide-y divide-border/50">
                             {visibleReferees.map((ref: AdminRefereeDTO) => (
                               <tr key={ref.telegram_id}>
-                                <td className="py-2 pr-4 font-mono">{ref.telegram_id}</td>
-                                <td className="py-2 pr-4">{ref.telegram_username ? `@${ref.telegram_username}` : '—'}</td>
+                                {/* Без ника подписью остаётся номер: иначе строку не опознать. */}
+                                <td className="py-2 pr-4">
+                                  {ref.telegram_username ? `@${ref.telegram_username}` : `#${ref.telegram_id}`}
+                                </td>
                                 <td className="py-2">
                                   <span className={cn('rounded-full px-2 py-0.5 text-xs', ref.active ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground')}>
                                     {ref.active ? t('admin.users.statusActive') : t('admin.users.referralInactive')}
@@ -517,11 +543,7 @@ export default function AdminUserDetailPage() {
         </div>
       </div>
 
-      <AdminUserMobileActionBar
-        onExtend={openExpireModal}
-        onOpenActions={() => setActionsModal(true)}
-        copy={copy}
-      />
+      <AdminUserMobileActionBar onExtend={openExpireModal} onOpenActions={() => setActionsModal(true)} />
 
       <AdminUserEditModals
         userId={userId!}
@@ -652,19 +674,7 @@ export default function AdminUserDetailPage() {
               {deleteError}
             </p>
           )}
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {hasRwUser && rwStatus === 'ACTIVE' && (
-              <button
-                onClick={() => {
-                  setConfirmDelete(false)
-                  setDeleteError(null)
-                  setConfirmDisable(true)
-                }}
-                className="me-auto rounded-btn px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                {t('admin.users.disableInstead')}
-              </button>
-            )}
+          <div className="flex items-center justify-end gap-2">
             <button onClick={() => { setConfirmDelete(false); setDeleteError(null) }} className="rounded-btn border px-4 py-2 text-sm hover:bg-accent">
               {t('admin.cancel')}
             </button>

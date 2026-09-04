@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { CalendarPlus, Check, Share2, Shield } from 'lucide-react'
+import { CalendarPlus, Shield } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
 interface Props {
   onExtend: () => void
   onOpenActions: () => void
-  copy: { available: boolean; copied: boolean; copy: () => void }
 }
 
 /**
@@ -16,7 +15,7 @@ interface Props {
  * «три точки» — значит прятать самое частое действие админа. Поэтому здесь
  * липкая панель: продление под большим пальцем, остальное — в шторке.
  */
-export function AdminUserMobileActionBar({ onExtend, onOpenActions, copy }: Props) {
+export function AdminUserMobileActionBar({ onExtend, onOpenActions }: Props) {
   const { t } = useTranslation()
 
   return (
@@ -34,20 +33,6 @@ export function AdminUserMobileActionBar({ onExtend, onOpenActions, copy }: Prop
         <CalendarPlus className="size-4 shrink-0" />
         {t('admin.users.extend')}
       </button>
-      {copy.available && (
-        <button
-          type="button"
-          onClick={copy.copy}
-          aria-label={t('admin.users.copySubscriptionLink')}
-          className="inline-flex items-center justify-center rounded-btn border border-border bg-secondary px-3 py-2.5 text-sm shadow-sm backdrop-blur dark:shadow-none"
-        >
-          {copy.copied ? (
-            <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          ) : (
-            <Share2 className="size-4 shrink-0" />
-          )}
-        </button>
-      )}
       <button
         type="button"
         onClick={onOpenActions}

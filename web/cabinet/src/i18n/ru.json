@@ -1613,7 +1613,8 @@
           "expandList_one": "Раскрыть список · ещё {{count}}",
           "expandList_few": "Раскрыть список · ещё {{count}}",
           "expandList_many": "Раскрыть список · ещё {{count}}",
-          "expandList_other": "Раскрыть список · ещё {{count}}"
+          "expandList_other": "Раскрыть список · ещё {{count}}",
+          "tileTrafficUsedOnly": "{{used}} ГБ"
         },
         "actionsModal": {
           "title": "Действия"
@@ -1736,7 +1737,6 @@
         "extendDeltaMinus_many": "−{{count}} дней",
         "extendDeltaMinus_other": "−{{count}} дней",
         "currentExpireHint": "Сейчас до {{date}}",
-        "disableInstead": "Отключить вместо этого",
         "deleteConsequences": {
           "panel_one": "учётка в панели Remnawave и {{count}} привязанное устройство",
           "panel_few": "учётка в панели Remnawave и {{count}} привязанных устройства",
@@ -1750,7 +1750,8 @@
         },
         "extendQuickYear": "+1 год",
         "extendPickDateShort": "Или выбрать дату",
-        "changeTariff": "Сменить тариф"
+        "changeTariff": "Сменить тариф",
+        "referralsInvited": "Приглашено"
       },
       "payments": {
         "title": "Платежи",

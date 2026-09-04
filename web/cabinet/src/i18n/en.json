@@ -1583,7 +1583,8 @@
           "noReferrals": "No one invited yet",
           "collapseList": "Collapse list",
           "expandList_one": "Expand list · {{count}} more",
-          "expandList_other": "Expand list · {{count}} more"
+          "expandList_other": "Expand list · {{count}} more",
+          "tileTrafficUsedOnly": "{{used}} GB"
         },
         "actionsModal": {
           "title": "Actions"
@@ -1700,7 +1701,6 @@
         "extendDeltaMinus_one": "−{{count}} day",
         "extendDeltaMinus_other": "−{{count}} days",
         "currentExpireHint": "Currently until {{date}}",
-        "disableInstead": "Disable instead",
         "deleteConsequences": {
           "panel_one": "the Remnawave account and {{count}} linked device",
           "panel_other": "the Remnawave account and {{count}} linked devices",
@@ -1710,7 +1710,8 @@
         },
         "extendQuickYear": "+1 year",
         "extendPickDateShort": "Or pick a date",
-        "changeTariff": "Change plan"
+        "changeTariff": "Change plan",
+        "referralsInvited": "Invited"
       },
       "payments": {
         "title": "Payments",

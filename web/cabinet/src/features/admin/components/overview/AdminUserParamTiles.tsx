@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Gauge, Layers, Pencil, Smartphone } from 'lucide-react'
+import { CalendarDays, Gauge, Infinity as InfinityIcon, Layers, Pencil, Smartphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -67,7 +67,7 @@ function Tile({
   )
 
   if (!onClick) {
-    return <div className={surface('well', 'rounded-xl p-3')}>{body}</div>
+    return <div className={surface('card', 'rounded-xl p-3')}>{body}</div>
   }
 
   return (
@@ -76,8 +76,10 @@ function Tile({
       onClick={onClick}
       title={editLabel}
       className={cn(
+        // Уровень как у соседних карточек: рядом с ними «поднятая» плитка
+        // читалась подсвеченной, будто выделена. Отклик остаётся на наведении.
         'group admin-overview-clickable admin-overview-clickable--surface relative rounded-xl p-3 text-left',
-        surface('raised'),
+        surface('card', 'hover:bg-secondary'),
       )}
     >
       <Pencil
@@ -136,14 +138,22 @@ export function AdminUserParamTiles({
         icon={Gauge}
         label={t('admin.users.overview.tileTraffic')}
         value={
-          metrics.trafficLimitGb > 0
-            ? t('admin.users.overview.tileTrafficValue', {
+          metrics.trafficLimitGb > 0 ? (
+            t('admin.users.overview.tileTrafficValue', {
+              used: formatDecimals(metrics.trafficUsedGb, 1),
+              limit: formatDecimals(metrics.trafficLimitGb, 0),
+            })
+          ) : (
+            /* Безлимит — знаком бесконечности: слово «без лимита» съедало
+               строку и ломало ритм с соседними плитками. */
+            <span className="inline-flex items-center gap-1.5">
+              {t('admin.users.overview.tileTrafficUsedOnly', {
                 used: formatDecimals(metrics.trafficUsedGb, 1),
-                limit: formatDecimals(metrics.trafficLimitGb, 0),
-              })
-            : t('admin.users.overview.tileTrafficUnlimited', {
-                used: formatDecimals(metrics.trafficUsedGb, 1),
-              })
+              })}
+              <span aria-hidden>·</span>
+              <InfinityIcon className="size-4 text-muted-foreground" aria-label={t('subscriptionPage.unlimited')} />
+            </span>
+          )
         }
         onClick={hasRwUser ? () => onOpenModal('traffic') : undefined}
         editLabel={editLabel}

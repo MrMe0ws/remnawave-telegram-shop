@@ -25,6 +25,17 @@ interface AdminSectionCardProps {
   /** Растянуть карточку на всю высоту родителя (сетка / flex) */
   fillHeight?: boolean
   /**
+   * Шапка без разделителя и с прижатым к содержимому низом.
+   *
+   * Черта под заголовком нужна там, где под ней форма или настройки: она
+   * отделяет «что это» от «что менять». Над списком она лишняя — список и так
+   * начинается своей строкой заголовков, и две горизонтальные линии подряд
+   * читаются как пустая полоса.
+   */
+  flushHeader?: boolean
+  /** Правый слот шапки прячется ниже sm: на телефоне он уходил на свою строку. */
+  headerRightDesktopOnly?: boolean
+  /**
    * Уровень поверхности. По умолчанию `card` — карточка на странице, с
    * привычной пластикой `cabinet-elevated-card`. Внутри модалки нужен
    * `raised`: панель окна сама уже `card`, и на ней такая же карточка
@@ -44,6 +55,8 @@ export function AdminSectionCard({
   iconAccent,
   prominentTitle = false,
   fillHeight = false,
+  flushHeader = false,
+  headerRightDesktopOnly = false,
   level = 'card',
 }: AdminSectionCardProps) {
   /*
@@ -77,7 +90,12 @@ export function AdminSectionCard({
         className,
       )}
     >
-      <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div
+        className={cn(
+          'flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5',
+          flushHeader ? 'pb-2' : 'border-b border-border/70 pb-4',
+        )}
+      >
         <div className="flex min-w-0 items-start gap-3 sm:items-center">
           {Icon && (
             <div
@@ -111,9 +129,26 @@ export function AdminSectionCard({
             )}
           </div>
         </div>
-        {headerRight && <div className="shrink-0 self-start sm:self-center">{headerRight}</div>}
+        {headerRight && (
+          <div
+            className={cn(
+              'shrink-0 self-start sm:self-center',
+              headerRightDesktopOnly && 'hidden sm:block',
+            )}
+          >
+            {headerRight}
+          </div>
+        )}
       </div>
-      <div className={cn('min-w-0 p-4 sm:p-5', fillHeight && 'flex flex-1 flex-col')}>{children}</div>
+      <div
+        className={cn(
+          'min-w-0 px-4 pt-4 sm:px-5 sm:pt-5',
+          flushHeader ? 'pb-4 sm:pb-5' : 'pb-4 sm:pb-5',
+          fillHeight && 'flex flex-1 flex-col',
+        )}
+      >
+        {children}
+      </div>
     </Root>
   )
 }
