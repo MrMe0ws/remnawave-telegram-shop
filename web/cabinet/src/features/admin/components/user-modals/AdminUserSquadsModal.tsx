@@ -6,6 +6,7 @@ import { AdminModal } from '../AdminModal'
 import { AdminModalSaveFooter } from '../AdminModalSaveFooter'
 import { AdminCheckbox } from '../AdminCheckbox'
 import { cn } from '@/lib/utils'
+import { surface } from '../Surface'
 import { formatAdminApiError } from '../../utils/formatAdminApiError'
 import {
   useAdminUserSetSquads,
@@ -120,10 +121,10 @@ export function AdminUserSquadsModal({
               <label
                 key={sq.uuid}
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
+                  'flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
                   draftSquads.includes(sq.uuid)
-                    ? 'border-primary/50 bg-primary/5'
-                    : 'border-border/50 hover:bg-accent/50',
+                    ? 'border border-primary/50 bg-primary/10'
+                    : surface('raised', 'hover:bg-accent/50'),
                 )}
               >
                 <AdminCheckbox

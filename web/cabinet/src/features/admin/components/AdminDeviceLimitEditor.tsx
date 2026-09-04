@@ -5,6 +5,7 @@ import { Loader2, Minus, Plus, Smartphone, Trash2 } from 'lucide-react'
 import { AdminSectionCard } from './AdminSectionCard'
 import { DevicePlatformIcon } from '@/components/DevicePlatformIcon'
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 import type { AdminCustomerDTO, AdminDeviceDTO } from '@/lib/types/admin'
 import {
   useAdminUserSetHwidLimit,
@@ -18,7 +19,7 @@ const MIN_TOTAL = 1
 const MAX_TOTAL = 100
 
 const stepperBtnClass =
-  'inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/60 hover:bg-accent disabled:opacity-40'
+  surface('raised', 'inline-flex size-9 shrink-0 items-center justify-center rounded-lg hover:bg-accent disabled:opacity-40')
 const stepperValueClass =
   'admin-input flex h-9 w-12 shrink-0 items-center justify-center px-1 text-center text-sm font-semibold tabular-nums'
 
@@ -217,8 +218,8 @@ export function AdminDeviceLimitEditor(props: Props) {
             <div
               key={label}
               className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-center',
-                accent ? 'border-primary/40 bg-primary/5' : 'border-border/50 bg-background/60',
+                'rounded-lg px-2.5 py-1.5 text-center',
+                accent ? 'border border-primary/40 bg-primary/10' : surface('raised'),
               )}
             >
               <p className="text-[9px] uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -234,7 +235,7 @@ export function AdminDeviceLimitEditor(props: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col rounded-xl border border-border/60 p-3 sm:p-4">
+        <div className={surface('raised', 'flex flex-col rounded-xl p-3 sm:p-4')}>
           <p className="text-xs font-medium sm:text-sm">
             {deferSave
               ? t('admin.users.subscription.baseLimitTitle')
@@ -261,7 +262,7 @@ export function AdminDeviceLimitEditor(props: Props) {
           </div>
         </div>
 
-        <div className="flex flex-col rounded-xl border border-border/60 p-3 sm:p-4">
+        <div className={surface('raised', 'flex flex-col rounded-xl p-3 sm:p-4')}>
           <p className="text-xs font-medium sm:text-sm">{t('admin.users.subscription.extraHwidTitle')}</p>
           <p className="mt-0.5 text-[10px] text-muted-foreground sm:text-xs">
             {t('admin.users.subscription.extraHwidHint')}
@@ -302,9 +303,9 @@ export function AdminDeviceLimitEditor(props: Props) {
         ) : (
           <div className="space-y-2">
             {devices.map((d) => (
-              <div key={d.hwid} className="flex items-start justify-between gap-2 rounded-lg border p-3">
+              <div key={d.hwid} className={surface('raised', 'flex items-start justify-between gap-2 rounded-lg p-3')}>
                 <div className="flex min-w-0 items-start gap-2.5">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-muted/30">
+                  <div className={surface('well', 'flex size-9 shrink-0 items-center justify-center rounded-lg')}>
                     <DevicePlatformIcon platform={d.platform} className="text-muted-foreground" />
                   </div>
                   <div className="min-w-0">

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 
 type ViewMode = 'days' | 'months' | 'years'
 
@@ -152,8 +153,10 @@ export function AdminDatePicker({
     return Array.from({ length: 12 }, (_, i) => yearPageStart + i)
   }, [yearPageStart])
 
+  // Календарь живёт внутри модалки, а `cabinet-elevated-card` красил его ровно
+  // как её панель — берём поднятый уровень шкалы.
   return (
-    <div className={cn('cabinet-elevated-card rounded-xl p-3', className)}>
+    <div className={cn(surface('raised', 'rounded-xl p-3'), className)}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -162,7 +165,7 @@ export function AdminDatePicker({
             else if (viewMode === 'months') setViewYear((y) => y - 1)
             else shiftMonth(-1)
           }}
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 hover:bg-accent"
+          className={surface('raised', 'inline-flex size-8 shrink-0 items-center justify-center rounded-lg hover:bg-accent')}
           aria-label={t('admin.prev')}
         >
           <ChevronLeft className="size-4" />
@@ -203,7 +206,7 @@ export function AdminDatePicker({
             else if (viewMode === 'months') setViewYear((y) => y + 1)
             else shiftMonth(1)
           }}
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/60 hover:bg-accent"
+          className={surface('raised', 'inline-flex size-8 shrink-0 items-center justify-center rounded-lg hover:bg-accent')}
           aria-label={t('admin.next')}
         >
           <ChevronRight className="size-4" />
