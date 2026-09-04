@@ -38,6 +38,7 @@ import { formatMoney, formatPercent, formatDayShort, formatDayMonth } from '@/fe
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { RecordCard } from '@/components/RecordCard'
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 import type {
   AdminPartnerDTO,
   AdminPartnerCustomerDTO,
@@ -223,7 +224,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
         />
       </div>
 
-      <dl className="divide-y divide-border rounded-lg border border-border text-sm">
+      <dl className={surface('raised', 'divide-y divide-border rounded-lg text-sm')}>
         <Row
           icon={Sparkles}
           label={t('admin.partners.terms.first')}
@@ -261,7 +262,7 @@ function OverviewTab({ partner }: { partner: AdminPartnerDTO }) {
       </dl>
 
       {partner.app_about ? (
-        <div className="rounded-lg border border-border p-3 text-sm">
+        <div className={surface('raised', 'rounded-lg p-3 text-sm')}>
           <p className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
             <FileText className="size-3.5 shrink-0 text-primary" />
             {t('admin.partners.detail.application')}
@@ -290,7 +291,7 @@ function LinksTab({ links }: { links: { id: number; name: string; code: string; 
   const { t } = useTranslation()
   if (links.length === 0) return <Empty text={t('admin.partners.detail.linksEmpty')} />
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+    <ul className={surface('raised', 'divide-y divide-border rounded-lg text-sm')}>
       {links.map((l) => (
         <li key={l.id} className={cn('flex items-center justify-between gap-3 px-3 py-2.5', l.archived && 'opacity-60')}>
           <div className="min-w-0">
@@ -319,7 +320,7 @@ function CustomersTab({ partnerID }: { partnerID: number }) {
 
   return (
     <>
-      <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+      <ul className={surface('raised', 'divide-y divide-border rounded-lg text-sm')}>
         {items.map((c, i) => (
           <li key={`${c.label}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
             <div className="min-w-0">
@@ -404,7 +405,7 @@ function OperationsTab({ partnerID }: { partnerID: number }) {
         ))}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
+      <div className={surface('raised', 'hidden overflow-x-auto rounded-lg sm:block')}>
         <table className="w-full min-w-[520px] border-collapse text-sm">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -466,7 +467,7 @@ function PayoutsTab({ partnerID }: { partnerID: number }) {
 
   return (
     <>
-      <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+      <ul className={surface('raised', 'divide-y divide-border rounded-lg text-sm')}>
         {items.map((p) => (
           <li key={p.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
             <div className="min-w-0">
@@ -659,7 +660,7 @@ function Metric({
   sub: string
 }) {
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className={surface('raised', 'rounded-lg p-3')}>
       <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
         <Icon className="size-3.5 shrink-0 text-primary" />
         {label}
@@ -815,7 +816,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+        className={surface('well', 'w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none')}
       />
     </div>
   )

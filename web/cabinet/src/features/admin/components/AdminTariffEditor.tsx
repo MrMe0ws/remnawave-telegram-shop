@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 import { AdminModal } from './AdminModal'
 import { AdminConfirmModal } from './AdminConfirmModal'
 import { TariffDescriptionEditor } from './TariffDescriptionEditor'
@@ -570,7 +571,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   <button
                     type="button"
                     onClick={() => set('squad_uuids', [])}
-                    className="rounded-md border border-border/60 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className={surface('raised', 'rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground')}
                   >
                     {t('admin.tariffs.squadsClear')}
                   </button>
@@ -581,10 +582,10 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   <label
                     key={sq.uuid}
                     className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
+                      'flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
                       form.squad_uuids.includes(sq.uuid)
-                        ? 'border-primary/50 bg-primary/5'
-                        : 'border-border/60 hover:bg-accent/40',
+                        ? 'border border-primary/50 bg-primary/10'
+                        : surface('raised', 'hover:bg-accent/40'),
                     )}
                   >
                     <AdminCheckbox

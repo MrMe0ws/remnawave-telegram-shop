@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { surface, type SurfaceLevel } from './Surface'
 import { rwIconToneClassNames, type RwIconTone } from '../utils/rwStatusStyles'
 import {
   adminSectionIconAccentClassNames,
@@ -23,6 +24,13 @@ interface AdminSectionCardProps {
   iconAccent?: AdminSectionIconAccent
   /** Растянуть карточку на всю высоту родителя (сетка / flex) */
   fillHeight?: boolean
+  /**
+   * Уровень поверхности. По умолчанию `card` — карточка на странице, с
+   * привычной пластикой `cabinet-elevated-card`. Внутри модалки нужен
+   * `raised`: панель окна сама уже `card`, и на ней такая же карточка
+   * читается как продолжение фона.
+   */
+  level?: SurfaceLevel
 }
 
 export function AdminSectionCard({
@@ -36,6 +44,7 @@ export function AdminSectionCard({
   iconAccent,
   prominentTitle = false,
   fillHeight = false,
+  level = 'card',
 }: AdminSectionCardProps) {
   const iconStyles =
     iconTone !== 'default'
@@ -45,7 +54,16 @@ export function AdminSectionCard({
         : rwIconToneClassNames('default')
 
   return (
-    <Card className={cn('cabinet-elevated-card overflow-hidden', fillHeight && 'flex h-full flex-col', className)}>
+    <Card
+      className={cn(
+        // На странице оставляем прежнюю пластику; поднятый уровень её
+        // перебить не может — там градиент с !important.
+        level === 'card' ? 'cabinet-elevated-card' : surface(level),
+        'overflow-hidden',
+        fillHeight && 'flex h-full flex-col',
+        className,
+      )}
+    >
       <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex min-w-0 items-start gap-3 sm:items-center">
           {Icon && (

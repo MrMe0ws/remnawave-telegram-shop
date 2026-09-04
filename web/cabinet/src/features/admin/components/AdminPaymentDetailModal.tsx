@@ -137,7 +137,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
                   <MiniTile icon={Receipt} label={t('admin.payments.createdAt')} value={formatAdminDateTime(data.created_at)} />
                 </div>
 
-                <AdminSectionCard title={t('admin.payments.sectionUser')} icon={User} iconAccent="violet">
+                <AdminSectionCard level="raised" title={t('admin.payments.sectionUser')} icon={User} iconAccent="violet">
                   <div className="divide-y divide-border/40">
                     <Row label={t('admin.payments.sectionUser')} value={username} />
                     <Row label={t('admin.users.id')} value={data.customer_id} copyValue={String(data.customer_id)} />
@@ -146,7 +146,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
                   <button
                     type="button"
                     onClick={() => handleOpenUser(data.customer_id)}
-                    className="mt-3 flex w-full items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-accent"
+                    className={surface('raised', 'mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-accent')}
                   >
                     <UserRound className="size-4 shrink-0" />
                     {t('admin.payments.openUserCard')}
@@ -156,7 +156,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
 
               {/* Правая колонка: платёж / провайдер / покупка */}
               <div className="space-y-4">
-                <AdminSectionCard title={t('admin.payments.sectionPayment')} icon={Receipt} iconAccent="emerald">
+                <AdminSectionCard level="raised" title={t('admin.payments.sectionPayment')} icon={Receipt} iconAccent="emerald">
                   <div className="divide-y divide-border/40">
                     <Row label="ID" value={`#${data.id}`} copyValue={String(data.id)} />
                     <Row label={t('admin.payments.amount')} value={amount.text} />
@@ -167,7 +167,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
                   </div>
                 </AdminSectionCard>
 
-                <AdminSectionCard title={t('admin.payments.sectionProvider')} icon={Landmark} iconAccent="blue">
+                <AdminSectionCard level="raised" title={t('admin.payments.sectionProvider')} icon={Landmark} iconAccent="blue">
                   <div className="divide-y divide-border/40">
                     <Row label={t('admin.payments.provider')} value={formatInvoiceType(data.invoice_type, t)} />
                     <Row
@@ -183,7 +183,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
                   </div>
                 </AdminSectionCard>
 
-                <AdminSectionCard title={t('admin.payments.sectionPurchase')} icon={Package} iconAccent="amber">
+                <AdminSectionCard level="raised" title={t('admin.payments.sectionPurchase')} icon={Package} iconAccent="amber">
                   <div className="divide-y divide-border/40">
                     <Row label={t('admin.payments.kindLabel')} value={formatPurchaseKind(data.purchase_kind, t)} />
                     {data.tariff_name && <Row label={t('admin.payments.tariff')} value={data.tariff_name} />}

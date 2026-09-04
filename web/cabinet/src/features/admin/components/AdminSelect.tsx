@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { surface } from './Surface'
 
 const LIST_MAX_HEIGHT_PX = 240
 const LIST_GAP_PX = 6
@@ -199,7 +200,8 @@ export function AdminSelect<T extends string | number = string>({
           // заливает контрол градиентом card → secondary поверх такой же
           // карточки-контейнера, и селект сливался с тем, на чём лежит.
           // Токен, а не цвет: все декор-темы переопределяют --secondary сами.
-          'flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/40',
+          surface('raised'),
+          'flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent/40',
           open && 'border-primary/40 ring-1 ring-primary/20',
           disabled && 'cursor-not-allowed opacity-60 hover:bg-transparent',
         )}

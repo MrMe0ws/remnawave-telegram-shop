@@ -475,7 +475,7 @@ export default function AdminBroadcastPage() {
            */
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t('admin.broadcast.confirmLead')}</p>
-            <dl className={surface('well', 'divide-y divide-border/60 rounded-lg')}>
+            <dl className={surface('raised', 'divide-y divide-border/60 rounded-lg')}>
               <ConfirmRow icon={Users} label={t('admin.broadcast.audienceTitle')}>
                 {audienceLabels[selectedAudience] ?? selectedAudience}
               </ConfirmRow>
