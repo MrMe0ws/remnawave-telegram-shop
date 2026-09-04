@@ -80,6 +80,12 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   const panelWidth = useAdminMobileNavWidth()
   const navProgress = panelWidth > 0 ? Math.min(1, mobileNavOffsetPx / panelWidth) : 0
   const navLayerVisible = mobileNavOpen || mobileNavOffsetPx > 0
+  /*
+   * Кликабельность слоя привязана к видимой позиции панели, а не к флагу
+   * `mobileNavOpen`: флаг живёт ещё 300мс после закрытия, и всё это время
+   * прозрачный бэкдроп на весь экран съедал первый тап по странице.
+   */
+  const navLayerInteractive = mobileNavOffsetPx > 0
   const [pageMeta, setPageMeta] = useState<AdminPageMeta>({})
   /*
    * Значение контекста обязано быть стабильным: `useAdminPageMeta` держит ctx
@@ -226,7 +232,7 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
           <div
             className={cn(
               'fixed inset-0 z-[210] lg:hidden',
-              !navLayerVisible && 'pointer-events-none',
+              !navLayerInteractive && 'pointer-events-none',
             )}
             aria-hidden={!navLayerVisible}
           >
@@ -239,6 +245,7 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
               onClick={closeMobileNav}
             />
             <aside
+              data-admin-nav-panel
               className={cn(
                 'absolute bottom-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-border bg-background p-4 shadow-xl will-change-transform',
                 !mobileNavDragging && 'transition-[transform,top] duration-300 ease-out',

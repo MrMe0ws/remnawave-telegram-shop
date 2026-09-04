@@ -2,6 +2,8 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -33,21 +35,45 @@ export function AdminShellProvider({ children }: { children: ReactNode }) {
   const [mobileNavDragging, setMobileNavDragging] = useState(false)
   const [mobileHeaderVisible, setMobileHeaderVisible] = useState(true)
 
+  /*
+   * Отложенный сброс `mobileNavOpen` обязан отменяться при любом повторном
+   * открытии. Иначе таймер от прошлого закрытия догоняет уже открытую шторку и
+   * оставляет состояние «open = false, панель выдвинута на всю ширину». В таком
+   * состоянии врут все проверки, которые смотрят на `mobileNavOpen`: например
+   * `isFullyOpen()` в useAdminLeftEdgeSwipe считает меню закрытым и начинает
+   * трактовать тапы по пунктам меню как старт edge-свайпа.
+   */
+  const closeTimerRef = useRef<number | null>(null)
+
+  const cancelPendingClose = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => cancelPendingClose, [cancelPendingClose])
+
   const closeMobileNav = useCallback(() => {
+    cancelPendingClose()
     setMobileNavDragging(false)
     setMobileNavOffsetPx(0)
-    window.setTimeout(() => setMobileNavOpen(false), NAV_ANIM_MS)
-  }, [])
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null
+      setMobileNavOpen(false)
+    }, NAV_ANIM_MS)
+  }, [cancelPendingClose])
 
   const openMobileNav = useCallback(() => {
     const width = getAdminMobileNavWidthPx()
+    cancelPendingClose()
     setMobileNavDragging(false)
     setMobileNavOpen(true)
     setMobileNavOffsetPx(0)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setMobileNavOffsetPx(width))
     })
-  }, [])
+  }, [cancelPendingClose])
 
   // Кнопка в шапке должна и закрывать шторку, а не только открывать.
   // Условие — по смещению панели, а не по mobileNavOpen: во время анимации
@@ -61,13 +87,17 @@ export function AdminShellProvider({ children }: { children: ReactNode }) {
     openMobileNav()
   }, [mobileNavOffsetPx, closeMobileNav, openMobileNav])
 
-  const setMobileNavDrag = useCallback((offsetPx: number) => {
-    const width = getAdminMobileNavWidthPx()
-    const clamped = Math.min(Math.max(offsetPx, 0), width)
-    setMobileNavDragging(true)
-    setMobileNavOpen(true)
-    setMobileNavOffsetPx(clamped)
-  }, [])
+  const setMobileNavDrag = useCallback(
+    (offsetPx: number) => {
+      const width = getAdminMobileNavWidthPx()
+      const clamped = Math.min(Math.max(offsetPx, 0), width)
+      cancelPendingClose()
+      setMobileNavDragging(true)
+      setMobileNavOpen(true)
+      setMobileNavOffsetPx(clamped)
+    },
+    [cancelPendingClose],
+  )
 
   const commitMobileNavDrag = useCallback(
     (offsetPx: number) => {
@@ -75,13 +105,14 @@ export function AdminShellProvider({ children }: { children: ReactNode }) {
       const shouldOpen = offsetPx >= width * 0.35
       setMobileNavDragging(false)
       if (shouldOpen) {
+        cancelPendingClose()
         setMobileNavOpen(true)
         setMobileNavOffsetPx(width)
         return
       }
       closeMobileNav()
     },
-    [closeMobileNav],
+    [cancelPendingClose, closeMobileNav],
   )
 
   return (

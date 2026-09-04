@@ -42,6 +42,7 @@ export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
           <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
           <button
             type="button"
+            data-admin-nav-toggle
             onClick={toggleMobileNav}
             aria-expanded={mobileNavExpanded}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-2.5 py-2 text-sm font-medium lg:hidden"
