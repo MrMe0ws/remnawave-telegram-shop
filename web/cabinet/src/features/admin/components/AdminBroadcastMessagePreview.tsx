@@ -74,7 +74,10 @@ export function AdminBroadcastMessagePreview({
   const caption = html.trim()
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#17212b] text-[#f2f5f8]">
+    // Оба вида Telegram: светлый чат в светлой теме, тёмный в тёмной.
+    // Цвета взяты у самого Telegram и намеренно не из наших токенов — это
+    // изображение чужого интерфейса, декор-темы к нему отношения не имеют.
+    <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-white text-[#0f0f0f] dark:border-white/[0.07] dark:bg-[#17212b] dark:text-[#f2f5f8]">
       {mediaUrl &&
         (mediaKind === 'video' ? (
           <video src={mediaUrl} className="aspect-video w-full object-cover" controls muted playsInline />
@@ -89,17 +92,17 @@ export function AdminBroadcastMessagePreview({
           dangerouslySetInnerHTML={{ __html: renderTelegramHtml(caption) }}
         />
       ) : (
-        <p className="px-3 py-2.5 text-sm text-white/45">
+        <p className="px-3 py-2.5 text-sm text-black/40 dark:text-white/45">
           {mediaUrl ? t('admin.broadcast.previewNoText') : t('admin.broadcast.previewEmpty')}
         </p>
       )}
 
       {inlineButtons.length > 0 && (
-        <div className="space-y-1.5 border-t border-white/10 p-2">
+        <div className="space-y-1.5 border-t border-black/[0.08] p-2 dark:border-white/10">
           {inlineButtons.map((label) => (
             <div
               key={label}
-              className="rounded-lg bg-[#2b5278]/80 px-3 py-2 text-center text-sm font-medium text-[#6ab3f3]"
+              className="rounded-lg bg-black/[0.05] px-3 py-2 text-center text-sm font-medium text-[#168acd] dark:bg-[#2b5278]/80 dark:text-[#6ab3f3]"
             >
               {label}
             </div>

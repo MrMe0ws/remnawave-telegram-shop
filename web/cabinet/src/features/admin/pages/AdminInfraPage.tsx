@@ -8,7 +8,7 @@ import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
-import { imageSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
+import { faviconSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
 import { Card } from '@/components/ui/card'
 
 type TabKey = 'nodes' | 'providers' | 'history' | 'settings'
@@ -354,7 +354,7 @@ function ProvidersTab() {
               <div className="flex items-center gap-3">
                 {prov.faviconLink && (
                   <img
-                    src={imageSrcFromUrl(prov.faviconLink)}
+                    src={faviconSrcFromUrl(prov.faviconLink)}
                     alt=""
                     className="size-6 rounded object-cover"
                     onError={(e) => {

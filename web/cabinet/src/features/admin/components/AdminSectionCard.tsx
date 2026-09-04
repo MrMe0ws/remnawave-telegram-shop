@@ -55,7 +55,11 @@ export function AdminSectionCard({
    * там, где карточка и правда лежит на странице.
    */
   const Root = level === 'card' ? Card : 'div'
-  const base = level === 'card' ? 'cabinet-elevated-card' : surface(level)
+  const base =
+    level === 'card'
+      ? 'cabinet-elevated-card'
+      : // Радиус и цвет текста приходили из <Card>; обычный div их не знает.
+        surface(level, 'rounded-[var(--radius)] text-card-foreground')
 
   const iconStyles =
     iconTone !== 'default'
