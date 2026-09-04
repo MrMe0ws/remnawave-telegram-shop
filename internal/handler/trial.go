@@ -12,6 +12,28 @@ import (
 	"remnawave-tg-shop-bot/utils"
 )
 
+// resolveTrialButton — кнопка «Попробовать бесплатно».
+//
+// В режиме minimalism ведёт сразу в WebApp на /cabinet/dashboard, где человека
+// встречает карточка пробного периода с кнопкой «Активировать бесплатно».
+// Триал-флоу внутри Telegram там только дублировал кабинет: пользователь
+// активировал пробный в боте, а подключаться всё равно уходил в мини-апп.
+//
+// В classic (и без кабинета вовсе) остаётся прежний callback —
+// TrialCallbackHandler ниже: там весь путь покупки живёт в боте, и уводить
+// из него один только пробный период значило бы рвать сценарий пополам.
+// Тот же callback обслуживает кнопки в уже отправленных сообщениях.
+func (h Handler) resolveTrialButton(langCode, buttonKey string) models.InlineKeyboardButton {
+	if cabinetTelegramMinimalismActive() {
+		if u := cabinetWebAppURL("/cabinet/dashboard"); u != "" {
+			return h.translation.WithButton(langCode, buttonKey, models.InlineKeyboardButton{
+				WebApp: &models.WebAppInfo{URL: u},
+			})
+		}
+	}
+	return h.translation.WithButton(langCode, buttonKey, models.InlineKeyboardButton{CallbackData: CallbackTrial})
+}
+
 func (h Handler) TrialCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if config.TrialDays() == 0 {
 		return
