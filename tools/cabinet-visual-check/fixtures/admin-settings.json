@@ -68,6 +68,17 @@
             "instant": true
           },
           {
+            "key": "CABINET_DEEPLINK_HAPP_CRYPT_VERSION",
+            "type": "enum",
+            "value": "crypt5",
+            "source": "default",
+            "instant": true,
+            "enum_values": [
+              "crypt5",
+              "crypt4"
+            ]
+          },
+          {
             "key": "CABINET_DEEPLINK_INCY_ENCRYPT",
             "type": "bool",
             "value": "false",

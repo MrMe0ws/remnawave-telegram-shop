@@ -466,7 +466,11 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'deeplink',
       titleKey: 'admin.settings.subsections.cabinet_connect.deeplink',
       icon: Shield,
-      keys: ['CABINET_DEEPLINK_HAPP_ENCRYPT', 'CABINET_DEEPLINK_INCY_ENCRYPT'],
+      keys: [
+        'CABINET_DEEPLINK_HAPP_ENCRYPT',
+        'CABINET_DEEPLINK_HAPP_CRYPT_VERSION',
+        'CABINET_DEEPLINK_INCY_ENCRYPT',
+      ],
     },
     {
       id: 'telegram',

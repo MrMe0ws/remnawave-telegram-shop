@@ -40,6 +40,7 @@ func cabinetDecorThemeSet() map[string]struct{} {
 	}
 	return m
 }
+
 type SettingType string
 
 const (
@@ -55,16 +56,16 @@ const (
 
 // SettingField — метаданные одного editable env-ключа (Phase 1 whitelist).
 type SettingField struct {
-	Key         string
-	Group       string
-	Type        SettingType
-	EnumValues  []string
-	MinInt      *int
-	MaxInt      *int
-	Instant     bool // bool toggles — autosave в UI
-	Apply       func(value string) error
-	Current     func() string
-	Source      func() string // "env" | "db" | "default"
+	Key        string
+	Group      string
+	Type       SettingType
+	EnumValues []string
+	MinInt     *int
+	MaxInt     *int
+	Instant    bool // bool toggles — autosave в UI
+	Apply      func(value string) error
+	Current    func() string
+	Source     func() string // "env" | "db" | "default"
 }
 
 var remnaTagPattern = regexp.MustCompile(`^[A-Z0-9_]+$`)
@@ -75,7 +76,7 @@ func RuntimeSettingsRegistry() []SettingField {
 		// --- loyalty ---
 		{
 			Key: "LOYALTY_ENABLED", Group: "loyalty", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.loyaltyEnabled = v }),
+			Apply:   applyBoolField(func(v bool) { conf.loyaltyEnabled = v }),
 			Current: func() string { return boolStr(conf.loyaltyEnabled) },
 		},
 		{
@@ -217,7 +218,7 @@ func RuntimeSettingsRegistry() []SettingField {
 		// --- payments_notify ---
 		{
 			Key: "PAYMENTS_NOTIFY_ENABLED", Group: "payments_notify", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.paymentsNotifyEnabled = v }),
+			Apply:   applyBoolField(func(v bool) { conf.paymentsNotifyEnabled = v }),
 			Current: func() string { return boolStr(conf.paymentsNotifyEnabled) },
 		},
 		{
@@ -255,14 +256,14 @@ func RuntimeSettingsRegistry() []SettingField {
 		// --- trial ---
 		{
 			Key: "TRIAL_DAYS", Group: "trial", Type: SettingInt,
-			MinInt: intPtr(1),
-			Apply:  applyIntField(func(v int) error { conf.trialDays = v; return nil }),
+			MinInt:  intPtr(1),
+			Apply:   applyIntField(func(v int) error { conf.trialDays = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.trialDays) },
 		},
 		{
 			Key: "TRIAL_TRAFFIC_LIMIT", Group: "trial", Type: SettingInt,
-			MinInt: intPtr(1),
-			Apply:  applyIntField(func(v int) error { conf.trialTrafficLimit = v; return nil }),
+			MinInt:  intPtr(1),
+			Apply:   applyIntField(func(v int) error { conf.trialTrafficLimit = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.trialTrafficLimit) },
 		},
 		{
@@ -273,7 +274,7 @@ func RuntimeSettingsRegistry() []SettingField {
 		},
 		{
 			Key: "TRIAL_ADD_TO_PAID", Group: "trial", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.trialAddsToPaid = v }),
+			Apply:   applyBoolField(func(v bool) { conf.trialAddsToPaid = v }),
 			Current: func() string { return boolStr(conf.trialAddsToPaid) },
 		},
 		{
@@ -286,80 +287,80 @@ func RuntimeSettingsRegistry() []SettingField {
 		// --- tags ---
 		{
 			Key: "REMNAWAVE_TAG", Group: "tags", Type: SettingText,
-			Apply: applyRemnaTag(func(v string) { conf.remnawaveTag = v }),
+			Apply:   applyRemnaTag(func(v string) { conf.remnawaveTag = v }),
 			Current: func() string { return conf.remnawaveTag },
 		},
 		{
 			Key: "TRIAL_REMNAWAVE_TAG", Group: "tags", Type: SettingText,
-			Apply: applyRemnaTagOptional(func(v string) { conf.trialRemnawaveTag = v }),
+			Apply:   applyRemnaTagOptional(func(v string) { conf.trialRemnawaveTag = v }),
 			Current: func() string { return conf.trialRemnawaveTag },
 		},
 
 		// --- hwid ---
 		{
 			Key: "HWID_EXTRA_DEVICES_ENABLED", Group: "hwid", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.hwidExtraDevicesEnabled = v }),
+			Apply:   applyBoolField(func(v bool) { conf.hwidExtraDevicesEnabled = v }),
 			Current: func() string { return boolStr(conf.hwidExtraDevicesEnabled) },
 		},
 		{
 			Key: "HWID_ADD_PRICE", Group: "hwid", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.hwidAddPrice = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.hwidAddPrice = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.hwidAddPrice) },
 		},
 		{
 			Key: "HWID_ADD_STARS_PRICE", Group: "hwid", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.hwidAddStarsPrice = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.hwidAddStarsPrice = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.hwidAddStarsPrice) },
 		},
 		{
 			Key: "HWID_MAX_DEVICE", Group: "hwid", Type: SettingInt,
-			MinInt: intPtr(1),
-			Apply:  applyIntField(func(v int) error { conf.hwidMaxDevices = v; return nil }),
+			MinInt:  intPtr(1),
+			Apply:   applyIntField(func(v int) error { conf.hwidMaxDevices = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.hwidMaxDevices) },
 		},
 		{
 			Key: "TRIAL_HWID_LIMIT", Group: "hwid", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.trialHwidLimit = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.trialHwidLimit = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.trialHwidLimit) },
 		},
 		{
 			Key: "PAID_HWID_LIMIT", Group: "hwid", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.paidHwidLimit = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.paidHwidLimit = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.paidHwidLimit) },
 		},
 		{
 			Key: "HWID_FALLBACK_DEVICE_LIMIT", Group: "hwid", Type: SettingInt,
-			MinInt: intPtr(1),
-			Apply:  applyIntField(func(v int) error { conf.hwidFallbackDeviceLimit = v; return nil }),
+			MinInt:  intPtr(1),
+			Apply:   applyIntField(func(v int) error { conf.hwidFallbackDeviceLimit = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.hwidFallbackDeviceLimit) },
 		},
 
 		// --- referral (progressive only; REFERRAL_MODE / REFERRAL_DAYS — только .env) ---
 		{
 			Key: "REFERRAL_FIRST_REFERRER_DAYS", Group: "referral", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.referralFirstReferrerDays = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.referralFirstReferrerDays = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.referralFirstReferrerDays) },
 		},
 		{
 			Key: "REFERRAL_FIRST_REFEREE_DAYS", Group: "referral", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.referralFirstRefereeDays = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.referralFirstRefereeDays = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.referralFirstRefereeDays) },
 		},
 		{
 			Key: "REFERRAL_REPEAT_REFERRER_DAYS", Group: "referral", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.referralRepeatReferrerDays = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.referralRepeatReferrerDays = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.referralRepeatReferrerDays) },
 		},
 		{
 			Key: "REFERRAL_SCALE_BY_MONTHS", Group: "referral", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.referralScaleByMonths = v }),
+			Apply:   applyBoolField(func(v bool) { conf.referralScaleByMonths = v }),
 			Current: func() string { return boolStr(conf.referralScaleByMonths) },
 		},
 
@@ -465,7 +466,7 @@ func RuntimeSettingsRegistry() []SettingField {
 		// --- access ---
 		{
 			Key: "FORWARD_USER_MESSAGES_TO_ADMIN", Group: "access", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.forwardUserMessagesToAdmin = v }),
+			Apply:   applyBoolField(func(v bool) { conf.forwardUserMessagesToAdmin = v }),
 			Current: func() string { return boolStr(conf.forwardUserMessagesToAdmin) },
 		},
 		{
@@ -523,6 +524,12 @@ func RuntimeSettingsRegistry() []SettingField {
 			Current: cabinetBoolCurrent("CABINET_DEEPLINK_HAPP_ENCRYPT", false),
 		},
 		{
+			Key: "CABINET_DEEPLINK_HAPP_CRYPT_VERSION", Group: "cabinet_connect", Type: SettingEnum, Instant: true,
+			EnumValues: []string{"crypt5", "crypt4"},
+			Apply:      applyCabinetHappCryptVersion(),
+			Current:    cabinetHappCryptVersionCurrent(),
+		},
+		{
 			Key: "CABINET_DEEPLINK_INCY_ENCRYPT", Group: "cabinet_connect", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("CABINET_DEEPLINK_INCY_ENCRYPT"),
 			Current: cabinetBoolCurrent("CABINET_DEEPLINK_INCY_ENCRYPT", false),
@@ -549,35 +556,35 @@ func RuntimeSettingsRegistry() []SettingField {
 		// --- lifecycle (без cron / master toggle) ---
 		{
 			Key: "LIFECYCLE_NO_CONNECT_PAID_ENABLED", Group: "lifecycle", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.lifecycleNoConnectPaidEnabled = v }),
+			Apply:   applyBoolField(func(v bool) { conf.lifecycleNoConnectPaidEnabled = v }),
 			Current: func() string { return boolStr(conf.lifecycleNoConnectPaidEnabled) },
 		},
 		{
 			Key: "LIFECYCLE_NO_CONNECT_TRIAL_ENABLED", Group: "lifecycle", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.lifecycleNoConnectTrialEnabled = v }),
+			Apply:   applyBoolField(func(v bool) { conf.lifecycleNoConnectTrialEnabled = v }),
 			Current: func() string { return boolStr(conf.lifecycleNoConnectTrialEnabled) },
 		},
 		{
 			Key: "LIFECYCLE_NO_CONNECT_DELAY_HOURS", Group: "lifecycle", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.lifecycleNoConnectDelayHours = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.lifecycleNoConnectDelayHours = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.lifecycleNoConnectDelayHours) },
 		},
 		{
 			Key: "LIFECYCLE_NO_CONNECT_MAX_AGE_HOURS", Group: "lifecycle", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.lifecycleNoConnectMaxAgeHours = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.lifecycleNoConnectMaxAgeHours = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.lifecycleNoConnectMaxAgeHours) },
 		},
 		{
 			Key: "LIFECYCLE_WINBACK_ENABLED", Group: "lifecycle", Type: SettingBool, Instant: true,
-			Apply:  applyBoolField(func(v bool) { conf.lifecycleWinbackEnabled = v }),
+			Apply:   applyBoolField(func(v bool) { conf.lifecycleWinbackEnabled = v }),
 			Current: func() string { return boolStr(conf.lifecycleWinbackEnabled) },
 		},
 		{
 			Key: "LIFECYCLE_WINBACK_DAYS_AFTER_EXPIRY", Group: "lifecycle", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.lifecycleWinbackDaysAfterExpiry = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.lifecycleWinbackDaysAfterExpiry = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.lifecycleWinbackDaysAfterExpiry) },
 		},
 		{
@@ -594,18 +601,18 @@ func RuntimeSettingsRegistry() []SettingField {
 		},
 		{
 			Key: "LIFECYCLE_WINBACK_DISCOUNT_TTL_HOURS", Group: "lifecycle", Type: SettingInt,
-			MinInt: intPtr(0),
-			Apply:  applyIntField(func(v int) error { conf.lifecycleWinbackDiscountTTLHours = v; return nil }),
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.lifecycleWinbackDiscountTTLHours = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.lifecycleWinbackDiscountTTLHours) },
 		},
 		{
 			Key: "LIFECYCLE_VIDEO_GUIDE_URL", Group: "lifecycle", Type: SettingURL,
-			Apply:  applyStringField(func(v string) { conf.lifecycleVideoGuideURL = v }),
+			Apply:   applyStringField(func(v string) { conf.lifecycleVideoGuideURL = v }),
 			Current: func() string { return conf.lifecycleVideoGuideURL },
 		},
 		{
 			Key: "LIFECYCLE_SUPPORT_CONTACT", Group: "lifecycle", Type: SettingText,
-			Apply:  applyStringField(func(v string) { conf.lifecycleSupportContact = v }),
+			Apply:   applyStringField(func(v string) { conf.lifecycleSupportContact = v }),
 			Current: func() string { return conf.lifecycleSupportContact },
 		},
 
@@ -962,5 +969,29 @@ func cabinetTariffPriceDisplayCurrent() func() string {
 			return "marketing"
 		}
 		return "monthly"
+	}
+}
+
+// applyCabinetHappCryptVersion — формат зашифрованного deep link Happ.
+// crypt4 нужен там, где у пользователей остались сборки Happ 4.x: нового
+// crypt5 они не понимают и показывают «URL подписки не валидна».
+func applyCabinetHappCryptVersion() func(string) error {
+	return func(value string) error {
+		v := strings.TrimSpace(strings.ToLower(value))
+		if v != "crypt5" && v != "crypt4" {
+			return fmt.Errorf("invalid happ crypt version %q", value)
+		}
+		setRuntimeOverride("CABINET_DEEPLINK_HAPP_CRYPT_VERSION", v)
+		return nil
+	}
+}
+
+func cabinetHappCryptVersionCurrent() func() string {
+	return func() string {
+		v := strings.TrimSpace(strings.ToLower(effectiveEnvUnderRLock("CABINET_DEEPLINK_HAPP_CRYPT_VERSION")))
+		if v == "crypt4" {
+			return "crypt4"
+		}
+		return "crypt5"
 	}
 }

@@ -107,7 +107,7 @@ func (h *SubscriptionHandler) Deeplink(w http.ResponseWriter, r *http.Request) {
 	var href string
 	switch app {
 	case "happ":
-		href, err = deeplink.EncryptHapp(r.Context(), subLink)
+		href, err = deeplink.EncryptHapp(r.Context(), subLink, cabcfg.DeeplinkHappCryptVersion())
 	case "incy":
 		href, err = deeplink.EncryptINCY(subLink, cabcfg.BrandName())
 	}

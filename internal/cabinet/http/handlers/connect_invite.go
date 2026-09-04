@@ -188,8 +188,11 @@ func (h *ConnectInviteHandler) Resolve(w http.ResponseWriter, r *http.Request) {
 	links := make(map[string]string, 2)
 	var lastErr error
 	if happEnabled {
-		href, encErr := h.deeplinkCache.get("happ", subLink, func() (string, error) {
-			return deeplink.EncryptHapp(r.Context(), subLink)
+		// Формат ссылки входит в ключ кэша: сменив его в админке, админ должен
+		// увидеть эффект сразу, а не через TTL.
+		happVersion := cabcfg.DeeplinkHappCryptVersion()
+		href, encErr := h.deeplinkCache.get("happ:"+happVersion, subLink, func() (string, error) {
+			return deeplink.EncryptHapp(r.Context(), subLink, happVersion)
 		})
 		if encErr != nil {
 			lastErr = encErr

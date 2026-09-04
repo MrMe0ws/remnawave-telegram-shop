@@ -2338,6 +2338,8 @@
           "rewards": "Prize amounts"
         },
         "enum": {
+          "crypt5": "crypt5 — current (Happ 5.x)",
+          "crypt4": "crypt4 — compatible with Happ 4.x",
           "day": "Day",
           "week": "Week",
           "month": "Calendar month",
@@ -2601,7 +2603,11 @@
           },
           "CABINET_DEEPLINK_HAPP_ENCRYPT": {
             "label": "Encrypt Happ deep link",
-            "hint": "When connecting Happ, return an encrypted link (happ://crypt5/) so the subscription can't be viewed/edited in the app. The subscription URL is sent to the third-party service crypto.happ.su"
+            "hint": "When connecting Happ, return an encrypted link (happ://crypt…) so the subscription can't be viewed/edited in the app. The subscription URL is sent to the third-party service crypto.happ.su"
+          },
+          "CABINET_DEEPLINK_HAPP_CRYPT_VERSION": {
+            "label": "Happ encrypted link format",
+            "hint": "Only Happ 5.x understands crypt5; older Happ 4.x fails with “Subscription URL is not valid”. Every version understands crypt4, but its private key is public — compatibility at the cost of strength"
           },
           "CABINET_DEEPLINK_INCY_ENCRYPT": {
             "label": "Encrypt INCY deep link",
