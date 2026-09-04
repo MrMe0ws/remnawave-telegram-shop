@@ -9,6 +9,7 @@ import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { faviconSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
+import { CountryFlag } from '../components/CountryFlag'
 import { Card } from '@/components/ui/card'
 
 type TabKey = 'nodes' | 'providers' | 'history' | 'settings'
@@ -153,11 +154,14 @@ function NodesTab() {
           <div className="divide-y divide-border/50">
             {data.billingNodes.map((node: any) => (
               <div key={node.uuid} className="flex items-center justify-between px-4 py-3">
-                <div>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <CountryFlag code={node.node?.countryCode} />
+                  <div className="min-w-0">
                   <div className="text-sm font-medium">{node.node?.name ?? node.nodeUuid}</div>
                   <div className="text-xs text-muted-foreground">
                     {node.provider?.name} &middot;{' '}
                     {t('admin.infra.nextBilling')}: {new Date(node.nextBillingAt).toLocaleDateString()}
+                  </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -582,11 +586,24 @@ function HistoryTab() {
           <div className="divide-y divide-border/50">
             {records.map((rec: any) => (
               <div key={rec.uuid} className="flex items-center justify-between px-4 py-3">
-                <div>
+                <div className="flex min-w-0 items-center gap-3">
+                  {rec.provider?.faviconLink && (
+                    <img
+                      src={faviconSrcFromUrl(rec.provider.faviconLink)}
+                      alt=""
+                      loading="lazy"
+                      className="size-6 shrink-0 rounded object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  )}
+                  <div className="min-w-0">
                   <div className="text-sm font-medium">${rec.amount.toFixed(2)}</div>
                   <div className="text-xs text-muted-foreground">
                     {rec.provider?.name ?? rec.providerUuid} &middot;{' '}
                     {new Date(rec.billedAt).toLocaleDateString()}
+                  </div>
                   </div>
                 </div>
                 <button

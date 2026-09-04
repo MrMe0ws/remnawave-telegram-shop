@@ -1,0 +1,115 @@
+{
+  "/admin/infra/nodes": {
+    "totalBillingNodes": 3,
+    "totalAvailableBillingNodes": 0,
+    "stats": {
+      "upcomingNodesCount": 2,
+      "currentMonthPayments": 145.5,
+      "totalSpent": 1820.4
+    },
+    "availableBillingNodes": [],
+    "billingNodes": [
+      {
+        "uuid": "n1",
+        "nodeUuid": "u1",
+        "providerUuid": "p1",
+        "nextBillingAt": "2026-09-12T00:00:00Z",
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "provider": {
+          "uuid": "p1",
+          "name": "Beget",
+          "faviconLink": "https://beget.com/ru",
+          "loginUrl": ""
+        },
+        "node": {
+          "uuid": "u1",
+          "name": "Германия 2 премиум",
+          "countryCode": "DE"
+        }
+      },
+      {
+        "uuid": "n2",
+        "nodeUuid": "u2",
+        "providerUuid": "p2",
+        "nextBillingAt": "2026-09-20T00:00:00Z",
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "provider": {
+          "uuid": "p2",
+          "name": "Senko",
+          "faviconLink": "https://hostvds.com",
+          "loginUrl": ""
+        },
+        "node": {
+          "uuid": "u2",
+          "name": "Швеция2",
+          "countryCode": "SE"
+        }
+      },
+      {
+        "uuid": "n3",
+        "nodeUuid": "u3",
+        "providerUuid": "p3",
+        "nextBillingAt": "2026-10-01T00:00:00Z",
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "provider": {
+          "uuid": "p3",
+          "name": "Yandex",
+          "faviconLink": "https://yandex.cloud",
+          "loginUrl": ""
+        },
+        "node": {
+          "uuid": "u3",
+          "name": "Латвия",
+          "countryCode": "LV"
+        }
+      }
+    ]
+  },
+  "/admin/infra/history": {
+    "total": 3,
+    "records": [
+      {
+        "uuid": "h1",
+        "providerUuid": "p1",
+        "amount": 41.0,
+        "billedAt": "2026-09-01T00:00:00Z",
+        "provider": {
+          "uuid": "p1",
+          "name": "Beget",
+          "faviconLink": "https://beget.com/ru",
+          "loginUrl": ""
+        }
+      },
+      {
+        "uuid": "h2",
+        "providerUuid": "p2",
+        "amount": 35.3,
+        "billedAt": "2026-08-21T00:00:00Z",
+        "provider": {
+          "uuid": "p2",
+          "name": "HostVDS",
+          "faviconLink": "https://hostvds.com",
+          "loginUrl": ""
+        }
+      },
+      {
+        "uuid": "h3",
+        "providerUuid": "p3",
+        "amount": 63.0,
+        "billedAt": "2026-08-14T00:00:00Z",
+        "provider": {
+          "uuid": "p3",
+          "name": "Yandex",
+          "faviconLink": "https://yandex.cloud",
+          "loginUrl": ""
+        }
+      }
+    ]
+  },
+  "/auth/bootstrap": {
+    "decor_theme": "nebula"
+  }
+}
