@@ -67,7 +67,7 @@ function Tile({
   )
 
   if (!onClick) {
-    return <div className={surface('card', 'rounded-xl p-3')}>{body}</div>
+    return <div className={surface('card', 'flex flex-col rounded-xl p-3')}>{body}</div>
   }
 
   return (
@@ -79,6 +79,10 @@ function Tile({
         // Уровень как у соседних карточек: рядом с ними «поднятая» плитка
         // читалась подсвеченной, будто выделена. Отклик остаётся на наведении.
         'group admin-overview-clickable admin-overview-clickable--surface relative rounded-xl p-3 text-left',
+        // flex-col обязателен: содержимое <button> браузер центрирует по
+        // вертикали, и плитка с полосой (она ниже соседей) съезжала вниз —
+        // подписи в ряду переставали стоять на одной линии.
+        'flex flex-col items-stretch justify-start',
         surface('card', 'hover:bg-secondary'),
       )}
     >

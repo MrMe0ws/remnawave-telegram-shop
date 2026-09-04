@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   AtSign,
@@ -151,14 +151,93 @@ const SCOPE_LABEL_KEYS: Record<Scope, string> = {
   trial: 'admin.users.scopeTrial',
 }
 
+/**
+ * Где мы стояли в списке: вкладка, страница и поисковый запрос.
+ *
+ * Живёт в адресе, а не в состоянии компонента: админ уходит в карточку
+ * пользователя и возвращается кнопкой «назад», и без этого список каждый раз
+ * открывался с первой страницы и пустым поиском — найденного человека
+ * приходилось искать заново.
+ *
+ * Дубль в sessionStorage нужен для второго пути возврата: по хлебным крошкам
+ * и по пункту меню адрес чистый, а вернуться человек ожидает туда же.
+ */
+const LIST_STATE_KEY = 'admin-users-list-state'
+
+interface ListState {
+  scope: Scope
+  page: number
+  q: string
+}
+
+function readStoredListState(): ListState | null {
+  try {
+    const raw = sessionStorage.getItem(LIST_STATE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<ListState>
+    const scope = SCOPES.includes(parsed.scope as Scope) ? (parsed.scope as Scope) : 'all'
+    const page = Number.isFinite(parsed.page) ? Math.max(1, Number(parsed.page)) : 1
+    return { scope, page, q: typeof parsed.q === 'string' ? parsed.q : '' }
+  } catch {
+    // Приватный режим или переполненное хранилище — не повод ломать страницу.
+    return null
+  }
+}
+
 export default function AdminUsersPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [scope, setScope] = useState<Scope>('all')
-  const [page, setPage] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const paramScope = searchParams.get('scope')
+  const scope: Scope = SCOPES.includes(paramScope as Scope) ? (paramScope as Scope) : 'all'
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1)
+  const urlQuery = searchParams.get('q') ?? ''
+
+  const [searchQuery, setSearchQuery] = useState(urlQuery)
+  const [debouncedSearch, setDebouncedSearch] = useState(urlQuery)
+
+  // Состояние списка меняем через replace: перелистывание и набор в поиске не
+  // должны копиться в истории — «назад» из карточки обязан выводить к списку,
+  // а не отматывать страницы по одной.
+  const applyListState = useCallback(
+    (next: Partial<ListState>) => {
+      const state: ListState = {
+        scope: next.scope ?? scope,
+        page: next.page ?? page,
+        q: next.q ?? urlQuery,
+      }
+      const params: Record<string, string> = {}
+      if (state.scope !== 'all') params.scope = state.scope
+      if (state.page > 1) params.page = String(state.page)
+      if (state.q.trim()) params.q = state.q
+      setSearchParams(params, { replace: true })
+      try {
+        sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify(state))
+      } catch {
+        /* ignore */
+      }
+    },
+    [page, scope, setSearchParams, urlQuery],
+  )
+
+  // Возврат по крошкам или через меню: адрес чистый, восстанавливаем из памяти.
+  useEffect(() => {
+    if (searchParams.toString() !== '') return
+    const stored = readStoredListState()
+    if (!stored || (stored.scope === 'all' && stored.page === 1 && !stored.q)) return
+    setSearchQuery(stored.q)
+    setDebouncedSearch(stored.q)
+    applyListState(stored)
+    // Только на первый заход с пустым адресом.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Адрес мог поменяться снаружи — кнопкой «назад» браузера.
+  useEffect(() => {
+    setSearchQuery(urlQuery)
+    setDebouncedSearch(urlQuery)
+  }, [urlQuery])
 
   const isSearching = debouncedSearch.trim().length > 0
 
@@ -172,9 +251,12 @@ export default function AdminUsersPage() {
     (val: string) => {
       setSearchQuery(val)
       if (debounceRef.timer) clearTimeout(debounceRef.timer)
-      debounceRef.timer = setTimeout(() => setDebouncedSearch(val), 350)
+      debounceRef.timer = setTimeout(() => {
+        setDebouncedSearch(val)
+        applyListState({ q: val, page: 1 })
+      }, 350)
     },
-    [debounceRef],
+    [applyListState, debounceRef],
   )
 
   const items = isSearching ? (searchResult.data?.items ?? []) : (listQuery.data?.items ?? [])
@@ -213,7 +295,7 @@ export default function AdminUsersPage() {
                 <button
                   key={s}
                   type="button"
-                  onClick={() => { setScope(s); setPage(1) }}
+                  onClick={() => applyListState({ scope: s, page: 1 })}
                   className={cn(
                     'min-h-9 shrink-0 rounded-md px-3 py-2 text-center text-sm font-medium transition-colors sm:flex-1',
                     scope === s
@@ -299,7 +381,7 @@ export default function AdminUsersPage() {
             <div className="flex items-center justify-between border-t border-border px-3 py-2">
               <button
                 disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => applyListState({ page: Math.max(1, page - 1) })}
                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
                 <ChevronLeft className="size-4" />
@@ -310,7 +392,7 @@ export default function AdminUsersPage() {
               </span>
               <button
                 disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => applyListState({ page: Math.min(totalPages, page + 1) })}
                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
               >
                 {t('admin.next')}

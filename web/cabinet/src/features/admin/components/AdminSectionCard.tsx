@@ -96,7 +96,7 @@ export function AdminSectionCard({
           flushHeader ? 'pb-2' : 'border-b border-border/70 pb-4',
         )}
       >
-        <div className="flex min-w-0 items-start gap-3 sm:items-center">
+        <div className="flex min-w-0 items-center gap-3">
           {Icon && (
             <div
               className={cn(

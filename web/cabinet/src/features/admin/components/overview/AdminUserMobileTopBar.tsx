@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, MoreHorizontal } from 'lucide-react'
 
@@ -19,12 +19,21 @@ interface Props {
 export function AdminUserMobileTopBar({ label, onOpenActions }: Props) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Шаг назад по истории сохраняет состояние списка — вкладку, страницу и
+  // поиск. Ключ 'default' означает, что карточку открыли прямой ссылкой и
+  // возвращаться некуда: тогда просто уходим в список.
+  const goBack = () => {
+    if (location.key !== 'default') navigate(-1)
+    else navigate('/admin/users')
+  }
 
   return (
     <div className="mb-3 flex items-center gap-2 lg:hidden">
       <button
         type="button"
-        onClick={() => navigate('/admin/users')}
+        onClick={goBack}
         aria-label={t('admin.users.backToList')}
         className="inline-flex size-9 shrink-0 items-center justify-center rounded-btn text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
