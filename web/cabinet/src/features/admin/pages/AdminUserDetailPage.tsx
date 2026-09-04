@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft,
   Calendar,
+  ChevronDown,
+  ChevronUp,
   PowerOff,
   Trash2,
   CreditCard,
@@ -13,7 +15,6 @@ import {
 import { useState, useEffect, useMemo } from 'react'
 
 import { AdminLayout } from '../layout/AdminLayout'
-import { useAdminPageMeta } from '../layout/useAdminPageMeta'
 import { AdminSectionCard } from '../components/AdminSectionCard'
 import { AdminSetExpireModal } from '../components/AdminSetExpireModal'
 import { AdminFeedback } from '../components/AdminFeedback'
@@ -22,11 +23,11 @@ import { AdminUserActionsModal } from '../components/user-modals/AdminUserAction
 import type { UserEditModalKey } from '../components/user-modals/types'
 import { ClickableOverviewControl } from '../components/overview/ClickableOverviewControl'
 import { AdminUserIdentityCard } from '../components/overview/AdminUserIdentityCard'
-import { AdminUserStateStrip } from '../components/overview/AdminUserStateStrip'
 import { AdminUserParamTiles } from '../components/overview/AdminUserParamTiles'
 import { AdminUserSystemCard } from '../components/overview/AdminUserSystemCard'
 import { AdminUserActionsPanel } from '../components/overview/AdminUserActionsPanel'
 import { AdminUserMobileActionBar } from '../components/overview/AdminUserMobileActionBar'
+import { AdminUserMobileTopBar } from '../components/overview/AdminUserMobileTopBar'
 import { useCopySubscriptionLink } from '../components/overview/useCopySubscriptionLink'
 import { buildUserCardMetrics } from '../components/overview/userCardMetrics'
 import { resolveLoyaltyDiscountPercent } from '../components/overview/loyaltyDiscount'
@@ -63,6 +64,57 @@ import { formatDecimals, formatNumber } from '@/lib/format'
 
 const LIST_PAGE_LIMIT = 20
 
+/**
+ * Сколько строк списка видно в свёрнутом виде.
+ *
+ * Смысл в симметрии первого экрана: платежи и рефералы должны занимать
+ * одинаковую предсказуемую высоту независимо от того, один у человека платёж
+ * или сорок. Всё остальное открывается кнопкой.
+ */
+const PREVIEW_ROWS = 3
+
+/** Кнопка «раскрыть/свернуть список» под таблицей. */
+function ListToggle({
+  expanded,
+  hidden,
+  onToggle,
+}: {
+  expanded: boolean
+  hidden: number
+  onToggle: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-btn border border-border bg-secondary px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
+    >
+      {expanded ? (
+        <>
+          <ChevronUp className="size-3.5" />
+          {t('admin.users.overview.collapseList')}
+        </>
+      ) : (
+        <>
+          <ChevronDown className="size-3.5" />
+          {t('admin.users.overview.expandList', { count: hidden })}
+        </>
+      )}
+    </button>
+  )
+}
+
+/** Пустое состояние карточки: рамка пунктиром, значок и одна строка. */
+function EmptyBox({ icon: Icon, text }: { icon: typeof Users; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
+      <Icon className="size-5" aria-hidden />
+      {text}
+    </div>
+  )
+}
+
 export default function AdminUserDetailPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
@@ -98,6 +150,8 @@ export default function AdminUserDetailPage() {
   const [editModal, setEditModal] = useState<UserEditModalKey | null>(null)
   const [paymentsPage, setPaymentsPage] = useState(1)
   const [referralsPage, setReferralsPage] = useState(1)
+  const [paymentsExpanded, setPaymentsExpanded] = useState(false)
+  const [referralsExpanded, setReferralsExpanded] = useState(false)
   const [expireError, setExpireError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [overviewFeedback, setOverviewFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -121,8 +175,6 @@ export default function AdminUserDetailPage() {
     setExpireModal(true)
   }
 
-  useAdminPageMeta({ breadcrumbTail })
-
   const paymentsTotalPages = paymentsData
     ? Math.max(1, Math.ceil(paymentsData.total / LIST_PAGE_LIMIT))
     : 1
@@ -134,6 +186,8 @@ export default function AdminUserDetailPage() {
   useEffect(() => {
     setPaymentsPage(1)
     setReferralsPage(1)
+    setPaymentsExpanded(false)
+    setReferralsExpanded(false)
   }, [userId])
 
   const subscriptionLink =
@@ -196,6 +250,11 @@ export default function AdminUserDetailPage() {
   const handleOverviewSuccess = (message: string) => setOverviewFeedback({ type: 'success', message })
   const handleOverviewError = (message: string) => setOverviewFeedback({ type: 'error', message })
 
+  const paymentItems = paymentsData?.items ?? []
+  const visiblePayments = paymentsExpanded ? paymentItems : paymentItems.slice(0, PREVIEW_ROWS)
+  const referees = referralsData?.referees ?? []
+  const visibleReferees = referralsExpanded ? referees : referees.slice(0, PREVIEW_ROWS)
+
   const tariffBadge = canEditTariff ? (
     <ClickableOverviewControl
       variant="badge"
@@ -214,7 +273,7 @@ export default function AdminUserDetailPage() {
   ) : null
 
   return (
-    <AdminLayout>
+    <AdminLayout meta={{ breadcrumbTail, mobileBareHeader: true }}>
       <AdminFeedback feedback={feedback} onDismiss={clear} />
       {overviewFeedback && (
         <AdminFeedback
@@ -223,51 +282,53 @@ export default function AdminUserDetailPage() {
         />
       )}
 
+      <AdminUserMobileTopBar label={`#${user.id}`} onOpenActions={() => setActionsModal(true)} />
+
       {/*
         Раскладка «панель оператора»: слева личность и действия, справа данные.
-        На ПК левая колонка липнет к верху — «на кого я смотрю» не уезжает,
-        пока листаешь платежи. Ниже lg обе колонки складываются в одну ленту,
-        и действия переезжают в нижнюю панель: разметка контента при этом одна
-        и та же, разное — только место кнопок.
+        Обе колонки начинаются от одной линии, а списки платежей и рефералов
+        свёрнуты до трёх строк — иначе карточка с сорока платежами растягивала
+        страницу и ломала симметрию первого экрана.
+
+        Ниже lg колонки складываются в одну ленту, а действия переезжают в
+        нижнюю панель. Обёртка не должна получать overflow: это отрезает
+        `position: sticky` у нижней панели.
       */}
-      <div className="min-w-0 max-w-full overflow-x-hidden">
-        <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,270px)_minmax(0,1fr)]">
-          <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
-            <AdminUserIdentityCard
-              user={user}
-              displayName={displayName}
-              status={accountStatus}
-              tariffBadge={tariffBadge}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,270px)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4">
+          <AdminUserIdentityCard
+            user={user}
+            displayName={displayName}
+            status={accountStatus}
+            tariffBadge={tariffBadge}
+            hasRwUser={hasRwUser}
+            payments={
+              paymentsData ? { rubSum: paymentsData.rub_sum, count: paymentsData.rub_count } : null
+            }
+            dateLocale={dateLocale}
+            copy={copy}
+          />
+          <div className="hidden lg:block">
+            <AdminUserActionsPanel
               hasRwUser={hasRwUser}
-              payments={
-                paymentsData ? { rubSum: paymentsData.rub_sum, count: paymentsData.rub_count } : null
-              }
-              dateLocale={dateLocale}
+              rwStatus={rwStatus}
+              onExtend={openExpireModal}
+              onDisable={() => setConfirmDisable(true)}
+              onEnable={() => enableMut.mutate(undefined, handlers(t('admin.feedback.enableSuccess')))}
+              onDelete={() => setConfirmDelete(true)}
+              disablePending={disableMut.isPending}
+              enablePending={enableMut.isPending}
+              copy={copy}
             />
-            <div className="hidden lg:block">
-              <AdminUserActionsPanel
-                hasRwUser={hasRwUser}
-                rwStatus={rwStatus}
-                onExtend={openExpireModal}
-                onDisable={() => setConfirmDisable(true)}
-                onEnable={() => enableMut.mutate(undefined, handlers(t('admin.feedback.enableSuccess')))}
-                onDelete={() => setConfirmDelete(true)}
-                disablePending={disableMut.isPending}
-                enablePending={enableMut.isPending}
-                copy={copy}
-              />
-            </div>
           </div>
+        </div>
 
-          <div className="flex min-w-0 flex-col gap-4">
-            {panelLoading ? (
-              <Card className="cabinet-elevated-card flex justify-center py-8">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </Card>
-            ) : (
-              <AdminUserStateStrip metrics={metrics} />
-            )}
-
+        <div className="flex min-w-0 flex-col gap-4">
+          {panelLoading ? (
+            <Card className="cabinet-elevated-card flex justify-center py-10">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </Card>
+          ) : (
             <AdminUserParamTiles
               metrics={metrics}
               hasRwUser={hasRwUser}
@@ -275,175 +336,192 @@ export default function AdminUserDetailPage() {
               onOpenModal={setEditModal}
               onOpenExpire={openExpireModal}
             />
+          )}
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:items-stretch">
-              <AdminSectionCard
-                title={t('admin.users.payments')}
-                icon={CreditCard}
-                iconAccent="emerald"
-                fillHeight
-                className="min-w-0"
-              >
-                {paymentsLoading ? (
-                  <div className="flex flex-1 items-center justify-center py-6">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : paymentsData ? (
-                  <div className="flex min-h-0 flex-1 flex-col">
-                    {/* Две короткие плитки помещаются рядом и на 390 px — в столбик они зря съедали экран. */}
-                    <div className="mb-4 grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border bg-muted/30 p-3">
-                        <p className="text-xs text-muted-foreground">{t('admin.users.paymentsRub')}</p>
-                        <p className="text-lg font-semibold tabular-nums">{formatNumber(paymentsData.rub_sum)} ₽</p>
-                        <p className="text-xs text-muted-foreground">{paymentsData.rub_count} {t('admin.users.paymentsCount')}</p>
-                      </div>
-                      <div className="rounded-lg border bg-muted/30 p-3">
-                        <p className="text-xs text-muted-foreground">{t('admin.users.paymentsStars')}</p>
-                        <p className="text-lg font-semibold tabular-nums">{paymentsData.stars_sum} ⭐</p>
-                        <p className="text-xs text-muted-foreground">{paymentsData.stars_count} {t('admin.users.paymentsCount')}</p>
-                        {paymentsData.stars_rub_equiv > 0 && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t('admin.users.starsRubEquiv', {
-                              value: formatDecimals(paymentsData.stars_rub_equiv, 2),
-                              rate: paymentsData.rub_per_star,
-                            })}
-                          </p>
-                        )}
-                      </div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] xl:items-stretch">
+            <AdminSectionCard
+              title={t('admin.users.payments')}
+              icon={CreditCard}
+              iconAccent="emerald"
+              fillHeight
+              className="min-w-0"
+              headerRight={
+                <span className="text-xs text-muted-foreground">
+                  {t('admin.users.overview.allTime')}
+                </span>
+              }
+            >
+              {paymentsLoading ? (
+                <div className="flex flex-1 items-center justify-center py-6">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : paymentsData ? (
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('admin.users.paymentsRub')}</p>
+                      <p className="text-lg font-semibold tabular-nums">{formatNumber(paymentsData.rub_sum)} ₽</p>
+                      <p className="text-xs text-muted-foreground">{paymentsData.rub_count} {t('admin.users.paymentsCount')}</p>
                     </div>
-                    <div className="min-h-0 flex-1">
-                      {paymentsData.items.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t('admin.noData')}</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b text-left text-xs text-muted-foreground">
-                                <th className="pb-2 pr-4">{t('admin.users.paymentDate')}</th>
-                                <th className="pb-2 pr-4">{t('admin.users.paymentAmount')}</th>
-                                <th className="pb-2 pr-4">{t('admin.users.paymentType')}</th>
-                                <th className="pb-2">{t('admin.users.paymentPeriod')}</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/50">
-                              {paymentsData.items.map((p: AdminPurchaseDTO) => (
-                                <tr key={p.id}>
-                                  <td className="whitespace-nowrap py-2 pr-4 tabular-nums">{formatAdminDateTime(p.paid_at, dateLocale)}</td>
-                                  <td className="py-2 pr-4 font-mono">
-                                    {formatPaymentAmount(p.amount, p.currency || '', p.invoice_type).text}
-                                  </td>
-                                  <td className="py-2 pr-4">{formatInvoiceType(p.invoice_type, t)}</td>
-                                  <td className="py-2">{p.month > 0 ? t('admin.users.monthsShort', { count: p.month }) : '—'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                    <div className="rounded-xl border bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">{t('admin.users.paymentsStars')}</p>
+                      <p className="text-lg font-semibold tabular-nums">{paymentsData.stars_sum} ⭐</p>
+                      <p className="text-xs text-muted-foreground">{paymentsData.stars_count} {t('admin.users.paymentsCount')}</p>
+                      {paymentsData.stars_rub_equiv > 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t('admin.users.starsRubEquiv', {
+                            value: formatDecimals(paymentsData.stars_rub_equiv, 2),
+                            rate: paymentsData.rub_per_star,
+                          })}
+                        </p>
                       )}
                     </div>
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    {paymentItems.length === 0 ? (
+                      <EmptyBox icon={CreditCard} text={t('admin.users.overview.noPayments')} />
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left text-xs text-muted-foreground">
+                              <th className="pb-2 pr-4 font-normal">{t('admin.users.paymentDate')}</th>
+                              <th className="pb-2 pr-4 font-normal">{t('admin.users.paymentAmount')}</th>
+                              <th className="pb-2 pr-4 font-normal">{t('admin.users.paymentType')}</th>
+                              <th className="pb-2 font-normal">{t('admin.users.paymentPeriod')}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/50">
+                            {visiblePayments.map((p: AdminPurchaseDTO) => (
+                              <tr key={p.id}>
+                                <td className="whitespace-nowrap py-2 pr-4 tabular-nums">{formatAdminDateTime(p.paid_at, dateLocale)}</td>
+                                <td className="whitespace-nowrap py-2 pr-4 font-mono">
+                                  {formatPaymentAmount(p.amount, p.currency || '', p.invoice_type).text}
+                                </td>
+                                <td className="py-2 pr-4">{formatInvoiceType(p.invoice_type, t)}</td>
+                                <td className="py-2">{p.month > 0 ? t('admin.users.monthsShort', { count: p.month }) : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                  {paymentItems.length > PREVIEW_ROWS && (
+                    <ListToggle
+                      expanded={paymentsExpanded}
+                      hidden={paymentItems.length - PREVIEW_ROWS}
+                      onToggle={() => setPaymentsExpanded((v) => !v)}
+                    />
+                  )}
+                  {paymentsExpanded && paymentsTotalPages > 1 && (
                     <AdminTablePagination
                       page={paymentsPage}
                       totalPages={paymentsTotalPages}
                       onPageChange={setPaymentsPage}
-                      className="mt-auto flex items-center justify-between border-t border-border pt-3"
+                      className="mt-3 flex items-center justify-between border-t border-border pt-3"
                     />
-                  </div>
-                ) : null}
-              </AdminSectionCard>
+                  )}
+                </div>
+              ) : null}
+            </AdminSectionCard>
 
-              <AdminSectionCard
-                title={t('admin.users.referrals')}
-                icon={Users}
-                iconAccent="rose"
-                fillHeight
-                className="min-w-0"
-              >
-                {referralsLoading ? (
-                  <div className="flex flex-1 items-center justify-center py-6">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            <AdminSectionCard
+              title={t('admin.users.referrals')}
+              icon={Users}
+              iconAccent="rose"
+              fillHeight
+              className="min-w-0"
+            >
+              {referralsLoading ? (
+                <div className="flex flex-1 items-center justify-center py-6">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : referralsData ? (
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {[
+                      { labelKey: 'admin.users.referralsTotal', value: referralsData.stats.total },
+                      { labelKey: 'admin.users.referralsPaid', value: referralsData.stats.paid },
+                      { labelKey: 'admin.users.referralsActive', value: referralsData.stats.active },
+                      { labelKey: 'admin.users.referralsConversion', value: `${referralsData.stats.conversion}%` },
+                      { labelKey: 'admin.users.referralsDays', value: referralsData.stats.earned_total },
+                    ].map(({ labelKey, value }) => (
+                      <div
+                        key={labelKey}
+                        className="min-w-[88px] flex-1 rounded-xl border bg-muted/30 p-2 text-center"
+                      >
+                        <p className="text-[10px] text-muted-foreground">{t(labelKey)}</p>
+                        <p className="font-semibold tabular-nums">{value}</p>
+                      </div>
+                    ))}
                   </div>
-                ) : referralsData ? (
-                  <div className="flex min-h-0 flex-1 flex-col">
-                    {/*
-                      Пять метрик не делятся ни на две, ни на три колонки: в
-                      сетке последняя строка оставалась дырявой. Flex с
-                      растяжением заполняет её целиком при любой ширине.
-                    */}
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {[
-                        { labelKey: 'admin.users.referralsTotal', value: referralsData.stats.total },
-                        { labelKey: 'admin.users.referralsPaid', value: referralsData.stats.paid },
-                        { labelKey: 'admin.users.referralsActive', value: referralsData.stats.active },
-                        { labelKey: 'admin.users.referralsConversion', value: `${referralsData.stats.conversion}%` },
-                        { labelKey: 'admin.users.referralsDays', value: referralsData.stats.earned_total },
-                      ].map(({ labelKey, value }) => (
-                        <div
-                          key={labelKey}
-                          className="min-w-[88px] flex-1 rounded-lg border bg-muted/30 p-2 text-center"
-                        >
-                          <p className="text-[10px] text-muted-foreground">{t(labelKey)}</p>
-                          <p className="font-semibold tabular-nums">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="min-h-0 flex-1">
-                      {referralsData.referees.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t('admin.noData')}</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b text-left text-xs text-muted-foreground">
-                                <th className="pb-2 pr-4">{t('admin.users.telegramId')}</th>
-                                <th className="pb-2 pr-4">{t('admin.users.username')}</th>
-                                <th className="pb-2">{t('admin.users.status')}</th>
+                  <div className="min-h-0 flex-1">
+                    {referees.length === 0 ? (
+                      <EmptyBox icon={Users} text={t('admin.users.overview.noReferrals')} />
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left text-xs text-muted-foreground">
+                              <th className="pb-2 pr-4 font-normal">{t('admin.users.telegramId')}</th>
+                              <th className="pb-2 pr-4 font-normal">{t('admin.users.username')}</th>
+                              <th className="pb-2 font-normal">{t('admin.users.status')}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/50">
+                            {visibleReferees.map((ref: AdminRefereeDTO) => (
+                              <tr key={ref.telegram_id}>
+                                <td className="py-2 pr-4 font-mono">{ref.telegram_id}</td>
+                                <td className="py-2 pr-4">{ref.telegram_username ? `@${ref.telegram_username}` : '—'}</td>
+                                <td className="py-2">
+                                  <span className={cn('rounded-full px-2 py-0.5 text-xs', ref.active ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground')}>
+                                    {ref.active ? t('admin.users.statusActive') : t('admin.users.referralInactive')}
+                                  </span>
+                                </td>
                               </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/50">
-                              {referralsData.referees.map((ref: AdminRefereeDTO) => (
-                                <tr key={ref.telegram_id}>
-                                  <td className="py-2 pr-4 font-mono">{ref.telegram_id}</td>
-                                  <td className="py-2 pr-4">{ref.telegram_username ? `@${ref.telegram_username}` : '—'}</td>
-                                  <td className="py-2">
-                                    <span className={cn('rounded-full px-2 py-0.5 text-xs', ref.active ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground')}>
-                                      {ref.active ? t('admin.users.statusActive') : t('admin.users.referralInactive')}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                  {referees.length > PREVIEW_ROWS && (
+                    <ListToggle
+                      expanded={referralsExpanded}
+                      hidden={referees.length - PREVIEW_ROWS}
+                      onToggle={() => setReferralsExpanded((v) => !v)}
+                    />
+                  )}
+                  {referralsExpanded && referralsTotalPages > 1 && (
                     <AdminTablePagination
                       page={referralsPage}
                       totalPages={referralsTotalPages}
                       onPageChange={setReferralsPage}
-                      className="mt-auto flex items-center justify-between border-t border-border pt-3"
+                      className="mt-3 flex items-center justify-between border-t border-border pt-3"
                     />
-                  </div>
-                ) : null}
-              </AdminSectionCard>
-            </div>
-
-            <AdminUserSystemCard
-              user={user}
-              panel={panel}
-              hasRwUser={hasRwUser}
-              loyaltyDiscount={loyaltyDiscount}
-              dateLocale={dateLocale}
-              onOpenModal={setEditModal}
-            />
+                  )}
+                </div>
+              ) : null}
+            </AdminSectionCard>
           </div>
-        </div>
 
-        <AdminUserMobileActionBar
-          onExtend={openExpireModal}
-          onOpenActions={() => setActionsModal(true)}
-          copy={copy}
-        />
+          <AdminUserSystemCard
+            user={user}
+            panel={panel}
+            hasRwUser={hasRwUser}
+            loyaltyDiscount={loyaltyDiscount}
+            dateLocale={dateLocale}
+            onOpenModal={setEditModal}
+          />
+        </div>
       </div>
+
+      <AdminUserMobileActionBar
+        onExtend={openExpireModal}
+        onOpenActions={() => setActionsModal(true)}
+        copy={copy}
+      />
 
       <AdminUserEditModals
         userId={userId!}
@@ -468,6 +546,8 @@ export default function AdminUserDetailPage() {
         onDelete={() => setConfirmDelete(true)}
         disablePending={disableMut.isPending}
         enablePending={enableMut.isPending}
+        copy={copy}
+        onChangeTariff={canEditTariff ? () => setEditModal('tariff') : undefined}
       />
 
       <AdminSetExpireModal
@@ -501,21 +581,21 @@ export default function AdminUserDetailPage() {
         size="sm"
       >
         <div className="space-y-4">
-          <div className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+          <div className="flex gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
             <AlertTriangle className="size-5 shrink-0 text-destructive" />
             <p className="text-sm text-muted-foreground">
               {t('admin.users.disableWarning', { name: displayName })}
             </p>
           </div>
           {disableError && (
-            <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="rounded-btn border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {disableError}
             </p>
           )}
           <div className="flex justify-end gap-2">
             <button
               onClick={() => { setConfirmDisable(false); setDisableError(null) }}
-              className="rounded-lg border px-4 py-2 text-sm hover:bg-accent"
+              className="rounded-btn border px-4 py-2 text-sm hover:bg-accent"
             >
               {t('admin.cancel')}
             </button>
@@ -531,7 +611,7 @@ export default function AdminUserDetailPage() {
                 })
               }}
               disabled={disableMut.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm text-destructive-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-btn bg-destructive px-4 py-2 text-sm text-destructive-foreground disabled:opacity-50"
             >
               {disableMut.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               {t('admin.users.disable')}
@@ -554,7 +634,7 @@ export default function AdminUserDetailPage() {
             предлагает отключение как безопасную замену: чаще всего админу
             нужно именно закрыть доступ, а не стереть историю.
           */}
-          <div className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+          <div className="flex gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
             <AlertTriangle className="size-5 shrink-0 text-destructive" />
             <div className="min-w-0 text-sm text-muted-foreground">
               <p>{t('admin.users.deleteWarning', { name: displayName })}</p>
@@ -568,7 +648,7 @@ export default function AdminUserDetailPage() {
             </div>
           </div>
           {deleteError && (
-            <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="rounded-btn border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {deleteError}
             </p>
           )}
@@ -580,12 +660,12 @@ export default function AdminUserDetailPage() {
                   setDeleteError(null)
                   setConfirmDisable(true)
                 }}
-                className="me-auto rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="me-auto rounded-btn px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {t('admin.users.disableInstead')}
               </button>
             )}
-            <button onClick={() => { setConfirmDelete(false); setDeleteError(null) }} className="rounded-lg border px-4 py-2 text-sm hover:bg-accent">
+            <button onClick={() => { setConfirmDelete(false); setDeleteError(null) }} className="rounded-btn border px-4 py-2 text-sm hover:bg-accent">
               {t('admin.cancel')}
             </button>
             <button
@@ -597,7 +677,7 @@ export default function AdminUserDetailPage() {
                 })
               }}
               disabled={deleteMut.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm text-destructive-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-btn bg-destructive px-4 py-2 text-sm text-destructive-foreground disabled:opacity-50"
             >
               {deleteMut.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               {t('admin.delete')}

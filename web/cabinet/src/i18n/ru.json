@@ -1591,11 +1591,6 @@
           "stripExpiredDays_few": "истекла {{count}} дня назад",
           "stripExpiredDays_many": "истекла {{count}} дней назад",
           "stripExpiredDays_other": "истекла {{count}} дней назад",
-          "stripNoExpire": "срок не задан",
-          "stripTrafficUsed": "израсходовано {{percent}}% трафика",
-          "stripTrafficUnlimited": "трафик без лимита",
-          "stripDevices": "устройства: {{used}} из {{limit}}",
-          "stripDevicesFull": "устройства заняты: {{used}} из {{limit}}",
           "tileExpire": "Действует до",
           "tileTraffic": "Трафик",
           "tileTrafficValue": "{{used}} / {{limit}} ГБ",
@@ -1609,7 +1604,16 @@
           "dangerZone": "Опасная зона",
           "dangerZoneHint": "Удаление сносит пользователя из панели и из бота. Отменить нельзя.",
           "more": "Ещё",
-          "xpWithDiscount": "{{xp}} · скидка {{discount}}%"
+          "xpWithDiscount": "{{xp}} · скидка {{discount}}%",
+          "registeredShort": "Регистрация",
+          "allTime": "за всё время",
+          "noPayments": "Платежей нет",
+          "noReferrals": "Никого не пригласил",
+          "collapseList": "Свернуть список",
+          "expandList_one": "Раскрыть список · ещё {{count}}",
+          "expandList_few": "Раскрыть список · ещё {{count}}",
+          "expandList_many": "Раскрыть список · ещё {{count}}",
+          "expandList_other": "Раскрыть список · ещё {{count}}"
         },
         "actionsModal": {
           "title": "Действия"
@@ -1743,7 +1747,10 @@
           "days_many": "оставшиеся {{count}} дней подписки",
           "days_other": "оставшиеся {{count}} дней подписки",
           "payments": "связь с платежами: в статистике они останутся, в карточке — нет"
-        }
+        },
+        "extendQuickYear": "+1 год",
+        "extendPickDateShort": "Или выбрать дату",
+        "changeTariff": "Сменить тариф"
       },
       "payments": {
         "title": "Платежи",

@@ -1565,11 +1565,6 @@
           "stripDaysLeft_other": "{{count}} days left",
           "stripExpiredDays_one": "expired {{count}} day ago",
           "stripExpiredDays_other": "expired {{count}} days ago",
-          "stripNoExpire": "no expiry set",
-          "stripTrafficUsed": "{{percent}}% of traffic used",
-          "stripTrafficUnlimited": "unlimited traffic",
-          "stripDevices": "devices: {{used}} of {{limit}}",
-          "stripDevicesFull": "devices full: {{used}} of {{limit}}",
           "tileExpire": "Valid until",
           "tileTraffic": "Traffic",
           "tileTrafficValue": "{{used}} / {{limit}} GB",
@@ -1581,7 +1576,14 @@
           "dangerZone": "Danger zone",
           "dangerZoneHint": "Deleting removes the user from the panel and from the bot. It cannot be undone.",
           "more": "More",
-          "xpWithDiscount": "{{xp}} · {{discount}}% off"
+          "xpWithDiscount": "{{xp}} · {{discount}}% off",
+          "registeredShort": "Registered",
+          "allTime": "all time",
+          "noPayments": "No payments yet",
+          "noReferrals": "No one invited yet",
+          "collapseList": "Collapse list",
+          "expandList_one": "Expand list · {{count}} more",
+          "expandList_other": "Expand list · {{count}} more"
         },
         "actionsModal": {
           "title": "Actions"
@@ -1705,7 +1707,10 @@
           "days_one": "{{count}} remaining subscription day",
           "days_other": "{{count}} remaining subscription days",
           "payments": "the link to payments: they stay in stats, but not on the card"
-        }
+        },
+        "extendQuickYear": "+1 year",
+        "extendPickDateShort": "Or pick a date",
+        "changeTariff": "Change plan"
       },
       "payments": {
         "title": "Payments",

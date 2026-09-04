@@ -13,12 +13,14 @@ import { CabinetDecorHeader } from '@/features/decor/CabinetDecorHeader'
 
 interface AdminChromeProps {
   children: ReactNode
+  /** Ниже lg страница рисует свою верхнюю строку — общий ряд chrome прячется. */
+  hideMobileHeader?: boolean
 }
 
 /**
  * Минимальный chrome для `/admin/*`: без user-cabinet nav и mobile bottom bar.
  */
-export function AdminChrome({ children }: AdminChromeProps) {
+export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
   const { t } = useTranslation()
   const { toggleMobileNav, mobileNavExpanded, mobileHeaderVisible } = useAdminShell()
 
@@ -32,9 +34,10 @@ export function AdminChrome({ children }: AdminChromeProps) {
           'dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]',
           // Safe-area top остаётся; прячется только ряд chrome.
           !mobileHeaderVisible && 'max-md:border-b-0 max-md:shadow-none',
+          hideMobileHeader && 'max-lg:border-b-0 max-lg:shadow-none',
         )}
       >
-        <div className={cn(!mobileHeaderVisible && 'max-md:hidden')}>
+        <div className={cn(!mobileHeaderVisible && 'max-md:hidden', hideMobileHeader && 'max-lg:hidden')}>
           <CabinetDecorHeader />
           <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
           <button

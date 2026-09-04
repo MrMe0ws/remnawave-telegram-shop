@@ -29,7 +29,7 @@ export function AdminUserMobileActionBar({ onExtend, onOpenActions, copy }: Prop
       <button
         type="button"
         onClick={onExtend}
-        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-2.5 text-sm font-medium text-emerald-700 backdrop-blur dark:text-emerald-400"
+        className="inline-flex flex-1 items-center justify-center gap-2 rounded-btn border border-emerald-500/40 bg-emerald-500/15 px-3 py-2.5 text-sm font-medium text-emerald-700 backdrop-blur dark:text-emerald-400"
       >
         <CalendarPlus className="size-4 shrink-0" />
         {t('admin.users.extend')}
@@ -39,7 +39,7 @@ export function AdminUserMobileActionBar({ onExtend, onOpenActions, copy }: Prop
           type="button"
           onClick={copy.copy}
           aria-label={t('admin.users.copySubscriptionLink')}
-          className="inline-flex items-center justify-center rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm shadow-sm backdrop-blur dark:shadow-none"
+          className="inline-flex items-center justify-center rounded-btn border border-border bg-secondary px-3 py-2.5 text-sm shadow-sm backdrop-blur dark:shadow-none"
         >
           {copy.copied ? (
             <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -51,7 +51,7 @@ export function AdminUserMobileActionBar({ onExtend, onOpenActions, copy }: Prop
       <button
         type="button"
         onClick={onOpenActions}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2.5 text-sm font-medium shadow-sm backdrop-blur dark:shadow-none"
+        className="inline-flex items-center justify-center gap-2 rounded-btn border border-border bg-secondary px-3 py-2.5 text-sm font-medium shadow-sm backdrop-blur dark:shadow-none"
       >
         <Shield className="size-4 shrink-0" />
         {t('admin.users.overview.more')}

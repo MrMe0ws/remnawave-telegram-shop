@@ -12,7 +12,6 @@ import {
 import type { LucideIcon } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
-import { useAdminPageMeta } from '../layout/useAdminPageMeta'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminTariffEditor } from '../components/AdminTariffEditor'
@@ -277,13 +276,11 @@ export default function AdminTariffsPage() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingTariff, setEditingTariff] = useState<AdminTariff | null>(null)
 
-  useAdminPageMeta({
-    breadcrumbTail: editorOpen
-      ? (editingTariff
-        ? t('admin.breadcrumb.tariffEdit', { name: editingTariff.name ?? editingTariff.slug })
-        : t('admin.breadcrumb.tariffCreate'))
-      : undefined,
-  })
+  const breadcrumbTail = editorOpen
+    ? (editingTariff
+      ? t('admin.breadcrumb.tariffEdit', { name: editingTariff.name ?? editingTariff.slug })
+      : t('admin.breadcrumb.tariffCreate'))
+    : undefined
 
   const openCreate = () => { setEditingTariff(null); setEditorOpen(true) }
   const openEdit = (tariff: AdminTariff) => { setEditingTariff(tariff); setEditorOpen(true) }
@@ -314,7 +311,7 @@ export default function AdminTariffsPage() {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout meta={{ breadcrumbTail }}>
       <AdminFeedback feedback={feedback} onDismiss={clear} />
       <div className="space-y-6">
         <AdminPageHeader

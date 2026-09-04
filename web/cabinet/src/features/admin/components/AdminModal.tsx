@@ -129,7 +129,7 @@ export function AdminModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1 hover:bg-accent"
+              className="rounded-btn p-1 hover:bg-accent"
               aria-label={t('common.close')}
             >
               <X className="size-4" />

@@ -841,9 +841,20 @@
     color: hsl(var(--primary));
   }
 
+  /*
+   * Радиус админки. В кабинете --radius равен 1.25rem: там это оправдано
+   * крупными карточками с картинками, но в админской таблице данных такая
+   * скруглённость превращает кнопку в пилюлю. В макете админки карточка —
+   * 14px, контрол — 10px (см. rounded-btn), поэтому переменная переопределена
+   * на уровне оболочки, а не правится у каждого элемента.
+   */
+  .admin-shell {
+    --radius: 0.875rem;
+  }
+
   /* Admin form fields — в тёмной теме не bg-background (темнее модалки), а --input. */
   .admin-input {
-    @apply rounded-lg border border-input bg-background text-sm text-foreground transition-colors;
+    @apply rounded-btn border border-input bg-background text-sm text-foreground transition-colors;
     @apply placeholder:text-muted-foreground;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }

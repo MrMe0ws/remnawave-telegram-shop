@@ -26,7 +26,7 @@ export function AdminModalSaveFooter({ onCancel, onSave, isPending, saveDisabled
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="rounded-lg border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
+          className="rounded-btn border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
         >
           {t('admin.cancel')}
         </button>
@@ -34,7 +34,7 @@ export function AdminModalSaveFooter({ onCancel, onSave, isPending, saveDisabled
           type="button"
           onClick={onSave}
           disabled={isPending || saveDisabled}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-btn bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
           {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
           {t('admin.save')}

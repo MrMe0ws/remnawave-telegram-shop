@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 const actionClass =
-  'inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:opacity-50 dark:shadow-none'
+  'inline-flex w-full items-center justify-center gap-2 rounded-btn border border-border bg-secondary px-3 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:opacity-50 dark:shadow-none'
 
 interface Props {
   hasRwUser: boolean
@@ -103,22 +103,24 @@ export function AdminUserActionsPanel({
 
       {copy.failed && <p className="mt-2 text-xs text-destructive">{t('admin.users.copyLinkError')}</p>}
 
+      {/*
+        Опасная зона по макету: рамка, подпись в разрядку, короткое объяснение
+        последствий и кнопка меньше остальных — необратимое действие не должно
+        выглядеть таким же удобным, как продление.
+      */}
       <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-destructive">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-destructive">
           {t('admin.users.overview.dangerZone')}
         </p>
-        <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
+        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
           {t('admin.users.overview.dangerZoneHint')}
         </p>
         <button
           type="button"
           onClick={onDelete}
-          className={cn(
-            actionClass,
-            'mt-2.5 border-destructive/40 bg-transparent text-destructive hover:bg-destructive/10',
-          )}
+          className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-btn border border-destructive/40 px-2.5 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
         >
-          <Trash2 className="size-4 shrink-0" />
+          <Trash2 className="size-3.5 shrink-0" />
           {t('admin.users.delete')}
         </button>
       </div>

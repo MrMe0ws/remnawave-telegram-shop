@@ -1,7 +1,19 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  AtSign,
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  Hash,
+  Search,
+  Send,
+  Users,
+  Zap,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
@@ -14,6 +26,22 @@ import {
 } from '../hooks/useAdminUsers'
 import { useAdminTariffList, type AdminTariff } from '../hooks/useAdminTariffs'
 import { resolveTariffLabel } from '../utils/resolveTariffLabel'
+
+/**
+ * Подпись колонки со значком.
+ *
+ * Значок здесь не украшение: шапка набрана капителью в один вес, и глазу не за
+ * что зацепиться при возврате к таблице. Иконка даёт колонке силуэт, по
+ * которому её находят быстрее, чем по слову.
+ */
+function HeadCell({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Icon className="size-3.5 shrink-0 text-muted-foreground/70" aria-hidden />
+      {label}
+    </span>
+  )
+}
 
 const SCOPES = ['all', 'active', 'inactive', 'expiring', 'trial'] as const
 type Scope = (typeof SCOPES)[number]
@@ -230,12 +258,24 @@ export default function AdminUsersPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      <th className="w-[1%] whitespace-nowrap px-3 py-2">{t('admin.users.id')}</th>
-                      <th className="w-[7rem] max-w-[7rem] px-3 py-2">{t('admin.users.telegramId')}</th>
-                      <th className="px-3 py-2">{t('admin.users.username')}</th>
-                      <th className="hidden px-3 py-2 sm:table-cell">{t('admin.users.expireAt')}</th>
-                      <th className="px-3 py-2">{t('admin.users.status')}</th>
-                      <th className="hidden px-3 py-2 md:table-cell">{t('admin.users.tariff')}</th>
+                      <th className="w-[1%] whitespace-nowrap px-3 py-2">
+                        <HeadCell icon={Hash} label={t('admin.users.id')} />
+                      </th>
+                      <th className="w-[9rem] max-w-[9rem] px-3 py-2">
+                        <HeadCell icon={Send} label={t('admin.users.telegramId')} />
+                      </th>
+                      <th className="px-3 py-2">
+                        <HeadCell icon={AtSign} label={t('admin.users.username')} />
+                      </th>
+                      <th className="hidden px-3 py-2 sm:table-cell">
+                        <HeadCell icon={CalendarClock} label={t('admin.users.expireAt')} />
+                      </th>
+                      <th className="px-3 py-2">
+                        <HeadCell icon={CircleDot} label={t('admin.users.status')} />
+                      </th>
+                      <th className="hidden px-3 py-2 md:table-cell">
+                        <HeadCell icon={Zap} label={t('admin.users.tariff')} />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

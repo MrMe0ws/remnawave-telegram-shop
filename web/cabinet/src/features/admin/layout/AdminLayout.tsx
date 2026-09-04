@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -32,6 +32,16 @@ import { useAdminMobileNavWidth } from '../hooks/useAdminMobileNavWidth'
 
 interface AdminLayoutProps {
   children: ReactNode
+  /**
+   * Мета страницы: хвост хлебных крошек и режим шапки на телефоне.
+   *
+   * Пропом, а не через `useAdminPageMeta`: страницы сами рендерят
+   * `<AdminLayout>`, то есть находятся НАД провайдером контекста, и хук у них
+   * всегда получал null — хвост крошек молча не доезжал, вместо «@username»
+   * оставался запасной «Пользователь #id». Хук оставлен для того, что живёт
+   * внутри layout.
+   */
+  meta?: AdminPageMeta
 }
 
 interface AdminNavItem {
@@ -48,15 +58,15 @@ interface AdminNavGroup {
   items: AdminNavItem[]
 }
 
-export function AdminLayout({ children }: AdminLayoutProps) {
+export function AdminLayout({ children, meta }: AdminLayoutProps) {
   return (
     <AdminShellProvider>
-      <AdminLayoutInner>{children}</AdminLayoutInner>
+      <AdminLayoutInner meta={meta}>{children}</AdminLayoutInner>
     </AdminShellProvider>
   )
 }
 
-function AdminLayoutInner({ children }: AdminLayoutProps) {
+function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const { data: bootstrap } = useAdminBootstrap()
@@ -71,6 +81,15 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
   const navProgress = panelWidth > 0 ? Math.min(1, mobileNavOffsetPx / panelWidth) : 0
   const navLayerVisible = mobileNavOpen || mobileNavOffsetPx > 0
   const [pageMeta, setPageMeta] = useState<AdminPageMeta>({})
+  /*
+   * Значение контекста обязано быть стабильным: `useAdminPageMeta` держит ctx
+   * в зависимостях эффекта, и новый объект на каждый рендер запускал круг
+   * «сбросить мету → выставить заново». До паузы доживал сброс, поэтому в
+   * хлебных крошках вместо «@username» всегда стоял запасной «Пользователь #id».
+   */
+  const metaContextValue = useMemo(() => ({ setMeta: setPageMeta }), [])
+  // Проп страницы важнее того, что выставили изнутри layout.
+  const effectiveMeta = meta ? { ...pageMeta, ...meta } : pageMeta
 
   useAdminLeftEdgeSwipe(true)
 
@@ -201,8 +220,8 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
   )
 
   return (
-    <AdminPageMetaContext.Provider value={{ setMeta: setPageMeta }}>
-      <AdminChrome>
+    <AdminPageMetaContext.Provider value={metaContextValue}>
+      <AdminChrome hideMobileHeader={effectiveMeta.mobileBareHeader}>
         <div className="admin-shell relative z-[1] mx-auto w-full max-w-7xl px-3 pb-8 pt-2 sm:px-4 sm:pt-4">
           <div
             className={cn(
@@ -242,7 +261,14 @@ function AdminLayoutInner({ children }: AdminLayoutProps) {
           </div>
 
           <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-4">
-            <AdminBreadcrumbs pathname={location.pathname} pageMeta={pageMeta} className="lg:col-start-2 lg:row-start-1" />
+            <AdminBreadcrumbs
+              pathname={location.pathname}
+              pageMeta={effectiveMeta}
+              className={cn(
+                'lg:col-start-2 lg:row-start-1',
+                effectiveMeta.mobileBareHeader && 'max-lg:hidden',
+              )}
+            />
 
             <aside className="hidden w-56 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:overflow-y-auto lg:overscroll-y-contain lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]">
               <div className="rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur-sm">

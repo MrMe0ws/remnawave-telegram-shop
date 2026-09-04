@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, Share2 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,11 @@ interface Props {
   /** Итог по платежам — та же цифра, что в карточке «Платежи» ниже. */
   payments?: { rubSum: number; count: number } | null
   dateLocale: string
+  /**
+   * Копирование ссылки. На телефоне колонки действий нет, поэтому кнопка
+   * живёт прямо в шапке карточки — как в макете.
+   */
+  copy: { available: boolean; copied: boolean; copy: () => void }
 }
 
 /**
@@ -37,6 +43,7 @@ export function AdminUserIdentityCard({
   hasRwUser,
   payments,
   dateLocale,
+  copy,
 }: Props) {
   const { t } = useTranslation()
 
@@ -53,6 +60,21 @@ export function AdminUserIdentityCard({
             })}
           </p>
         </div>
+        {copy.available && (
+          <button
+            type="button"
+            onClick={copy.copy}
+            aria-label={t('admin.users.copySubscriptionLink')}
+            title={t('admin.users.copySubscriptionLink')}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-btn border border-border bg-secondary text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
+          >
+            {copy.copied ? (
+              <Check className="size-4 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <Share2 className="size-4" />
+            )}
+          </button>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">

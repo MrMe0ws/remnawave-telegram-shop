@@ -108,7 +108,7 @@ export function AdminSetExpireModal({
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="rounded-lg border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
+            className="rounded-btn border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
           >
             {t('admin.cancel')}
           </button>
@@ -119,7 +119,7 @@ export function AdminSetExpireModal({
               onApply(dateToExpireIso(date))
             }}
             disabled={isPending || !date}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-btn bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
             {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
             {t('admin.users.extendApply')}
@@ -144,26 +144,28 @@ export function AdminSetExpireModal({
                 onClick={() => addDays(days)}
                 className={cn(chipClass, deltaDays === days && 'border-primary bg-primary/10 text-primary')}
               >
-                {t('admin.users.extendQuickDays', { count: days })}
+                {days === 365
+                  ? t('admin.users.extendQuickYear')
+                  : t('admin.users.extendQuickDays', { count: days })}
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium">{t('admin.users.extendPickDate')}</p>
+          <p className="mb-2 text-sm font-medium">{t('admin.users.extendPickDateShort')}</p>
           <AdminDatePicker
             value={date}
             onChange={setDate}
             minDate={minDate}
             currentExpireAt={currentExpireAt}
-            className="max-w-[320px]"
+            className="w-full"
           />
         </div>
 
         {date && (
           <div className={surface('raised', 'flex flex-wrap items-center gap-2 rounded-xl px-3 py-2.5 text-sm')}>
-            <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Clock className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
             <span className="text-muted-foreground">{t('admin.users.extendResult')}</span>
             <span className="font-semibold tabular-nums">
               {formatAdminDateTime(dateToExpireIso(date), dateLocale)}
