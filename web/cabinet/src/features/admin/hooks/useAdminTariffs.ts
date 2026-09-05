@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/lib/api'
+import type { AdminTariffSquadsPreviewDTO } from '@/lib/types/admin'
 
 export interface AdminTariffPrice {
   tariff_id: number
@@ -84,6 +85,33 @@ export function useAdminTariffDelete() {
   return useMutation({
     mutationFn: (id: number) => api.adminTariffDelete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-tariffs'] }),
+  })
+}
+
+/**
+ * Состав сквадов тарифа + прогресс применения к действующим подписчикам.
+ *
+ * Опрос включается только пока прогон идёт: он живёт в памяти процесса и
+ * событий наружу не шлёт, но и держать 30 запросов в минуту, пока админ просто
+ * смотрит на вкладку, незачем — у админских ручек общий лимит 120/мин.
+ */
+export function useAdminTariffSquads(id: number | null, poll = false) {
+  return useQuery<AdminTariffSquadsPreviewDTO>({
+    queryKey: ['admin-tariff-squads', id],
+    queryFn: () => api.adminTariffSquads(id!),
+    enabled: id != null,
+    refetchInterval: (query) => (poll && query.state.data?.run?.status === 'running' ? 2000 : false),
+  })
+}
+
+export function useAdminTariffSquadsApply() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, add, remove }: { id: number; add: string[]; remove: string[] }) =>
+      api.adminTariffSquadsApply(id, { add, remove }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['admin-tariff-squads', vars.id] })
+    },
   })
 }
 

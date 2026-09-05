@@ -507,6 +507,32 @@ export interface AdminTariffDTO {
   prices: AdminTariffPriceDTO[]
 }
 
+/** Ход применения состава сквадов тарифа к действующим подписчикам. */
+export interface AdminTariffSquadsRunDTO {
+  tariff_id: number
+  add: string[]
+  remove: string[]
+  status: 'running' | 'done' | 'failed'
+  total: number
+  processed: number
+  changed: number
+  already_ok: number
+  not_found: number
+  failed: number
+  error?: string
+  failures?: string[]
+  started_at: string
+  finished_at?: string
+}
+
+export interface AdminTariffSquadsPreviewDTO {
+  /** Фактический состав тарифа: пустой список в БД разворачивается во все сквады панели. */
+  tariff_squads: string[]
+  /** Сколько клиентов с активной подпиской сейчас на этом тарифе. */
+  active_count: number
+  run: AdminTariffSquadsRunDTO | null
+}
+
 export interface AdminBroadcastPreviewDTO {
   recipient_count: number
   status?: string

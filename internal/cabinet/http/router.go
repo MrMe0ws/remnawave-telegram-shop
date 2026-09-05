@@ -48,6 +48,7 @@ import (
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/sync"
+	"remnawave-tg-shop-bot/internal/tariffsquads"
 	"remnawave-tg-shop-bot/internal/translation"
 )
 
@@ -372,7 +373,11 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminPaymentsCheckoutRepo := repository.NewCheckoutRepo(pool)
 	adminPaymentsHandler := handlers.NewAdminPayments(purchaseRepo, tariffRepo, promoRepo, adminPaymentsCheckoutRepo, customerRepo)
 	adminPromosHandler := handlers.NewAdminPromos(promoRepo)
-	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo)
+	// Применение состава сквадов к действующим подписчикам тарифа.
+	// rw может быть nil (панель не сконфигурирована) — сервис это переживает,
+	// массовое применение просто отвечает 503.
+	tariffSquadsSvc := tariffsquads.New(customerRepo, tariffRepo, rw)
+	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo, tariffSquadsSvc)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
 	adminPartnersHandler := handlers.NewAdminPartners(partnerRepo, customerRepo, config.BotURL(), partnerNotifier)
 	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, broadcastSender, tgBot)

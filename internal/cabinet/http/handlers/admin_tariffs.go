@@ -9,13 +9,28 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/tariffsquads"
 )
 
-func extractTariffID(path string) (int64, bool) {
+// extractTariffPath разбирает /cabinet/api/admin/tariffs/{id}[/{sub}].
+// sub — пустая строка для операций над самим тарифом.
+func extractTariffPath(path string) (int64, string, bool) {
 	s := strings.TrimPrefix(path, "/cabinet/api/admin/tariffs/")
-	s = strings.TrimRight(s, "/")
-	id, err := strconv.ParseInt(s, 10, 64)
+	s = strings.Trim(s, "/")
+	if s == "" {
+		return 0, "", false
+	}
+	head, sub, _ := strings.Cut(s, "/")
+	id, err := strconv.ParseInt(head, 10, 64)
 	if err != nil {
+		return 0, "", false
+	}
+	return id, sub, true
+}
+
+func extractTariffID(path string) (int64, bool) {
+	id, sub, ok := extractTariffPath(path)
+	if !ok || sub != "" {
 		return 0, false
 	}
 	return id, true
@@ -23,10 +38,32 @@ func extractTariffID(path string) (int64, bool) {
 
 type AdminTariffsHandler struct {
 	tariffs *database.TariffRepository
+	// squads — применение состава сквадов к действующим подписчикам.
+	// nil, если панель Remnawave не сконфигурирована: тарифы при этом
+	// продолжают редактироваться, недоступно только массовое применение.
+	squads *tariffsquads.Service
 }
 
-func NewAdminTariffs(tariffs *database.TariffRepository) *AdminTariffsHandler {
-	return &AdminTariffsHandler{tariffs: tariffs}
+func NewAdminTariffs(tariffs *database.TariffRepository, squads *tariffsquads.Service) *AdminTariffsHandler {
+	return &AdminTariffsHandler{tariffs: tariffs, squads: squads}
+}
+
+// validateSquadList проверяет строку active_internal_squad_uuids перед записью.
+//
+// Формат проверяется всегда: битый UUID раньше молча превращался в «нет
+// ограничений» (payment.BuildRemnawaveTariffProfile глотал ошибку разбора,
+// а пустой список означает «все сквады панели»). Существование сквада
+// сверяется с панелью, но только если панель ответила — иначе её недоступность
+// заблокировала бы правку любых полей тарифа.
+func (h *AdminTariffsHandler) validateSquadList(r *http.Request, raw string) error {
+	list, err := database.ParseSquadUUIDList(raw)
+	if err != nil {
+		return err
+	}
+	if len(list) == 0 || h.squads == nil {
+		return nil
+	}
+	return h.squads.ValidateSquadsExist(r.Context(), list)
 }
 
 type tariffPriceDTO struct {
@@ -37,20 +74,20 @@ type tariffPriceDTO struct {
 }
 
 type tariffDTO struct {
-	ID                        int64           `json:"id"`
-	Slug                      string          `json:"slug"`
-	Name                      *string         `json:"name"`
-	SortOrder                 int             `json:"sort_order"`
-	IsActive                  bool            `json:"is_active"`
-	DeviceLimit               int             `json:"device_limit"`
-	TrafficLimitBytes         int64           `json:"traffic_limit_bytes"`
-	TrafficLimitResetStrategy string          `json:"traffic_limit_reset_strategy"`
-	ActiveInternalSquadUUIDs  string          `json:"active_internal_squad_uuids"`
-	ExternalSquadUUID         *string         `json:"external_squad_uuid"`
-	RemnawaveTag              *string         `json:"remnawave_tag"`
-	TierLevel                 *int            `json:"tier_level"`
-	Description               *string         `json:"description"`
-	DescriptionDetail         *string         `json:"description_detail"`
+	ID                        int64            `json:"id"`
+	Slug                      string           `json:"slug"`
+	Name                      *string          `json:"name"`
+	SortOrder                 int              `json:"sort_order"`
+	IsActive                  bool             `json:"is_active"`
+	DeviceLimit               int              `json:"device_limit"`
+	TrafficLimitBytes         int64            `json:"traffic_limit_bytes"`
+	TrafficLimitResetStrategy string           `json:"traffic_limit_reset_strategy"`
+	ActiveInternalSquadUUIDs  string           `json:"active_internal_squad_uuids"`
+	ExternalSquadUUID         *string          `json:"external_squad_uuid"`
+	RemnawaveTag              *string          `json:"remnawave_tag"`
+	TierLevel                 *int             `json:"tier_level"`
+	Description               *string          `json:"description"`
+	DescriptionDetail         *string          `json:"description_detail"`
 	Prices                    []tariffPriceDTO `json:"prices"`
 }
 
@@ -70,10 +107,10 @@ func tariffToDTO(t *database.Tariff, prices []database.TariffPrice) tariffDTO {
 	return tariffDTO{
 		ID: t.ID, Slug: t.Slug, Name: t.Name, SortOrder: t.SortOrder,
 		IsActive: t.IsActive, DeviceLimit: t.DeviceLimit,
-		TrafficLimitBytes: t.TrafficLimitBytes,
+		TrafficLimitBytes:         t.TrafficLimitBytes,
 		TrafficLimitResetStrategy: t.TrafficLimitResetStrategy,
 		ActiveInternalSquadUUIDs:  t.ActiveInternalSquadUUIDs,
-		ExternalSquadUUID: extUUID, RemnawaveTag: t.RemnawaveTag,
+		ExternalSquadUUID:         extUUID, RemnawaveTag: t.RemnawaveTag,
 		TierLevel: t.TierLevel, Description: t.Description, DescriptionDetail: t.DescriptionDetail,
 		Prices: priceDTOs,
 	}
@@ -138,6 +175,10 @@ func (h *AdminTariffsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.TrimSpace(req.Slug) == "" {
 		http.Error(w, "slug is required", http.StatusBadRequest)
+		return
+	}
+	if err := h.validateSquadList(r, req.ActiveInternalSquadUUIDs); err != nil {
+		http.Error(w, "invalid squads: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -242,6 +283,18 @@ func (h *AdminTariffsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		fields[k] = val
 	}
 
+	if v, ok := fields["active_internal_squad_uuids"]; ok {
+		raw, isStr := v.(string)
+		if !isStr {
+			http.Error(w, "invalid field: active_internal_squad_uuids", http.StatusBadRequest)
+			return
+		}
+		if err := h.validateSquadList(r, raw); err != nil {
+			http.Error(w, "invalid squads: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
 	if len(fields) > 0 {
 		if err := h.tariffs.UpdateTariff(r.Context(), id, fields); err != nil {
 			slog.Error("admin tariffs update", "error", err.Error())
@@ -316,16 +369,31 @@ func (h *AdminTariffsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// HandleByID dispatches /cabinet/api/admin/tariffs/{id}.
+// HandleByID dispatches /cabinet/api/admin/tariffs/{id}[/squads[/apply]].
 func (h *AdminTariffsHandler) HandleByID(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		h.Get(w, r)
-	case http.MethodPatch:
-		h.Update(w, r)
-	case http.MethodDelete:
-		h.Delete(w, r)
+	id, sub, ok := extractTariffPath(r.URL.Path)
+	if !ok {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	switch sub {
+	case "":
+		switch r.Method {
+		case http.MethodGet:
+			h.Get(w, r)
+		case http.MethodPatch:
+			h.Update(w, r)
+		case http.MethodDelete:
+			h.Delete(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	case "squads":
+		h.SquadsPreview(w, r, id)
+	case "squads/apply":
+		h.SquadsApply(w, r, id)
 	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "not found", http.StatusNotFound)
 	}
 }

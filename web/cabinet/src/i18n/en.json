@@ -1974,7 +1974,7 @@
         "tierLevel": "Tier level",
         "strategy": "Traffic reset",
         "squads": "Servers (squads)",
-        "squadsHint": "Empty selection = all servers",
+        "squadsHint": "Pick servers explicitly: the panel treats an empty list as «all servers».",
         "prices": "Prices",
         "pricesHint": "Subscription price per billing period. Leave Stars empty if you only accept rubles.",
         "pricePeriod": "Period",
@@ -2012,9 +2012,8 @@
         "slugImmutable": "— fixed after creation",
         "activeHint": "An inactive tariff is hidden from checkout",
         "trafficUnlimitedHint": "0 — unlimited traffic",
-        "squadsAllSelected": "Nothing selected — all servers are available",
+        "squadsAllSelected": "Nothing selected",
         "squadsSelected": "{{count}} of {{total}} selected",
-        "squadsClear": "Clear selection",
         "perMonth": "≈ {{amount}} ₽/mo",
         "starsAutoHint": "Empty field = price is derived automatically at {{rate}} ₽ per ★",
         "starsByRateNote": "rate would give {{count}} ★",
@@ -2031,7 +2030,8 @@
           "devicesMin": "At least 1 device",
           "trafficNegative": "Traffic cannot be negative",
           "priceNegative": "Ruble price cannot be negative",
-          "starsNegative": "Stars price cannot be negative"
+          "starsNegative": "Stars price cannot be negative",
+          "squadsRequired": "Select at least one server"
         },
         "markup": {
           "bold": "Bold",
@@ -2058,6 +2058,27 @@
           "month": "Month",
           "monthRolling": "Rolling month",
           "noResetRw": "No reset (RW)"
+        },
+        "squadsSelectAll": "Select all",
+        "squadsApply": {
+          "title": "Apply to existing subscribers",
+          "activeCount": "{{count}} active subscribers on this tariff",
+          "noActive": "No active subscribers on this tariff",
+          "addMissing": "Grant missing to everyone",
+          "strict": "Match tariff exactly",
+          "dirtyHint": "Save the tariff first — the saved set is what gets applied",
+          "confirmButton": "Apply",
+          "confirmAdd": "Missing servers will be added to everyone on this tariff ({{count}}). Manually granted servers are kept.",
+          "confirmStrict": "Everyone on this tariff ({{count}}) will get exactly the tariff's server set. Manually granted servers will be removed.",
+          "running": "Applying: {{processed}} of {{total}}",
+          "runDone": "Done: changed {{changed}}, already matching {{already}}",
+          "runFailed": "Apply did not finish: {{error}}",
+          "runProblems": "Not found in panel: {{notFound}}, errors: {{failed}}",
+          "saveTitle": "Server set changed",
+          "saveHint": "«Apply to all» pushes the change to the panel now. «New only» leaves current subscribers until their next renewal.",
+          "applyAll": "Apply to all ({{count}})",
+          "onlyNew": "New only",
+          "started": "Apply started: {{count}} subscribers"
         }
       },
       "loyalty": {

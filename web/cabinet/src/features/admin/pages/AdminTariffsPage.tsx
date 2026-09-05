@@ -28,6 +28,7 @@ import {
   useAdminTariffCreate,
   useAdminTariffUpdate,
   useAdminTariffDelete,
+  useAdminTariffSquadsApply,
   type AdminTariff,
   type AdminTariffPrice,
   type CreateTariffInput,
@@ -271,6 +272,7 @@ export default function AdminTariffsPage() {
   const { data: tariffs, isLoading } = useAdminTariffList()
   const create = useAdminTariffCreate()
   const update = useAdminTariffUpdate()
+  const applySquadsMutation = useAdminTariffSquadsApply()
   const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -286,15 +288,32 @@ export default function AdminTariffsPage() {
   const openEdit = (tariff: AdminTariff) => { setEditingTariff(tariff); setEditorOpen(true) }
   const closeEditor = () => { setEditorOpen(false); setEditingTariff(null) }
 
-  const handleSave = (data: CreateTariffInput | Record<string, unknown>, isEdit: boolean) => {
+  const handleSave = (
+    data: CreateTariffInput | Record<string, unknown>,
+    isEdit: boolean,
+    applySquads?: { add: string[]; remove: string[] } | null,
+  ) => {
     const savedMsg = t('admin.feedback.saved')
     if (isEdit && editingTariff) {
+      const tariffId = editingTariff.id
       update.mutate(
-        { id: editingTariff.id, fields: data as Record<string, unknown> },
+        { id: tariffId, fields: data as Record<string, unknown> },
         {
           onSuccess: () => {
             showSuccess(savedMsg)
             closeEditor()
+            // Применяем только после успешного сохранения: иначе в панель уехал
+            // бы состав, которого в тарифе нет.
+            if (applySquads && (applySquads.add.length > 0 || applySquads.remove.length > 0)) {
+              applySquadsMutation.mutate(
+                { id: tariffId, add: applySquads.add, remove: applySquads.remove },
+                {
+                  onSuccess: (run) =>
+                    showSuccess(t('admin.tariffs.squadsApply.started', { count: run.total })),
+                  onError: showError,
+                },
+              )
+            }
           },
           onError: showError,
         },

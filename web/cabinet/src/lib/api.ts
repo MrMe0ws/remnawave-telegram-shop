@@ -43,6 +43,8 @@ import type {
   AdminStatsInsightsDTO,
   AdminStatsTimeSeriesDTO,
   AdminTariffDTO,
+  AdminTariffSquadsPreviewDTO,
+  AdminTariffSquadsRunDTO,
   AdminUserPanelDTO,
   AdminUsersListDTO,
   AdminDeviceDTO,
@@ -1418,6 +1420,12 @@ export const api = {
   adminTariffUpdate: (id: number, fields: Record<string, unknown>) =>
     request<AdminTariffDTO>('PATCH', `/admin/tariffs/${id}`, fields),
   adminTariffDelete: (id: number) => request<AdminOkDTO>('DELETE', `/admin/tariffs/${id}`),
+
+  // Состав сквадов тарифа: сколько людей уже на тарифе и как идёт применение.
+  adminTariffSquads: (id: number) =>
+    request<AdminTariffSquadsPreviewDTO>('GET', `/admin/tariffs/${id}/squads`),
+  adminTariffSquadsApply: (id: number, body: { add: string[]; remove: string[] }) =>
+    request<AdminTariffSquadsRunDTO>('POST', `/admin/tariffs/${id}/squads/apply`, body),
 
   // --- Партнёрская программа ---
 

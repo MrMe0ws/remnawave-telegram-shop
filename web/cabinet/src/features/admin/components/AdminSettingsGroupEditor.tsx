@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, Loader2, SlidersHorizontal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -297,48 +296,40 @@ export function AdminSettingsGroupEditor({
         />
       </button>
 
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            <CardContent className="space-y-1 border-t border-border/60 pt-4">
-              {subsectionBlocks.length === 1 && !subsectionBlocks[0].def ? (
-                <div className="rounded-lg border border-border/60 bg-card/80 px-3 shadow-sm">
-                  {renderFieldsLayout(subsectionBlocks[0].fields)}
-                </div>
-              ) : (
-                subsectionBlocks.map(renderSubsection)
-              )}
+      {expanded && (
+        <div className="admin-reveal">
+          <CardContent className="space-y-1 border-t border-border/60 pt-4">
+            {subsectionBlocks.length === 1 && !subsectionBlocks[0].def ? (
+              <div className="rounded-lg border border-border/60 bg-card/80 px-3 shadow-sm">
+                {renderFieldsLayout(subsectionBlocks[0].fields)}
+              </div>
+            ) : (
+              subsectionBlocks.map(renderSubsection)
+            )}
 
-              {nonInstantKeys.length > 0 && (
-                <div className="flex justify-end pt-3">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={saving}
-                    onClick={() => onSave(nonInstantKeys)}
-                    className="min-w-[140px]"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                        {t('admin.settings.saving')}
-                      </>
-                    ) : (
-                      t('admin.settings.saveSection')
-                    )}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {nonInstantKeys.length > 0 && (
+              <div className="flex justify-end pt-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => onSave(nonInstantKeys)}
+                  className="min-w-[140px]"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      {t('admin.settings.saving')}
+                    </>
+                  ) : (
+                    t('admin.settings.saveSection')
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </div>
+      )}
     </Card>
   )
 }

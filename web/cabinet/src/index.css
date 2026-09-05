@@ -852,6 +852,42 @@
     --radius: 0.875rem;
   }
 
+  /*
+   * Раскрытие секции настроек — проявление по opacity, без анимации высоты.
+   *
+   * Раньше блок ехал framer-motion'ом с `height: 0 → auto`. Высота — layout,
+   * и каждый её кадр пересчитывал весь документ: `.cabinet-shell-gradient` и
+   * `.cabinet-decor-layer` растянуты `absolute; inset: 0` на всю его высоту,
+   * поверх них sticky-шапка с `backdrop-blur-xl`, а сама карточка несёт
+   * `backdrop-blur-[2px]`. Chrome такое тянет, WebKit — нет: кадры приходят
+   * неровно, дробная высота при DPR 3 квантуется по device-пикселям, и на
+   * iPhone секция дрожала по вертикали на 2–3px. Разбор тот же, что у
+   * авто-скрытия шапки (useAdminMobileHeaderAutoHide.ts): покадрово менять
+   * высоту документа в этой оболочке нельзя.
+   *
+   * Секция раскрывается сразу на конечную высоту, анимируется только opacity —
+   * это композитор, ни одного reflow. Сдвиг (translateY) не добавлен намеренно:
+   * карточка `overflow: hidden`, и сдвинутый блок подрезался бы по краю.
+   */
+  .admin-reveal {
+    animation: admin-reveal 0.16s ease-out both;
+  }
+
+  @keyframes admin-reveal {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-reveal {
+      animation: none;
+    }
+  }
+
   /* Admin form fields — в тёмной теме не bg-background (темнее модалки), а --input. */
   .admin-input {
     @apply rounded-btn border border-input bg-background text-sm text-foreground transition-colors;

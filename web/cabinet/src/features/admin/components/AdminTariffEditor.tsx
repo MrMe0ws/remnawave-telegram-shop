@@ -36,10 +36,15 @@ import { rubPerStarFromSettings, starsFromRub, savingsPercent } from '../utils/t
 import { useAdminBotSettings } from '../hooks/useAdminBotSettings'
 import {
   useAdminSquads,
+  useAdminTariffSquads,
   STRATEGIES,
   type AdminTariff,
   type CreateTariffInput,
 } from '../hooks/useAdminTariffs'
+import {
+  AdminTariffSquadsApplyPanel,
+  AdminTariffSquadsSaveDialog,
+} from './AdminTariffSquadsApply'
 
 const GB = 1024 * 1024 * 1024
 const PERIOD_MONTHS = [1, 3, 6, 12] as const
@@ -219,13 +224,21 @@ type TariffValidationErrors = Partial<Record<TariffEditorTabId, string[]>>
  * Бэкенд обязательным считает только slug (он выводится из названия), поэтому
  * здесь проверяем лишь бесспорные ошибки данных — не выдумывая бизнес-правил.
  */
-function validateTariffForm(form: TariffFormData): TariffValidationErrors {
+function validateTariffForm(form: TariffFormData, hasSquads: boolean): TariffValidationErrors {
   const errors: TariffValidationErrors = {}
   const push = (tab: TariffEditorTabId, key: string) => {
     ;(errors[tab] ??= []).push(key)
   }
 
   if (!form.name.trim()) push('basic', 'admin.tariffs.validation.nameRequired')
+  /*
+   * Пустой список сквадов в БД означает «все сквады панели», а не «ни одного»
+   * (filterSquadsByUUIDList в remnawave/tariff_profile.go). Кнопка «Очистить»
+   * рядом с чекбоксами читалась ровно наоборот, поэтому состав выбирается явно.
+   */
+  if (hasSquads && form.squad_uuids.length === 0) {
+    push('servers', 'admin.tariffs.validation.squadsRequired')
+  }
   if (!Number.isFinite(form.device_limit) || form.device_limit < 1) {
     push('traffic', 'admin.tariffs.validation.devicesMin')
   }
@@ -323,7 +336,12 @@ interface Props {
   open: boolean
   onClose: () => void
   tariff?: AdminTariff | null
-  onSave: (data: CreateTariffInput | Record<string, unknown>, isEdit: boolean) => void
+  onSave: (
+    data: CreateTariffInput | Record<string, unknown>,
+    isEdit: boolean,
+    /** Дифф состава сквадов, который надо применить к действующим подписчикам. */
+    applySquads?: { add: string[]; remove: string[] } | null,
+  ) => void
   saving?: boolean
 }
 
@@ -339,7 +357,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
   const [activeTab, setActiveTab] = useState<TariffEditorTabId>('basic')
 
   const rubPerStar = rubPerStarFromSettings(botSettings)
-  const errors = validateTariffForm(form)
+  const errors = validateTariffForm(form, hasSquads)
   const errorTabs = new Set(Object.keys(errors) as TariffEditorTabId[])
   const activeTabErrors = errors[activeTab] ?? []
   const hasErrors = errorTabs.size > 0
@@ -386,13 +404,43 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
 
   const clearStars = () => set('stars', [null, null, null, null])
 
-  const handleSave = () => {
-    if (hasErrors) return
+  /*
+   * Дифф состава относительно сохранённого тарифа. Исходный пустой список
+   * разворачивается во все сквады панели — иначе «пусто -> выбрал два»
+   * выглядело бы как добавление, хотя на деле это снятие остальных.
+   */
+  const originalSquads =
+    tariff == null
+      ? []
+      : (() => {
+          const parsed = parseSquadUUIDs(tariff.active_internal_squad_uuids ?? '')
+          return parsed.length > 0 ? parsed : (squadsData?.items ?? []).map((s) => s.uuid)
+        })()
+  const addedSquads = form.squad_uuids.filter((u) => !originalSquads.includes(u))
+  const removedSquads = originalSquads.filter((u) => !form.squad_uuids.includes(u))
+  const squadsChanged = addedSquads.length > 0 || removedSquads.length > 0
+
+  const { data: squadsApplyData } = useAdminTariffSquads(open && isEdit ? (tariff?.id ?? null) : null)
+  const activeOnTariff = squadsApplyData?.active_count ?? 0
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false)
+
+  const submit = (applySquads: { add: string[]; remove: string[] } | null) => {
     if (isEdit) {
-      onSave(formToUpdateFields(form), true)
+      onSave(formToUpdateFields(form), true, applySquads)
     } else {
       onSave(formToCreateInput(form), false)
     }
+  }
+
+  const handleSave = () => {
+    if (hasErrors) return
+    // Спрашиваем только когда выбор реально что-то меняет: состав изменился
+    // и на тарифе есть кому его применять.
+    if (isEdit && squadsChanged && activeOnTariff > 0) {
+      setApplyDialogOpen(true)
+      return
+    }
+    submit(null)
   }
 
   const handleRequestClose = () => {
@@ -567,13 +615,13 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                         total: squadsData.items.length,
                       })}
                 </span>
-                {form.squad_uuids.length > 0 && (
+                {form.squad_uuids.length < squadsData.items.length && (
                   <button
                     type="button"
-                    onClick={() => set('squad_uuids', [])}
+                    onClick={() => set('squad_uuids', squadsData.items.map((sq) => sq.uuid))}
                     className={surface('raised', 'rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground')}
                   >
-                    {t('admin.tariffs.squadsClear')}
+                    {t('admin.tariffs.squadsSelectAll')}
                   </button>
                 )}
               </div>
@@ -598,6 +646,13 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                 ))}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{t('admin.tariffs.squadsHint')}</p>
+              {isEdit && tariff && (
+                <AdminTariffSquadsApplyPanel
+                  tariffId={tariff.id}
+                  squads={squadsData.items}
+                  dirty={isDirty}
+                />
+              )}
             </section>
           )}
 
@@ -767,6 +822,24 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
         message={t('admin.tariffs.unsavedMessage')}
         confirmLabel={t('admin.tariffs.unsavedConfirm')}
         variant="destructive"
+      />
+
+      <AdminTariffSquadsSaveDialog
+        open={applyDialogOpen}
+        onClose={() => setApplyDialogOpen(false)}
+        onApplyAll={() => {
+          setApplyDialogOpen(false)
+          submit({ add: addedSquads, remove: removedSquads })
+        }}
+        onOnlyNew={() => {
+          setApplyDialogOpen(false)
+          submit(null)
+        }}
+        added={addedSquads}
+        removed={removedSquads}
+        squads={squadsData?.items ?? []}
+        activeCount={activeOnTariff}
+        loading={Boolean(saving)}
       />
     </>
   )
