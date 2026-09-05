@@ -849,13 +849,9 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
       <AdminTariffSquadsSaveDialog
         open={applyDialogOpen}
         onClose={() => setApplyDialogOpen(false)}
-        onApplyAll={() => {
+        onSubmit={(applyNow) => {
           setApplyDialogOpen(false)
-          submit({ add: addedSquads, remove: removedSquads })
-        }}
-        onOnlyNew={() => {
-          setApplyDialogOpen(false)
-          submit(null)
+          submit(applyNow ? { add: addedSquads, remove: removedSquads } : null)
         }}
         added={addedSquads}
         removed={removedSquads}
