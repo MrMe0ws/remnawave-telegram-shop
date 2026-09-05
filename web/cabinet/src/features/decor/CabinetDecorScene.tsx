@@ -162,6 +162,17 @@ function SunsetGlow() {
   )
 }
 
+/** wine: густая винная дымка по углам + мягкий блик «бокала» у верхней кромки. */
+function WineHaze() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__wine-haze cabinet-decor-scene__wine-haze--tl" aria-hidden />
+      <div className="cabinet-decor-scene__wine-haze cabinet-decor-scene__wine-haze--br" aria-hidden />
+      <div className="cabinet-decor-scene__wine-sheen" aria-hidden />
+    </>
+  )
+}
+
 function LavenderMist() {
   return (
     <>
@@ -230,6 +241,8 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
       return <SunsetGlow />
     case 'lavender':
       return <LavenderMist />
+    case 'wine':
+      return <WineHaze />
     default:
       return null
   }

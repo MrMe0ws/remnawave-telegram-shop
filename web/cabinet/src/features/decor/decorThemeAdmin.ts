@@ -41,6 +41,7 @@ export const DECOR_THEME_ADMIN_LABEL_COLOR: Partial<Record<DecorThemeId, string>
   cyber: 'hsl(140 90% 42%)',
   sunset: 'hsl(18 92% 54%)',
   lavender: 'hsl(270 45% 58%)',
+  wine: 'hsl(346 70% 40%)',
 }
 
 export function decorThemeOptionLabelStyle(themeId: string): CSSProperties | undefined {

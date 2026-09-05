@@ -166,6 +166,7 @@ export interface AuthBootstrapResponse {
     | 'cyber'
     | 'sunset'
     | 'lavender'
+    | 'wine'
   /** Доступные провайдеры оплаты по backend-конфигурации env. */
   payment_providers?: {
     yookassa?: boolean

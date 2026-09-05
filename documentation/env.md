@@ -313,7 +313,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_BRAND_LOGO_URL` / `CABINET_BRAND_LOGO_FILE` / `CABINET_BRAND_LOGO_FILE_BASE` | Логотип |
 | `CABINET_PWA_ENABLED` / `CABINET_PWA_APP_NAME` / `CABINET_PWA_SHORT_NAME` | PWA |
 | `CABINET_LIGHT_THEME_ENABLED` | Светлая тема (`true` по умолчанию) |
-| `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `neon`, `ocean`, `new_year`, `slate`, `carbon`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `sunset`, `orange`, `halloween`, `yellow`, `summer`, `black_friday`. Меняется в админке без рестарта |
+| `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `neon`, `ocean`, `new_year`, `slate`, `carbon`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `wine`, `sunset`, `orange`, `halloween`, `yellow`, `summer`, `black_friday`. Меняется в админке без рестарта |
 | `CABINET_DECOR_AUTO_ENABLED` | Авто-смена декор-темы по календарю (`false` по умолчанию). В праздничном окне тема окна перекрывает `CABINET_DECOR_THEME`, вне окон возвращается она же |
 | `CABINET_DECOR_SCHEDULE` | Окна авто-смены: JSON `[{"theme":"new_year","from":"12-01","to":"01-31","enabled":true}]`. Пусто — встроенный пресет праздников. Побеждает первое совпавшее окно; `from > to` — окно через 31 декабря. Редактируется в админке |
 | `CABINET_TARIFF_PRICE_DISPLAY` | Витрина: `monthly` или `marketing` |

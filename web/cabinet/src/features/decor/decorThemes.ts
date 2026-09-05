@@ -19,6 +19,7 @@ export const DECOR_THEME_IDS = [
   // pink / red
   'pink',
   'valentine',
+  'wine',
   // warm
   'sunset',
   'orange',
@@ -66,6 +67,7 @@ export const DECOR_THEMES: Record<DecorThemeId, DecorThemeDef> = {
   lavender: { id: 'lavender', effect: 'dots' },
   pink: { id: 'pink', effect: null },
   valentine: { id: 'valentine', effect: 'hearts' },
+  wine: { id: 'wine', effect: null },
   sunset: { id: 'sunset', effect: 'embers' },
   orange: { id: 'orange', effect: null },
   halloween: { id: 'halloween', effect: 'pumpkins' },

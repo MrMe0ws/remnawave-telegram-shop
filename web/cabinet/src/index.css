@@ -2859,6 +2859,58 @@ html:not(.dark)[data-cabinet-decor="lavender"] .cabinet-shell-gradient {
     radial-gradient(ellipse 70% 45% at 0% 60%, hsl(250 35% 70% / 0.1), transparent 48%);
 }
 
+/* --- wine: винная (вишнёвая) — акцент #5E1224 ------------------------------
+ *
+ * Светлая тема берёт хекс как есть (346 68% 22%): почти чёрный бордо на белом
+ * даёт «этикеточный» вид и белый текст на кнопках читается с запасом.
+ * В тёмной тот же тон поднят по светлоте до вишни — на #0B1220 бордо 22%
+ * сливается с фоном, и акцент переставал быть акцентом.
+ */
+html[data-cabinet-decor="wine"] {
+  --primary: 346 68% 22%;
+  --accent: 346 68% 22%;
+  --ring: 346 68% 22%;
+}
+
+html.dark[data-cabinet-decor="wine"] {
+  --primary: 346 66% 52%;
+  --accent: 346 66% 52%;
+  --ring: 346 66% 52%;
+
+  /*
+   * Поверхности уведены из синевы в бордо по той же лесенке светлоты, что и
+   * в базовой тёмной: на винном фоне сине-серые карточки читались как чужая
+   * тема. Насыщенность вдвое ниже акцента — карточка остаётся почти
+   * нейтральной, цвет виден только рядом с белым текстом.
+   */
+  --background: 345 32% 7%;
+  --foreground: 350 20% 96%;
+  --card: 344 20% 14%;
+  --card-foreground: 350 20% 96%;
+  --muted: 345 22% 11%;
+  --muted-foreground: 345 14% 66%;
+  --secondary: 344 18% 19%;
+  --secondary-foreground: 350 20% 96%;
+  --border: 344 16% 25%;
+  --input: 344 16% 23%;
+  --connect-device-inner-bg: 344 18% 19%;
+  --connect-device-inner-bg-hover: 344 18% 22%;
+
+  /* Фон — через переменную, её же читает `.cabinet-shell-gradient` (см. carbon). */
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 130% 88% at 28% -16%, hsl(346 72% 42% / 0.26) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 100% 100%, hsl(330 60% 34% / 0.18) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(345 34% 11%) 0%, hsl(var(--background)) 45%, hsl(352 40% 6%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="wine"] body,
+html:not(.dark)[data-cabinet-decor="wine"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 24% -15%, hsl(346 60% 40% / 0.2), transparent 56%),
+    radial-gradient(ellipse 85% 50% at 100% 90%, hsl(335 55% 52% / 0.12), transparent 50%),
+    radial-gradient(ellipse 70% 45% at 0% 60%, hsl(356 45% 58% / 0.08), transparent 48%);
+}
+
 /*
  * Общей акцентной обводки у карточек больше нет.
  *
@@ -3258,6 +3310,52 @@ html:not(.dark) .cabinet-decor-scene__sunset-orb {
 
 html:not(.dark) .cabinet-decor-scene__lavender-mist {
   opacity: 0.22;
+}
+
+.cabinet-decor-scene__wine-haze {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(52px);
+  opacity: 0.34;
+  background: radial-gradient(circle, hsl(346 70% 34% / 0.75), transparent 70%);
+}
+
+.cabinet-decor-scene__wine-haze--tl {
+  top: -10%;
+  left: -8%;
+  width: min(52vw, 320px);
+  height: min(42vw, 260px);
+}
+
+.cabinet-decor-scene__wine-haze--br {
+  bottom: -8%;
+  right: -6%;
+  width: min(46vw, 280px);
+  height: min(38vw, 230px);
+  opacity: 0.26;
+  background: radial-gradient(circle, hsl(332 55% 38% / 0.7), transparent 70%);
+}
+
+/* Тонкий блик по верхней кромке — «бокал на просвет», без движения. */
+.cabinet-decor-scene__wine-sheen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(180deg, hsl(350 75% 58% / 0.16), transparent 100%);
+}
+
+html:not(.dark) .cabinet-decor-scene__wine-haze {
+  opacity: 0.2;
+}
+
+html:not(.dark) .cabinet-decor-scene__wine-haze--br {
+  opacity: 0.16;
+}
+
+html:not(.dark) .cabinet-decor-scene__wine-sheen {
+  background: linear-gradient(180deg, hsl(346 60% 45% / 0.1), transparent 100%);
 }
 
 /* new_year: иней на карточках */

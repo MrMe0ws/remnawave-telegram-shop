@@ -26,6 +26,7 @@ var ValidDecorThemeIDs = []string{
 	"lavender",
 	"pink",
 	"valentine",
+	"wine",
 	"sunset",
 	"orange",
 	"halloween",
