@@ -416,6 +416,14 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
           const parsed = parseSquadUUIDs(tariff.active_internal_squad_uuids ?? '')
           return parsed.length > 0 ? parsed : (squadsData?.items ?? []).map((s) => s.uuid)
         })()
+  /*
+   * UUID, которых нет в панели. Тариф мог быть заведён из SQUAD_UUIDS мимо
+   * панели (tariff_admin.go) или сквад пересоздали с новым UUID. Галочкой такой
+   * сквад не показать — он не в списке панели, — поэтому он молча ехал обратно
+   * при каждом сохранении. Показываем его явно и даём убрать.
+   */
+  const knownSquadUuids = squadsData?.items.map((sq) => sq.uuid) ?? []
+  const unknownSquads = hasSquads ? form.squad_uuids.filter((u) => !knownSquadUuids.includes(u)) : []
   const addedSquads = form.squad_uuids.filter((u) => !originalSquads.includes(u))
   const removedSquads = originalSquads.filter((u) => !form.squad_uuids.includes(u))
   const squadsChanged = addedSquads.length > 0 || removedSquads.length > 0
@@ -611,11 +619,11 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   {form.squad_uuids.length === 0
                     ? t('admin.tariffs.squadsAllSelected')
                     : t('admin.tariffs.squadsSelected', {
-                        count: form.squad_uuids.length,
+                        count: form.squad_uuids.length - unknownSquads.length,
                         total: squadsData.items.length,
                       })}
                 </span>
-                {form.squad_uuids.length < squadsData.items.length && (
+                {squadsData.items.some((sq) => !form.squad_uuids.includes(sq.uuid)) && (
                   <button
                     type="button"
                     onClick={() => set('squad_uuids', squadsData.items.map((sq) => sq.uuid))}
@@ -646,6 +654,20 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                 ))}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{t('admin.tariffs.squadsHint')}</p>
+              {unknownSquads.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                  <span>{t('admin.tariffs.squadsUnknown', { count: unknownSquads.length })}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set('squad_uuids', form.squad_uuids.filter((u) => knownSquadUuids.includes(u)))
+                    }
+                    className={surface('raised', 'rounded-md px-2 py-1 transition-colors hover:bg-accent hover:text-foreground')}
+                  >
+                    {t('admin.tariffs.squadsUnknownDrop')}
+                  </button>
+                </div>
+              )}
               {isEdit && tariff && (
                 <AdminTariffSquadsApplyPanel
                   tariffId={tariff.id}

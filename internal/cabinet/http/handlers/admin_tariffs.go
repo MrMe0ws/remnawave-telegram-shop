@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/tariffsquads"
@@ -55,7 +57,14 @@ func NewAdminTariffs(tariffs *database.TariffRepository, squads *tariffsquads.Se
 // а пустой список означает «все сквады панели»). Существование сквада
 // сверяется с панелью, но только если панель ответила — иначе её недоступность
 // заблокировала бы правку любых полей тарифа.
-func (h *AdminTariffsHandler) validateSquadList(r *http.Request, raw string) error {
+//
+// Сверяются ТОЛЬКО добавляемые сквады (те, которых в тарифе ещё не было).
+// Уже записанный UUID пропускается, даже если панель его не отдаёт: тариф мог
+// быть заведён из SQUAD_UUIDS мимо панели (см. tariff_admin.go), а сквад —
+// пересоздан в панели с новым UUID. Раньше такой «унаследованный» UUID делал
+// тариф нередактируемым: любая правка падала с «squad not found in panel», а
+// убрать его через список галочек нельзя — он в нём не отображается.
+func (h *AdminTariffsHandler) validateSquadList(r *http.Request, raw string, existing []uuid.UUID) error {
 	list, err := database.ParseSquadUUIDList(raw)
 	if err != nil {
 		return err
@@ -63,7 +72,20 @@ func (h *AdminTariffsHandler) validateSquadList(r *http.Request, raw string) err
 	if len(list) == 0 || h.squads == nil {
 		return nil
 	}
-	return h.squads.ValidateSquadsExist(r.Context(), list)
+	had := make(map[uuid.UUID]struct{}, len(existing))
+	for _, u := range existing {
+		had[u] = struct{}{}
+	}
+	added := make([]uuid.UUID, 0, len(list))
+	for _, u := range list {
+		if _, ok := had[u]; !ok {
+			added = append(added, u)
+		}
+	}
+	if len(added) == 0 {
+		return nil
+	}
+	return h.squads.ValidateSquadsExist(r.Context(), added)
 }
 
 type tariffPriceDTO struct {
@@ -177,7 +199,7 @@ func (h *AdminTariffsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "slug is required", http.StatusBadRequest)
 		return
 	}
-	if err := h.validateSquadList(r, req.ActiveInternalSquadUUIDs); err != nil {
+	if err := h.validateSquadList(r, req.ActiveInternalSquadUUIDs, nil); err != nil {
 		http.Error(w, "invalid squads: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -289,7 +311,11 @@ func (h *AdminTariffsHandler) Update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid field: active_internal_squad_uuids", http.StatusBadRequest)
 			return
 		}
-		if err := h.validateSquadList(r, raw); err != nil {
+		var stored []uuid.UUID
+		if cur, curErr := h.tariffs.GetByID(r.Context(), id); curErr == nil && cur != nil {
+			stored, _ = database.ParseSquadUUIDList(cur.ActiveInternalSquadUUIDs)
+		}
+		if err := h.validateSquadList(r, raw, stored); err != nil {
 			http.Error(w, "invalid squads: "+err.Error(), http.StatusBadRequest)
 			return
 		}

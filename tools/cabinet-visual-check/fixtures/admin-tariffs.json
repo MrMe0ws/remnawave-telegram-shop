@@ -9,7 +9,7 @@
       "device_limit": 3,
       "traffic_limit_bytes": 0,
       "traffic_limit_reset_strategy": "MONTH",
-      "active_internal_squad_uuids": "11111111-1111-1111-1111-111111111111",
+      "active_internal_squad_uuids": "3beecbc5-6742-4024-830a-6eec56620c10,11111111-1111-1111-1111-111111111111",
       "tier_level": 3,
       "description": "Обход белых списков",
       "description_detail": null,

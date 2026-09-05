@@ -2079,7 +2079,10 @@
           "applyAll": "Apply to all ({{count}})",
           "onlyNew": "New only",
           "started": "Apply started: {{count}} subscribers"
-        }
+        },
+        "squadsUnknownDrop": "Drop them",
+        "squadsUnknown_one": "{{count}} server from this tariff is missing in the panel — not shown in the list",
+        "squadsUnknown_other": "{{count}} servers from this tariff are missing in the panel — not shown in the list"
       },
       "loyalty": {
         "title": "Loyalty",
