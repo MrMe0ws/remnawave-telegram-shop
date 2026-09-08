@@ -9,6 +9,7 @@ import {
   Gem,
   Gift,
   Handshake,
+  LayoutList,
   Link2,
   ListFilter,
   Megaphone,
@@ -455,6 +456,12 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME'],
     },
     {
+      id: 'sections',
+      titleKey: 'admin.settings.subsections.cabinet.sections',
+      icon: LayoutList,
+      keys: ['CABINET_SUBSCRIPTION_SHOW_LOYALTY'],
+    },
+    {
       id: 'schedule',
       titleKey: 'admin.settings.subsections.cabinet.schedule',
       icon: CalendarDays,
@@ -484,7 +491,7 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'showcase',
       titleKey: 'admin.settings.subsections.tariffs.showcase',
       icon: BadgeRussianRuble,
-      keys: ['CABINET_TARIFF_PRICE_DISPLAY'],
+      keys: ['CABINET_TARIFF_PRICE_DISPLAY', 'CABINET_TARIFF_SAVINGS_BADGE'],
     },
   ],
 }

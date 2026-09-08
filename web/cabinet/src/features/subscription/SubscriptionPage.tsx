@@ -21,12 +21,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { api, SUBSCRIPTION_STALE_MS } from '@/lib/api'
 import { daysUntil, cn } from '@/lib/utils'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
 export default function SubscriptionPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const toast = useToast()
+  // CABINET_SUBSCRIPTION_SHOW_LOYALTY: плашку уровня на этой странице админ
+  // включает сам, по умолчанию её нет. Пока bootstrap не приехал, не рисуем —
+  // иначе карточка мелькала бы при каждой загрузке у тех, кто её выключил.
+  const { data: bootstrap } = useAuthBootstrap()
+  const loyaltyVisible = bootstrap?.subscription_loyalty_visible === true
   const [refreshDone, setRefreshDone] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -221,11 +227,13 @@ export default function SubscriptionPage() {
               </RevealItem>
             )}
 
-            <RevealItem>
-              <div id="cabinet-loyalty">
-                <LoyaltyCompactCard />
-              </div>
-            </RevealItem>
+            {loyaltyVisible && (
+              <RevealItem>
+                <div id="cabinet-loyalty">
+                  <LoyaltyCompactCard />
+                </div>
+              </RevealItem>
+            )}
 
             {sub?.hwid_extra?.ui_visible && sub.hwid_extra.enabled && (
               <RevealItem>

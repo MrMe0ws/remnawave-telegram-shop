@@ -18,9 +18,12 @@ import { formatDecimals, formatNumber } from '@/lib/format'
 import {
   formatRubInteger,
   formatShowcasePriceRub,
+  periodBaselineRub,
+  periodSavingsPercent,
   showAnnualPriceFootnote,
   showcaseMonthlyRub,
   type TariffPriceDisplayMode,
+  type TariffSavingsBadgeMode,
 } from '@/features/tariffs/tariffShowcasePrice'
 
 export default function TariffsPage() {
@@ -106,6 +109,7 @@ export default function TariffsPage() {
             <TariffPeriodStep
               slug={planSlug}
               tariffs={data.tariffs}
+              savingsBadge={data.savings_badge ?? 'none'}
               onBack={clearPlan}
               onSelect={handleCheckout}
             />
@@ -530,11 +534,13 @@ function TariffPlanCard({
 function TariffPeriodStep({
   slug,
   tariffs,
+  savingsBadge,
   onBack,
   onSelect,
 }: {
   slug: string
   tariffs: TariffItem[]
+  savingsBadge: TariffSavingsBadgeMode
   onBack: () => void
   onSelect: (t: TariffItem) => void
 }) {
@@ -584,7 +590,7 @@ function TariffPeriodStep({
                * Ховер и нажатие приходят из варианта outline — свой
                * tariffOtherCardHoverClassName тут только спорил с ним за бордер.
                */
-              'h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-[var(--radius)] backdrop-blur-[2px] border duration-200',
+              'relative h-auto min-h-[88px] flex-col items-start justify-start gap-0 px-4 py-3 rounded-[var(--radius)] backdrop-blur-[2px] border duration-200',
               tariffCardShadowClassName,
               p.months === selectedMonths
                 ? 'border-primary bg-primary/10 shadow-[0_10px_26px_-12px_hsl(var(--cabinet-accent)/0.5)] dark:bg-primary/15'
@@ -597,17 +603,62 @@ function TariffPeriodStep({
           >
             {(() => {
               const perMonthRub = p.months > 0 ? p.price_rub / p.months : 0
+              const savingPct = savingsBadge === 'none' ? null : periodSavingsPercent(periods, p)
+              const baselineRub =
+                savingsBadge === 'old_price' && savingPct != null
+                  ? periodBaselineRub(periods, p.months)
+                  : 0
               return (
                 <>
+                  {savingPct != null && (
+                    <span
+                      className={cn(
+                        periodSavingBadgeClassName,
+                        'absolute right-2.5 top-2.5',
+                        /*
+                         * old_price: на ПК плашка стоит в строке цены рядом с
+                         * зачёркнутой базой. На узких экранах «1 320 ₽ 1 800 ₽ −27%»
+                         * в одну строку не помещается — там плашка уходит в угол.
+                         */
+                        savingsBadge === 'old_price' && 'min-[501px]:hidden',
+                      )}
+                    >
+                      −{savingPct}%
+                    </span>
+                  )}
                   <span
                     className="text-lg leading-7 font-medium tabular-nums text-foreground dark:text-[rgb(241,245,249)]"
                   >
-                    {pluralizeMonths(p.months)}
+                    {savingsBadge === 'none' ? (
+                      pluralizeMonths(p.months)
+                    ) : (
+                      /*
+                       * С плашкой в углу «12 месяцев» на мобилке упирается в неё
+                       * (у кнопки whitespace-nowrap, так что текст полез бы под
+                       * плашку). Короткая форма — как в редакторе тарифа в админке.
+                       */
+                      <>
+                        <span className="min-[501px]:hidden">{pluralizeMonthsShort(p.months)}</span>
+                        <span className="hidden min-[501px]:inline">{pluralizeMonths(p.months)}</span>
+                      </>
+                    )}
                   </span>
-                  <span
-                    className="text-[0.95rem] leading-5 font-semibold tabular-nums text-primary"
-                  >
-                    {formatRubInteger(p.price_rub)} ₽
+                  <span className="flex flex-wrap items-baseline gap-x-1.5">
+                    <span
+                      className="text-[0.95rem] leading-5 font-semibold tabular-nums text-primary"
+                    >
+                      {formatRubInteger(p.price_rub)} ₽
+                    </span>
+                    {baselineRub > 0 && (
+                      <span className="text-[0.7rem] min-[501px]:text-[0.78rem] leading-5 font-normal tabular-nums text-muted-foreground line-through">
+                        {formatRubInteger(baselineRub)} ₽
+                      </span>
+                    )}
+                    {baselineRub > 0 && (
+                      <span className={cn(periodSavingBadgeClassName, 'hidden min-[501px]:inline-block')}>
+                        −{savingPct}%
+                      </span>
+                    )}
                   </span>
                   <span
                     className="mt-1 text-[0.7rem] leading-4 font-normal tabular-nums text-muted-foreground dark:text-[rgb(101,114,134)] tracking-[-1px]"
@@ -818,6 +869,15 @@ function pluralizeMonths(n: number): string {
   if (n >= 2 && n <= 4) return `${n} месяца`
   return `${n} месяцев`
 }
+
+/** Короткая форма для узких карточек: рядом с плашкой «−N %» полная не влезает. */
+function pluralizeMonthsShort(n: number): string {
+  return `${n} мес.`
+}
+
+/** Плашка экономии — тот же вид, что у процентов в редакторе тарифа в админке. */
+const periodSavingBadgeClassName =
+  'rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[0.7rem] font-medium leading-tight tabular-nums text-emerald-600 dark:text-emerald-400'
 
 function isSubscriptionActive(expireAt: string | null | undefined): boolean {
   if (expireAt == null || expireAt === '') return false

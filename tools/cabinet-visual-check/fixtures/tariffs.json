@@ -7,14 +7,27 @@
       {
         "id": 1,
         "slug": "base",
-        "name": "Базовый",
-        "description": "2 устройства\nЛимит трафика до 150 ГБ/мес\nНет обхода Белых списков",
+        "name": "Стандарт",
+        "description": "2 устройства\nЛимит до 200 ГБ/мес",
         "device_limit": 1,
         "traffic_limit_bytes": 214748364800,
         "prices": [
-          { "months": 1, "amount_rub": 150 },
-          { "months": 3, "amount_rub": 420 },
-          { "months": 12, "amount_rub": 1500 }
+          {
+            "months": 1,
+            "amount_rub": 150
+          },
+          {
+            "months": 3,
+            "amount_rub": 400
+          },
+          {
+            "months": 6,
+            "amount_rub": 750
+          },
+          {
+            "months": 12,
+            "amount_rub": 1320
+          }
         ]
       },
       {
@@ -25,8 +38,14 @@
         "device_limit": 4,
         "traffic_limit_bytes": 0,
         "prices": [
-          { "months": 1, "amount_rub": 200 },
-          { "months": 6, "amount_rub": 1000 }
+          {
+            "months": 1,
+            "amount_rub": 200
+          },
+          {
+            "months": 6,
+            "amount_rub": 1000
+          }
         ]
       },
       {
@@ -36,7 +55,12 @@
         "description": "Обход Белых списков🔥\nБезлимитный трафик для 3 устройств",
         "device_limit": 3,
         "traffic_limit_bytes": 0,
-        "prices": [{ "months": 1, "amount_rub": 400 }]
+        "prices": [
+          {
+            "months": 1,
+            "amount_rub": 400
+          }
+        ]
       },
       {
         "id": 4,
@@ -45,9 +69,15 @@
         "description": "низкие цены\n- все четко\n- порвет по скорости\n- офигенный тариф",
         "device_limit": 5,
         "traffic_limit_bytes": 107374182400,
-        "prices": [{ "months": 1, "amount_rub": 1000 }]
+        "prices": [
+          {
+            "months": 1,
+            "amount_rub": 1000
+          }
+        ]
       }
-    ]
+    ],
+    "savings_badge": "corner"
   },
   "/me/subscription": {
     "expire_at": "2026-10-14T12:00:00Z",
@@ -55,7 +85,13 @@
     "subscription_period_months": 1,
     "traffic_used_gb": 42.5,
     "traffic_limit_gb": 200,
-    "tariff": { "id": 1, "slug": "base", "name": "Базовый", "traffic_gb": 200, "device_limit": 1 },
+    "tariff": {
+      "id": 1,
+      "slug": "base",
+      "name": "Базовый",
+      "traffic_gb": 200,
+      "device_limit": 1
+    },
     "loyalty_xp": 1240,
     "loyalty_tier": "silver"
   }

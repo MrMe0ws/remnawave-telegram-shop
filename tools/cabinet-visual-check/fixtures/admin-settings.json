@@ -55,6 +55,13 @@
             "value": "",
             "source": "default",
             "instant": false
+          },
+          {
+            "key": "CABINET_SUBSCRIPTION_SHOW_LOYALTY",
+            "type": "bool",
+            "value": "false",
+            "source": "default",
+            "instant": true
           }
         ]
       },

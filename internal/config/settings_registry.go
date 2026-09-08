@@ -517,6 +517,11 @@ func RuntimeSettingsRegistry() []SettingField {
 			Apply:   applyCabinetDecorSchedule(),
 			Current: cabinetDecorScheduleCurrent(),
 		},
+		{
+			Key: "CABINET_SUBSCRIPTION_SHOW_LOYALTY", Group: "cabinet", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("CABINET_SUBSCRIPTION_SHOW_LOYALTY"),
+			Current: cabinetBoolCurrent("CABINET_SUBSCRIPTION_SHOW_LOYALTY", false),
+		},
 
 		// --- cabinet_connect (подключение и кнопки в Telegram) ---
 		{
@@ -552,6 +557,12 @@ func RuntimeSettingsRegistry() []SettingField {
 			EnumValues: []string{"monthly", "marketing"},
 			Apply:      applyCabinetTariffPriceDisplay(),
 			Current:    cabinetTariffPriceDisplayCurrent(),
+		},
+		{
+			Key: "CABINET_TARIFF_SAVINGS_BADGE", Group: "tariffs", Type: SettingEnum, Instant: true,
+			EnumValues: []string{"none", "corner", "old_price"},
+			Apply:      applyCabinetTariffSavingsBadge(),
+			Current:    cabinetTariffSavingsBadgeCurrent(),
 		},
 
 		// --- lifecycle (без cron / master toggle) ---
@@ -970,6 +981,30 @@ func cabinetTariffPriceDisplayCurrent() func() string {
 			return "marketing"
 		}
 		return "monthly"
+	}
+}
+
+// applyCabinetTariffSavingsBadge — вид плашки «−N %» на карточках сроков
+// (шаг 2 витрины): none — без плашки, corner — в углу карточки, old_price —
+// зачёркнутая база «цена 1 мес × N» рядом с ценой периода.
+func applyCabinetTariffSavingsBadge() func(string) error {
+	return func(value string) error {
+		v := strings.TrimSpace(strings.ToLower(value))
+		if v != "none" && v != "corner" && v != "old_price" {
+			return fmt.Errorf("invalid tariff savings badge %q", value)
+		}
+		setRuntimeOverride("CABINET_TARIFF_SAVINGS_BADGE", v)
+		return nil
+	}
+}
+
+func cabinetTariffSavingsBadgeCurrent() func() string {
+	return func() string {
+		v := strings.TrimSpace(strings.ToLower(effectiveEnvUnderRLock("CABINET_TARIFF_SAVINGS_BADGE")))
+		if v == "corner" || v == "old_price" {
+			return v
+		}
+		return "none"
 	}
 }
 

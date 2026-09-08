@@ -2324,7 +2324,8 @@
           },
           "cabinet": {
             "decor": "Appearance",
-            "schedule": "Holiday auto-switch"
+            "schedule": "Holiday auto-switch",
+            "sections": "Subscription page sections"
           },
           "cabinet_connect": {
             "deeplink": "Connection deep links",
@@ -2410,7 +2411,10 @@
           "summer": "Summer",
           "black_friday": "Black Friday",
           "monthly": "Monthly price",
-          "marketing": "Marketing (annual)"
+          "marketing": "Marketing (annual)",
+          "none": "Off",
+          "corner": "Badge in the card corner",
+          "old_price": "Struck-through full price"
         },
         "fields": {
           "LOYALTY_ENABLED": {
@@ -2642,6 +2646,10 @@
             "label": "Holiday theme schedule",
             "hint": ""
           },
+          "CABINET_SUBSCRIPTION_SHOW_LOYALTY": {
+            "label": "Loyalty card on subscription page",
+            "hint": "Turn on to show the level card on the Subscription page; it is hidden by default. The Loyalty section and the profile card are always available — use \"Loyalty program\" to disable the program itself"
+          },
           "CABINET_DEEPLINK_HAPP_ENCRYPT": {
             "label": "Encrypt Happ deep link",
             "hint": "When connecting Happ, return an encrypted link (happ://crypt…) so the subscription can't be viewed/edited in the app. The subscription URL is sent to the third-party service crypto.happ.su"
@@ -2665,6 +2673,10 @@
           "CABINET_TARIFF_PRICE_DISPLAY": {
             "label": "Showcase price display",
             "hint": "Cabinet Tariffs page (tariffs mode): monthly price or effective ₽/month when paying for 12 months"
+          },
+          "CABINET_TARIFF_SAVINGS_BADGE": {
+            "label": "Savings badge on periods",
+            "hint": "Billing period step: the percentage is calculated from the 1-month price, same as in the tariff price list. Periods without savings show no badge"
           },
           "LIFECYCLE_NO_CONNECT_PAID_ENABLED": {
             "label": "Reminder after payment",

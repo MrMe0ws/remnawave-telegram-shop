@@ -22,11 +22,15 @@ export function useAdminBotSettingsPatch() {
         'CABINET_LIGHT_THEME_ENABLED' in variables ||
         'CABINET_DECOR_THEME' in variables ||
         'CABINET_DEEPLINK_HAPP_ENCRYPT' in variables ||
-        'CABINET_DEEPLINK_INCY_ENCRYPT' in variables
+        'CABINET_DEEPLINK_INCY_ENCRYPT' in variables ||
+        'CABINET_SUBSCRIPTION_SHOW_LOYALTY' in variables
       ) {
         void queryClient.invalidateQueries({ queryKey: ['auth-bootstrap'] })
       }
-      if ('CABINET_TARIFF_PRICE_DISPLAY' in variables) {
+      if (
+        'CABINET_TARIFF_PRICE_DISPLAY' in variables ||
+        'CABINET_TARIFF_SAVINGS_BADGE' in variables
+      ) {
         void queryClient.invalidateQueries({ queryKey: ['tariffs'] })
       }
     },

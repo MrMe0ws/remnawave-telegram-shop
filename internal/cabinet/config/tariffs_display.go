@@ -24,3 +24,25 @@ func TariffPriceDisplay() string {
 func IsTariffPriceDisplayMarketing() bool {
 	return TariffPriceDisplay() == TariffPriceDisplayMarketing
 }
+
+const (
+	TariffSavingsBadgeNone     = "none"
+	TariffSavingsBadgeCorner   = "corner"
+	TariffSavingsBadgeOldPrice = "old_price"
+)
+
+// TariffSavingsBadge — CABINET_TARIFF_SAVINGS_BADGE (runtime/env): none | corner | old_price.
+//
+// Плашка «−N %» на карточках сроков (шаг 2 витрины). Процент считается на
+// фронте от «цена 1 мес × N» — так же, как в редакторе тарифа в админке.
+// Отдельно от SHOW_LONG_TERM_SAVINGS_PERCENT: та настройка правит кнопки в боте.
+func TariffSavingsBadge() string {
+	switch strings.ToLower(strings.TrimSpace(botcfg.EffectiveEnv("CABINET_TARIFF_SAVINGS_BADGE"))) {
+	case TariffSavingsBadgeCorner:
+		return TariffSavingsBadgeCorner
+	case TariffSavingsBadgeOldPrice:
+		return TariffSavingsBadgeOldPrice
+	default:
+		return TariffSavingsBadgeNone
+	}
+}

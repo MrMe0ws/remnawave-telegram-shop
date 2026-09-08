@@ -316,7 +316,9 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `neon`, `ocean`, `new_year`, `slate`, `carbon`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `wine`, `sunset`, `orange`, `halloween`, `yellow`, `summer`, `black_friday`. Меняется в админке без рестарта |
 | `CABINET_DECOR_AUTO_ENABLED` | Авто-смена декор-темы по календарю (`false` по умолчанию). В праздничном окне тема окна перекрывает `CABINET_DECOR_THEME`, вне окон возвращается она же |
 | `CABINET_DECOR_SCHEDULE` | Окна авто-смены: JSON `[{"theme":"new_year","from":"12-01","to":"01-31","enabled":true}]`. Пусто — встроенный пресет праздников. Побеждает первое совпавшее окно; `from > to` — окно через 31 декабря. Редактируется в админке |
+| `CABINET_SUBSCRIPTION_SHOW_LOYALTY` | Плашка уровня лояльности на странице «Подписка» (`false` по умолчанию). Флаг влияет только на эту страницу: раздел `/loyalty` и плашка в профиле доступны всегда, программу целиком выключает `LOYALTY_ENABLED`. Меняется в админке без рестарта |
 | `CABINET_TARIFF_PRICE_DISPLAY` | Витрина: `monthly` или `marketing` |
+| `CABINET_TARIFF_SAVINGS_BADGE` | Плашка «−N %» на карточках сроков: `none` (по умолчанию), `corner` (в углу карточки) или `old_price` (зачёркнутая база «цена 1 мес × N»). Меняется в админке без рестарта |
 | `CABINET_DEEPLINK_HAPP_ENCRYPT` | Шифровать Happ deep link (`happ://crypt…/`) |
 | `CABINET_DEEPLINK_HAPP_CRYPT_VERSION` | Формат ссылки Happ: `crypt5` (по умолчанию) или `crypt4` — для старых сборок Happ 4.x, которые crypt5 не понимают |
 | `CABINET_DEEPLINK_INCY_ENCRYPT` | Обфусцировать INCY deep link (`incy://crypt1/`) |

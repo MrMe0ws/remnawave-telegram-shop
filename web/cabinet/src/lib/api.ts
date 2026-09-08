@@ -143,6 +143,8 @@ export interface AuthBootstrapResponse {
   deeplink_happ_encrypt?: boolean
   /** true — при подключении INCY отдавать обфусцированный deep link (incy://crypt1/…) вместо incy://add/ (CABINET_DEEPLINK_INCY_ENCRYPT). */
   deeplink_incy_encrypt?: boolean
+  /** true — на странице подписки показывается плашка уровня лояльности (CABINET_SUBSCRIPTION_SHOW_LOYALTY, по умолчанию выключено); раздел /loyalty доступен всегда. */
+  subscription_loyalty_visible?: boolean
   /** Декоративная тема кабинета (CABINET_DECOR_THEME) */
   decor_theme?:
     | 'off'
@@ -278,6 +280,7 @@ export interface TariffsResponse {
   currency?: string
   show_savings?: boolean
   price_display?: 'monthly' | 'marketing'
+  savings_badge?: 'none' | 'corner' | 'old_price'
 }
 
 /** Как отдаёт GET /tariffs (internal/cabinet/service/catalog.go): тариф + вложенные prices. */
@@ -304,6 +307,7 @@ interface TariffsRawResponse {
   currency?: string
   show_savings?: boolean
   price_display?: 'monthly' | 'marketing'
+  savings_badge?: 'none' | 'corner' | 'old_price'
   tariffs: unknown[]
 }
 
@@ -374,6 +378,10 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
     currency: raw.currency,
     show_savings: raw.show_savings,
     price_display: raw.price_display === 'marketing' ? 'marketing' : 'monthly',
+    savings_badge:
+      raw.savings_badge === 'corner' || raw.savings_badge === 'old_price'
+        ? raw.savings_badge
+        : 'none',
   }
 }
 

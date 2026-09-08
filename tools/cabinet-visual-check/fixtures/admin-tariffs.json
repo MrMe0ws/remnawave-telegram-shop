@@ -105,6 +105,35 @@
     "run": null
   },
   "/admin/settings": {
-    "groups": []
+    "groups": [
+      {
+        "id": "tariffs",
+        "fields": [
+          {
+            "key": "CABINET_TARIFF_PRICE_DISPLAY",
+            "type": "enum",
+            "value": "monthly",
+            "source": "default",
+            "instant": true,
+            "enum_values": [
+              "monthly",
+              "marketing"
+            ]
+          },
+          {
+            "key": "CABINET_TARIFF_SAVINGS_BADGE",
+            "type": "enum",
+            "value": "corner",
+            "source": "db",
+            "instant": true,
+            "enum_values": [
+              "none",
+              "corner",
+              "old_price"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

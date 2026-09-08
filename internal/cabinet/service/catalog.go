@@ -78,6 +78,7 @@ type Response struct {
 	Currency     string       `json:"currency"` // MVP: всегда "RUB" (CryptoPay конвертирует)
 	ShowSavings  bool         `json:"show_savings"`
 	PriceDisplay string       `json:"price_display"` // monthly | marketing (CABINET_TARIFF_PRICE_DISPLAY)
+	SavingsBadge string       `json:"savings_badge"` // none | corner | old_price (CABINET_TARIFF_SAVINGS_BADGE)
 	Tariffs      []TariffView `json:"tariffs"`
 }
 
@@ -89,6 +90,7 @@ func (c *Catalog) Get(ctx context.Context) (*Response, error) {
 		Currency:     "RUB",
 		ShowSavings:  config.ShowLongTermSavingsPercent(),
 		PriceDisplay: cabcfg.TariffPriceDisplay(),
+		SavingsBadge: cabcfg.TariffSavingsBadge(),
 	}
 
 	switch resp.SalesMode {

@@ -145,6 +145,9 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		// Уже с учётом авто-расписания (CABINET_DECOR_AUTO_ENABLED): в праздничном
 		// окне отдаём тему окна, вне окон — выбранную админом вручную.
 		"decor_theme": cabcfg.EffectiveDecorTheme(),
+		// CABINET_SUBSCRIPTION_SHOW_LOYALTY: плашка уровня на /subscription.
+		// Раздел /loyalty и плашка в профиле от флага не зависят.
+		"subscription_loyalty_visible": cabcfg.SubscriptionLoyaltyVisible(),
 		// Шифрование deep link'ов подключения (см. /me/deeplink): фронт узнаёт,
 		// что для Happ/INCY надо запросить зашифрованную ссылку вместо .../add/.
 		"deeplink_happ_encrypt": cabcfg.DeeplinkHappEncryptEnabled(),

@@ -5,7 +5,13 @@
     "subscription_period_months": 1,
     "traffic_used_gb": 42.5,
     "traffic_limit_gb": 200,
-    "tariff": { "id": 1, "slug": "base", "name": "Базовый", "traffic_gb": 200, "device_limit": 3 },
+    "tariff": {
+      "id": 1,
+      "slug": "base",
+      "name": "Базовый",
+      "traffic_gb": 200,
+      "device_limit": 3
+    },
     "loyalty_xp": 1240,
     "loyalty_tier": "silver",
     "hwid_extra": {
@@ -42,5 +48,27 @@
         "updated_at": "2026-09-02T21:05:00Z"
       }
     ]
+  },
+  "/me/loyalty": {
+    "enabled": true,
+    "xp": 1240,
+    "current": {
+      "id": 4,
+      "name": "Уровень 4",
+      "sort_order": 4,
+      "xp_min": 1000,
+      "discount_percent": 8
+    },
+    "next": {
+      "id": 5,
+      "name": "Уровень 5",
+      "sort_order": 5,
+      "xp_min": 4162,
+      "discount_percent": 10
+    },
+    "progress_percent": 8,
+    "xp_in_segment": 240,
+    "xp_segment_span": 3162,
+    "xp_until_next": 2922
   }
 }

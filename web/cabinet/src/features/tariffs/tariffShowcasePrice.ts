@@ -36,3 +36,34 @@ export function showAnnualPriceFootnote(
 ): boolean {
   return mode === 'marketing' && anyTariffHasYearPeriod(cardPeriods)
 }
+
+/** Вид плашки скидки на карточках сроков — CABINET_TARIFF_SAVINGS_BADGE. */
+export type TariffSavingsBadgeMode = 'none' | 'corner' | 'old_price'
+
+/**
+ * Месячная база тарифа: цена периода «1 месяц». Если такого периода у тарифа
+ * нет — берём ₽/мес самого короткого, иначе сравнивать не с чем.
+ */
+function monthlyBaseRub(periods: TariffItem[]): number {
+  const month1 = periods.find((p) => p.months === 1)
+  if (month1 && month1.price_rub > 0) return month1.price_rub
+  return periods[0]?.monthly_base_rub ?? 0
+}
+
+/** База сравнения периода: «цена за 1 месяц × N». 0 — сравнивать не с чем. */
+export function periodBaselineRub(periods: TariffItem[], months: number): number {
+  const base = monthlyBaseRub(periods)
+  if (!(base > 0) || months <= 1) return 0
+  return base * months
+}
+
+/**
+ * Экономия периода в процентах — тот же расчёт, что savingsPercent() в
+ * редакторе тарифа в админке. null, если выгоды нет (или сравнивать не с чем):
+ * плашку в этом случае не рисуем.
+ */
+export function periodSavingsPercent(periods: TariffItem[], period: TariffItem): number | null {
+  const baseline = periodBaselineRub(periods, period.months)
+  if (!(baseline > 0) || !(period.price_rub > 0) || period.price_rub >= baseline) return null
+  return Math.round((1 - period.price_rub / baseline) * 100)
+}
