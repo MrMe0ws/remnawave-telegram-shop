@@ -611,18 +611,12 @@ function TariffPeriodStep({
               return (
                 <>
                   {savingPct != null && (
-                    <span
-                      className={cn(
-                        periodSavingBadgeClassName,
-                        'absolute right-2.5 top-2.5',
-                        /*
-                         * old_price: на ПК плашка стоит в строке цены рядом с
-                         * зачёркнутой базой. На узких экранах «1 320 ₽ 1 800 ₽ −27%»
-                         * в одну строку не помещается — там плашка уходит в угол.
-                         */
-                        savingsBadge === 'old_price' && 'min-[501px]:hidden',
-                      )}
-                    >
+                    /*
+                     * Угол — единственное место плашки в обоих режимах: в строке
+                     * цены она читалась как часть суммы, а рядом с зачёркнутой
+                     * базой строка ещё и распухала.
+                     */
+                    <span className={cn(periodSavingBadgeClassName, 'absolute right-2.5 top-2.5')}>
                       −{savingPct}%
                     </span>
                   )}
@@ -652,11 +646,6 @@ function TariffPeriodStep({
                     {baselineRub > 0 && (
                       <span className="text-[0.7rem] min-[501px]:text-[0.78rem] leading-5 font-normal tabular-nums text-muted-foreground line-through">
                         {formatRubInteger(baselineRub)} ₽
-                      </span>
-                    )}
-                    {baselineRub > 0 && (
-                      <span className={cn(periodSavingBadgeClassName, 'hidden min-[501px]:inline-block')}>
-                        −{savingPct}%
                       </span>
                     )}
                   </span>
