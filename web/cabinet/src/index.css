@@ -615,6 +615,34 @@
   }
 
   /*
+   * Чек об оплате: подложка с «оторванным» нижним краем.
+   *
+   * Зубцы делаются маской из двух слоёв: верхний закрывает всё, кроме нижних
+   * 6px, нижний вырезает по полукругу на каждые 13px. Маска срезала бы и
+   * рамку, поэтому её здесь нет вовсе — блок отделяется заливкой.
+   */
+  .cabinet-receipt {
+    border-radius: var(--radius) var(--radius) 0 0;
+    background-color: hsl(var(--foreground) / 0.045);
+    -webkit-mask:
+      linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat,
+      radial-gradient(circle 6px at 50% 100%, transparent 97%, #000) bottom / 13px 12px repeat-x;
+    mask:
+      linear-gradient(#000 0 0) top / 100% calc(100% - 6px) no-repeat,
+      radial-gradient(circle 6px at 50% 100%, transparent 97%, #000) bottom / 13px 12px repeat-x;
+  }
+
+  /*
+   * Точечная выноска между подписью и значением. Отдельным элементом, а не
+   * border-bottom у строки: иначе линия шла бы под текстом, а не между.
+   */
+  .cabinet-receipt-leader {
+    flex: 1 1 auto;
+    border-bottom: 1px dotted hsl(var(--muted-foreground) / 0.5);
+    transform: translateY(-3px);
+  }
+
+  /*
    * Блик по главной кнопке. .cabinet-btn-primary — стабильный хук из
    * components/ui/button.tsx, заведённый как раз под такие подцепки.
    */

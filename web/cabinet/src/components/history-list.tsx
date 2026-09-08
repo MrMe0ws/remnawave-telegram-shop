@@ -3,10 +3,29 @@ import { useTranslation } from 'react-i18next'
 
 import { HeleketBrandIcon, TelegramBrandIcon } from '@/components/BrandIcons'
 import { Button } from '@/components/ui/button'
-import { cn, splitDateTimeShort } from '@/lib/utils'
+import { formatNumber } from '@/lib/format'
+import { cn, formatRub, splitDateTimeShort } from '@/lib/utils'
 
 /** Обе истории кабинета — оплат и лояльности — листаются одинаково. */
 export const HISTORY_PAGE_SIZE = 20
+
+/**
+ * Сумма покупки. Рубли округляем (в базе они дробные из-за скидок), у остальных
+ * валют дробную часть сохраняем — у крипты копейки и есть вся точность.
+ *
+ * Разделитель берётся из локали интерфейса: голая интерполяция числа давала
+ * «12.6 USDT» и в русской версии, где дробная часть пишется через запятую.
+ */
+export function formatMoney(amount: number, currency: string): string {
+  const c = (currency || '').toUpperCase()
+  if (c === 'STARS' || c === 'XTR') {
+    return `${formatNumber(amount)} ⭐`
+  }
+  if (c === 'RUB' || c === 'RUR' || c === '') {
+    return formatRub(Math.round(amount))
+  }
+  return `${formatNumber(amount)} ${currency}`
+}
 
 /** Дата в таблице истории: `28.08.26`, время второй строкой мелким и приглушённым. */
 export function HistoryDateCell({ iso }: { iso?: string }) {

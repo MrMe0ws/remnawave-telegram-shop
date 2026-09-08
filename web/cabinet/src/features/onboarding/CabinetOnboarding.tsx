@@ -32,6 +32,13 @@ const TARGET_ID = 'cabinet-onboarding-connect-target'
  * Теперь подсказка одна и появляется только когда подписка уже есть — то
  * есть ровно в тот момент, когда у неё есть смысл. Про резервный вход
  * напоминает тихая строка на главной, она не перекрывает экран.
+ *
+ * Второе условие — ни одного подключённого устройства. После активации
+ * пробного периода человека уводит прямо на страницу подключения, и обратно
+ * на главную он приходит уже двумя разными людьми: кто устройство подключил —
+ * дорогу знает, и затемнять ему экран указателем на пройденный путь незачем;
+ * кто не подключил — по-прежнему не знает, где эта страница, потому что его
+ * привели туда за руку. Подсказка достаётся второму.
  */
 
 type PopoverGeom = {
@@ -96,9 +103,34 @@ export function CabinetOnboarding() {
       (sub?.expire_at && String(sub.expire_at).trim() !== ''),
   )
 
+  /*
+   * Тот же ключ и staleTime, что у дашборда и страницы подписки — обе
+   * разрешённые страницы этот запрос уже делают, так что подсказке он
+   * достаётся из кэша и сети не стоит.
+   */
+  const { data: devices, isPending: devicesPending } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => api.devices(),
+    staleTime: SUBSCRIPTION_STALE_MS,
+    retry: 1,
+    enabled: !completed && hasSubscription && ALLOWED_PATHS.has(location.pathname),
+  })
+
+  /*
+   * Ждём ответа, чтобы подсказка не мигала поверх экрана и не гасла обратно.
+   * Если запрос упал, devices остаётся пустым и подсказка показывается: не
+   * знать про кнопку хуже, чем увидеть лишнюю подсказку.
+   */
+  const alreadyConnected = (devices?.connected ?? 0) > 0
+
   const active = useMemo(
-    () => !completed && hasSubscription && ALLOWED_PATHS.has(location.pathname),
-    [completed, hasSubscription, location.pathname],
+    () =>
+      !completed &&
+      hasSubscription &&
+      !devicesPending &&
+      !alreadyConnected &&
+      ALLOWED_PATHS.has(location.pathname),
+    [completed, hasSubscription, devicesPending, alreadyConnected, location.pathname],
   )
 
   const updateGeometry = useCallback(() => {

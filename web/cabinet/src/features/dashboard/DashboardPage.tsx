@@ -1,4 +1,4 @@
-﻿import { Link } from 'react-router-dom'
+﻿import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const { lang } = useTranslationWithLang()
   const qc = useQueryClient()
   const toast = useToast()
+  const navigate = useNavigate()
 
   const { data: sub, isPending: subPending } = useQuery({
     queryKey: ['subscription'],
@@ -122,13 +123,21 @@ export default function DashboardPage() {
         qc.refetchQueries({ queryKey: ['trial-info'] }),
       ])
       /*
-       * Остаёмся на главной, а не уходим на страницу подписки.
+       * Сразу на страницу подключения, а не обратно на приборную панель.
        *
-       * Карточка предложения на месте сменяется приборной панелью, и поверх
-       * неё появляется подсказка «куда нажать, чтобы подключить». Переход на
-       * другую страницу разрывал этот момент: человек нажимал кнопку и
-       * оказывался в незнакомом разделе, не поняв, что произошло.
+       * Пробный период человек берёт ради одного — попробовать VPN, и сразу
+       * после активации ему нужны инструкции по подключению. Раньше он
+       * оставался на главной, где подсказка лишь показывала пальцем на кнопку
+       * «Подключить устройство»: лишний экран и лишнее нажатие между «взял
+       * пробный» и «работающим VPN».
+       *
+       * Подсказку про кнопку «Подключить устройство» здесь намеренно НЕ гасим.
+       * Мы привели человека на страницу подключения за руку, но дорогу к ней
+       * не показали: в следующий раз он будет искать её сам. Подсказка ждёт
+       * первого самостоятельного захода на главную или в подписку — и гаснет
+       * сама, когда устройство подключено (см. CabinetOnboarding).
        */
+      navigate('/connections')
     },
     // Без этого при ошибке кнопка просто разблокировалась, и пользователь
     // не понимал, активировался триал или нет.

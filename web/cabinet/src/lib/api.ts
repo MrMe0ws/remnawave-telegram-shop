@@ -553,6 +553,16 @@ export interface PaymentStatusResponse {
   subscription_link: string | null
   /** paid: subscription | extra_hwid | tariff_upgrade — для текста успеха. */
   purchase_kind?: string
+  /** Реквизиты чека на экране успешной оплаты (см. StatusResult в checkout.go). */
+  payment_id?: number
+  amount?: number
+  currency?: string
+  invoice_type?: string
+  paid_at?: string
+  month?: number
+  extra_hwid?: number
+  /** Дата окончания подписки после оплаты. */
+  expire_at?: string
 }
 
 export interface ReferralsStatsResponse {

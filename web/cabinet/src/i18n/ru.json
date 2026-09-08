@@ -383,7 +383,15 @@
       "linkLabel": "Ссылка подписки",
       "toDashboard": "В кабинет",
       "toSubscription": "Моя подписка",
-      "retry": "Попробовать снова"
+      "retry": "Попробовать снова",
+      "receiptTitle": "Чек об оплате",
+      "receiptMonths_one": "{{count}} месяц",
+      "receiptMonths_few": "{{count}} месяца",
+      "receiptMonths_many": "{{count}} месяцев",
+      "receiptMethod": "Способ",
+      "receiptNumber": "Платёж",
+      "receiptTime": "Время",
+      "receiptExpireAt": "Подписка до"
     },
     "accounts": {
       "title": "Привязанные аккаунты",

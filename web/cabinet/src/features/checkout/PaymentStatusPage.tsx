@@ -1,22 +1,25 @@
-import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, XCircle, Copy, Check } from 'lucide-react'
+import { CheckCircle2, XCircle } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
+import {
+  PaymentMethodIcon,
+  formatMoney,
+  invoiceLabel,
+  purchaseKindLabel,
+} from '@/components/history-list'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { api, type PaymentStatusResponse } from '@/lib/api'
+import { splitDateTimeShort } from '@/lib/utils'
 
 export default function PaymentStatusPage() {
   const { t } = useTranslation()
   const { id: idParam } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
-  const { state: copyState, copy } = useCopyToClipboard()
-  const copied = copyState === 'done'
 
   // Поддерживаем /payment/status/:id и /payment/status?id=…
   const rawId = idParam ?? searchParams.get('id') ?? ''
@@ -38,11 +41,6 @@ export default function PaymentStatusPage() {
 
   const status = data?.status
 
-  function copyLink() {
-    if (!data?.subscription_link) return
-    void copy(data.subscription_link)
-  }
-
   return (
     <AppLayout>
       <PageReveal className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[60vh] space-y-6">
@@ -55,14 +53,8 @@ export default function PaymentStatusPage() {
           <CardContent className="pt-8 pb-8 flex flex-col items-center gap-5 text-center">
             {isLoading || status === 'new' || status === 'pending' ? (
               <PendingState />
-            ) : status === 'paid' ? (
-              <SuccessState
-                link={data?.subscription_link ?? null}
-                purchaseKind={data?.purchase_kind}
-                copied={copied}
-                copyFailed={copyState === 'failed'}
-                onCopy={copyLink}
-              />
+            ) : status === 'paid' && data ? (
+              <SuccessState data={data} />
             ) : (
               <FailedState expired={status === 'expired'} />
             )}
@@ -98,22 +90,61 @@ function PendingState() {
   )
 }
 
-function SuccessState({
-  link,
-  purchaseKind,
-  copied,
-  copyFailed,
-  onCopy,
-}: {
-  link: string | null
-  purchaseKind?: string
-  copied: boolean
-  copyFailed: boolean
-  onCopy: () => void
-}) {
+/**
+ * Строка чека: подпись слева, значение справа, точечная выноска между ними.
+ *
+ * Выноска на flex-1 и сжимается до нуля — на узком экране пропадают точки, а
+ * не переносится значение.
+ */
+function ReceiptRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-2 py-[3px] text-left">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <span className="cabinet-receipt-leader" aria-hidden />
+      <dd className="m-0 flex shrink-0 items-center gap-1.5 whitespace-nowrap font-medium tabular-nums">
+        {children}
+      </dd>
+    </div>
+  )
+}
+
+/**
+ * Экран успешной оплаты: чек вместо ссылки на подписку.
+ *
+ * Ссылку отсюда убрали намеренно. Человек, который только что заплатил,
+ * первым делом хочет увидеть, сколько с него списали и за что, — а ссылка
+ * никуда не девается, за ней ведёт кнопка «Моя подписка».
+ *
+ * Строки, для которой нет значения, просто нет: прочерк в чеке читается как
+ * сбой оплаты, а не как отсутствие данных. По той же причине «Подписка до»
+ * не показывается при покупке доп. устройств — подписку она не продлевает, и
+ * дата рядом с такой покупкой вводит в заблуждение.
+ */
+function SuccessState({ data }: { data: PaymentStatusResponse }) {
   const { t } = useTranslation()
-  const successHintKey =
-    purchaseKind === 'extra_hwid' ? 'paymentStatus.successHintExtraHwid' : 'paymentStatus.successHint'
+
+  const kind = data.purchase_kind ?? 'subscription'
+  const isExtraHwid = kind === 'extra_hwid'
+  const successHintKey = isExtraHwid
+    ? 'paymentStatus.successHintExtraHwid'
+    : 'paymentStatus.successHint'
+
+  const months = data.month ?? 0
+  const what = purchaseKindLabel(t, {
+    purchase_kind: kind,
+    month: months,
+    extra_hwid: data.extra_hwid ?? 0,
+  })
+  // «Подписка» + «3 месяца»: сам purchaseKindLabel срок не называет, а на чеке
+  // он — половина ответа на вопрос «за что списали».
+  const whatFull =
+    months > 0 && kind === 'subscription'
+      ? `${what} · ${t('paymentStatus.receiptMonths', { count: months })}`
+      : what
+
+  const paidAt = splitDateTimeShort(data.paid_at)
+  const expireAt = isExtraHwid ? null : splitDateTimeShort(data.expire_at)
+  const hasAmount = typeof data.amount === 'number' && data.amount > 0
 
   return (
     <>
@@ -125,31 +156,38 @@ function SuccessState({
         <p className="text-sm text-muted-foreground mt-1">{t(successHintKey)}</p>
       </div>
 
-      {link && (
-        <div className="w-full space-y-2">
-          <p className="text-xs text-muted-foreground text-left">{t('paymentStatus.linkLabel')}</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-lg bg-muted px-3 py-2 text-xs font-mono text-muted-foreground truncate select-all">
-              {link}
+      {hasAmount && (
+        <section
+          className="cabinet-receipt w-full px-4 pb-5 pt-4 sm:px-5"
+          aria-label={t('paymentStatus.receiptTitle')}
+        >
+          <div className="pb-3 text-center">
+            <div className="font-heading text-3xl font-extrabold leading-none tracking-tight tabular-nums sm:text-4xl">
+              {formatMoney(data.amount as number, data.currency ?? '')}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCopy}
-              className="shrink-0 gap-1"
-              aria-label={t('subscriptionPage.copyLink')}
-            >
-              {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
-            </Button>
+            <div className="mt-1.5 text-xs text-muted-foreground sm:text-[13px]">{whatFull}</div>
           </div>
-          {/* Кнопка без текста — результат копирования иначе никак не сообщается. */}
-          <p aria-live="polite" className="text-left text-xs text-muted-foreground">
-            {copied ? t('subscriptionPage.copied') : ''}
-          </p>
-          {copyFailed && (
-            <p className="text-left text-xs text-destructive">{t('common.copyFailed')}</p>
-          )}
-        </div>
+
+          <dl className="border-t border-dashed border-border pt-2 text-xs sm:text-[13px]">
+            {data.invoice_type && (
+              <ReceiptRow label={t('paymentStatus.receiptMethod')}>
+                <PaymentMethodIcon invoiceType={data.invoice_type} className="size-3.5" />
+                {invoiceLabel(t, data.invoice_type)}
+              </ReceiptRow>
+            )}
+            {data.payment_id != null && data.payment_id > 0 && (
+              <ReceiptRow label={t('paymentStatus.receiptNumber')}>#{data.payment_id}</ReceiptRow>
+            )}
+            {paidAt && (
+              <ReceiptRow label={t('paymentStatus.receiptTime')}>
+                {paidAt.date}, {paidAt.time}
+              </ReceiptRow>
+            )}
+            {expireAt && (
+              <ReceiptRow label={t('paymentStatus.receiptExpireAt')}>{expireAt.date}</ReceiptRow>
+            )}
+          </dl>
+        </section>
       )}
 
       <Button asChild className="w-full">

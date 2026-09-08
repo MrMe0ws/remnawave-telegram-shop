@@ -1,0 +1,42 @@
+{
+  "/payments/10482/status": {
+    "checkout_id": 77,
+    "status": "paid",
+    "purchase_kind": "subscription",
+    "payment_id": 10482,
+    "amount": 1200,
+    "currency": "RUB",
+    "invoice_type": "yookasa",
+    "paid_at": "2026-09-09T14:32:00+03:00",
+    "month": 3,
+    "expire_at": "2026-12-09T14:32:00+03:00",
+    "subscription_link": "https://example.invalid/sub/abc"
+  },
+  "/payments/10483/status": {
+    "checkout_id": 78,
+    "status": "paid",
+    "purchase_kind": "extra_hwid",
+    "payment_id": 10483,
+    "amount": 150,
+    "currency": "RUB",
+    "invoice_type": "plt_sbp",
+    "paid_at": "2026-09-09T14:40:00+03:00",
+    "month": 0,
+    "extra_hwid": 2,
+    "expire_at": "2026-12-09T14:32:00+03:00",
+    "subscription_link": "https://example.invalid/sub/abc"
+  },
+  "/payments/10484/status": {
+    "checkout_id": 79,
+    "status": "paid",
+    "purchase_kind": "subscription",
+    "payment_id": 10484,
+    "amount": 12.6,
+    "currency": "USDT",
+    "invoice_type": "crypto",
+    "paid_at": "2026-09-09T15:02:00+03:00",
+    "month": 12,
+    "expire_at": "2027-09-09T15:02:00+03:00",
+    "subscription_link": "https://example.invalid/sub/abc"
+  }
+}

@@ -983,7 +983,14 @@
       "linkLabel": "Subscription link",
       "toDashboard": "Go to dashboard",
       "toSubscription": "My subscription",
-      "retry": "Try again"
+      "retry": "Try again",
+      "receiptTitle": "Payment receipt",
+      "receiptMonths_one": "{{count}} month",
+      "receiptMonths_other": "{{count}} months",
+      "receiptMethod": "Method",
+      "receiptNumber": "Payment",
+      "receiptTime": "Time",
+      "receiptExpireAt": "Subscription until"
     },
     "settings": {
       "title": "Settings",

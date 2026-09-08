@@ -174,6 +174,20 @@ type StatusResult struct {
 	ExpireAt         *time.Time `json:"expire_at,omitempty"`
 	// PurchaseKind — при привязанном purchase (в т.ч. paid): для текста на странице статуса (подписка vs доп. HWID).
 	PurchaseKind string `json:"purchase_kind,omitempty"`
+
+	// Реквизиты чека на экране успешной оплаты. Всё читается из уже
+	// загруженного purchase — дополнительных запросов в БД не добавляют.
+	PaymentID   int64      `json:"payment_id,omitempty"`
+	Amount      float64    `json:"amount,omitempty"`
+	Currency    string     `json:"currency,omitempty"`
+	InvoiceType string     `json:"invoice_type,omitempty"`
+	// PaidAt — момент оплаты; если провайдер его не проставил, отдаём время
+	// создания счёта: на чеке пустая строка времени выглядит как сбой.
+	PaidAt *time.Time `json:"paid_at,omitempty"`
+	// Month и ExtraHwid нужны фронту, чтобы назвать покупку тем же
+	// purchaseKindLabel(), что и в истории оплат.
+	Month     int `json:"month,omitempty"`
+	ExtraHwid int `json:"extra_hwid,omitempty"`
 }
 
 // PreviewResult — ответ GET /payments/preview: сумма с учётом upgrade/downgrade (как у бота).
@@ -497,6 +511,19 @@ func (s *CheckoutService) GetStatus(ctx context.Context, accountID, checkoutID i
 		kind = string(database.PurchaseKindExtraHwid)
 	}
 	result.PurchaseKind = kind
+
+	result.PaymentID = purchase.ID
+	result.Amount = purchase.Amount
+	result.Currency = purchase.Currency
+	result.InvoiceType = string(purchase.InvoiceType)
+	result.Month = purchase.Month
+	result.ExtraHwid = purchase.ExtraHwid
+	if purchase.PaidAt != nil {
+		result.PaidAt = purchase.PaidAt
+	} else {
+		paidAt := checkout.CreatedAt
+		result.PaidAt = &paidAt
+	}
 
 	desired := checkoutStatusForPurchase(purchase.Status)
 	if desired != "" && desired != checkout.Status {

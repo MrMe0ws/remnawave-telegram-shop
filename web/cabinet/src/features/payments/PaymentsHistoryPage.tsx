@@ -7,6 +7,7 @@ import {
   HistoryDateCell,
   HistoryPagination,
   PaymentMethodIcon,
+  formatMoney,
   historyDateInline,
   invoiceLabel,
   purchaseKindLabel,
@@ -14,18 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type PurchaseHistoryItem } from '@/lib/api'
-import { cn, formatRub } from '@/lib/utils'
-
-function formatMoney(amount: number, currency: string) {
-  const c = (currency || '').toUpperCase()
-  if (c === 'STARS' || c === 'XTR') {
-    return `${amount} ⭐`
-  }
-  if (c === 'RUB' || c === 'RUR' || c === '') {
-    return formatRub(Math.round(amount))
-  }
-  return `${amount} ${currency}`
-}
+import { cn } from '@/lib/utils'
 
 /**
  * Сумма со значком способа оплаты. Колонки «Способ» больше нет: название
