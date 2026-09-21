@@ -235,7 +235,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	avatarSecret := []byte(cabcfg.JWTSecret())
 
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
-		paymentService, purchaseRepo, rw, customerRepo, adminChecker, tgProfiles, avatarSecret, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
+		paymentService, purchaseRepo, rw, customerRepo, database.NewDeviceNameRepository(pool), adminChecker, tgProfiles, avatarSecret, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 	// Приглашения «подключить ещё устройство»: токен подписывается тем же
@@ -822,6 +822,15 @@ func registerAPIRoutes(
 			middleware.RequireVerifiedEmail(),
 			middleware.CSRF(),
 			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_delete")),
+		)),
+	)
+	api.Handle("/cabinet/api/me/devices/rename",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.RenameDevice),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireVerifiedEmail(),
+			middleware.CSRF(),
+			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_rename")),
 		)),
 	)
 	api.Handle("/cabinet/api/me/hwid-extra/apply",

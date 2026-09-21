@@ -440,6 +440,8 @@ export interface DeviceInfo {
   os_version?: string
   device_model?: string
   user_agent?: string
+  /** Название, которое пользователь дал устройству в кабинете. */
+  custom_name?: string
   created_at?: string
   updated_at?: string
 }
@@ -1222,6 +1224,10 @@ export const api = {
 
   deleteDevice: (hwid: string) =>
     request<{ ok: boolean }>('POST', '/me/devices/delete', { hwid }),
+
+  /** Пустое name сбрасывает название к исходному из Remnawave. */
+  renameDevice: (hwid: string, name: string) =>
+    request<{ ok: boolean; custom_name: string }>('POST', '/me/devices/rename', { hwid, name }),
 
   // Tariffs
   tariffs: () => request<TariffsRawResponse>('GET', '/tariffs').then(normalizeTariffsResponse),
