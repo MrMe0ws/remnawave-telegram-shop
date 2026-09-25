@@ -83,7 +83,8 @@
       "resendCooldown": "Resend in {{sec}}s",
       "checkSpam": "Didn't receive it? Check your spam folder.",
       "resendNeedEmail": "Open this page from the registration or link-email flow so we know which address to resend to.",
-      "backToLogin": "Back to sign in"
+      "backToLogin": "Back to sign in",
+      "changeEmail": "Wrong address? Use a different email"
     },
     "forgotPassword": {
       "title": "Reset password",
