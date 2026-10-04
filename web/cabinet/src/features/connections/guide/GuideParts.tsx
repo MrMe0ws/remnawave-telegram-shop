@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -9,21 +10,33 @@ import type { AppGuide, PlatformKey } from './types'
 
 /* ── Шаг-линия ─────────────────────────────────────────────────────── */
 
-export function GuideCounter({ text, current, finished }: { text: GuideText; current: number; finished: boolean }) {
+export function GuideCounter({
+  text,
+  current,
+  total,
+  finished,
+}: {
+  text: GuideText
+  current: number
+  total: number
+  finished: boolean
+}) {
   return finished ? (
     <span className="whitespace-nowrap text-[13px] font-bold text-emerald-700 dark:text-emerald-400">{text.doneShort} ✓</span>
   ) : (
-    <span className="whitespace-nowrap text-[13px] font-bold text-muted-foreground">{text.stepOf(current + 1)}</span>
+    <span className="whitespace-nowrap text-[13px] font-bold text-muted-foreground">{text.stepOf(current + 1, total)}</span>
   )
 }
 
 /**
- * Три сегмента с подписями. Каждый — кнопка: так же попадают сразу на шаг 2
- * те, у кого приложение уже стоит.
+ * Сегменты с подписями, по одному на шаг (их 2 или 3 — шаг «Включение»
+ * бывает не у всех приложений). Каждый — кнопка: так же попадают сразу на
+ * шаг 2 те, у кого приложение уже стоит.
  */
 export function GuideStepLine({
   text,
   current,
+  total,
   done,
   finished,
   onPick,
@@ -31,6 +44,7 @@ export function GuideStepLine({
 }: {
   text: GuideText
   current: number
+  total: number
   done: boolean[]
   finished: boolean
   onPick: (step: number) => void
@@ -38,8 +52,8 @@ export function GuideStepLine({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="grid flex-1 grid-cols-3 gap-2">
-        {text.stepShort.map((label, i) => {
+      <div className={cn('grid flex-1 gap-2', total === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+        {text.stepShort.slice(0, total).map((label, i) => {
           const full = finished || done[i]
           const isCur = !finished && i === current
           return (
@@ -71,12 +85,12 @@ export function GuideStepLine({
           )
         })}
       </div>
-      {withCounter ? <GuideCounter text={text} current={current} finished={finished} /> : null}
+      {withCounter ? <GuideCounter text={text} current={current} total={total} finished={finished} /> : null}
     </div>
   )
 }
 
-/* ── Кнопка «устройство · приложение · Изменить» ───────────────────── */
+/* ── Кнопка «устройство · приложение ▾» ──────────────────────────────── */
 
 export function DeviceChip({
   text,
@@ -95,11 +109,14 @@ export function DeviceChip({
     <button
       type="button"
       onClick={onOpen}
+      // Слова «Изменить» на кнопке нет — его заменяет стрелка, но читалке экрана оно нужно
+      aria-label={`${platformLabel[platform] || platform} · ${app.name}. ${text.change}`}
+      aria-haspopup="dialog"
       className={cn(
-        'inline-flex max-w-full items-center gap-2 border border-border bg-foreground/[0.04] text-sm font-medium text-foreground transition-colors',
+        'group inline-flex max-w-full items-center gap-2 border border-border bg-foreground/[0.04] text-sm font-medium text-foreground transition-colors',
         'hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         'dark:border-white/10 dark:bg-white/[0.04]',
-        wide ? 'w-full rounded-2xl py-2 pl-2 pr-3.5' : 'rounded-full py-1 pl-1.5 pr-3',
+        wide ? 'w-full rounded-2xl py-2 pl-2 pr-3' : 'rounded-full py-1 pl-1.5 pr-2.5',
       )}
     >
       <span className="grid size-[26px] shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
@@ -109,7 +126,11 @@ export function DeviceChip({
       <span className="opacity-35">·</span>
       <AppTile app={app} className="size-[22px] text-[8px]" />
       <span className="truncate">{app.name}</span>
-      <span className={cn('shrink-0 font-semibold text-primary', wide && 'ml-auto')}>{text.change}</span>
+      <ChevronDown
+        size={16}
+        aria-hidden
+        className={cn('shrink-0 text-primary transition-transform duration-200 group-hover:translate-y-0.5', wide ? 'ml-auto' : 'ml-0.5')}
+      />
     </button>
   )
 }

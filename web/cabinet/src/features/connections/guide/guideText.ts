@@ -18,7 +18,7 @@ export const guideText = {
     encryptedError: 'Не удалось подготовить защищённую ссылку. Попробуйте ещё раз.',
 
     stepShort: ['Установка', 'Подписка', 'Включение'],
-    stepOf: (n: number) => `Шаг ${n} из 3`,
+    stepOf: (n: number, total: number) => `Шаг ${n} из ${total}`,
     stepLabel: (n: number) => `Шаг ${n}`,
     stepDone: 'сделано',
     doneShort: 'Готово',
@@ -81,7 +81,7 @@ export const guideText = {
     encryptedError: 'Could not prepare the secure link. Please try again.',
 
     stepShort: ['Install', 'Subscription', 'Connect'],
-    stepOf: (n: number) => `Step ${n} of 3`,
+    stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
     stepLabel: (n: number) => `Step ${n}`,
     stepDone: 'done',
     doneShort: 'Done',

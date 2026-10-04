@@ -18,7 +18,8 @@ export type AppGuide = {
   installationStep: GuideStep
   addSubscriptionStep: GuideStep
   additionalAfterAddSubscriptionStep?: GuideStep
-  connectAndUseStep: GuideStep
+  /** Необязателен: без него гид показывает два шага. */
+  connectAndUseStep?: GuideStep
   isNeedBase64Encoding?: boolean
 }
 

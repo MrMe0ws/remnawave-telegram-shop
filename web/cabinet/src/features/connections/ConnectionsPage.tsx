@@ -73,11 +73,18 @@ export default function ConnectionsPage() {
   const isDesktop = useIsDesktop()
   const navigate = useNavigate()
   const app = g.selectedApp
+  // Шаг «Включение» есть не у всех приложений: нет его описания в app-config —
+  // гид из двух шагов, и «Да, подписка появилась» сразу ведёт к финалу.
+  const hasConnectStep = Boolean(pickText(app?.connectAndUseStep?.description, g.lang).trim())
+  const total = hasConnectStep ? 3 : 2
+  const scenes = SCENES.slice(0, total)
 
   const progressKey =
     app && g.selectedPlatform ? `${g.inviteMode ? inviteScope(g.inviteToken) : 'me'}:${g.selectedPlatform}:${app.id}` : ''
   const { progress, update } = useGuideProgress(progressKey)
-  const { current, done, finished } = progress
+  const { done, finished } = progress
+  // Сохранённый шаг мог остаться от варианта с тремя шагами.
+  const current = Math.min(progress.current, total - 1)
 
   const [flow, setFlow] = useState<Flow>(FRESH_FLOW)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -104,7 +111,7 @@ export default function ConnectionsPage() {
     changeProgress((p) => {
       const nextDone = [...p.done] as GuideProgress['done']
       nextDone[step] = true
-      return step === 2 ? { ...p, done: nextDone, finished: true } : { ...p, done: nextDone, current: step + 1 }
+      return step >= total - 1 ? { ...p, done: nextDone, finished: true } : { ...p, done: nextDone, current: step + 1 }
     })
   const undo = (step: number) =>
     changeProgress((p) => {
@@ -300,7 +307,15 @@ export default function ConnectionsPage() {
   )
 
   const stepLine = (withCounter: boolean) => (
-    <GuideStepLine text={text} current={current} done={done} finished={finished} onPick={goTo} withCounter={withCounter} />
+    <GuideStepLine
+      text={text}
+      current={current}
+      total={total}
+      done={done}
+      finished={finished}
+      onPick={goTo}
+      withCounter={withCounter}
+    />
   )
 
   let body: ReactNode
@@ -324,8 +339,8 @@ export default function ConnectionsPage() {
     )
   } else if (isDesktop) {
     body = (
-      <div className="grid grid-cols-3 gap-x-3">
-        {SCENES.map((kind, i) => {
+      <div className={cn('grid gap-x-3', total === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+        {scenes.map((kind, i) => {
           const state = done[i] ? 'done' : i === current ? 'current' : 'rest'
           // Анимация — только у текущего шага; будущие «Подписка» и «Включение» стоят на
           // начальном кадре, чтобы не выглядеть уже сделанными.
@@ -421,7 +436,7 @@ export default function ConnectionsPage() {
                 <>
                   <div className="mb-3.5 flex items-center justify-between gap-3">
                     <div className="min-w-0">{title}</div>
-                    {ready ? <GuideCounter text={text} current={current} finished={finished} /> : null}
+                    {ready ? <GuideCounter text={text} current={current} total={total} finished={finished} /> : null}
                   </div>
                   {ready ? <div className="mb-3.5">{stepLine(false)}</div> : null}
                   {ready && app && !finished ? (
