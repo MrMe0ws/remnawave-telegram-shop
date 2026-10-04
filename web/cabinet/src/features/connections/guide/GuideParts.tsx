@@ -60,6 +60,8 @@ export function GuideStepLine({
           const full = finished || done[i]
           const isCur = !finished && i === current
           const reviewing = allDone && !finished
+          // Открыт уже пройденный шаг — сегмент ярко-зелёный, а не синий.
+          const brightCurrent = isCur && done[i]
           return (
             <button
               key={label}
@@ -70,7 +72,7 @@ export function GuideStepLine({
               className={cn(
                 'group flex min-w-0 flex-col gap-1.5 rounded-md pt-1 text-left text-xs font-semibold transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                reviewing && isCur
+                brightCurrent
                   ? 'text-foreground'
                   : full
                     ? 'text-emerald-700 dark:text-emerald-400'
@@ -83,14 +85,14 @@ export function GuideStepLine({
               <i
                 className={cn(
                   'relative block h-1.5 overflow-hidden rounded-full transition-[background-color,box-shadow,height,margin]',
-                  reviewing && isCur
+                  brightCurrent
                     ? '-mt-px h-2 bg-gradient-to-r from-emerald-500 to-emerald-300 shadow-[0_0_14px_rgb(16_185_129_/_0.7)]'
                     : full
                       ? 'bg-emerald-500'
                       : 'bg-foreground/10 group-hover:bg-foreground/20',
                 )}
               >
-                {isCur && !reviewing ? (
+                {isCur && !brightCurrent ? (
                   <span className="absolute inset-0 rounded-full bg-primary animate-[cg-seg_.6s_ease-out_both]" />
                 ) : null}
               </i>

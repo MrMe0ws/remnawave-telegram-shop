@@ -121,7 +121,7 @@ export function GuideIllustration({ kind, shape, app, brandName, brandLogoUrl, l
       <div className={cn('cg-dev', shape === 'phone' ? 'cg-dev--phone' : 'cg-dev--laptop')}>
         {kind === 'install' ? (
           <span className="cg-arrow">
-            <Download size={24} />
+            <Download size={22} />
           </span>
         ) : null}
         <div className="cg-screen">{screen}</div>

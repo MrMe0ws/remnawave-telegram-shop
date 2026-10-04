@@ -21,14 +21,18 @@ import { isPhonePlatform } from './guide/glyphs'
 import { guideText, type GuideText } from './guide/guideText'
 import { pickText } from './guide/types'
 import { emptyProgress, inviteScope, useGuideProgress, type GuideProgress } from './guide/useGuideProgress'
+import { useAppReturn, type AppTrip } from './guide/useAppReturn'
 import { useConnectionGuide } from './useConnectionGuide'
 import './guide/connections-guide.css'
 
 const SCENES: SceneKind[] = ['install', 'add', 'connect']
 
 /** Короткое состояние внутри шага; сбрасывается при любой смене шага. */
-type Flow = { downloaded: boolean; asked: boolean; failed: boolean }
-const FRESH_FLOW: Flow = { downloaded: false, asked: false, failed: false }
+type Flow = { downloaded: boolean; noOpen: boolean }
+const FRESH_FLOW: Flow = { downloaded: false, noOpen: false }
+
+/** Сколько ждём, что после «Добавить подписку» страница уйдёт в приложение. */
+const APP_OPEN_WAIT_MS = 3500
 
 /** ПК — три карточки в ряд, телефон — мастер по одному шагу. Граница как у md: в Tailwind. */
 function useIsDesktop(): boolean {
@@ -79,6 +83,8 @@ export default function ConnectionsPage() {
   const total = hasConnectStep ? 3 : 2
   const scenes = SCENES.slice(0, total)
 
+  const ready0 = () => !g.loading && !g.inviteError && !g.configError && Boolean(g.selectedApp)
+
   const progressKey =
     app && g.selectedPlatform ? `${g.inviteMode ? inviteScope(g.inviteToken) : 'me'}:${g.selectedPlatform}:${app.id}` : ''
   const { progress, update } = useGuideProgress(progressKey)
@@ -91,16 +97,24 @@ export default function ConnectionsPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  // Плашка после возврата из магазина или приложения (телефон): «Приложение установлено · Ещё нет».
+  const [notice, setNotice] = useState<AppTrip | null>(null)
   const helpRef = useRef<HTMLDivElement>(null)
+  const noOpenTimer = useRef(0)
 
   // Другая пара «платформа + приложение» — шаги начинаются со своего состояния.
   useEffect(() => {
     setFlow(FRESH_FLOW)
+    setNotice(null)
   }, [progressKey])
+
+  useEffect(() => () => window.clearTimeout(noOpenTimer.current), [])
 
   const changeProgress = useCallback(
     (fn: (p: GuideProgress) => GuideProgress) => {
       setFlow(FRESH_FLOW)
+      setNotice(null)
+      window.clearTimeout(noOpenTimer.current)
       update(fn)
     },
     [update],
@@ -120,6 +134,16 @@ export default function ConnectionsPage() {
       return { current: step, done: nextDone, finished: false }
     })
 
+  /*
+   * Телефон: вместо «Установил — дальше» и «Подписка появилась?» гид сам
+   * замечает, что человек сходил в магазин или в приложение и вернулся, и
+   * переходит дальше. Ошибся — плашка «Ещё нет» / «Не появилась?» вернёт назад.
+   */
+  const trip = useAppReturn(progressKey, ready0() && !isDesktop, (kind) => {
+    complete(kind === 'install' ? 0 : 1)
+    setNotice(kind)
+  })
+
   function addSubscription(compact: boolean) {
     if (!g.openAddSubscription()) return
     // ПК: все шаги перед глазами, а помощь — прямо под ними, поэтому без
@@ -128,9 +152,14 @@ export default function ConnectionsPage() {
       complete(1)
       return
     }
-    // Нажали «Добавить» в карточке, которая не была текущей, — теперь она текущая.
-    if (current !== 1) update((p) => ({ ...p, current: 1, finished: false }))
-    setFlow({ downloaded: false, asked: true, failed: false })
+    trip.start('add')
+    setFlow((f) => ({ ...f, noOpen: false }))
+    // Страница так и не ушла в приложение — значит, оно не открылось (часто — ещё
+    // не установлено). Показываем помощь прямо под кнопкой, без лишних вопросов.
+    window.clearTimeout(noOpenTimer.current)
+    noOpenTimer.current = window.setTimeout(() => {
+      if (!trip.hasLeft()) setFlow((f) => ({ ...f, noOpen: true }))
+    }, APP_OPEN_WAIT_MS)
   }
 
   function openHelp() {
@@ -138,10 +167,14 @@ export default function ConnectionsPage() {
     requestAnimationFrame(() => helpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
   }
 
-  function addFailed() {
-    setFlow((f) => ({ ...f, failed: true }))
-    setHelpOpen(true)
-    requestAnimationFrame(() => helpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+  /** Плашка ошиблась: шаг на самом деле не сделан — возвращаемся к нему. */
+  function revertNotice() {
+    if (notice === 'install') {
+      undo(0)
+    } else {
+      undo(1)
+      openHelp()
+    }
   }
 
   function connectAnother() {
@@ -164,7 +197,7 @@ export default function ConnectionsPage() {
   }
 
   const Shell = g.inviteMode ? InviteShell : AppLayout
-  const ready = !g.loading && !g.inviteError && !g.configError && Boolean(app)
+  const ready = ready0()
   const shape = isPhonePlatform(g.selectedPlatform) ? 'phone' : 'laptop'
 
   /* ── Куски шага ─────────────────────────────────────────────────── */
@@ -208,7 +241,14 @@ export default function ConnectionsPage() {
             href={btn.buttonLink}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => (compact ? complete(0) : setFlow((f) => ({ ...f, downloaded: true })))}
+            onClick={() => {
+              if (compact) {
+                complete(0)
+                return
+              }
+              trip.start('install')
+              setFlow((f) => ({ ...f, downloaded: true }))
+            }}
           >
             {idx === 0 ? <Download /> : <ExternalLink />}
             <span className="truncate">{pickText(btn.buttonText, g.lang)}</span>
@@ -254,45 +294,20 @@ export default function ConnectionsPage() {
       const hint = g.addHint ? (
         <p className="text-xs text-amber-700 dark:text-amber-300/90">{text[g.addHint]}</p>
       ) : null
-      if (!flow.asked) {
-        return (
-          <>
-            <Button variant={primary} className={size} onClick={() => addSubscription(compact)} disabled={g.addDisabled}>
-              <Plus />
-              {text.addSubscription}
-            </Button>
-            {hint}
-          </>
-        )
-      }
       return (
         <>
-          <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/[0.08] p-3">
-            <b className="text-sm font-semibold text-foreground">{text.addedQuestion(app.name)}</b>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" className={cn('h-10', OK_BUTTON)} onClick={() => complete(1)}>
-                <Check />
-                {text.yes}
-              </Button>
-              <Button variant="outline" className="h-10" onClick={addFailed}>
-                {text.no}
-              </Button>
-            </div>
-          </div>
-          {flow.failed ? (
+          <Button variant={primary} className={size} onClick={() => addSubscription(compact)} disabled={g.addDisabled}>
+            <Plus />
+            {flow.noOpen ? text.tryAgain : text.addSubscription}
+          </Button>
+          {flow.noOpen ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[13px] text-muted-foreground">
-              <b className="font-semibold text-foreground">{text.failTipLead}</b> {text.failTip}
+              <b className="font-semibold text-foreground">{text.noOpenLead(app.name)}</b> {text.noOpenTip}{' '}
+              <button type="button" onClick={openHelp} className="font-semibold text-primary hover:underline">
+                {text.helpTitle}
+              </button>
             </div>
           ) : null}
-          <button
-            type="button"
-            onClick={() => g.openAddSubscription()}
-            disabled={g.addDisabled}
-            className="mx-auto inline-flex items-center gap-1.5 px-1 py-1 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
-          >
-            <Plus size={13} />
-            {text.tryAgain}
-          </button>
           {hint}
         </>
       )
@@ -352,10 +367,12 @@ export default function ConnectionsPage() {
     body = (
       <div className={cn('grid gap-x-3', total === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
         {scenes.map((kind, i) => {
-          const state = done[i] ? 'done' : i === current ? 'current' : 'rest'
-          // Анимация — только у текущего шага; будущие «Подписка» и «Включение» стоят на
-          // начальном кадре, чтобы не выглядеть уже сделанными.
-          const freeze: SceneFreeze = state === 'current' ? 'none' : state === 'done' || i === 0 ? 'end' : 'start'
+          const isCurrent = i === current
+          const state = done[i] ? 'done' : isCurrent ? 'current' : 'rest'
+          // Анимация — у выбранного шага, даже уже пройденного. Остальные стоят:
+          // пройденные — на итоговом кадре, будущие «Подписка» и «Включение» — на
+          // начальном, чтобы не выглядеть уже сделанными.
+          const freeze: SceneFreeze = isCurrent ? 'none' : state === 'done' || i === 0 ? 'end' : 'start'
           return (
             <div
               key={kind}
@@ -369,11 +386,15 @@ export default function ConnectionsPage() {
                 'border-border bg-foreground/[0.03] dark:border-white/10',
                 state === 'current' &&
                   'border-primary/60 shadow-[0_0_0_3px_hsl(var(--primary)/0.15),0_14px_30px_-18px_hsl(var(--primary)/0.9)] dark:border-primary/60',
+                // Вернулись к пройденному шагу — подсветка зелёная, как сегмент шаг-линии.
+                state === 'done' &&
+                  isCurrent &&
+                  'border-emerald-500/60 shadow-[0_0_0_3px_rgb(16_185_129_/_0.15),0_14px_30px_-18px_rgb(16_185_129_/_0.9)] dark:border-emerald-500/60',
                 state === 'rest' && 'cursor-pointer opacity-80 hover:opacity-100',
-                state === 'done' && 'cursor-pointer',
+                state === 'done' && !isCurrent && 'cursor-pointer',
               )}
             >
-              {scene(kind, freeze, cn('h-[170px]', state === 'done' && 'opacity-65 saturate-50'))}
+              {scene(kind, freeze, cn('cg-ill--compact h-[170px]', state === 'done' && !isCurrent && 'opacity-65 saturate-50'))}
               <div className="flex items-center gap-2.5">
                 <StepNumber index={i} state={state} />
                 <b className="text-[15.5px] font-semibold leading-tight text-foreground">{stepTitle(i)}</b>
@@ -410,6 +431,21 @@ export default function ConnectionsPage() {
   } else {
     body = (
       <div key={current} className="cg-step-enter">
+        {notice ? (
+          <div className="cg-rise mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[13px]">
+            <Check size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-semibold text-foreground">
+              {notice === 'install' ? text.noticeInstalled : text.noticeAdded}
+            </span>
+            <button
+              type="button"
+              onClick={revertNotice}
+              className="ml-auto font-medium text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
+            >
+              {notice === 'install' ? text.notInstalled : text.notAddedShort}
+            </button>
+          </div>
+        ) : null}
         {scene(SCENES[current], 'none', 'h-[210px]')}
         <div className="mt-4 flex flex-col gap-1.5">
           <div className="text-xs font-bold uppercase tracking-wider text-primary">
