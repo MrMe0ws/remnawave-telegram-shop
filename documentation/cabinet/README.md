@@ -23,6 +23,12 @@
   reverse-proxy, что подтягивается из настроек, где править тексты:
   - [landing.md](./landing.md)
 
+## Страница подключения устройства
+
+- `/cabinet/connections` и `/connect` по приглашению: устройство экрана, откуда
+  берутся тексты и кнопки, окно выбора устройства, блок помощи, план переверстки:
+  - [connections-page.md](./connections-page.md)
+
 ## Чат поддержки (bridge к telegram-support-bot)
 
 - Встроенный чат в кабинете при `SUPPORT_BOT_API=true` (миграция `000036_cabinet_support`).
