@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SupportChatModal } from '@/features/support/SupportChatModal'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
 
 import { DevicePicker } from './guide/DevicePicker'
 import { GuideHelp } from './guide/GuideHelp'
@@ -33,6 +34,8 @@ const FRESH_FLOW: Flow = { downloaded: false, noOpen: false }
 
 /** Сколько ждём, что после «Добавить подписку» страница уйдёт в приложение. */
 const APP_OPEN_WAIT_MS = 3500
+/** Сколько висит тост «Приложение установлено / Подписка добавлена». */
+const NOTICE_MS = 4500
 
 /** ПК — три карточки в ряд, телефон — мастер по одному шагу. Граница как у md: в Tailwind. */
 function useIsDesktop(): boolean {
@@ -97,15 +100,12 @@ export default function ConnectionsPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  // Плашка после возврата из магазина или приложения (телефон): «Приложение установлено · Ещё нет».
-  const [notice, setNotice] = useState<AppTrip | null>(null)
   const helpRef = useRef<HTMLDivElement>(null)
   const noOpenTimer = useRef(0)
 
   // Другая пара «платформа + приложение» — шаги начинаются со своего состояния.
   useEffect(() => {
     setFlow(FRESH_FLOW)
-    setNotice(null)
   }, [progressKey])
 
   useEffect(() => () => window.clearTimeout(noOpenTimer.current), [])
@@ -113,7 +113,6 @@ export default function ConnectionsPage() {
   const changeProgress = useCallback(
     (fn: (p: GuideProgress) => GuideProgress) => {
       setFlow(FRESH_FLOW)
-      setNotice(null)
       window.clearTimeout(noOpenTimer.current)
       update(fn)
     },
@@ -139,9 +138,14 @@ export default function ConnectionsPage() {
    * замечает, что человек сходил в магазин или в приложение и вернулся, и
    * переходит дальше. Ошибся — плашка «Ещё нет» / «Не появилась?» вернёт назад.
    */
+  const toast = useToast()
   const trip = useAppReturn(progressKey, ready0() && !isDesktop, (kind) => {
     complete(kind === 'install' ? 0 : 1)
-    setNotice(kind)
+    // Временный тост, а не плашка в шаге: сообщили и ушли, кнопка — на случай ошибки.
+    toast.success(kind === 'install' ? text.noticeInstalled : text.noticeAdded, {
+      action: { label: kind === 'install' ? text.notInstalled : text.notAddedShort, onClick: () => revertTrip(kind) },
+      durationMs: NOTICE_MS,
+    })
   })
 
   function addSubscription(compact: boolean) {
@@ -167,9 +171,9 @@ export default function ConnectionsPage() {
     requestAnimationFrame(() => helpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
   }
 
-  /** Плашка ошиблась: шаг на самом деле не сделан — возвращаемся к нему. */
-  function revertNotice() {
-    if (notice === 'install') {
+  /** Гид поторопился: шаг на самом деле не сделан — возвращаемся к нему. */
+  function revertTrip(kind: AppTrip) {
+    if (kind === 'install') {
       undo(0)
     } else {
       undo(1)
@@ -431,21 +435,6 @@ export default function ConnectionsPage() {
   } else {
     body = (
       <div key={current} className="cg-step-enter">
-        {notice ? (
-          <div className="cg-rise mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[13px]">
-            <Check size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span className="font-semibold text-foreground">
-              {notice === 'install' ? text.noticeInstalled : text.noticeAdded}
-            </span>
-            <button
-              type="button"
-              onClick={revertNotice}
-              className="ml-auto font-medium text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
-            >
-              {notice === 'install' ? text.notInstalled : text.notAddedShort}
-            </button>
-          </div>
-        ) : null}
         {scene(SCENES[current], 'none', 'h-[210px]')}
         <div className="mt-4 flex flex-col gap-1.5">
           <div className="text-xs font-bold uppercase tracking-wider text-primary">
