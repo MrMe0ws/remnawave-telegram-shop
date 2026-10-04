@@ -120,11 +120,22 @@ export default function ConnectionsPage() {
       return { current: step, done: nextDone, finished: false }
     })
 
-  function addSubscription() {
-    g.openAddSubscription()
+  function addSubscription(compact: boolean) {
+    if (!g.openAddSubscription()) return
+    // ПК: все шаги перед глазами, а помощь — прямо под ними, поэтому без
+    // вопроса «Подписка появилась?» сразу переходим к следующему шагу.
+    if (compact) {
+      complete(1)
+      return
+    }
     // Нажали «Добавить» в карточке, которая не была текущей, — теперь она текущая.
     if (current !== 1) update((p) => ({ ...p, current: 1, finished: false }))
     setFlow({ downloaded: false, asked: true, failed: false })
+  }
+
+  function openHelp() {
+    setHelpOpen(true)
+    requestAnimationFrame(() => helpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
   }
 
   function addFailed() {
@@ -197,7 +208,7 @@ export default function ConnectionsPage() {
             href={btn.buttonLink}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setFlow((f) => ({ ...f, downloaded: true }))}
+            onClick={() => (compact ? complete(0) : setFlow((f) => ({ ...f, downloaded: true })))}
           >
             {idx === 0 ? <Download /> : <ExternalLink />}
             <span className="truncate">{pickText(btn.buttonText, g.lang)}</span>
@@ -246,7 +257,7 @@ export default function ConnectionsPage() {
       if (!flow.asked) {
         return (
           <>
-            <Button variant={primary} className={size} onClick={addSubscription} disabled={g.addDisabled}>
+            <Button variant={primary} className={size} onClick={() => addSubscription(compact)} disabled={g.addDisabled}>
               <Plus />
               {text.addSubscription}
             </Button>
@@ -362,7 +373,7 @@ export default function ConnectionsPage() {
                 state === 'done' && 'cursor-pointer',
               )}
             >
-              {scene(kind, freeze, cn('h-[150px]', state === 'done' && 'opacity-65 saturate-50'))}
+              {scene(kind, freeze, cn('h-[170px]', state === 'done' && 'opacity-65 saturate-50'))}
               <div className="flex items-center gap-2.5">
                 <StepNumber index={i} state={state} />
                 <b className="text-[15.5px] font-semibold leading-tight text-foreground">{stepTitle(i)}</b>
@@ -370,10 +381,23 @@ export default function ConnectionsPage() {
               <GuideMarkdown text={stepDescription(i)} clamp labels={text} className="min-w-0 [&_div]:text-[13.5px]" />
               <div className="flex flex-col gap-1.5 self-end pt-1">
                 {state === 'done' ? (
-                  <Button variant="outline" className={cn('h-10 w-full', OK_BUTTON)} onClick={() => undo(i)}>
-                    <Check />
-                    {text.markedDone}
-                  </Button>
+                  <>
+                    {/* Вопроса «появилась?» на ПК нет — вместо него тихая ссылка к помощи.
+                        Над кнопкой, чтобы кнопки карточек остались на одной линии. */}
+                    {i === 1 ? (
+                      <button
+                        type="button"
+                        onClick={openHelp}
+                        className="mx-auto px-1 py-1 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        {text.notAdded}
+                      </button>
+                    ) : null}
+                    <Button variant="outline" className={cn('h-10 w-full', OK_BUTTON)} onClick={() => undo(i)}>
+                      <Check />
+                      {text.markedDone}
+                    </Button>
+                  </>
                 ) : (
                   stepActions(i, true, state === 'current')
                 )}

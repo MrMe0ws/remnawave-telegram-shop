@@ -230,22 +230,23 @@ export function useConnectionGuide() {
 
   const encryptedHref = (encryptedDeeplink?.deeplink || '').trim()
 
-  function openAddSubscription() {
-    if (!selectedApp) return
+  /** true — переход в приложение запущен; false — ссылки ещё нет (гид шаг не засчитывает). */
+  function openAddSubscription(): boolean {
+    if (!selectedApp) return false
     const scheme = (selectedApp.urlScheme || '').trim()
-    if (!scheme) return
+    if (!scheme) return false
     let href: string
     if (inviteHref) {
       // Приглашение в защищённом режиме: ссылка уже зашифрована бэкендом,
       // собирать нечего.
       href = inviteHref
     } else if (!subscriptionLink) {
-      return
+      return false
     } else if (encryptApp) {
       if (!encryptedHref) {
         // Ещё не готово или прошлая попытка упала — пробуем получить ссылку снова.
         void refetchEncryptedDeeplink()
-        return
+        return false
       }
       href = encryptedHref
     } else {
@@ -254,15 +255,16 @@ export function useConnectionGuide() {
     }
     if (needsTelegramDeepLinkWorkaround()) {
       openCabinetDeepLinkRedirectExternally(href)
-      return
+      return true
     }
     // iOS Chrome / Edge / Firefox / Opera: window.open(customScheme) → часто пустая вкладка.
     // Промежуточная /deeplink делает переход через location.assign (и запасная кнопка «Открыть приложение»).
     if (prefersSameTabIosAppDeepLink()) {
       window.location.assign(buildCabinetDeepLinkRedirectUrl(href))
-      return
+      return true
     }
     window.open(href, '_blank', 'noopener,noreferrer')
+    return true
   }
 
   const addDisabled =

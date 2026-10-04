@@ -118,12 +118,12 @@ export function GuideIllustration({ kind, shape, app, brandName, brandLogoUrl, l
 
   return (
     <div className={cn('cg-ill', kind === 'install' && 'cg-dl', kind === 'add' && 'cg-add', className)} data-freeze={freezeAttr} aria-hidden>
-      {kind === 'install' ? (
-        <span className="cg-arrow">
-          <Download size={24} />
-        </span>
-      ) : null}
       <div className={cn('cg-dev', shape === 'phone' ? 'cg-dev--phone' : 'cg-dev--laptop')}>
+        {kind === 'install' ? (
+          <span className="cg-arrow">
+            <Download size={24} />
+          </span>
+        ) : null}
         <div className="cg-screen">{screen}</div>
       </div>
     </div>

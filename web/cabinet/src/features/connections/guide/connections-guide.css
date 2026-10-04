@@ -109,9 +109,16 @@
   background: hsl(var(--cg-ok));
   animation: cg-pop var(--cg-d) ease-out infinite;
 }
+/*
+ * Стрелка висит над устройством, а не у верхнего края картинки: телефон выше
+ * ноутбука, и с отступом от края она заезжала на его рамку.
+ */
+.cg-dl .cg-dev {
+  margin-top: 30px;
+}
 .cg-arrow {
   position: absolute;
-  top: 12px;
+  bottom: calc(100% + 4px);
   left: 50%;
   translate: -50% 0;
   color: hsl(var(--primary));
