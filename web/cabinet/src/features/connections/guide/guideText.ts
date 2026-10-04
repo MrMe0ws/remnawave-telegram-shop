@@ -6,7 +6,6 @@
 export const guideText = {
   ru: {
     pageTitle: 'Установка',
-    invitePageTitle: 'Подключение устройства',
     inviteExpired: 'Срок действия ссылки истёк. Попросите отправить новую.',
     inviteInvalid: 'Ссылка недействительна. Проверьте, что она скопирована целиком.',
     inviteNoSubscription: 'У этой подписки нет активного доступа.',
@@ -69,7 +68,6 @@ export const guideText = {
   },
   en: {
     pageTitle: 'Setup',
-    invitePageTitle: 'Connect a device',
     inviteExpired: 'This link has expired. Ask for a new one.',
     inviteInvalid: 'This link is not valid. Make sure it was copied in full.',
     inviteNoSubscription: 'This subscription has no active access.',

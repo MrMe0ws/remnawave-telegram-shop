@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils'
 import { DevicePicker } from './guide/DevicePicker'
 import { GuideHelp } from './guide/GuideHelp'
 import { GuideIllustration, type SceneFreeze, type SceneKind } from './guide/GuideIllustration'
-import { DeviceChip, GuideCounter, GuideMarkdown, GuideStepLine } from './guide/GuideParts'
+import { DeviceChip, GuideMarkdown, GuideStepLine } from './guide/GuideParts'
 import { isPhonePlatform } from './guide/glyphs'
 import { guideText, type GuideText } from './guide/guideText'
 import { pickText } from './guide/types'
@@ -297,11 +297,11 @@ export default function ConnectionsPage() {
 
   /* ── Разметка ───────────────────────────────────────────────────── */
 
-  const title = g.inviteMode ? (
-    <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-100">{text.invitePageTitle}</h1>
-  ) : (
+  // На /connect «назад» некуда: у гостя нет кабинета, куда возвращаться.
+  const title = (
     <PageTitleWithBack
       title={text.pageTitle}
+      showBack={!g.inviteMode}
       titleClassName="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-100"
     />
   )
@@ -434,16 +434,15 @@ export default function ConnectionsPage() {
                 </>
               ) : (
                 <>
+                  {/* Номер шага на телефоне не пишем — его видно по шаг-линии, а место
+                      справа от заголовка отдано кнопке выбора устройства. */}
                   <div className="mb-3.5 flex items-center justify-between gap-3">
                     <div className="min-w-0">{title}</div>
-                    {ready ? <GuideCounter text={text} current={current} total={total} finished={finished} /> : null}
+                    {ready && app ? (
+                      <DeviceChip text={text} platform={g.selectedPlatform} app={app} onOpen={() => setPickerOpen(true)} compact />
+                    ) : null}
                   </div>
                   {ready ? <div className="mb-3.5">{stepLine(false)}</div> : null}
-                  {ready && app && !finished ? (
-                    <div className="mb-3.5">
-                      <DeviceChip text={text} platform={g.selectedPlatform} app={app} onOpen={() => setPickerOpen(true)} wide />
-                    </div>
-                  ) : null}
                 </>
               )}
               {body}

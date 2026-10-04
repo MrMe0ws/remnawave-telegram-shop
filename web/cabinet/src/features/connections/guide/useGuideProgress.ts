@@ -10,11 +10,24 @@ export type GuideProgress = {
 const EMPTY: GuideProgress = { current: 0, done: [false, false, false], finished: false }
 const PREFIX = 'cabinet:connections-progress:v1:'
 
+/**
+ * Сколько помним прогресс. Он нужен только чтобы пережить уход в приложение
+ * по «Добавить подписку» и возврат обратно — это минуты. Пришёл через месяц
+ * подключить ещё раз — начинаешь с первого шага, а не попадаешь на финал.
+ */
+const TTL_MS = 60 * 60 * 1000
+
+/*
+ * sessionStorage, а не localStorage: живёт, пока открыта вкладка, и сам
+ * исчезает, когда её закрывают. Плюс срок выше — вкладку в мобильном браузере
+ * могут не закрывать неделями.
+ */
 function read(key: string): GuideProgress {
   try {
-    const raw = window.localStorage.getItem(PREFIX + key)
+    const raw = window.sessionStorage.getItem(PREFIX + key)
     if (!raw) return EMPTY
-    const v = JSON.parse(raw) as Partial<GuideProgress>
+    const v = JSON.parse(raw) as Partial<GuideProgress> & { at?: number }
+    if (typeof v.at !== 'number' || Date.now() - v.at > TTL_MS) return EMPTY
     const current = typeof v.current === 'number' && v.current >= 0 && v.current <= 2 ? v.current : 0
     const done = Array.isArray(v.done) && v.done.length === 3 ? (v.done.map(Boolean) as GuideProgress['done']) : EMPTY.done
     return { current, done, finished: Boolean(v.finished) }
@@ -26,7 +39,7 @@ function read(key: string): GuideProgress {
 
 function write(key: string, value: GuideProgress) {
   try {
-    window.localStorage.setItem(PREFIX + key, JSON.stringify(value))
+    window.sessionStorage.setItem(PREFIX + key, JSON.stringify({ ...value, at: Date.now() }))
   } catch {
     /* хранилище недоступно — прогресс живёт только до перезагрузки */
   }

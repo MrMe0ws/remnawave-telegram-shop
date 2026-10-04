@@ -414,6 +414,43 @@
   }
 }
 
+/* Окно выбора устройства: на телефоне шторка снизу, на ПК — модалка по центру */
+.cg-backdrop {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.cg-backdrop[data-shown='true'] {
+  opacity: 1;
+}
+.cg-sheet {
+  transform: translateY(105%);
+  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cg-sheet[data-shown='true'] {
+  transform: translateY(0);
+}
+@media (min-width: 768px) {
+  .cg-sheet {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+    transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease;
+  }
+  .cg-sheet[data-shown='true'] {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Пока шторку тянут пальцем, она идёт за ним без задержки */
+.cg-sheet--drag {
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-sheet,
+  .cg-backdrop {
+    transition-duration: 0.01ms;
+  }
+}
+
 /* Заливка текущего сегмента шаг-линии */
 @keyframes cg-seg {
   from { transform: translateX(-100%); }
