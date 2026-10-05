@@ -188,10 +188,23 @@
    */
   html[data-cabinet-ios] .cabinet-edge-header {
     background-color: hsl(var(--card));
+    /* Шапка и так непрозрачная, а размытие в WebKit мешало бы рисовать за её границей. */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
-  html[data-cabinet-ios] .cabinet-edge-header::before {
-    content: '';
-    position: absolute;
+  /*
+   * Продолжение шапки вверх — отдельная fixed-полоса над верхним краем видимой
+   * области, а не ::before у шапки: у шапки с backdrop-filter WebKit на iPhone
+   * не рисовал выходящий за неё ::before (проверено на iOS 27). Шапка sticky top-0,
+   * поэтому верх видимой области — это всегда её верх.
+   */
+  .cabinet-edge-top {
+    display: none;
+  }
+  html[data-cabinet-ios] .cabinet-edge-top {
+    display: block;
+    position: fixed;
+    z-index: 50;
     inset-inline: 0;
     bottom: 100%;
     height: 100vh;

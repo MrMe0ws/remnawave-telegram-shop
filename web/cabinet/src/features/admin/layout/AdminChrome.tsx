@@ -28,6 +28,8 @@ export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
     <div className="relative flex min-h-dvh flex-col">
       <div className="cabinet-shell-gradient" aria-hidden />
       <CabinetDecorLayer />
+      {/* iPhone: фон шапки над краем экрана, под панелями браузера (index.css) */}
+      <div className="cabinet-edge-top" aria-hidden />
       <header
         className={cn(
           'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm cabinet-app-header cabinet-edge-header',
