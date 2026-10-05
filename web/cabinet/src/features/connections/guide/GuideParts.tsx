@@ -70,7 +70,9 @@ export function GuideStepLine({
               aria-current={isCur ? 'step' : undefined}
               aria-label={`${text.stepLabel(i + 1)}: ${label}`}
               className={cn(
-                'group flex min-w-0 flex-col gap-1.5 rounded-md pt-1 text-left text-xs font-semibold transition-colors',
+                // items-stretch обязателен: в Safari у кнопки по умолчанию align-items: flex-start,
+                // и пустая полоска сжимается до нулевой ширины — шаг-линию не видно.
+                'group flex min-w-0 flex-col items-stretch gap-1.5 rounded-md pt-1 text-left text-xs font-semibold transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 brightCurrent
                   ? 'text-foreground'
@@ -84,7 +86,7 @@ export function GuideStepLine({
             >
               <i
                 className={cn(
-                  'relative block h-1.5 overflow-hidden rounded-full transition-[background-color,box-shadow,height,margin]',
+                  'relative block h-1.5 w-full overflow-hidden rounded-full transition-[background-color,box-shadow,height,margin]',
                   brightCurrent
                     ? '-mt-px h-2 bg-gradient-to-r from-emerald-500 to-emerald-300 shadow-[0_0_14px_rgb(16_185_129_/_0.7)]'
                     : full

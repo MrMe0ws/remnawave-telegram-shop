@@ -1,3 +1,5 @@
+import { isTelegramMiniAppSession } from '@/lib/telegram-web-app-loader'
+
 /**
  * Проверка цели для страницы редиректа: только non-http(s) custom scheme, без javascript:/data:.
  */
@@ -39,6 +41,21 @@ export function prefersSameTabIosAppDeepLink(): boolean {
   const ua = navigator.userAgent
   if (!/iphone|ipad|ipod/i.test(ua)) return false
   return /CriOS|EdgiOS|FxiOS|OPiOS/i.test(ua)
+}
+
+/**
+ * iOS Safari и встроенный браузер Telegram (не Mini App): window.open(customScheme)
+ * открывает новую вкладку. Приложение запускается, но, вернувшись, человек видит
+ * эту пустую вкладку (в Telegram — с заголовком вроде «crypt1»), а не кабинет.
+ * Переход в той же вкладке страницу не меняет: схему забирает приложение.
+ */
+export function prefersSameTabDeepLink(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  // iPadOS притворяется Mac — отличаем по сенсорному экрану
+  const ios = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
+  if (!ios) return false
+  return !isTelegramMiniAppSession()
 }
 
 export function needsTelegramDeepLinkWorkaround(): boolean {

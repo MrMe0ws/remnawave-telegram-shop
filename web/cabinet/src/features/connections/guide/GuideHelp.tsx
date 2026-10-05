@@ -83,7 +83,15 @@ export const GuideHelp = forwardRef<HTMLDivElement, Props>(function GuideHelp(
   if (!description.trim() && !hasTiles) return null
 
   return (
-    <div ref={ref} className={cn('overflow-hidden rounded-2xl border border-border dark:border-white/10', className)}>
+    <div
+      ref={ref}
+      className={cn(
+        'overflow-hidden rounded-2xl border border-border dark:border-white/10',
+        // Прокрутка к раскрытому блоку не должна прятать его низ под нижнее меню телефона.
+        'scroll-mt-20 scroll-mb-[calc(6.5rem+max(env(safe-area-inset-bottom,0px),var(--cabinet-tg-safe-bottom)))] sm:scroll-mb-4',
+        className,
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}

@@ -101,6 +101,8 @@ export default function ConnectionsPage() {
   const [chatOpen, setChatOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const helpRef = useRef<HTMLDivElement>(null)
+  // Каждое раскрытие помощи прокручивает к ней — и по ссылке, и по самому заголовку блока.
+  const [helpScroll, setHelpScroll] = useState(0)
   const noOpenTimer = useRef(0)
 
   // Другая пара «платформа + приложение» — шаги начинаются со своего состояния.
@@ -168,8 +170,15 @@ export default function ConnectionsPage() {
 
   function openHelp() {
     setHelpOpen(true)
-    requestAnimationFrame(() => helpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+    setHelpScroll((n) => n + 1)
   }
+
+  // После отрисовки раскрытого блока: весь он должен оказаться на экране, вместе с кнопками.
+  useEffect(() => {
+    if (!helpScroll) return
+    const id = requestAnimationFrame(() => helpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
+    return () => cancelAnimationFrame(id)
+  }, [helpScroll])
 
   /** Гид поторопился: шаг на самом деле не сделан — возвращаемся к нему. */
   function revertTrip(kind: AppTrip) {
@@ -456,7 +465,7 @@ export default function ConnectionsPage() {
         text={text}
         lang={g.lang}
         open={helpOpen}
-        onToggle={() => setHelpOpen((v) => !v)}
+        onToggle={() => (helpOpen ? setHelpOpen(false) : openHelp())}
         extra={app.additionalAfterAddSubscriptionStep}
         onCopy={g.subscriptionLink ? copyLink : null}
         copied={copied}

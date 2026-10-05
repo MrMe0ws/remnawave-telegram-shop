@@ -9,6 +9,7 @@ import {
   buildCabinetDeepLinkRedirectUrl,
   needsTelegramDeepLinkWorkaround,
   openCabinetDeepLinkRedirectExternally,
+  prefersSameTabDeepLink,
   prefersSameTabIosAppDeepLink,
 } from '@/lib/deep-link-redirect'
 import type { AppConfig, AppGuide, Lang, PlatformKey } from './guide/types'
@@ -261,6 +262,10 @@ export function useConnectionGuide() {
     // Промежуточная /deeplink делает переход через location.assign (и запасная кнопка «Открыть приложение»).
     if (prefersSameTabIosAppDeepLink()) {
       window.location.assign(buildCabinetDeepLinkRedirectUrl(href))
+      return true
+    }
+    if (prefersSameTabDeepLink()) {
+      window.location.href = href
       return true
     }
     window.open(href, '_blank', 'noopener,noreferrer')
