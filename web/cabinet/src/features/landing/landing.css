@@ -8,6 +8,10 @@
  * лендинга сам несёт класс `dark`, поэтому значения тут всегда тёмные,
  * независимо от переключателя темы в шапке.
  *
+ * Декор-тема из админки (data-cabinet-decor на <html>) меняет только пару
+ * акцентов — --lp-cyan и --lp-violet, см. блок «Декор-темы» ниже. Фон, карточки
+ * и вторичные цвета (emerald, amber) от темы не зависят.
+ *
  * Плейн-CSS без @apply/@layer: Tailwind-директивы живут только в index.css.
  */
 
@@ -32,6 +36,10 @@ html[data-landing="1"] {
   --lp-emerald: 160 74% 46%;
   --lp-amber: 38 92% 58%;
 
+  /* Середина градиента главной кнопки и цвет её текста — их подменяют декор-темы. */
+  --lp-cta-mid: hsl(210 90% 56%);
+  --lp-on-accent: #fff;
+
   --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --lp-header-h: 68px;
 
@@ -41,6 +49,50 @@ html[data-landing="1"] {
   overflow-x: clip;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * Декор-темы
+ *
+ * --lp-cyan — это --primary темы (значения из index.css), --lp-violet — второй
+ * цвет градиентов, подобранный под тему вручную: сдвиг оттенка по формуле на
+ * части тем даёт грязные пары (оранжевый → салатовый у halloween).
+ * nebula и off не перечислены: нынешняя палитра лендинга и есть nebula.
+ * Новая тема без строки здесь просто останется в палитре nebula.
+ * ───────────────────────────────────────────────────────────── */
+
+html[data-cabinet-decor]:not([data-cabinet-decor="nebula"]) .landing-root {
+  --lp-cta-mid: color-mix(in oklab, hsl(var(--lp-cyan)) 60%, hsl(var(--lp-violet)));
+}
+
+html[data-cabinet-decor="green"] .landing-root { --lp-cyan: 142 55% 46%; --lp-violet: 188 75% 56%; }
+html[data-cabinet-decor="spring"] .landing-root { --lp-cyan: 142 55% 46%; --lp-violet: 330 75% 72%; }
+html[data-cabinet-decor="cyber"] .landing-root { --lp-cyan: 140 90% 46%; --lp-violet: 172 90% 52%; }
+html[data-cabinet-decor="neon"] .landing-root { --lp-cyan: 186 100% 50%; --lp-violet: 300 90% 66%; }
+html[data-cabinet-decor="ocean"] .landing-root { --lp-cyan: 205 85% 52%; --lp-violet: 178 72% 52%; }
+html[data-cabinet-decor="new_year"] .landing-root { --lp-cyan: 198 85% 52%; --lp-violet: 220 70% 80%; }
+html[data-cabinet-decor="slate"] .landing-root { --lp-cyan: 215 20% 62%; --lp-violet: 250 30% 74%; }
+html[data-cabinet-decor="carbon"] .landing-root { --lp-cyan: 217 90% 60%; --lp-violet: 190 70% 60%; }
+html[data-cabinet-decor="aurora"] .landing-root { --lp-cyan: 168 75% 48%; --lp-violet: 262 80% 68%; }
+html[data-cabinet-decor="violet"] .landing-root { --lp-cyan: 262 72% 62%; --lp-violet: 318 78% 68%; }
+html[data-cabinet-decor="lavender"] .landing-root { --lp-cyan: 270 48% 68%; --lp-violet: 222 70% 72%; }
+html[data-cabinet-decor="pink"] .landing-root { --lp-cyan: 338 78% 52%; --lp-violet: 280 78% 70%; }
+html[data-cabinet-decor="valentine"] .landing-root { --lp-cyan: 338 78% 52%; --lp-violet: 8 85% 64%; }
+html[data-cabinet-decor="wine"] .landing-root { --lp-cyan: 346 66% 52%; --lp-violet: 300 50% 62%; }
+html[data-cabinet-decor="sunset"] .landing-root { --lp-cyan: 18 92% 56%; --lp-violet: 330 85% 65%; }
+html[data-cabinet-decor="orange"] .landing-root { --lp-cyan: 28 95% 48%; --lp-violet: 350 80% 64%; }
+html[data-cabinet-decor="halloween"] .landing-root { --lp-cyan: 28 95% 48%; --lp-violet: 270 72% 66%; }
+html[data-cabinet-decor="yellow"] .landing-root { --lp-cyan: 38 92% 46%; --lp-violet: 12 85% 62%; }
+html[data-cabinet-decor="summer"] .landing-root { --lp-cyan: 38 92% 46%; --lp-violet: 190 80% 55%; }
+html[data-cabinet-decor="black_friday"] .landing-root { --lp-cyan: 45 95% 46%; --lp-violet: 20 90% 58%; }
+
+/* Яркий акцент: белая подпись на кнопке не читается — берём тёмную. */
+html[data-cabinet-decor="neon"] .landing-root,
+html[data-cabinet-decor="cyber"] .landing-root,
+html[data-cabinet-decor="yellow"] .landing-root,
+html[data-cabinet-decor="summer"] .landing-root,
+html[data-cabinet-decor="black_friday"] .landing-root {
+  --lp-on-accent: hsl(224 40% 10%);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -259,10 +311,10 @@ html[data-landing="1"] {
   background-image: linear-gradient(
     135deg,
     hsl(var(--lp-cyan)) 0%,
-    hsl(210 90% 56%) 55%,
+    var(--lp-cta-mid) 55%,
     hsl(var(--lp-violet)) 100%
   );
-  color: #fff;
+  color: var(--lp-on-accent);
   box-shadow:
     0 10px 30px -12px hsl(var(--lp-cyan) / 0.7),
     inset 0 1px 0 rgb(255 255 255 / 0.22);
