@@ -1,4 +1,5 @@
 import { isTelegramMiniAppSession } from '@/lib/telegram-web-app-loader'
+import { isIosWebKit } from '@/lib/utils'
 
 /**
  * Проверка цели для страницы редиректа: только non-http(s) custom scheme, без javascript:/data:.
@@ -50,12 +51,7 @@ export function prefersSameTabIosAppDeepLink(): boolean {
  * Переход в той же вкладке страницу не меняет: схему забирает приложение.
  */
 export function prefersSameTabDeepLink(): boolean {
-  if (typeof navigator === 'undefined') return false
-  const ua = navigator.userAgent
-  // iPadOS притворяется Mac — отличаем по сенсорному экрану
-  const ios = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)
-  if (!ios) return false
-  return !isTelegramMiniAppSession()
+  return isIosWebKit() && !isTelegramMiniAppSession()
 }
 
 export function needsTelegramDeepLinkWorkaround(): boolean {

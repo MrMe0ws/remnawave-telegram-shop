@@ -30,7 +30,7 @@ export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
       <CabinetDecorLayer />
       <header
         className={cn(
-          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm cabinet-app-header',
+          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm cabinet-app-header cabinet-edge-header',
           'dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]',
           // Safe-area top остаётся; прячется только ряд chrome.
           !mobileHeaderVisible && 'max-md:border-b-0 max-md:shadow-none',
