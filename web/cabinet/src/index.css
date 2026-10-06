@@ -232,6 +232,18 @@
   }
 
   /*
+   * Шторка под плашкой оплаты на телефоне (CheckoutPage): лента мягко уходит
+   * под неё, а текст и кнопка лежат уже на сплошном фоне страницы.
+   */
+  .cabinet-pay-scrim {
+    background-image: linear-gradient(
+      to bottom,
+      hsl(var(--background) / 0) 0,
+      hsl(var(--background)) 1.75rem
+    );
+  }
+
+  /*
    * Скелетоны загрузки (components/ui/skeleton.tsx).
    * Мягкий проход блика вместо pulse: на тёмной теме пульсация opacity читается
    * как мигание, а сдвиг градиента — как «идёт загрузка».

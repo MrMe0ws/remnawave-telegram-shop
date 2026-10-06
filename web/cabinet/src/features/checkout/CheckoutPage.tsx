@@ -429,13 +429,13 @@ export default function CheckoutPage() {
       </PageReveal>
 
       {/*
-        Mobile: сплошная подложка от кнопки до низа экрана, нижнее меню (z-50) лежит
-        поверх неё. Без подложки способы оплаты просвечивали сквозь текст согласия.
+        Mobile: шторка от кнопки до низа экрана, нижнее меню (z-50) лежит поверх неё.
+        Без подложки способы оплаты просвечивали сквозь текст согласия.
         z-[39] — под выпадающим мобильным меню (z-40).
       */}
       {typeof document !== 'undefined' &&
         createPortal(
-          <div className="sm:hidden fixed inset-x-0 bottom-0 z-[39] rounded-t-[1.25rem] border-t border-border bg-card px-3 pt-2.5 pb-[calc(var(--cabinet-bottom-nav-h,calc(73px+var(--cabinet-tg-safe-bottom)))+0.375rem)] shadow-[0_-10px_24px_-16px_rgb(0_0_0_/_0.55)]">
+          <div className="cabinet-pay-scrim sm:hidden fixed inset-x-0 bottom-0 z-[39] px-3 pt-8 pb-[calc(var(--cabinet-bottom-nav-h,calc(73px+var(--cabinet-tg-safe-bottom)))+0.375rem)]">
             <div className="mx-auto flex w-full max-w-lg flex-col gap-1.5">
               <Button
                 className={cn('w-full shadow-none', !loading && disabledPayButtonClass)}
