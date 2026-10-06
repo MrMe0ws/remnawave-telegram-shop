@@ -40,7 +40,10 @@
       "continueBefore": "By continuing, you agree to the ",
       "privacyPolicy": "privacy policy",
       "continueAnd": " and ",
-      "userAgreement": "terms of service"
+      "userAgreement": "terms of service",
+      "payShortBefore": "By paying, you accept the ",
+      "payShortAgreement": "terms",
+      "payShortPrivacy": "privacy policy"
     },
     "auth": {
       "login": "Sign in",

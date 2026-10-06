@@ -40,7 +40,10 @@
       "continueBefore": "Продолжая, Вы соглашаетесь с условиями ",
       "privacyPolicy": "политики конфиденциальности",
       "continueAnd": " и ",
-      "userAgreement": "пользовательского соглашения"
+      "userAgreement": "пользовательского соглашения",
+      "payShortBefore": "Оплачивая, вы принимаете ",
+      "payShortAgreement": "соглашение",
+      "payShortPrivacy": "политику"
     },
     "auth": {
       "login": "Войти",

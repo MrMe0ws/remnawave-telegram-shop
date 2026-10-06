@@ -140,6 +140,26 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const mobileNavRef = useRef<HTMLElement>(null)
+
+  /*
+   * Высота нижнего меню в --cabinet-bottom-nav-h: на iPhone у меню отступ под
+   * безопасную зону, и оно выше, чем в Telegram на Android. Фиксированные
+   * плашки над меню (кнопка оплаты в CheckoutPage) встают ровно на его верх.
+   */
+  useEffect(() => {
+    const nav = mobileNavRef.current
+    if (!nav || typeof ResizeObserver === 'undefined') return
+    const root = document.documentElement
+    const sync = () => root.style.setProperty('--cabinet-bottom-nav-h', `${nav.offsetHeight}px`)
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(nav)
+    return () => {
+      ro.disconnect()
+      root.style.removeProperty('--cabinet-bottom-nav-h')
+    }
+  }, [])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -533,6 +553,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <CabinetOnboarding />
 
       <nav
+        ref={mobileNavRef}
         className="cabinet-edge-nav fixed inset-x-0 bottom-0 z-50 sm:hidden px-2 pb-[max(0.5rem,var(--cabinet-tg-safe-bottom))] pointer-events-none"
         aria-label={t('nav.mobile')}
       >
