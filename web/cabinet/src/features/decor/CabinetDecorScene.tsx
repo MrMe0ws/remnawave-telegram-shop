@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 
+import { JackOLanternShape, SpiderSvg } from './DecorEffects'
 import type { DecorThemeId } from './decorThemes'
 import { useCabinetDecorTheme } from './useCabinetDecorTheme'
 
@@ -42,46 +43,146 @@ function NewYearTree() {
 
 function HalloweenMoon() {
   return (
-    <svg className="cabinet-decor-scene__moon" viewBox="0 0 80 80" fill="none" aria-hidden>
+    <svg className="cabinet-decor-scene__moon" viewBox="0 0 120 120" fill="none" aria-hidden>
       <defs>
-        <radialGradient id="cabinet-moon-glow" cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="hsl(48 85% 88%)" />
-          <stop offset="55%" stopColor="hsl(45 70% 72%)" />
-          <stop offset="100%" stopColor="hsl(42 55% 58%)" />
+        <radialGradient id="cabinet-hw-moon-face" cx="42%" cy="38%" r="62%">
+          <stop offset="0%" stopColor="hsl(50 90% 92%)" />
+          <stop offset="60%" stopColor="hsl(45 75% 76%)" />
+          <stop offset="100%" stopColor="hsl(38 60% 60%)" />
         </radialGradient>
-        <mask id="cabinet-moon-crescent">
-          <circle cx="40" cy="40" r="26" fill="white" />
-          <circle cx="52" cy="36" r="22" fill="black" />
-        </mask>
+        <radialGradient id="cabinet-hw-moon-halo" cx="50%" cy="50%" r="50%">
+          <stop offset="45%" stopColor="hsl(42 90% 70% / 0.35)" />
+          <stop offset="100%" stopColor="hsl(42 90% 70% / 0)" />
+        </radialGradient>
       </defs>
-      <circle cx="40" cy="40" r="26" fill="url(#cabinet-moon-glow)" mask="url(#cabinet-moon-crescent)" />
-      <ellipse cx="30" cy="38" rx="3.5" ry="2.5" fill="hsl(40 30% 45% / 0.22)" />
-      <ellipse cx="36" cy="46" rx="2" ry="1.5" fill="hsl(40 30% 45% / 0.18)" />
-      <ellipse cx="42" cy="34" rx="1.5" ry="1" fill="hsl(40 30% 45% / 0.15)" />
+      <circle cx="60" cy="60" r="60" fill="url(#cabinet-hw-moon-halo)" />
+      <circle cx="60" cy="60" r="32" fill="url(#cabinet-hw-moon-face)" />
+      <circle cx="50" cy="52" r="6" fill="hsl(38 35% 50% / 0.22)" />
+      <circle cx="68" cy="68" r="8" fill="hsl(38 35% 50% / 0.18)" />
+      <circle cx="70" cy="47" r="3.5" fill="hsl(38 35% 50% / 0.2)" />
+      <circle cx="48" cy="72" r="3" fill="hsl(38 35% 50% / 0.16)" />
+      {/* летучая мышь на фоне луны */}
+      <g className="cabinet-decor-scene__moon-bat" transform="translate(46 58) scale(0.55)">
+        <path d="M30 11 C24 6 14 5 3 9 C7.5 11 9 14 8 18 C11 15.5 14 15.5 16 19 C18 15.5 21 15.5 23 19 C25 15.5 28 15 30 16 Z" />
+        <path d="M34 11 C40 6 50 5 61 9 C56.5 11 55 14 56 18 C53 15.5 50 15.5 48 19 C46 15.5 43 15.5 41 19 C39 15.5 36 15 34 16 Z" />
+        <ellipse cx="32" cy="14.5" rx="3.6" ry="6" />
+        <path d="M29.2 9.5 L29.6 4.5 L31.3 7.6 H32.7 L34.4 4.5 L34.8 9.5 Z" />
+      </g>
     </svg>
   )
 }
 
-function HalloweenCat() {
+/** Паутина в углу: 7 радиальных нитей + провисающие кольца. Генерируется один раз. */
+const WEB_SPOKES = [0, 15, 30, 45, 60, 75, 90].map((deg) => (deg * Math.PI) / 180)
+const WEB_RINGS = [22, 42, 64, 88, 112]
+const WEB_PATH = (() => {
+  const pt = (r: number, a: number) => `${(r * Math.cos(a)).toFixed(1)} ${(r * Math.sin(a)).toFixed(1)}`
+  const spokes = WEB_SPOKES.map((a) => `M0 0 L${pt(120, a)}`)
+  const rings = WEB_RINGS.map((r) =>
+    WEB_SPOKES.slice(1)
+      .map((a, i) => {
+        const prev = WEB_SPOKES[i]!
+        return `${i === 0 ? `M${pt(r, prev)} ` : ''}Q${pt(r * 0.84, (a + prev) / 2)} ${pt(r, a)}`
+      })
+      .join(' '),
+  )
+  return [...spokes, ...rings].join(' ')
+})()
+
+function HalloweenWeb() {
   return (
-    <svg className="cabinet-decor-scene__cat" viewBox="0 0 80 72" fill="none" aria-hidden>
-      <ellipse cx="40" cy="48" rx="28" ry="22" fill="currentColor" opacity="0.35" />
-      <path d="M18 28 L24 8 L32 24 Z M48 24 L56 8 L62 28 Z" fill="currentColor" opacity="0.4" />
-      <circle cx="30" cy="44" r="3" fill="hsl(var(--background))" />
-      <circle cx="50" cy="44" r="3" fill="hsl(var(--background))" />
-      <path d="M36 52 Q40 56 44 52" stroke="hsl(var(--background))" strokeWidth="2" fill="none" />
+    <div className="cabinet-decor-scene__web" aria-hidden>
+      <svg viewBox="0 0 120 120" fill="none" className="size-full overflow-visible">
+        <path d={WEB_PATH} stroke="currentColor" strokeWidth="0.7" strokeLinecap="round" />
+      </svg>
+      <span className="cabinet-hw-spider cabinet-hw-spider--web">
+        <span className="cabinet-hw-spider__drop">
+          <span className="cabinet-hw-spider__body">
+            <SpiderSvg />
+          </span>
+        </span>
+      </span>
+    </div>
+  )
+}
+
+/** Тыква на земле в силуэте кладбища: x/y — центр основания, size — ширина. */
+function GroundPumpkin({ x, y, size }: { x: number; y: number; size: number }) {
+  const scale = size / 64
+  return (
+    <g className="cabinet-decor-scene__ground-pumpkin" transform={`translate(${x - size / 2} ${y - 56 * scale}) scale(${scale})`}>
+      <JackOLanternShape />
+    </g>
+  )
+}
+
+function HalloweenGraveyardLeft() {
+  return (
+    <svg className="cabinet-decor-scene__graves cabinet-decor-scene__graves--l" viewBox="0 0 300 200" aria-hidden>
+      <g className="cabinet-decor-scene__silhouette">
+        <path d="M0 320 V172 C60 160 140 158 220 168 C260 173 285 178 300 182 V320 Z" />
+        <g fill="none" stroke="currentColor" strokeLinecap="round">
+          <path d="M40 196 C42 175 44 150 40 120 C38 104 32 90 22 78" strokeWidth="9" />
+          <path d="M41 128 C52 112 66 104 86 100" strokeWidth="5" />
+          <path d="M70 103 C76 94 78 86 76 74" strokeWidth="3" />
+          <path d="M86 100 C94 99 100 94 104 88" strokeWidth="2.5" />
+          <path d="M22 78 C16 70 14 60 17 48" strokeWidth="4" />
+          <path d="M27 86 C19 84 10 86 2 93" strokeWidth="3" />
+          <path d="M43 160 C55 150 66 148 80 151" strokeWidth="4" />
+          <path d="M17 60 C12 56 8 56 4 58" strokeWidth="2" />
+        </g>
+        <path d="M108 200 V152 C108 132 148 132 148 152 V200 Z" />
+        <rect x="186" y="140" width="8" height="50" rx="1" />
+        <rect x="174" y="152" width="32" height="8" rx="1" />
+        <path d="M232 200 V170 C232 158 254 158 254 170 V200 Z" />
+        {/* кот на надгробии */}
+        <path d="M114 140 C112 128 115 119 121 115 C119 111 119 105 121 101 L119.5 91 L126 97 C128 96 132 96 134 97 L140.5 91 L139 101 C141 105 141 111 139 115 C145 119 148 128 146 140 Z" />
+        <path d="M145 138 C154 137 158 128 153 119" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+      </g>
+      <g className="cabinet-decor-scene__cat-eyes">
+        <ellipse cx="126" cy="106" rx="1.9" ry="1.5" />
+        <ellipse cx="134" cy="106" rx="1.9" ry="1.5" />
+      </g>
+      <GroundPumpkin x={78} y={182} size={34} />
     </svg>
   )
 }
 
-function HalloweenMouse() {
+const FENCE_POSTS = Array.from({ length: 9 }, (_, i) => 150 + i * 18)
+
+function HalloweenGraveyardRight() {
   return (
-    <svg className="cabinet-decor-scene__mouse" viewBox="0 0 64 48" fill="none" aria-hidden>
-      <ellipse cx="32" cy="30" rx="22" ry="14" fill="currentColor" opacity="0.32" />
-      <circle cx="48" cy="18" r="10" fill="currentColor" opacity="0.28" />
-      <circle cx="52" cy="16" r="2" fill="hsl(var(--background))" />
-      <path d="M8 28 C4 24 2 18 6 14" stroke="currentColor" strokeWidth="2" opacity="0.35" />
+    <svg className="cabinet-decor-scene__graves cabinet-decor-scene__graves--r" viewBox="0 0 300 200" aria-hidden>
+      <g className="cabinet-decor-scene__silhouette">
+        {FENCE_POSTS.map((x) => (
+          <path key={x} d={`M${x} 200 V146 L${x + 2.5} 139 L${x + 5} 146 V200 Z`} />
+        ))}
+        <rect x="146" y="156" width="154" height="3.5" />
+        <rect x="146" y="178" width="154" height="3.5" />
+        <path d="M0 320 V184 C30 176 80 166 150 164 C220 162 270 168 300 172 V320 Z" />
+        <path d="M54 200 V158 C54 140 90 140 90 158 V200 Z" />
+        <path d="M14 200 V180 L18 170 H32 L36 180 V200 Z" />
+      </g>
+      <text x="72" y="166" textAnchor="middle" className="cabinet-decor-scene__rip">
+        RIP
+      </text>
+      <GroundPumpkin x={122} y={178} size={40} />
+      <GroundPumpkin x={226} y={186} size={30} />
     </svg>
+  )
+}
+
+function HalloweenScene() {
+  return (
+    <>
+      <div className="cabinet-decor-scene__hw-horizon" aria-hidden />
+      <HalloweenMoon />
+      <HalloweenWeb />
+      <HalloweenGraveyardLeft />
+      <HalloweenGraveyardRight />
+      <div className="cabinet-decor-scene__fog cabinet-decor-scene__fog--a" aria-hidden />
+      <div className="cabinet-decor-scene__fog cabinet-decor-scene__fog--b" aria-hidden />
+    </>
   )
 }
 
@@ -204,13 +305,7 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
     case 'summer':
       return <SummerTree />
     case 'halloween':
-      return (
-        <>
-          <HalloweenMoon />
-          <HalloweenCat />
-          <HalloweenMouse />
-        </>
-      )
+      return <HalloweenScene />
     case 'spring':
       return <SpringScene />
     case 'valentine':
