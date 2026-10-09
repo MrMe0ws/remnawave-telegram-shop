@@ -2400,6 +2400,25 @@ html:not(.dark) .cabinet-ny-sky {
   inset-inline: 0;
   bottom: 0;
   height: 0;
+  /*
+   * Баланс «видно, но не отвлекает»: на телефоне сцена ложится под нижние
+   * карточки и подписи — глушим сильнее; на ПК она в пустых полях по бокам.
+   */
+  opacity: 0.6;
+}
+
+html:not(.dark) .cabinet-ny-ground {
+  opacity: 0.68;
+}
+
+@media (min-width: 768px) {
+  .cabinet-ny-ground {
+    opacity: 0.8;
+  }
+
+  html:not(.dark) .cabinet-ny-ground {
+    opacity: 0.85;
+  }
 }
 
 @media (max-width: 639px) {
@@ -2452,11 +2471,6 @@ html:not(.dark) .cabinet-ny-drifts__front {
   overflow: visible;
 }
 
-html.dark .cabinet-ny-tree,
-html.dark .cabinet-ny-snowman {
-  opacity: 0.92;
-}
-
 .cabinet-ny-tree__snow {
   stroke: hsl(210 45% 96%);
 }
@@ -2492,31 +2506,16 @@ html:not(.dark) .cabinet-ny-fir-bg {
   fill: hsl(165 30% 52%);
 }
 
-/* ── new_year: шапка — снежная кромка и гирлянда ────────────────────────── */
+/* ── new_year: гирлянда под шапкой ─────────────────────────────────────── */
 
 .cabinet-ny-header {
   z-index: 2;
 }
 
-.cabinet-ny-header__snow {
-  position: absolute;
-  inset-inline: 0;
-  top: -2px;
-  width: 100%;
-  height: 9px;
-  fill: hsl(210 40% 96%);
-  filter: drop-shadow(0 1px 1px hsl(210 60% 20% / 0.35));
-}
-
-html:not(.dark) .cabinet-ny-header__snow {
-  fill: hsl(0 0% 100%);
-  filter: drop-shadow(0 1px 1.5px hsl(205 50% 45% / 0.35));
-}
-
 .cabinet-ny-garland {
   position: absolute;
   inset-inline: 0;
-  top: 1px;
+  top: -1px;
   height: 24px;
 }
 
@@ -2543,7 +2542,7 @@ html:not(.dark) .cabinet-ny-garland__wire {
   box-shadow: 0 0 8px 1px var(--bulb-color);
   transform: rotate(var(--bulb-tilt, 0deg));
   transform-origin: 50% 0;
-  animation: cabinet-ny-bulb 2.2s ease-in-out infinite;
+  animation: cabinet-ny-bulb 4.4s ease-in-out infinite;
   animation-delay: var(--bulb-delay, 0s);
 }
 
@@ -2981,6 +2980,8 @@ html:not(.dark) .cabinet-decor-scene--halloween .cabinet-decor-scene__web {
   width: min(52vw, 360px);
   height: auto;
   overflow: visible;
+  /* Тот же баланс, что у new_year: на телефоне кладбище под текстом — глушим сильнее. */
+  opacity: 0.7;
 }
 
 /* Над нижним меню телефона, иначе кладбище целиком под ним; земля тянется вниз за viewBox. */
@@ -3065,6 +3066,7 @@ html:not(.dark) .cabinet-decor-scene--halloween .cabinet-decor-scene__fog {
 
 /* Тыквы-светильники: всплывают, покачиваются и гаснут. */
 .cabinet-hw-jack {
+  --hw-jack-max: 0.65;
   position: absolute;
   display: block;
   opacity: 0;
@@ -3267,13 +3269,13 @@ html:not(.dark) .cabinet-hw-spider {
     transform: translateY(18px) rotate(var(--hw-tilt, 0deg)) scale(0.9);
   }
   16% {
-    opacity: 0.85;
+    opacity: var(--hw-jack-max, 0.85);
   }
   50% {
     transform: translateY(-12px) rotate(calc(var(--hw-tilt, 0deg) * -1)) scale(1);
   }
   84% {
-    opacity: 0.85;
+    opacity: var(--hw-jack-max, 0.85);
   }
   100% {
     opacity: 0;
@@ -3387,6 +3389,11 @@ html:not(.dark) .cabinet-hw-spider {
 
   .cabinet-decor-scene--halloween .cabinet-decor-scene__graves {
     width: min(34vw, 460px);
+    opacity: 0.9;
+  }
+
+  .cabinet-hw-jack {
+    --hw-jack-max: 0.85;
   }
 }
 

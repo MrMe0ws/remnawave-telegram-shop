@@ -238,7 +238,7 @@ export function NewYearScene() {
   )
 }
 
-/** Гирлянда с провисающим проводом под шапкой + снежная кромка шапки. */
+/** Гирлянда с провисающим проводом, подвешенная к нижнему краю шапки. */
 const GARLAND_COLORS = [
   'hsl(355 85% 58%)',
   'hsl(45 100% 58%)',
@@ -249,19 +249,6 @@ const GARLAND_COLORS = [
 ]
 const GARLAND_SPANS = 14
 
-const SNOW_CAP_PATH = (() => {
-  const rnd = seeded(31)
-  let d = 'M0 0 H1200 V2'
-  for (let x = 1200; x > 0; ) {
-    const w = 18 + rnd() * 34
-    const nx = Math.max(0, x - w)
-    const depth = 4 + rnd() * 6
-    d += ` Q${((x + nx) / 2).toFixed(1)} ${(2 + depth * 2).toFixed(1)} ${nx.toFixed(1)} 2`
-    x = nx
-  }
-  return d + ' Z'
-})()
-
 export function NewYearHeaderDecor() {
   const wire = Array.from({ length: GARLAND_SPANS }, (_, i) => {
     const x0 = i * 40
@@ -270,9 +257,6 @@ export function NewYearHeaderDecor() {
 
   return (
     <div className="cabinet-ny-header pointer-events-none absolute inset-x-0 bottom-0 h-px" aria-hidden>
-      <svg className="cabinet-ny-header__snow" viewBox="0 0 1200 16" preserveAspectRatio="none">
-        <path d={SNOW_CAP_PATH} />
-      </svg>
       <div className="cabinet-ny-garland">
         <svg viewBox={`0 0 ${GARLAND_SPANS * 40} 24`} preserveAspectRatio="none" className="cabinet-ny-garland__wire">
           <path d={wire} fill="none" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
@@ -285,7 +269,7 @@ export function NewYearHeaderDecor() {
               {
                 left: `${((i + 0.5) / GARLAND_SPANS) * 100}%`,
                 '--bulb-color': GARLAND_COLORS[i % GARLAND_COLORS.length],
-                '--bulb-delay': `${(i % GARLAND_COLORS.length) * 0.32}s`,
+                '--bulb-delay': `${(i % GARLAND_COLORS.length) * 0.64}s`,
                 '--bulb-tilt': `${i % 2 === 0 ? -8 : 8}deg`,
               } as CSSProperties
             }
