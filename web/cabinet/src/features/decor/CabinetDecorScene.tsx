@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 
 import { JackOLanternShape, SpiderSvg } from './DecorEffects'
 import type { DecorThemeId } from './decorThemes'
+import { NewYearScene } from './NewYearScene'
 import { useCabinetDecorTheme } from './useCabinetDecorTheme'
 
 function SummerTree() {
@@ -19,24 +20,6 @@ function SummerTree() {
         opacity="0.22"
       />
       <rect x="54" y="178" width="12" height="22" rx="2" fill="currentColor" opacity="0.3" />
-    </svg>
-  )
-}
-
-function NewYearTree() {
-  return (
-    <svg
-      className="cabinet-decor-scene__christmas-tree"
-      viewBox="0 0 120 200"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path d="M60 8 L72 28 H84 L68 48 L76 68 H92 L60 108 L28 68 H44 L52 48 L36 28 H48 Z" fill="currentColor" opacity="0.2" />
-      <path d="M60 38 L70 54 H80 L66 72 L74 88 H88 L60 120 L32 88 H46 L54 72 L40 54 H50 Z" fill="currentColor" opacity="0.26" />
-      <path d="M60 72 L68 84 H78 L64 98 L70 112 H82 L60 148 L38 112 H50 L56 98 L42 84 H52 Z" fill="currentColor" opacity="0.32" />
-      <rect x="54" y="148" width="12" height="24" rx="2" fill="currentColor" opacity="0.35" />
-      <path d="M60 4 L62 10 L68 10 L63 14 L65 20 L60 16 L55 20 L57 14 L52 10 L58 10 Z" fill="currentColor" opacity="0.45" />
     </svg>
   )
 }
@@ -301,7 +284,7 @@ function NebulaGlow() {
 function SceneContent({ theme }: { theme: DecorThemeId }) {
   switch (theme) {
     case 'new_year':
-      return <NewYearTree />
+      return <NewYearScene />
     case 'summer':
       return <SummerTree />
     case 'halloween':

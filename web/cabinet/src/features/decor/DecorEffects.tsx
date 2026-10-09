@@ -95,23 +95,120 @@ function FloatingParticles({ char, chars, particleClassName, fxClassName, count,
   )
 }
 
+/** Шестилучевая снежинка-кристалл: лучи с веточками + шестиугольник в центре. */
+function SnowCrystalSvg() {
+  return (
+    <svg viewBox="-12 -12 24 24" aria-hidden className="size-full overflow-visible">
+      <g stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" fill="none">
+        {[0, 60, 120, 180, 240, 300].map((deg) => (
+          <g key={deg} transform={`rotate(${deg})`}>
+            <path d="M0 0 V-10.5" />
+            <path d="M0 -6.5 L-2.6 -9 M0 -6.5 L2.6 -9" />
+            <path d="M0 -3.4 L-1.8 -5.2 M0 -3.4 L1.8 -5.2" />
+          </g>
+        ))}
+      </g>
+      <circle r="1.6" fill="currentColor" />
+    </svg>
+  )
+}
+
+interface SnowFlakeStyle {
+  left: string
+  size: number
+  animationDuration: string
+  animationDelay: string
+  swayDuration: string
+  sway: number
+  opacity: number
+  /** 0 — дальний (мелкий, размытый, медленный), 2 — ближний. */
+  depth: 0 | 1 | 2
+}
+
+function buildSnowFlakes(
+  count: number,
+  opts: { sizeMin: number; sizeMax: number; durationMin: number; durationMax: number },
+): SnowFlakeStyle[] {
+  return Array.from({ length: count }, () => {
+    const t = Math.random()
+    const depth = (t < 0.45 ? 0 : t < 0.85 ? 1 : 2) as SnowFlakeStyle['depth']
+    const k = depth / 2
+    // Ближние снежинки крупнее и падают быстрее — так снегопад обретает глубину.
+    const size = opts.sizeMin + (opts.sizeMax - opts.sizeMin) * (k * 0.7 + Math.random() * 0.3)
+    const duration = opts.durationMax - (opts.durationMax - opts.durationMin) * (k * 0.75 + Math.random() * 0.25)
+    return {
+      left: `${randomBetween(-2, 100)}%`,
+      size,
+      animationDuration: `${duration}s`,
+      animationDelay: `-${randomBetween(0, duration)}s`,
+      swayDuration: `${randomBetween(2.8, 5.5)}s`,
+      sway: randomBetween(10, 34),
+      opacity: randomBetween(0.55, 0.95) * (depth === 0 ? 0.6 : 1),
+      depth,
+    }
+  })
+}
+
+/** new_year: многослойный снегопад из мягких хлопьев и редких кристаллов. */
 export function SnowEffect() {
   const desktop = useIsDesktopViewport()
-  const buildOpts = useMemo(
+  const reduced =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  const flakes = useMemo(
     () =>
-      desktop
-        ? { fontMin: 16, fontMax: 30, durationMin: 8, durationMax: 18, delayMax: 12 }
-        : { fontMin: 12, fontMax: 24, durationMin: 8, durationMax: 18, delayMax: 12 },
-    [desktop],
+      reduced
+        ? []
+        : buildSnowFlakes(
+            desktop ? 64 : 30,
+            desktop
+              ? { sizeMin: 2.5, sizeMax: 8, durationMin: 9, durationMax: 22 }
+              : { sizeMin: 2, sizeMax: 6.5, durationMin: 8, durationMax: 18 },
+          ),
+    [desktop, reduced],
+  )
+  const crystals = useMemo(
+    () =>
+      reduced
+        ? []
+        : buildSnowFlakes(
+            desktop ? 9 : 4,
+            desktop
+              ? { sizeMin: 14, sizeMax: 28, durationMin: 14, durationMax: 24 }
+              : { sizeMin: 12, sizeMax: 20, durationMin: 12, durationMax: 20 },
+          ),
+    [desktop, reduced],
   )
 
+  if (flakes.length + crystals.length === 0) return null
+
+  const style = (s: SnowFlakeStyle) =>
+    ({
+      left: s.left,
+      width: s.size,
+      height: s.size,
+      opacity: s.opacity,
+      animationDuration: s.animationDuration,
+      animationDelay: s.animationDelay,
+      ['--ny-sway' as string]: `${s.sway}px`,
+      ['--ny-sway-dur' as string]: s.swayDuration,
+    }) as CSSProperties
+
   return (
-    <FloatingParticles
-      char="❄"
-      fxClassName="cabinet-decor-fx--snow"
-      particleClassName="cabinet-decor-particle--snow"
-      buildOpts={buildOpts}
-    />
+    <div className="cabinet-decor-fx cabinet-decor-fx--snow" aria-hidden>
+      {flakes.map((s, i) => (
+        <span key={`f${i}`} className={cn('cabinet-ny-flake', `cabinet-ny-flake--d${s.depth}`)} style={style(s)}>
+          <span className="cabinet-ny-flake__sway" />
+        </span>
+      ))}
+      {crystals.map((s, i) => (
+        <span key={`c${i}`} className="cabinet-ny-flake cabinet-ny-flake--crystal" style={style(s)}>
+          <span className="cabinet-ny-flake__sway">
+            <SnowCrystalSvg />
+          </span>
+        </span>
+      ))}
+    </div>
   )
 }
 

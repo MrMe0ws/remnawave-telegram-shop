@@ -1886,16 +1886,6 @@ html.dark[data-cabinet-decor="neon"] {
   animation: cabinet-decor-fall linear infinite;
 }
 
-.cabinet-decor-particle--snow {
-  color: hsl(210 40% 96% / 0.9);
-  text-shadow: 0 0 6px hsl(198 89% 50% / 0.35);
-}
-
-html:not(.dark) .cabinet-decor-particle--snow {
-  color: hsl(210 55% 42% / 0.7);
-  text-shadow: 0 0 5px hsl(198 89% 50% / 0.3);
-}
-
 .cabinet-decor-particle--sunray {
   top: -10%;
   color: hsl(45 100% 70% / 0.55);
@@ -1986,14 +1976,6 @@ html:not(.dark) .cabinet-decor-particle--spring-bloom {
 
 html:not(.dark) .cabinet-decor-particle--spring-leaf {
   color: hsl(138 42% 38% / 0.75);
-}
-
-html[data-cabinet-decor="new_year"] .cabinet-decor-particle--snow {
-  text-shadow: 0 0 6px hsl(var(--primary) / 0.4);
-}
-
-html:not(.dark)[data-cabinet-decor="new_year"] .cabinet-decor-particle--snow {
-  text-shadow: 0 0 5px hsl(var(--primary) / 0.35);
 }
 
 .cabinet-decor-particle--spark {
@@ -2315,17 +2297,366 @@ html.dark[data-cabinet-decor="new_year"] {
   --ring: 198 85% 52%;
 }
 
-html[data-cabinet-decor="new_year"] body {
+/* Зимняя ночь: холодное свечение сверху, лёгкий «северный» отсвет, светлее у снега. */
+html.dark[data-cabinet-decor="new_year"] body {
   background-image:
-    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(198 70% 45% / 0.12), transparent 55%),
-    radial-gradient(ellipse 80% 50% at 100% 0%, hsl(150 40% 35% / 0.08), transparent 50%),
-    radial-gradient(ellipse 80% 50% at 0% 0%, hsl(350 50% 40% / 0.06), transparent 50%);
+    radial-gradient(ellipse 120% 70% at 50% -20%, hsl(205 80% 42% / 0.22), transparent 58%),
+    radial-gradient(ellipse 60% 40% at 12% 0%, hsl(170 60% 38% / 0.12), transparent 60%),
+    radial-gradient(ellipse 90% 40% at 50% 108%, hsl(205 50% 60% / 0.12), transparent 62%),
+    linear-gradient(180deg, hsl(218 50% 9%) 0%, hsl(var(--background)) 50%, hsl(214 40% 12%) 100%);
 }
 
-html[data-cabinet-decor="new_year"] .cabinet-shell-gradient {
+html.dark[data-cabinet-decor="new_year"] .cabinet-shell-gradient {
   background-image:
-    radial-gradient(ellipse 120% 85% at 50% -25%, hsl(198 70% 45% / 0.12), transparent 55%),
-    radial-gradient(ellipse 80% 50% at 100% 0%, hsl(150 40% 35% / 0.08), transparent 50%);
+    radial-gradient(ellipse 120% 70% at 50% -20%, hsl(205 80% 42% / 0.22), transparent 58%),
+    radial-gradient(ellipse 60% 40% at 12% 0%, hsl(170 60% 38% / 0.12), transparent 60%),
+    radial-gradient(ellipse 90% 40% at 50% 108%, hsl(205 50% 60% / 0.12), transparent 62%);
+}
+
+html:not(.dark)[data-cabinet-decor="new_year"] body,
+html:not(.dark)[data-cabinet-decor="new_year"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 120% 70% at 50% -20%, hsl(198 85% 70% / 0.26), transparent 58%),
+    radial-gradient(ellipse 60% 40% at 90% 0%, hsl(350 70% 75% / 0.1), transparent 60%),
+    radial-gradient(ellipse 90% 45% at 50% 110%, hsl(205 70% 80% / 0.35), transparent 62%);
+}
+
+/* ── new_year: снегопад ─────────────────────────────────────────────────── */
+
+.cabinet-ny-flake {
+  position: absolute;
+  top: -3rem;
+  display: block;
+  animation: cabinet-ny-fall linear infinite;
+  will-change: transform;
+}
+
+.cabinet-ny-flake__sway {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, hsl(0 0% 100%) 0%, hsl(205 80% 96% / 0.85) 45%, transparent 72%);
+  animation: cabinet-ny-sway var(--ny-sway-dur, 4s) ease-in-out infinite alternate;
+}
+
+.cabinet-ny-flake--d0 {
+  filter: blur(1px);
+}
+
+.cabinet-ny-flake--d2 .cabinet-ny-flake__sway {
+  box-shadow: 0 0 6px hsl(200 90% 85% / 0.55);
+}
+
+.cabinet-ny-flake--crystal {
+  color: hsl(200 80% 94%);
+  filter: drop-shadow(0 0 4px hsl(200 90% 75% / 0.55));
+}
+
+.cabinet-ny-flake--crystal .cabinet-ny-flake__sway {
+  background: none;
+  border-radius: 0;
+  animation-name: cabinet-ny-sway-spin;
+}
+
+/* На светлом фоне белый снег не виден: голубые хлопья с тенью. */
+html:not(.dark) .cabinet-ny-flake__sway {
+  background: radial-gradient(circle, hsl(205 75% 72%) 0%, hsl(205 70% 78% / 0.7) 45%, transparent 72%);
+}
+
+html:not(.dark) .cabinet-ny-flake--crystal {
+  color: hsl(205 70% 58%);
+  filter: drop-shadow(0 1px 2px hsl(205 60% 40% / 0.25));
+}
+
+html:not(.dark) .cabinet-ny-flake--crystal .cabinet-ny-flake__sway {
+  background: none;
+}
+
+/* ── new_year: небо и земля ─────────────────────────────────────────────── */
+
+.cabinet-ny-sky {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: min(100vh, 900px);
+}
+
+.cabinet-ny-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: hsl(50 100% 92%);
+  box-shadow: 0 0 6px hsl(50 100% 85% / 0.8);
+  animation: cabinet-ny-twinkle ease-in-out infinite;
+}
+
+html:not(.dark) .cabinet-ny-sky {
+  display: none;
+}
+
+.cabinet-ny-ground {
+  --ny-drift-h: clamp(54px, 8vw, 110px);
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 0;
+}
+
+@media (max-width: 639px) {
+  .cabinet-ny-ground {
+    bottom: var(--cabinet-bottom-nav-h, 0px);
+  }
+}
+
+.cabinet-ny-drifts {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--ny-drift-h);
+  overflow: visible;
+}
+
+.cabinet-ny-drifts__back {
+  fill: hsl(212 32% 70% / 0.55);
+}
+
+.cabinet-ny-drifts__front {
+  fill: hsl(212 38% 86% / 0.82);
+}
+
+html:not(.dark) .cabinet-ny-drifts__back {
+  fill: hsl(205 55% 86%);
+}
+
+html:not(.dark) .cabinet-ny-drifts__front {
+  fill: hsl(0 0% 100%);
+  filter: drop-shadow(0 -2px 3px hsl(205 50% 60% / 0.25));
+}
+
+.cabinet-ny-tree {
+  position: absolute;
+  left: 0.5rem;
+  bottom: calc(var(--ny-drift-h) * 0.18);
+  width: min(23vw, 150px);
+  height: auto;
+  overflow: visible;
+}
+
+.cabinet-ny-snowman {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--ny-drift-h) * 0.16);
+  width: min(32vw, 200px);
+  height: auto;
+  overflow: visible;
+}
+
+html.dark .cabinet-ny-tree,
+html.dark .cabinet-ny-snowman {
+  opacity: 0.92;
+}
+
+.cabinet-ny-tree__snow {
+  stroke: hsl(210 45% 96%);
+}
+
+.cabinet-ny-tree__lights {
+  stroke: hsl(48 100% 70%);
+  animation: cabinet-ny-lights 2.4s ease-in-out infinite;
+}
+
+.cabinet-ny-ornament--blink {
+  animation: cabinet-ny-ornament 3s ease-in-out infinite;
+}
+
+.cabinet-ny-ornament--blink:nth-of-type(2n) {
+  animation-delay: -1.4s;
+}
+
+.cabinet-ny-tree__star-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cabinet-ny-star-glow 3.2s ease-in-out infinite;
+}
+
+.cabinet-ny-fir-bg {
+  fill: hsl(170 30% 26%);
+}
+
+.cabinet-ny-fir-bg__snow {
+  fill: hsl(210 45% 95%);
+}
+
+html:not(.dark) .cabinet-ny-fir-bg {
+  fill: hsl(165 30% 52%);
+}
+
+/* ── new_year: шапка — снежная кромка и гирлянда ────────────────────────── */
+
+.cabinet-ny-header {
+  z-index: 2;
+}
+
+.cabinet-ny-header__snow {
+  position: absolute;
+  inset-inline: 0;
+  top: -2px;
+  width: 100%;
+  height: 9px;
+  fill: hsl(210 40% 96%);
+  filter: drop-shadow(0 1px 1px hsl(210 60% 20% / 0.35));
+}
+
+html:not(.dark) .cabinet-ny-header__snow {
+  fill: hsl(0 0% 100%);
+  filter: drop-shadow(0 1px 1.5px hsl(205 50% 45% / 0.35));
+}
+
+.cabinet-ny-garland {
+  position: absolute;
+  inset-inline: 0;
+  top: 1px;
+  height: 24px;
+}
+
+.cabinet-ny-garland__wire {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: hsl(150 25% 22%);
+}
+
+html:not(.dark) .cabinet-ny-garland__wire {
+  stroke: hsl(150 20% 35%);
+}
+
+.cabinet-ny-bulb {
+  position: absolute;
+  top: 11px;
+  width: 7px;
+  height: 10px;
+  margin-left: -3.5px;
+  border-radius: 50% 50% 45% 45% / 40% 40% 60% 60%;
+  background: radial-gradient(circle at 35% 35%, hsl(0 0% 100% / 0.7), transparent 40%), var(--bulb-color);
+  box-shadow: 0 0 8px 1px var(--bulb-color);
+  transform: rotate(var(--bulb-tilt, 0deg));
+  transform-origin: 50% 0;
+  animation: cabinet-ny-bulb 2.2s ease-in-out infinite;
+  animation-delay: var(--bulb-delay, 0s);
+}
+
+.cabinet-ny-bulb::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 1.5px;
+  width: 4px;
+  height: 3.5px;
+  border-radius: 1px;
+  background: hsl(45 20% 55%);
+}
+
+@keyframes cabinet-ny-fall {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(min(100vh, 1100px) + 4rem));
+  }
+}
+
+@keyframes cabinet-ny-sway {
+  from {
+    transform: translateX(calc(var(--ny-sway, 20px) * -0.5));
+  }
+  to {
+    transform: translateX(calc(var(--ny-sway, 20px) * 0.5));
+  }
+}
+
+@keyframes cabinet-ny-sway-spin {
+  from {
+    transform: translateX(calc(var(--ny-sway, 20px) * -0.5)) rotate(-40deg);
+  }
+  to {
+    transform: translateX(calc(var(--ny-sway, 20px) * 0.5)) rotate(40deg);
+  }
+}
+
+@keyframes cabinet-ny-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes cabinet-ny-lights {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes cabinet-ny-ornament {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes cabinet-ny-star-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes cabinet-ny-bulb {
+  0%,
+  100% {
+    opacity: 0.5;
+    filter: brightness(0.8);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+}
+
+@media (min-width: 768px) {
+  .cabinet-ny-tree {
+    left: 1.5rem;
+    width: min(22vw, 210px);
+  }
+
+  .cabinet-ny-snowman {
+    right: 0.5rem;
+    width: min(26vw, 260px);
+  }
+
+  .cabinet-ny-bulb {
+    width: 8px;
+    height: 12px;
+    margin-left: -4px;
+  }
 }
 
 /* --- color accents (только палитра, без декора) --- */
@@ -3419,53 +3750,7 @@ html:not(.dark)[data-cabinet-decor="wine"] .cabinet-shell-gradient {
  * перебивали и нейтральную обводку, и `border-color: transparent` из слоя
  * пластики. Цвет карточки и её ховер теперь целиком за базовым слоем.
  */
-/* ── Декор: гирлянда (new_year), неон-хедер, фоновые сцены ───────────────── */
-
-.cabinet-decor-garland {
-  z-index: 2;
-}
-
-.cabinet-decor-garland__wire {
-  position: absolute;
-  left: 2%;
-  right: 2%;
-  top: 50%;
-  height: 2px;
-  border-radius: 9999px;
-  background: linear-gradient(90deg, transparent, hsl(var(--muted-foreground) / 0.35), transparent);
-  transform: translateY(-50%);
-}
-
-.cabinet-decor-garland__bulbs {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-inline: 3%;
-}
-
-.cabinet-decor-garland__bulb {
-  width: 7px;
-  height: 10px;
-  border-radius: 50% 50% 45% 45%;
-  background: var(--bulb-color);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--bulb-color) 70%, transparent);
-  animation: cabinet-decor-bulb-twinkle 1.8s ease-in-out infinite;
-  animation-delay: var(--bulb-delay, 0s);
-}
-
-@keyframes cabinet-decor-bulb-twinkle {
-  0%,
-  100% {
-    opacity: 0.45;
-    filter: brightness(0.85);
-  }
-  50% {
-    opacity: 1;
-    filter: brightness(1.25);
-  }
-}
+/* ── Декор: неон-хедер, фоновые сцены ───────────────── */
 
 .cabinet-decor-neon-header {
   z-index: 2;
@@ -3491,21 +3776,6 @@ html:not(.dark)[data-cabinet-decor="wine"] .cabinet-shell-gradient {
   pointer-events: none;
   overflow: hidden;
   color: hsl(var(--primary));
-}
-
-.cabinet-decor-scene--new_year .cabinet-decor-scene__christmas-tree {
-  position: absolute;
-  left: -0.5rem;
-  bottom: 0;
-  width: min(30vw, 220px);
-  height: auto;
-  opacity: 0.32;
-  color: hsl(140 45% 38%);
-}
-
-html:not(.dark) .cabinet-decor-scene--new_year .cabinet-decor-scene__christmas-tree {
-  opacity: 0.26;
-  color: hsl(145 50% 34%);
 }
 
 .cabinet-decor-scene--summer .cabinet-decor-scene__tree {
@@ -3891,11 +4161,6 @@ html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
 }
 
 @media (min-width: 768px) {
-  .cabinet-decor-scene--new_year .cabinet-decor-scene__christmas-tree {
-    width: min(34vw, 300px);
-    opacity: 0.38;
-  }
-
   .cabinet-decor-scene--spring .cabinet-decor-scene__spring-grass {
     width: min(18vw, 120px);
     opacity: 0.42;
@@ -3916,10 +4181,6 @@ html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
     opacity: 0.4;
   }
 
-  .cabinet-decor-garland__bulb {
-    width: 9px;
-    height: 12px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3927,11 +4188,11 @@ html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
     display: none;
   }
 
-  .cabinet-decor-garland__bulb {
-    animation: none;
-    opacity: 0.75;
-  }
-
+  .cabinet-ny-bulb,
+  .cabinet-ny-star,
+  .cabinet-ny-tree__lights,
+  .cabinet-ny-ornament--blink,
+  .cabinet-ny-tree__star-glow,
   .cabinet-decor-scene--halloween .cabinet-decor-scene__moon,
   .cabinet-decor-scene--halloween .cabinet-decor-scene__fog,
   .cabinet-decor-scene--halloween .cabinet-decor-scene__cat-eyes,
