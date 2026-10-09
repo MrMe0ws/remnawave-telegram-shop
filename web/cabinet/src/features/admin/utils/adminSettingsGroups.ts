@@ -340,7 +340,7 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'moderation',
       titleKey: 'admin.settings.subsections.access.moderation',
       icon: MessageSquare,
-      keys: ['FORWARD_USER_MESSAGES_TO_ADMIN'],
+      keys: ['FORWARD_USER_MESSAGES_TO_ADMIN', 'SUSPICIOUS_USER_FILTER_ENABLED'],
     },
     {
       id: 'lists',

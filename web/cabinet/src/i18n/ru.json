@@ -2691,6 +2691,10 @@
             "label": "Пересылать сообщения админу",
             "hint": "Текст и неизвестные команды"
           },
+          "SUSPICIOUS_USER_FILTER_ENABLED": {
+            "label": "Фильтр подозрительных имён",
+            "hint": "Не пускает тех, кто выдаёт себя за Telegram или поддержку (t.me, Telegram Support)"
+          },
           "BLOCKED_TELEGRAM_IDS": {
             "label": "Заблокированные Telegram ID",
             "hint": "Через запятую"

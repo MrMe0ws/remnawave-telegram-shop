@@ -2638,6 +2638,10 @@
             "label": "Forward messages to admin",
             "hint": "Text and unknown commands"
           },
+          "SUSPICIOUS_USER_FILTER_ENABLED": {
+            "label": "Suspicious name filter",
+            "hint": "Blocks names posing as Telegram or support (t.me, Telegram Support)"
+          },
           "BLOCKED_TELEGRAM_IDS": {
             "label": "Blocked Telegram IDs",
             "hint": "Comma-separated"

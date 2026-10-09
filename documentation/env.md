@@ -47,6 +47,7 @@
 | `MINI_APP_URL` | URL Telegram Mini App; пусто — не используется |
 | `GREETING_IMAGE` | Картинка главного меню: `http(s)://` или путь к файлу |
 | `FORWARD_USER_MESSAGES_TO_ADMIN` | Пересылать админу сообщения пользователей (`true`/`false`) |
+| `SUSPICIOUS_USER_FILTER_ENABLED` | Фильтр подозрительных имён (t.me, Telegram Support) (`true`/`false`, по умолчанию `true`) |
 | `BLOCKED_TELEGRAM_IDS` | Telegram ID через запятую — блок доступа |
 | `WHITELISTED_TELEGRAM_IDS` | ID, обходящие проверки на подозрительных пользователей |
 | `ADMIN_TELEGRAM_ID` | ID админа: админка в боте и кабинете |

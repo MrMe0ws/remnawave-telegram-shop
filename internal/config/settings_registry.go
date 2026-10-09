@@ -471,6 +471,11 @@ func RuntimeSettingsRegistry() []SettingField {
 			Current: func() string { return boolStr(conf.forwardUserMessagesToAdmin) },
 		},
 		{
+			Key: "SUSPICIOUS_USER_FILTER_ENABLED", Group: "access", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.suspiciousUserFilterEnabled = v }),
+			Current: func() string { return boolStr(conf.suspiciousUserFilterEnabled) },
+		},
+		{
 			Key: "BLOCKED_TELEGRAM_IDS", Group: "access", Type: SettingCSVInt,
 			Apply: func(value string) error {
 				m, err := parseTelegramIDList(value)

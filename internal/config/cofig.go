@@ -61,6 +61,7 @@ type config struct {
 	moynalogReceiptYookasa, moynalogReceiptPlatega, moynalogReceiptCrypto        bool // MOYNALOG_RECEIPT_FOR
 	adminTelegramId                                                              int64
 	forwardUserMessagesToAdmin                                                   bool
+	suspiciousUserFilterEnabled                                                  bool
 	trialDays                                                                    int
 	squadUUIDs                                                                   map[uuid.UUID]uuid.UUID
 	referralDays                                                                 int
@@ -729,6 +730,11 @@ func ForwardUserMessagesToAdmin() bool {
 	return conf.forwardUserMessagesToAdmin
 }
 
+// SuspiciousUserFilterEnabled — не пускать в бота пользователей с подозрительными именами (SUSPICIOUS_USER_FILTER_ENABLED).
+func SuspiciousUserFilterEnabled() bool {
+	return conf.suspiciousUserFilterEnabled
+}
+
 func GetHealthCheckPort() int {
 	return conf.healthCheckPort
 }
@@ -1008,6 +1014,7 @@ func InitConfig() {
 	}
 
 	conf.forwardUserMessagesToAdmin = envBoolDefault("FORWARD_USER_MESSAGES_TO_ADMIN", true)
+	conf.suspiciousUserFilterEnabled = envBoolDefault("SUSPICIOUS_USER_FILTER_ENABLED", true)
 
 	conf.telegramToken = mustEnv("TELEGRAM_TOKEN")
 
