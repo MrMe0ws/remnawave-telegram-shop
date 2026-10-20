@@ -205,7 +205,7 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
                       <div key={m.id} className="flex gap-2">
                         <SupportAvatar />
                         <div className="min-w-0 max-w-[85%]">
-                          <div className="rounded-2xl rounded-tl-md border border-border/80 bg-muted/50 px-3 py-2 text-sm shadow-sm">
+                          <div className="whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-border/80 bg-muted/50 px-3 py-2 text-sm shadow-sm">
                             {m.text}
                           </div>
                           <p className="mt-1 text-[11px] text-muted-foreground">{t('supportChat.supportLabel')}</p>
@@ -215,7 +215,9 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
                       <div key={m.id} className="flex flex-col items-end gap-1">
                         <div
                           className={cn(
-                            'max-w-[85%] rounded-2xl rounded-tr-md px-3 py-2 text-sm shadow-sm',
+                            // pre-wrap в обоих пузырях: переносы строк — часть сообщения (списки, шаги
+                            // в ответах поддержки и ИИ), без него текст склеивался в одну строку.
+                            'max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md px-3 py-2 text-sm shadow-sm',
                             inMessageBubbleClass(m.delivery_status),
                           )}
                         >
