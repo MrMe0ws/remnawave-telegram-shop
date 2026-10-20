@@ -93,7 +93,7 @@ func (s *Sender) Send(
 			if utils.IsSyntheticTelegramID(rec.TelegramID) {
 				continue
 			}
-			markup := BuildReplyMarkup(s.tm, rec.Language, msg.Buttons)
+			markup := BuildReplyMarkup(s.tm, rec.Language, msg.Buttons, rec.TelegramID)
 			_, sendErr := Deliver(ctx, b, rec.TelegramID, msg, markup)
 			if sendErr != nil {
 				slog.Warn("broadcast: send message", "userId", rec.TelegramID, "error", sendErr)

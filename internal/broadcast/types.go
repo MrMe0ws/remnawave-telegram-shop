@@ -9,12 +9,15 @@ type RecipientButtons struct {
 	MainMenu bool
 	Promo    bool
 	Connect  bool
-	Links    []string
+	// ShareReferral — «Пригласить друга»: окно «Переслать» Telegram с готовым
+	// текстом и личной реферальной ссылкой получателя.
+	ShareReferral bool
+	Links         []string
 }
 
 // IsEmpty — под сообщением не будет ни одной кнопки.
 func (f RecipientButtons) IsEmpty() bool {
-	return !f.Buy && !f.MainMenu && !f.Promo && !f.Connect && len(f.Links) == 0
+	return !f.Buy && !f.MainMenu && !f.Promo && !f.Connect && !f.ShareReferral && len(f.Links) == 0
 }
 
 // MediaKind — каким методом Bot API уходит прикреплённый файл.

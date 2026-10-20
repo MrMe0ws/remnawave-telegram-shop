@@ -47,6 +47,7 @@ const (
 	CallbackBroadcastTogglePromo = "bc_t_prm"
 	CallbackBroadcastToggleVPN   = "bc_t_vpn"
 	CallbackBroadcastToggleBuy   = "bc_t_buy"
+	CallbackBroadcastToggleShare = "bc_t_ref"
 	CallbackBroadcastButtonsNext = "bc_next"
 
 	CallbackAdminPanel   = "admin_panel"

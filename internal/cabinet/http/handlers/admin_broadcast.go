@@ -118,11 +118,13 @@ func (h *AdminBroadcastHandler) Audiences(w http.ResponseWriter, r *http.Request
 }
 
 type broadcastButtonsReq struct {
-	Buy      bool     `json:"buy"`
-	Connect  bool     `json:"connect"`
-	Promo    bool     `json:"promo"`
-	MainMenu bool     `json:"main_menu"`
-	Links    []string `json:"links,omitempty"`
+	Buy      bool `json:"buy"`
+	Connect  bool `json:"connect"`
+	Promo    bool `json:"promo"`
+	MainMenu bool `json:"main_menu"`
+	// ShareReferral — «Пригласить друга» с личной реферальной ссылкой получателя.
+	ShareReferral bool     `json:"share_referral"`
+	Links         []string `json:"links,omitempty"`
 }
 
 type broadcastMediaReq struct {
@@ -180,11 +182,12 @@ func (req *broadcastSendReq) recipientButtons() broadcast.RecipientButtons {
 		return broadcast.RecipientButtons{}
 	}
 	return broadcast.RecipientButtons{
-		Buy:      req.Buttons.Buy,
-		Connect:  req.Buttons.Connect,
-		Promo:    req.Buttons.Promo,
-		MainMenu: req.Buttons.MainMenu,
-		Links:    broadcast.NormalizeCabinetLinkKeys(req.Buttons.Links),
+		Buy:           req.Buttons.Buy,
+		Connect:       req.Buttons.Connect,
+		Promo:         req.Buttons.Promo,
+		MainMenu:      req.Buttons.MainMenu,
+		ShareReferral: req.Buttons.ShareReferral,
+		Links:         broadcast.NormalizeCabinetLinkKeys(req.Buttons.Links),
 	}
 }
 

@@ -1585,6 +1585,8 @@ export const api = {
       connect?: boolean
       promo?: boolean
       main_menu?: boolean
+      /** «Пригласить друга» с личной реферальной ссылкой получателя. */
+      share_referral?: boolean
       links?: string[]
     }
     media?: {

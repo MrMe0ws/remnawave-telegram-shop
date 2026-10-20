@@ -65,6 +65,7 @@ const defaultButtons: BroadcastButtonsState = {
   connect: false,
   promo: false,
   main_menu: false,
+  share_referral: false,
   links: [],
 }
 
@@ -176,6 +177,7 @@ export default function AdminBroadcastPage() {
       t(broadcastLinkLabelKey(key)),
     ),
     buttons.promo ? t('admin.broadcast.buttons.promo') : null,
+    buttons.share_referral ? t('admin.broadcast.buttons.shareReferral') : null,
     buttons.main_menu ? t('admin.broadcast.buttons.mainMenu') : null,
   ].filter(Boolean) as string[]
 

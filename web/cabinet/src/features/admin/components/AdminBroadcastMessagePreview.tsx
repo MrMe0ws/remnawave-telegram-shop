@@ -14,6 +14,7 @@ interface BroadcastButtons {
   connect: boolean
   promo: boolean
   main_menu: boolean
+  share_referral: boolean
   links: BroadcastLinkKey[]
 }
 
@@ -41,7 +42,8 @@ export function AdminBroadcastMessagePreview({
   const { t } = useTranslation()
   const bodyRef = useRef<HTMLDivElement>(null)
 
-  // Порядок повторяет BuildReplyMarkup: купить, мой VPN, разделы кабинета, промокод, меню.
+  // Порядок повторяет BuildReplyMarkup: купить, мой VPN, разделы кабинета, промокод,
+  // пригласить друга, меню.
   const inlineButtons = [
     buttons.buy ? t('admin.broadcast.buttons.buy') : null,
     buttons.connect ? t('admin.broadcast.buttons.connect') : null,
@@ -49,6 +51,7 @@ export function AdminBroadcastMessagePreview({
       t(broadcastLinkLabelKey(key)),
     ),
     buttons.promo ? t('admin.broadcast.buttons.promo') : null,
+    buttons.share_referral ? t('admin.broadcast.buttons.shareReferral') : null,
     buttons.main_menu ? t('admin.broadcast.buttons.mainMenu') : null,
   ].filter(Boolean) as string[]
 

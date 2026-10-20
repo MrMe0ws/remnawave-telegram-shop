@@ -2203,6 +2203,7 @@
           "connect": "🔌 My VPN",
           "promo": "🎫 Promo code",
           "mainMenu": "🏠 Main menu",
+          "shareReferral": "📨 Invite a friend",
           "none": "no buttons"
         },
         "preview": "Preview",
@@ -2240,7 +2241,7 @@
         "groupCabinetTitle": "Open the cabinet",
         "groupCabinetHint": "Telegram mini app. “My VPN” and “Cabinet home” lead to the same place — one is enough.",
         "groupPlainTitle": "Stay outside the cabinet",
-        "groupPlainHint": "Actions in the bot chat and the external support link.",
+        "groupPlainHint": "Actions in the bot chat, inviting a friend and the support link.",
         "linksConfigHint": "A button is skipped when its section is off in config: wheel of fortune needs FORTUNE_ENABLED, support needs SUPPORT_URL.",
         "mp4Hint": "Telegram plays videos only in MP4. WebM and MOV arrive as a file the recipient has to download.",
         "confirmLead": "A broadcast cannot be cancelled once it starts.",
