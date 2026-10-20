@@ -839,6 +839,99 @@ func (h *MeHandler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+type meResetSubscriptionLinkResp struct {
+	OK               bool   `json:"ok"`
+	SubscriptionLink string `json:"subscription_link"`
+	// DevicesCleared=false: новая ссылка выдана, но список устройств панель
+	// не очистила — чужое устройство может ещё занимать слот, пока его не
+	// удалят вручную. Подключиться оно всё равно уже не сможет.
+	DevicesCleared bool `json:"devices_cleared"`
+}
+
+// ResetSubscriptionLink — POST /cabinet/api/me/subscription/reset-link.
+//
+// Сценарий: клиент поделился подпиской и хочет закрыть доступ. Панель выдаёт
+// новую ссылку и меняет пароли в конфигах (иначе уже импортированные конфиги
+// продолжали бы работать), мы записываем ссылку в БД и отвязываем все
+// устройства, чтобы чужое не занимало слот. Приглашения, выпущенные до сброса,
+// отсекает Resolve по отметке времени сброса.
+func (h *MeHandler) ResetSubscriptionLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	c, rwUser, ok := h.resolveDeviceOwner(w, r, claims.AccountID, "me.reset_subscription_link")
+	if !ok {
+		return
+	}
+	if c.SubscriptionLink == nil || strings.TrimSpace(*c.SubscriptionLink) == "" {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "no_subscription"})
+		return
+	}
+
+	ctx := r.Context()
+	prev, claimed, err := h.customers.ClaimSubscriptionLinkReset(ctx, c.ID, cabsvc.SubscriptionLinkResetCooldown)
+	if err != nil {
+		slog.Error("me: reset link claim failed", "account_id", claims.AccountID, "error", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !claimed {
+		resp := map[string]any{"error": "cooldown"}
+		if prev != nil {
+			resp["available_at"] = prev.Add(cabsvc.SubscriptionLinkResetCooldown).UTC()
+		}
+		writeJSON(w, http.StatusTooManyRequests, resp)
+		return
+	}
+
+	user, err := h.rw.RevokeUserSubscription(ctx, rwUser.ID)
+	if err != nil || user == nil || strings.TrimSpace(user.SubscriptionUrl) == "" {
+		// Панель ничего не сменила — паузу засчитывать нечестно.
+		if rerr := h.customers.RestoreSubscriptionLinkReset(ctx, c.ID, prev); rerr != nil {
+			slog.Warn("me: reset link restore failed", "account_id", claims.AccountID, "error", rerr.Error())
+		}
+		errText := "empty subscription url"
+		if err != nil {
+			errText = err.Error()
+		}
+		slog.Error("me: reset link revoke failed", "account_id", claims.AccountID, "error", errText)
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "revoke_failed"})
+		return
+	}
+
+	newLink := strings.TrimSpace(user.SubscriptionUrl)
+	// Ссылка в панели уже новая. Если запись в БД не удалась, следующий
+	// GET /me/subscription подтянет её из панели сам, поэтому не роняем ответ.
+	if err := h.customers.SetSubscriptionLinkAfterReset(ctx, c.ID, newLink, user.ShortUUID); err != nil {
+		slog.Error("me: reset link save failed", "account_id", claims.AccountID, "error", err.Error())
+	}
+
+	devicesCleared := true
+	if err := h.rw.DeleteAllUserDevices(ctx, rwUser.ID); err != nil {
+		devicesCleared = false
+		slog.Warn("me: reset link clear devices failed", "account_id", claims.AccountID, "error", err.Error())
+	} else if h.deviceNames != nil {
+		if err := h.deviceNames.DeleteAllByCustomer(ctx, c.ID); err != nil {
+			slog.Warn("me: reset link clear device names failed", "account_id", claims.AccountID, "error", err.Error())
+		}
+	}
+
+	slog.Info("me: subscription link reset", "account_id", claims.AccountID, "devices_cleared", devicesCleared)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, meResetSubscriptionLinkResp{
+		OK:               true,
+		SubscriptionLink: newLink,
+		DevicesCleared:   devicesCleared,
+	})
+}
+
 // RenameDevice — POST /cabinet/api/me/devices/rename: задаёт своё название
 // устройству. Пустое имя сбрасывает его к исходному из Remnawave.
 func (h *MeHandler) RenameDevice(w http.ResponseWriter, r *http.Request) {

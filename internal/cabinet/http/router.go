@@ -824,6 +824,17 @@ func registerAPIRoutes(
 			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_delete")),
 		)),
 	)
+	// Сброс ссылки подписки: редкое и разрушительное действие, частоту держит
+	// пауза в БД (см. SubscriptionLinkResetCooldown), лимит здесь — от перебора.
+	api.Handle("/cabinet/api/me/subscription/reset-link",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(me.ResetSubscriptionLink),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireVerifiedEmail(),
+			middleware.CSRF(),
+			middleware.RateLimit(subscriptionAcctLim, accountKey("subscription_reset_link")),
+		)),
+	)
 	api.Handle("/cabinet/api/me/devices/rename",
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.RenameDevice),

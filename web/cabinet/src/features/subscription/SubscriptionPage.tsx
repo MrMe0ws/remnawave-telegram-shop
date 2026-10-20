@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ClipboardList, Check, RefreshCw, Smartphone, Trash2 } from 'lucide-react'
@@ -14,6 +14,7 @@ import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { AddDeviceSlot, ConnectExtraDeviceCard, ConnectInviteModal } from '@/features/subscription/ConnectExtraDevice'
 import { DeviceRow } from '@/features/subscription/DeviceRow'
+import { SubscriptionLinkResetLink, SubscriptionLinkResetSheet } from '@/features/subscription/SubscriptionLinkReset'
 import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,7 @@ export default function SubscriptionPage() {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
   const toast = useToast()
+  const navigate = useNavigate()
   // CABINET_SUBSCRIPTION_SHOW_LOYALTY: плашку уровня на этой странице админ
   // включает сам, по умолчанию её нет. Пока bootstrap не приехал, не рисуем —
   // иначе карточка мелькала бы при каждой загрузке у тех, кто её выключил.
@@ -65,6 +67,8 @@ export default function SubscriptionPage() {
   // Модалку приглашения открывают из двух мест: карточка-действие и пустой
   // слот в списке устройств — поэтому состояние живёт на странице.
   const [connectOpen, setConnectOpen] = useState(false)
+  // Сброс ссылки открывают из шторки приглашения и из окна удаления устройства.
+  const [resetOpen, setResetOpen] = useState(false)
 
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
   const isExpiredByDate = sub?.expire_at != null && sub.expire_at !== '' && days !== null && days <= 0
@@ -303,15 +307,57 @@ export default function SubscriptionPage() {
                 open={connectOpen}
                 subscriptionLink={sub.subscription_link}
                 onClose={() => setConnectOpen(false)}
+                onResetLink={
+                  isExpired
+                    ? undefined
+                    : () => {
+                        setConnectOpen(false)
+                        setResetOpen(true)
+                      }
+                }
               />
             )}
+
+            <SubscriptionLinkResetSheet
+              open={resetOpen}
+              availableAt={sub?.link_reset_available_at}
+              onClose={() => setResetOpen(false)}
+              onConnectThis={() => {
+                setResetOpen(false)
+                navigate('/connections')
+              }}
+              onConnectOther={() => {
+                setResetOpen(false)
+                setConnectOpen(true)
+              }}
+            />
 
             <ConfirmModal
               open={Boolean(deleteConfirmHwid)}
               tone="danger"
               icon={Trash2}
               title={t('subscriptionPage.deleteDeviceConfirm')}
-              description={t('subscriptionPage.deleteDeviceConfirmHint')}
+              description={
+                <>
+                  <p>{t('subscriptionPage.deleteDeviceConfirmHint')}</p>
+                  {/* Чужое устройство удалением не убрать: пока у человека
+                      ссылка, оно подключится снова. Подсказка стоит ровно в
+                      момент, когда это становится важно. */}
+                  {hasLink && !isExpired && (
+                    <div className="mt-3 rounded-xl bg-muted/60 px-3 py-2.5 text-xs leading-relaxed">
+                      <p>{t('linkReset.deviceHint')}</p>
+                      <SubscriptionLinkResetLink
+                        label={t('linkReset.deviceHintAction')}
+                        className="-mb-1.5 mt-0.5 text-foreground"
+                        onClick={() => {
+                          setDeleteConfirmHwid(null)
+                          setResetOpen(true)
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
+              }
               confirmLabel={t('subscriptionPage.deleteDevice')}
               loading={deleteDevice.isPending}
               onClose={() => setDeleteConfirmHwid(null)}

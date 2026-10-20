@@ -14,6 +14,7 @@ import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { api, ApiError } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
 import { shareLink } from '@/lib/share'
+import { SubscriptionLinkResetLink } from '@/features/subscription/SubscriptionLinkReset'
 
 /**
  * Перенос подписки на устройство, с которого в кабинет не зайти.
@@ -97,10 +98,13 @@ export function ConnectInviteModal({
   open,
   subscriptionLink,
   onClose,
+  onResetLink,
 }: {
   open: boolean
   subscriptionLink: string
   onClose: () => void
+  /** Сброс ссылки: тихая строка под сырой ссылкой, там, откуда её и брали. */
+  onResetLink?: () => void
 }) {
   const { t } = useTranslation()
   const { lang } = useTranslationWithLang()
@@ -343,6 +347,13 @@ export function ConnectInviteModal({
                   </div>
                   {linkCopyState === 'failed' && (
                     <p className="mt-2 text-xs text-destructive">{t('common.copyFailed')}</p>
+                  )}
+                  {onResetLink && (
+                    <SubscriptionLinkResetLink
+                      onClick={onResetLink}
+                      label={t('linkReset.inviteEntry')}
+                      className="mt-2"
+                    />
                   )}
                 </div>
               </div>

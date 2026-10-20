@@ -217,7 +217,7 @@
       "noDevices": "No HWID devices connected yet.",
       "deleteDevice": "Delete",
       "deleteDeviceConfirm": "Delete this device?",
-      "deleteDeviceConfirmHint": "The device will be disconnected from the subscription and free up its slot. You can connect it again at any time.",
+      "deleteDeviceConfirmHint": "The device will be disconnected and free up a spot. You can connect it again at any time.",
       "renameDevice": "Rename",
       "renameDeviceSave": "Save",
       "renameDeviceCancel": "Cancel",
@@ -271,6 +271,23 @@
       "manualToggle": "Set up manually",
       "manualHint": "Subscription link to paste into a VPN app by hand — if the guided setup did not work. It is not meant to be opened in a browser, only an app understands it.",
       "addDeviceSlot": "Add a device"
+    },
+    "linkReset": {
+      "inviteEntry": "Link ended up with the wrong people? Reset it",
+      "deviceHint": "Not your device? It will connect again using your link.",
+      "deviceHintAction": "Reset link",
+      "title": "Reset subscription link?",
+      "pointOld": "The old link and invites will stop working for everyone you shared them with.",
+      "pointYours": "Your devices will be disconnected too — you will need to connect them again.",
+      "pointKept": "Paid days and your plan stay the same.",
+      "confirm": "Reset link",
+      "cooldown": "The link was just reset. You can do it again in {{minutes}} min.",
+      "failed": "Could not reset the link. Please try again.",
+      "doneTitle": "Done, the link is new",
+      "doneText": "All devices are disconnected. Connect yours again.",
+      "doneTextDevicesLeft": "The old link no longer works. If someone else's device is still listed, delete it.",
+      "connectThis": "Connect this device",
+      "connectOther": "Connect another device"
     },
     "accounts": {
       "title": "Linked accounts",

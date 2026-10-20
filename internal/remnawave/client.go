@@ -869,6 +869,34 @@ func (r *Client) DeleteUserDevice(ctx context.Context, userID int64, hwid string
 	return r.doJSON(ctx, http.MethodPost, "/api/hwid/devices/delete", req, nil)
 }
 
+// RevokeUserSubscription выдаёт пользователю новую ссылку подписки
+// POST /api/users/{userId}/actions/revoke.
+//
+// Тело пустое намеренно: по умолчанию панель меняет и shortUuid (саму ссылку),
+// и пароли/UUID внутри конфигов. Одной новой ссылки мало — у того, кто уже
+// импортировал конфиги, они продолжали бы работать. Свой shortUuid не
+// передаём: документация панели прямо советует отдать его генерацию ей.
+func (r *Client) RevokeUserSubscription(ctx context.Context, userID int64) (*User, error) {
+	if userID <= 0 {
+		return nil, ErrUserNotFound
+	}
+	var resp apiResponse[User]
+	path := fmt.Sprintf("/api/users/%d/actions/revoke", userID)
+	if err := r.doJSON(ctx, http.MethodPost, path, &revokeUserSubscriptionRequest{}, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Response, nil
+}
+
+// DeleteAllUserDevices отвязывает все HWID-устройства пользователя
+// POST /api/hwid/devices/delete-all.
+func (r *Client) DeleteAllUserDevices(ctx context.Context, userID int64) error {
+	if userID <= 0 {
+		return ErrUserNotFound
+	}
+	return r.doJSON(ctx, http.MethodPost, "/api/hwid/devices/delete-all", &deleteAllUserDevicesRequest{UserID: userID}, nil)
+}
+
 // ResetUserTraffic обнуляет накопленный расход трафика у пользователя в панели; лимиты и стратегия сброса не меняются.
 // POST /api/users/{userId}/actions/reset-traffic
 func (r *Client) ResetUserTraffic(ctx context.Context, userID int64) error {

@@ -55,3 +55,10 @@ func (r *DeviceNameRepository) Delete(ctx context.Context, customerID int64, hwi
 	_, err := r.pool.Exec(ctx, `DELETE FROM device_name WHERE customer_id = $1 AND hwid = $2`, customerID, hwid)
 	return err
 }
+
+// DeleteAllByCustomer убирает все названия клиента — после того как панель
+// отвязала все его устройства разом.
+func (r *DeviceNameRepository) DeleteAllByCustomer(ctx context.Context, customerID int64) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM device_name WHERE customer_id = $1`, customerID)
+	return err
+}

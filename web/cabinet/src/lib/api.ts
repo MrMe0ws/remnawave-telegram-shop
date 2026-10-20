@@ -418,6 +418,18 @@ export interface SubscriptionResponse {
   loyalty_xp: number
   loyalty_tier: string | null
   hwid_extra?: SubscriptionHwidExtraInfo | null
+  /** Когда клиент последний раз сбрасывал ссылку подписки. */
+  link_reset_at?: string | null
+  /** С какого момента сброс снова доступен — только пока идёт пауза. */
+  link_reset_available_at?: string | null
+}
+
+/** POST /me/subscription/reset-link */
+export interface ResetSubscriptionLinkResponse {
+  ok: boolean
+  subscription_link: string
+  /** false — ссылка новая, но список устройств панель не очистила. */
+  devices_cleared: boolean
 }
 
 /** GET /payments/hwid/preview */
@@ -1224,6 +1236,13 @@ export const api = {
 
   deleteDevice: (hwid: string) =>
     request<{ ok: boolean }>('POST', '/me/devices/delete', { hwid }),
+
+  /**
+   * Новая ссылка подписки: старая и все конфиги по ней перестают работать,
+   * устройства отвязываются. 429 {error:'cooldown', available_at} — пауза.
+   */
+  resetSubscriptionLink: () =>
+    request<ResetSubscriptionLinkResponse>('POST', '/me/subscription/reset-link'),
 
   /** Пустое name сбрасывает название к исходному из Remnawave. */
   renameDevice: (hwid: string, name: string) =>

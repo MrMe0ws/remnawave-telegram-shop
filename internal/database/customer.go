@@ -312,6 +312,70 @@ func (cr *CustomerRepository) SetRemnawaveIdentity(ctx context.Context, customer
 	return nil
 }
 
+// SubscriptionLinkResetAt возвращает момент последнего сброса ссылки подписки
+// клиентом; nil — ни разу не сбрасывал.
+//
+// Колонка читается отдельным запросом, а не через customerSelectColumns: так
+// миграция остаётся аддитивной и не трогает все места, где сканируется клиент.
+func (cr *CustomerRepository) SubscriptionLinkResetAt(ctx context.Context, customerID int64) (*time.Time, error) {
+	var at *time.Time
+	err := cr.pool.QueryRow(ctx,
+		`SELECT subscription_link_reset_at FROM customer WHERE id = $1`, customerID).Scan(&at)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("load subscription_link_reset_at: %w", err)
+	}
+	return at, nil
+}
+
+// ClaimSubscriptionLinkReset атомарно ставит отметку сброса, если с прошлого
+// прошло не меньше cooldown. Возвращает прежнее значение (для отката, если сброс
+// в панели не удастся) и ok=false, когда пауза ещё не вышла: два одновременных
+// нажатия не уйдут в панель оба.
+func (cr *CustomerRepository) ClaimSubscriptionLinkReset(ctx context.Context, customerID int64, cooldown time.Duration) (prev *time.Time, ok bool, err error) {
+	prev, err = cr.SubscriptionLinkResetAt(ctx, customerID)
+	if err != nil {
+		return nil, false, err
+	}
+	tag, err := cr.pool.Exec(ctx,
+		`UPDATE customer SET subscription_link_reset_at = NOW()
+		 WHERE id = $1
+		   AND (subscription_link_reset_at IS NULL
+		        OR subscription_link_reset_at <= NOW() - make_interval(secs => $2))`,
+		customerID, cooldown.Seconds())
+	if err != nil {
+		return nil, false, fmt.Errorf("claim subscription link reset: %w", err)
+	}
+	return prev, tag.RowsAffected() == 1, nil
+}
+
+// RestoreSubscriptionLinkReset возвращает отметку сброса к прежнему значению:
+// панель сброс не выполнила, и паузу клиенту засчитывать нечестно.
+func (cr *CustomerRepository) RestoreSubscriptionLinkReset(ctx context.Context, customerID int64, prev *time.Time) error {
+	if _, err := cr.pool.Exec(ctx,
+		`UPDATE customer SET subscription_link_reset_at = $2 WHERE id = $1`, customerID, prev); err != nil {
+		return fmt.Errorf("restore subscription link reset: %w", err)
+	}
+	return nil
+}
+
+// SetSubscriptionLinkAfterReset записывает новую ссылку и shortUuid, выданные
+// панелью при сбросе.
+func (cr *CustomerRepository) SetSubscriptionLinkAfterReset(ctx context.Context, customerID int64, link, shortUUID string) error {
+	var short *string
+	if s := strings.TrimSpace(shortUUID); s != "" {
+		short = &s
+	}
+	if _, err := cr.pool.Exec(ctx,
+		`UPDATE customer SET subscription_link = $2, remnawave_short_uuid = COALESCE($3, remnawave_short_uuid) WHERE id = $1`,
+		customerID, link, short); err != nil {
+		return fmt.Errorf("set subscription link after reset: %w", err)
+	}
+	return nil
+}
+
 // IncrementLoyaltyXP добавляет накопленный XP лояльности после успешной оплаты.
 func (cr *CustomerRepository) IncrementLoyaltyXP(ctx context.Context, customerID int64, delta int64) error {
 	if delta <= 0 {
