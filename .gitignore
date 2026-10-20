@@ -379,3 +379,6 @@ remnawave-bedolaga-telegram-bot-main
 
 # Снимки визуальной проверки кабинета
 .tmp/
+
+# Черновые HTML-макеты для обсуждения дизайна — в код не входят
+.claude/mockups/
