@@ -31,6 +31,12 @@
     --cabinet-tg-safe-bottom: calc(
       var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)
     );
+    /*
+     * Нижний край шторок на телефоне. Одного env(safe-area-inset-bottom) мало:
+     * в fullscreen Mini App на Android он равен нулю, хотя страница лежит под
+     * кнопками навигации, — их высоту Telegram отдаёт только в --tg-*.
+     */
+    --cabinet-sheet-safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--cabinet-tg-safe-bottom));
 
     /* Light theme */
     --connect-device-inner-bg: 210 40% 96%;

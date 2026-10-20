@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Loader2, Send, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { useSheetDragDismiss } from '@/hooks/useSheetDragDismiss'
 import { cn } from '@/lib/utils'
 import type { SupportMessageDTO } from '@/lib/api'
 import { useSupportChat } from '@/features/support/useSupportChat'
@@ -58,6 +59,11 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastOutMsgIdRef = useRef(0)
   const { conversation, sendMutation, markReadMutation } = useSupportChat(enabled, open)
+  const drag = useSheetDragDismiss<HTMLDivElement, HTMLButtonElement>({
+    open,
+    onDismiss: onClose,
+    desktopQuery: '(min-width: 768px)',
+  })
 
   useEffect(() => {
     if (!open) {
@@ -143,19 +149,30 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
       aria-labelledby="support-chat-title"
     >
       <button
+        ref={drag.backdropRef}
         type="button"
         className="absolute inset-0 bg-neutral-950/65 backdrop-blur-sm"
         aria-label={t('common.close')}
         onClick={onClose}
       />
       <div
+        ref={drag.sheetRef}
         className={cn(
           'relative z-[1] flex w-full max-h-[min(88dvh,640px)] flex-col border border-border bg-card shadow-2xl transition-[transform,opacity] duration-300 ease-out md:max-h-[min(720px,90vh)] md:w-full md:max-w-md md:rounded-2xl',
-          'rounded-t-3xl pb-[max(0px,env(safe-area-inset-bottom))]',
+          // У поля ввода свой отступ p-3, поэтому снизу добавляем только высоту
+          // кнопок навигации Android, если окно лежит под ними.
+          'rounded-t-3xl pb-[var(--cabinet-sheet-safe-bottom)] md:pb-0',
           entered ? 'translate-y-0 opacity-100 md:scale-100' : 'translate-y-full opacity-95 md:translate-y-2 md:scale-[0.97] md:opacity-0',
         )}
       >
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        {/* Ручка шторки: за неё и за заголовок окно тянут вниз, чтобы закрыть. */}
+        <div className="flex shrink-0 cursor-grab touch-none justify-center pb-0.5 pt-2.5 md:hidden" {...drag.handlers}>
+          <span className="h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden />
+        </div>
+        <div
+          className="flex touch-none items-center justify-between gap-2 border-b border-border px-4 pb-3 pt-1.5 md:touch-auto md:pt-3"
+          {...drag.handlers}
+        >
           <div className="min-w-0">
             <h2 id="support-chat-title" className="text-base font-semibold">
               {t('supportChat.title')}
