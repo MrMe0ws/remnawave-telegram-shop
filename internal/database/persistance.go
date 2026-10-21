@@ -47,7 +47,9 @@ func RunMigrations(ctx context.Context, migrationConfig *MigrationConfig, pool *
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", absPath),
+		// ToSlash: на Windows путь с обратными слешами ломает разбор URL
+		// («C:\...» читается как хост с портом). На Linux путь не меняется.
+		fmt.Sprintf("file://%s", filepath.ToSlash(absPath)),
 		"postgres", driver,
 	)
 	if err != nil {

@@ -1086,6 +1086,47 @@ func initDatabase(ctx context.Context, connString string) (*pgxpool.Pool, error)
 // зависший ответ кассы не держал задачу до следующего запуска.
 const heleketPollTimeout = 4 * time.Minute
 
+// invoicePollTimeout — потолок на один проход поллера CryptoPay, YooKassa и
+// Platega. Запуск каждые 5 секунд, но проход с медленной кассой или панелью
+// может длиться дольше — тогда следующие запуски пропускаются, а не копятся.
+const invoicePollTimeout = 2 * time.Minute
+
+// invoicePollJob оборачивает проход поллера касс. Проходы не накладываются:
+// иначе два прохода шли бы по одному списку pending и упирались в блокировку
+// покупки. Паника в проходе не роняет процесс — без recover она убила бы вместе
+// с поллером и бота, и кабинет, и приём вебхуков.
+func invoicePollJob(run func(ctx context.Context)) cron.Job {
+	return cron.NewChain(
+		cron.Recover(cronSlogLogger{}),
+		cron.SkipIfStillRunning(cron.DiscardLogger),
+	).Then(cron.FuncJob(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), invoicePollTimeout)
+		defer cancel()
+		run(ctx)
+	}))
+}
+
+// cronSlogLogger направляет сообщения cron (в первую очередь пойманные паники) в slog.
+type cronSlogLogger struct{}
+
+func (cronSlogLogger) Info(msg string, keysAndValues ...interface{}) {
+	slog.Info("cron: "+msg, keysAndValues...)
+}
+
+func (cronSlogLogger) Error(err error, msg string, keysAndValues ...interface{}) {
+	slog.Error("cron: "+msg, append([]interface{}{"error", err}, keysAndValues...)...)
+}
+
+// logProcessPurchaseError пишет ошибку обработки покупки из поллера. Занятая
+// блокировка — не сбой: покупку прямо сейчас доводит вебхук или соседний проход.
+func logProcessPurchaseError(msg string, err error, args ...any) {
+	if errors.Is(err, database.ErrPurchaseLocked) {
+		slog.Info(msg+": purchase is being processed elsewhere", args...)
+		return
+	}
+	slog.Error(msg, append(args, "error", err)...)
+}
+
 // Проверяет оплаченные счета в CryptoPay и YooKassa каждые 5 секунд
 // Если счет оплачен, обрабатывает покупку и активирует подписку
 func setupInvoiceChecker(
@@ -1112,13 +1153,12 @@ func setupInvoiceChecker(
 
 	// Задача для проверки счетов CryptoPay (каждые 5 секунд)
 	if config.CryptoPayHasCredentials() {
-		_, err := c.AddFunc("*/5 * * * * *", func() {
+		_, err := c.AddJob("*/5 * * * * *", invoicePollJob(func(ctx context.Context) {
 			if !config.IsCryptoPayEnabled() {
 				return
 			}
-			ctx := context.Background()
 			checkCryptoPayInvoice(ctx, purchaseRepository, cryptoPayClient, paymentService)
-		})
+		}))
 
 		if err != nil {
 			panic(err)
@@ -1127,13 +1167,12 @@ func setupInvoiceChecker(
 
 	// Задача для проверки счетов YooKassa (каждые 5 секунд), если нет вебхука
 	if yookPoll {
-		_, err := c.AddFunc("*/5 * * * * *", func() {
+		_, err := c.AddJob("*/5 * * * * *", invoicePollJob(func(ctx context.Context) {
 			if !config.IsYookasaEnabled() {
 				return
 			}
-			ctx := context.Background()
 			checkYookasaInvoice(ctx, purchaseRepository, yookasaClient, paymentService)
-		})
+		}))
 
 		if err != nil {
 			panic(err)
@@ -1141,13 +1180,12 @@ func setupInvoiceChecker(
 	}
 
 	if plategaPoll && plategaClient != nil && plategaClient.IsConfigured() {
-		_, err := c.AddFunc("*/5 * * * * *", func() {
+		_, err := c.AddJob("*/5 * * * * *", invoicePollJob(func(ctx context.Context) {
 			if !config.IsPlategaEnabled() {
 				return
 			}
-			ctx := context.Background()
 			checkPlategaInvoice(ctx, purchaseRepository, plategaClient, paymentService)
-		})
+		}))
 		if err != nil {
 			panic(err)
 		}
@@ -1165,7 +1203,7 @@ func setupInvoiceChecker(
 		// Оплату по ним всё равно не вернуть, поэтому pending дозакрываем всегда.
 		// Проходы не должны накладываться: при большом числе pending один обход
 		// длится дольше периода, и два поллера пошли бы по одному списку.
-		_, err := c.AddJob(schedule, cron.NewChain(cron.SkipIfStillRunning(cron.DiscardLogger)).Then(cron.FuncJob(func() {
+		_, err := c.AddJob(schedule, cron.NewChain(cron.Recover(cronSlogLogger{}), cron.SkipIfStillRunning(cron.DiscardLogger)).Then(cron.FuncJob(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), heleketPollTimeout)
 			defer cancel()
 			heleketReconciler.PollPending(ctx)
@@ -1243,7 +1281,7 @@ func checkYookasaInvoice(
 		purchaseId := int(purchase.ID)
 		err = paymentService.ProcessPurchaseById(ctxWithValue, purchase.ID)
 		if err != nil {
-			slog.Error("Error processing invoice", "invoiceId", invoice.ID, "purchaseId", purchaseId, "error", err)
+			logProcessPurchaseError("yookassa poll: process purchase", err, "invoiceId", invoice.ID, "purchaseId", purchaseId)
 		} else {
 			slog.Info("Invoice processed", "invoiceId", invoice.ID, "purchaseId", purchaseId)
 		}
@@ -1297,7 +1335,7 @@ func checkPlategaInvoice(
 				}
 			case platega.StatusConfirmed:
 				if err := paymentService.ProcessPurchaseById(ctx, purchase.ID); err != nil {
-					slog.Error("platega poll: process purchase", "purchaseId", purchase.ID, "error", err)
+					logProcessPurchaseError("platega poll: process purchase", err, "purchaseId", purchase.ID)
 				} else {
 					slog.Info("platega poll: processed", "purchaseId", purchase.ID)
 				}
@@ -1353,10 +1391,18 @@ func checkCryptoPayInvoice(
 	// Обрабатываем оплаченные счета
 	for _, invoice := range *invoices {
 		if invoice.InvoiceID != nil && invoice.IsPaid() {
-			// Извлекаем данные из payload счета (формат: "purchaseId=123&username=user")
-			payload := strings.Split(invoice.Payload, "&")
-			purchaseID, err := strconv.Atoi(strings.Split(payload[0], "=")[1])
-			username := strings.Split(payload[1], "=")[1]
+			// Извлекаем данные из payload счета (формат: "purchaseId=123&username=user").
+			// username не экранируется при создании счёта, поэтому разбираем вручную, а
+			// не url.ParseQuery. Счёт с битым payload пропускаем: раньше индексация без
+			// проверок паниковала, и один такой счёт останавливал обработку всех.
+			idPart, userPart, _ := strings.Cut(invoice.Payload, "&")
+			idStr, _ := strings.CutPrefix(idPart, "purchaseId=")
+			purchaseID, err := strconv.Atoi(idStr)
+			if err != nil || purchaseID <= 0 {
+				slog.Error("cryptopay poll: no purchase id in invoice payload", "invoiceId", invoice.InvoiceID)
+				continue
+			}
+			username := strings.TrimPrefix(userPart, "username=")
 			// Передаем username в контексте для логирования
 			ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, username)
 			feeAmt := ""
@@ -1376,7 +1422,7 @@ func checkCryptoPayInvoice(
 			})
 			err = paymentService.ProcessPurchaseById(ctxPaid, int64(purchaseID))
 			if err != nil {
-				slog.Error("Error processing invoice", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID, "error", err)
+				logProcessPurchaseError("cryptopay poll: process purchase", err, "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID)
 			} else {
 				slog.Info("Invoice processed", "invoiceId", invoice.InvoiceID, "purchaseId", purchaseID)
 			}
