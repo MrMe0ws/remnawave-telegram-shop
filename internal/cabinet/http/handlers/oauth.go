@@ -54,6 +54,7 @@ func (h *OAuthHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
@@ -72,6 +73,10 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if state == "" || code == "" {
 		cabmetrics.RecordAuth("google_callback", "client_error")
 		http.Error(w, "missing state or code", http.StatusBadRequest)
+		return
+	}
+	if !consumeOAuthState(w, r, state, h.cookieDomain) {
+		http.Redirect(w, r, oauthStateMismatchRedirect, http.StatusFound)
 		return
 	}
 
@@ -183,6 +188,7 @@ func (h *OAuthHandler) YandexStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
@@ -191,6 +197,10 @@ func (h *OAuthHandler) YandexCallback(w http.ResponseWriter, r *http.Request) {
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
 	if state == "" || code == "" {
 		http.Error(w, "missing state or code", http.StatusBadRequest)
+		return
+	}
+	if !consumeOAuthState(w, r, state, h.cookieDomain) {
+		http.Redirect(w, r, oauthStateMismatchRedirect, http.StatusFound)
 		return
 	}
 	result, err := h.svc.YandexCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
@@ -228,6 +238,7 @@ func (h *OAuthHandler) VKStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
@@ -237,6 +248,10 @@ func (h *OAuthHandler) VKCallback(w http.ResponseWriter, r *http.Request) {
 	deviceID := strings.TrimSpace(r.URL.Query().Get("device_id"))
 	if state == "" || code == "" || deviceID == "" {
 		http.Error(w, "missing state, code, or device_id", http.StatusBadRequest)
+		return
+	}
+	if !consumeOAuthState(w, r, state, h.cookieDomain) {
+		http.Redirect(w, r, oauthStateMismatchRedirect, http.StatusFound)
 		return
 	}
 	result, err := h.svc.VKCallback(r.Context(), state, code, deviceID, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
@@ -283,6 +298,7 @@ func (h *OAuthHandler) TelegramOIDCStart(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
@@ -294,9 +310,26 @@ func (h *OAuthHandler) TelegramOIDCCallback(w http.ResponseWriter, r *http.Reque
 		http.Redirect(w, r, "/cabinet/login?status=error&reason_code=telegram_oidc_missing_code", http.StatusFound)
 		return
 	}
-	res, err := h.svc.TelegramOIDCCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r))
+	if !consumeOAuthState(w, r, state, h.cookieDomain) {
+		http.Redirect(w, r, oauthStateMismatchRedirect, http.StatusFound)
+		return
+	}
+	res, err := h.svc.TelegramOIDCCallback(r.Context(), state, code, r.UserAgent(), middleware.ClientIP(r), service.RefreshCookieFromRequest(r))
 	if err != nil {
 		slog.Warn("telegram oidc callback failed", "error", err)
+		if res != nil && res.Mode == googleoauth.TelegramOIDCModeLink {
+			to := "/cabinet/accounts?status=error&reason_code=telegram_link_unknown"
+			switch {
+			case errors.Is(err, service.ErrInvalidToken):
+				to = "/cabinet/accounts?status=error&reason_code=telegram_link_session_invalid"
+			case errors.Is(err, service.ErrGoogleLinkSessionMismatch):
+				to = "/cabinet/accounts?status=error&reason_code=telegram_link_session_mismatch"
+			case errors.Is(err, bootstrap.ErrTelegramCustomerLinkedElsewhere):
+				to = "/cabinet/link/merge?status=merge_required&reason_code=telegram_merge_candidate_detected&auto=1&provider=telegram"
+			}
+			http.Redirect(w, r, to, http.StatusFound)
+			return
+		}
 		if errors.Is(err, bootstrap.ErrTelegramCustomerLinkedElsewhere) {
 			http.Redirect(w, r, "/cabinet/link/merge?status=merge_required&reason_code=telegram_merge_candidate_detected&auto=1&provider=telegram", http.StatusFound)
 			return

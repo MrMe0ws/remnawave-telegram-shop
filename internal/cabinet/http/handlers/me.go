@@ -331,6 +331,7 @@ func (h *MeHandler) TelegramLinkOIDCStart(w http.ResponseWriter, r *http.Request
 	}
 	// fetch() с redirect:manual на внешний oauth.telegram.org даёт opaqueredirect (status 0)
 	// без читаемого Location — SPA запрашивает JSON и сама делает assign.
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	accept := strings.ToLower(r.Header.Get("Accept"))
 	if strings.Contains(accept, "application/json") || r.URL.Query().Get("format") == "json" {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})
@@ -370,6 +371,7 @@ func (h *MeHandler) GoogleLinkStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	accept := strings.ToLower(r.Header.Get("Accept"))
 	if strings.Contains(accept, "application/json") || r.URL.Query().Get("format") == "json" {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})
@@ -398,6 +400,7 @@ func (h *MeHandler) YandexLinkStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	accept := strings.ToLower(r.Header.Get("Accept"))
 	if strings.Contains(accept, "application/json") || r.URL.Query().Get("format") == "json" {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})
@@ -426,6 +429,7 @@ func (h *MeHandler) VKLinkStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
 	accept := strings.ToLower(r.Header.Get("Accept"))
 	if strings.Contains(accept, "application/json") || r.URL.Query().Get("format") == "json" {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})

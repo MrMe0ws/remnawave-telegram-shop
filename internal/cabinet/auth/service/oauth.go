@@ -924,7 +924,7 @@ func (s *Service) TelegramOIDCStart(in TelegramOIDCStartInput) (string, error) {
 	return res.RedirectURL, nil
 }
 
-func (s *Service) TelegramOIDCCallback(ctx context.Context, state, code, userAgent, ip string) (*TelegramOIDCCallbackResult, error) {
+func (s *Service) TelegramOIDCCallback(ctx context.Context, state, code, userAgent, ip, refreshFromCookie string) (*TelegramOIDCCallbackResult, error) {
 	if s.telegramOIDC == nil || s.telegramOIDC.p == nil {
 		return nil, ErrTelegramOIDCDisabled
 	}
@@ -934,6 +934,17 @@ func (s *Service) TelegramOIDCCallback(ctx context.Context, state, code, userAge
 	}
 	switch cb.Mode {
 	case googleoauth.TelegramOIDCModeLink:
+		// Как у Google/Yandex/VK: привязываем только в браузере владельца аккаунта
+		// из state. Иначе атакующий отдаёт жертве свою ссылку на oauth.telegram.org,
+		// и её Telegram (вплоть до ADMIN_TELEGRAM_ID) привязывается к его аккаунту.
+		linkRes := &TelegramOIDCCallbackResult{Mode: cb.Mode}
+		sessAccID, err := s.accountIDFromValidRefresh(ctx, refreshFromCookie)
+		if err != nil {
+			return linkRes, err
+		}
+		if sessAccID != cb.AccountID {
+			return linkRes, ErrGoogleLinkSessionMismatch
+		}
 		hasMerge, err := s.linkTelegramIdentity(ctx, cb.AccountID, cb.TelegramID, cb.Username)
 		if err != nil {
 			return nil, err
