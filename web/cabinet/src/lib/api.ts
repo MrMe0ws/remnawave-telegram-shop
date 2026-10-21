@@ -1049,8 +1049,12 @@ export const api = {
       ...(referralCode ? { referral_code: referralCode } : {}),
     }),
 
-  confirmEmail: (token: string) =>
-    request<AuthTokenResponse>('POST', '/auth/email/verify/confirm', { token }),
+  /**
+   * Код из шести цифр бэкенд проверяет только против кода одного аккаунта:
+   * по email, а без него — по сессии залогиненного пользователя.
+   */
+  confirmEmail: (token: string, email?: string) =>
+    request<AuthTokenResponse>('POST', '/auth/email/verify/confirm', email ? { token, email } : { token }),
 
   resendVerifyEmail: () =>
     request<void>('POST', '/me/email/verify/resend'),

@@ -28,6 +28,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/auth/password"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/ratelimit"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/service"
+	"remnawave-tg-shop-bot/internal/cabinet/auth/tokens"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/cabinet/http/handlers"
@@ -137,6 +138,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		AntiEnumLatency:   300 * time.Millisecond,
 		PasswordParams:    password.DefaultParams(),
 		PasswordPolicy:    password.DefaultPolicy(),
+		EmailCodeKey:      tokens.EmailVerifyOTPKey(cabcfg.JWTSecret()),
 	}, accountRepo, identityRepo, sessionRepo, evRepo, prRepo, jwtIssuer, mailer, customerBootstrap, emailMergeCodesRepo)
 	authSvc.SetTelegramCustomerLookup(customerRepo, linkRepo)
 
