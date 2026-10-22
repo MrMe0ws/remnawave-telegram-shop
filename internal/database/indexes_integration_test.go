@@ -57,8 +57,15 @@ func TestHotIndexes_CreatedAndReversible(t *testing.T) {
 	}
 	check("up")
 
+	// Откатываем до версии перед первым индексом (000049): над ними могли
+	// появиться новые миграции, поэтому шаги считаем от текущей версии.
+	const lastBeforeIndexes = 48
+	var version int
+	if err := pool.QueryRow(ctx, `SELECT version FROM schema_migrations`).Scan(&version); err != nil {
+		t.Fatalf("schema version: %v", err)
+	}
 	dir := partnerMigrationsDir(t)
-	if err := RunMigrations(ctx, &MigrationConfig{Direction: "down", Steps: len(hotIndexes), MigrationsPath: dir}, pool); err != nil {
+	if err := RunMigrations(ctx, &MigrationConfig{Direction: "down", Steps: version - lastBeforeIndexes, MigrationsPath: dir}, pool); err != nil {
 		t.Fatalf("down: %v", err)
 	}
 	if got := validIndexes(t, pool); len(got) != 0 {

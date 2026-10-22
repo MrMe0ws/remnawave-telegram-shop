@@ -1011,6 +1011,16 @@ func moveReferrals(ctx context.Context, tx pgx.Tx, fromTgID, toTgID int64) error
 	if _, err := tx.Exec(ctx, `UPDATE referral SET referrer_id = $2 WHERE referrer_id = $1`, fromTgID, toTgID); err != nil {
 		return err
 	}
+	// У приглашённого одна связь (UNIQUE referee_id). Если приглашёнными были
+	// обе стороны слияния, оставляем одну строку — ту, по которой бонус уже
+	// начислен, иначе самую раннюю, — иначе перенос упадёт на уникальности.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM referral
+		WHERE referee_id IN ($1, $2)
+		  AND id <> (SELECT id FROM referral WHERE referee_id IN ($1, $2) ORDER BY bonus_granted DESC, id LIMIT 1)`,
+		fromTgID, toTgID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `UPDATE referral SET referee_id = $2 WHERE referee_id = $1`, fromTgID, toTgID); err != nil {
 		return err
 	}

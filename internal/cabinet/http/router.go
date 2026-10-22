@@ -333,12 +333,15 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	connectTokenLim := ratelimit.New(ratelimit.Rule{Count: 30, Interval: time.Minute})
 
 	deleteAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
+	// Смена пароля проверяет текущий пароль: без лимита украденная сессия
+	// подбирала бы его, а каждая попытка — это Argon2id на 64 MiB.
+	passwordChangeAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: 15 * time.Minute})
 	trialActivateAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 	supportAcctLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
 	// Webhook от support-bot: 100/min/IP — внутренний endpoint, но защита от flood при утечке секрета
 	supportWebhookIPLim := ratelimit.New(ratelimit.Rule{Count: 100, Interval: time.Minute})
 
-	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim} {
+	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim} {
 		lim.RunGC(ctx)
 	}
 
@@ -393,7 +396,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, partnerHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
 		adminChecker, adminBootstrapHandler, adminStatsHandler, adminOverviewHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
-		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
+		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 
 	// 404 JSON на любой неизвестный /cabinet/api/*.
@@ -501,7 +504,7 @@ func registerAPIRoutes(
 	adminSquads *handlers.AdminSquadsHandler,
 	adminSync *handlers.AdminSyncHandler,
 	adminAcctLim,
-	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
+	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
 ) {
 	// Healthz — без middleware, открыт всем.
@@ -686,6 +689,7 @@ func registerAPIRoutes(
 				http.HandlerFunc(me.PutPassword),
 				middleware.RequireAuth(jwtIssuer),
 				middleware.CSRF(),
+				middleware.RateLimit(passwordChangeAcctLim, accountKey("me_password")),
 			),
 		}),
 	)

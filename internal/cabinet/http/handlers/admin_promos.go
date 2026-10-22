@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -11,10 +10,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/pgerr"
 )
 
 func extractPromoID(path string) (int64, bool) {
@@ -220,8 +217,7 @@ func (h *AdminPromosHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Код уникален без учёта регистра, в том числе среди выключенных
 		// промокодов. Раньше повтор отдавал 500, и было непонятно, что не так.
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+		if pgerr.IsUniqueViolation(err) {
 			http.Error(w, "promo code already exists", http.StatusConflict)
 			return
 		}

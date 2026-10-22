@@ -108,6 +108,26 @@ func (r *MoynalogReceiptRepository) GetByPurchaseID(ctx context.Context, purchas
 	return row, nil
 }
 
+// Claim захватывает чек на отправку до leaseUntil: переносит next_attempt_at
+// в будущее, и ListDue его больше не отдаёт. Возвращает false, если чек уже
+// отправлен, снят или его прямо сейчас отправляет другой (next_attempt_at ещё
+// не наступил).
+//
+// Без захвата фоновая отправка сразу после оплаты и тик воркера брали одну
+// pending-строку одновременно — и ФНС получала два чека на одну оплату. Если
+// процесс упадёт посреди отправки, захват истечёт и чек подхватит воркер.
+func (r *MoynalogReceiptRepository) Claim(ctx context.Context, id int64, leaseUntil time.Time) (bool, error) {
+	const q = `
+		UPDATE moynalog_receipt
+		SET next_attempt_at = $3, updated_at = now()
+		WHERE id = $1 AND status = $2 AND next_attempt_at <= now()`
+	tag, err := r.pool.Exec(ctx, q, id, MoynalogReceiptPending, leaseUntil)
+	if err != nil {
+		return false, fmt.Errorf("claim moynalog receipt: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 // MarkSent закрывает чек успешно, сохраняя присвоенный ФНС идентификатор.
 func (r *MoynalogReceiptRepository) MarkSent(ctx context.Context, id int64, receiptID string) error {
 	const q = `

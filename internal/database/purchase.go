@@ -112,8 +112,24 @@ func NewPurchaseRepository(pool *pgxpool.Pool) *PurchaseRepository {
 	}
 }
 
-// purchaseScanArgs returns pointers for scanning a full purchase row (column order must match SELECT * from purchase).
-// Порядок колонок в PostgreSQL — порядок CREATE + ALTER ADD (см. миграции 000001, 000005 extra_hwid, 000007 promo, 000008 tariff, 000032 platega).
+// purchaseColumns — колонки purchase в порядке purchaseScanArgs.
+//
+// Раньше выборка шла через SELECT *, а скан — позиционно, в порядке колонок
+// таблицы. Любой ADD COLUMN сдвигал этот порядок: откат образа на прошлую
+// версию без отката БД (обычный план отката) ломал чтение всех покупок —
+// вебхуки, поллеры, историю. Явный список от новых колонок не зависит.
+var purchaseColumns = []string{
+	"id", "amount", "customer_id", "created_at", "month",
+	"paid_at", "currency", "expire_at", "status", "invoice_type",
+	"crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id",
+	"extra_hwid",
+	"promo_code_id", "discount_percent_applied",
+	"tariff_id", "purchase_kind", "is_early_downgrade",
+	"platega_id", "platega_url",
+	"heleket_id", "heleket_url",
+}
+
+// purchaseScanArgs returns pointers for scanning a full purchase row (column order must match purchaseColumns).
 func purchaseScanArgs(p *Purchase) []interface{} {
 	return []interface{}{
 		&p.ID, &p.Amount, &p.CustomerID, &p.CreatedAt, &p.Month,
@@ -152,7 +168,7 @@ func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (i
 }
 
 func (cr *PurchaseRepository) FindByInvoiceTypeAndStatus(ctx context.Context, invoiceType InvoiceType, status PurchaseStatus) (*[]Purchase, error) {
-	buildSelect := sq.Select("*").
+	buildSelect := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.And{
 			sq.Eq{"invoice_type": invoiceType},
@@ -210,7 +226,7 @@ func (cr *PurchaseRepository) FindOpenByInvoiceTypeOrdered(
 		raw = append(raw, string(s))
 	}
 
-	buildSelect := sq.Select("*").
+	buildSelect := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.And{
 			sq.Eq{"invoice_type": invoiceType},
@@ -247,7 +263,7 @@ func (cr *PurchaseRepository) FindOpenByInvoiceTypeOrdered(
 }
 
 func (cr *PurchaseRepository) FindById(ctx context.Context, id int64) (*Purchase, error) {
-	buildSelect := sq.Select("*").
+	buildSelect := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.Eq{"id": id}).
 		PlaceholderFormat(sq.Dollar)
@@ -331,7 +347,7 @@ func (pr *PurchaseRepository) MarkAsPaid(ctx context.Context, purchaseID int64) 
 // ночное автопродление проводило бы такую покупку без оплаты — каждый месяц.
 func buildLatestActiveTributesQuery(customerIDs []int64) sq.SelectBuilder {
 	return sq.
-		Select("*").
+		Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.And{
 			sq.Eq{"invoice_type": InvoiceTypeTribute},
@@ -381,7 +397,7 @@ func (pr *PurchaseRepository) FindLatestActiveTributesByCustomerIDs(
 }
 
 func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.Context, customerID int64) (*Purchase, error) {
-	buildSelect := sq.Select("*").
+	buildSelect := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},
@@ -420,7 +436,7 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 }
 
 func (pr *PurchaseRepository) FindPaidByCustomer(ctx context.Context, customerID int64, limit, offset int) ([]Purchase, error) {
-	buildSelect := sq.Select("*").
+	buildSelect := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},
@@ -460,7 +476,7 @@ func (pr *PurchaseRepository) FindPaidByCustomer(ctx context.Context, customerID
 
 // ListAllPaidForLoyaltyBackfill возвращает все успешные оплаты для полного пересчёта loyalty_xp по правилам XPRubEquivalentForPurchase.
 func (pr *PurchaseRepository) ListAllPaidForLoyaltyBackfill(ctx context.Context) ([]Purchase, error) {
-	buildSelect := sq.Select("*").
+	buildSelect := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.Eq{"status": PurchaseStatusPaid}).
 		PlaceholderFormat(sq.Dollar)
@@ -741,7 +757,7 @@ func (pr *PurchaseRepository) FindByCustomerIDAndInvoiceTypeLast(
 	invoiceType InvoiceType,
 ) (*Purchase, error) {
 
-	query := sq.Select("*").
+	query := sq.Select(purchaseColumns...).
 		From("purchase").
 		Where(sq.And{
 			sq.Eq{"customer_id": customerID},

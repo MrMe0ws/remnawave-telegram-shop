@@ -8,6 +8,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratepgx "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"log/slog"
@@ -74,6 +75,17 @@ func RunMigrations(ctx context.Context, migrationConfig *MigrationConfig, pool *
 	}
 
 	if dirty && version == 3 {
+		// Down миграции 3 — это DROP TABLE referral. Автопочинка рассчитана на
+		// установку, где миграция 3 упала на первом запуске и таблица пуста;
+		// по базе с рефералами она молча стёрла бы их все.
+		hasReferrals, err := tableHasRows(ctx, migPool, "referral")
+		if err != nil {
+			return fmt.Errorf("check referral table before repairing migration 3: %w", err)
+		}
+		if hasReferrals {
+			return errors.New("migration 3 is dirty, but table referral has data: automatic repair would drop it; " +
+				"fix the schema manually and run migrate force 3")
+		}
 		slog.Warn("Detected dirty migration at version 3: forcing pointer and running down script")
 
 		if err := m.Force(int(version)); err != nil {
@@ -160,4 +172,18 @@ func GetMigrationVersion(migrationsPath string) (uint, bool, error) {
 	}
 
 	return version, dirty, nil
+}
+
+// tableHasRows — есть ли в таблице хоть одна строка; несуществующая таблица — false.
+func tableHasRows(ctx context.Context, pool *pgxpool.Pool, table string) (bool, error) {
+	var exists bool
+	if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil {
+		return false, err
+	}
+	if !exists {
+		return false, nil
+	}
+	var has bool
+	err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM `+pgx.Identifier{table}.Sanitize()+`)`).Scan(&has)
+	return has, err
 }

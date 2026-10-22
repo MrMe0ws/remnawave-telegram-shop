@@ -30,6 +30,7 @@ import (
 	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/remnawavewebhook"
 	"remnawave-tg-shop-bot/internal/sync"
+	"remnawave-tg-shop-bot/internal/tgclient"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/tribute"
 	"remnawave-tg-shop-bot/internal/yookasa"
@@ -177,19 +178,20 @@ func main() {
 	// Создание экземпляра Telegram бота с 3 воркерами для параллельной обработки запросов
 	botInflight := &handler.Inflight{}
 	botOptions := []bot.Option{bot.WithWorkers(3), bot.WithMiddlewares(handler.RecoverMiddleware(botInflight))}
+	// Значения по умолчанию go-telegram/bot: long poll и таймаут клиента — минута.
+	botPollTimeout := time.Minute
+	var botHTTP tgclient.Doer = &http.Client{Timeout: botPollTimeout}
 	if proxyURL := config.TelegramProxyURL(); proxyURL != "" {
 		parsedURL, err := url.Parse(proxyURL)
 		if err != nil {
 			slog.Error("Invalid TELEGRAM_PROXY_URL, proxy disabled", "error", err)
 		} else {
-			transport := &http.Transport{
-				Proxy: http.ProxyURL(parsedURL),
-			}
-			botOptions = append(botOptions, bot.WithHTTPClient(30*time.Second, &http.Client{
-				Transport: transport,
-			}))
+			botPollTimeout = 30 * time.Second
+			botHTTP = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(parsedURL)}}
 		}
 	}
+	// Общий лимит отправки и повтор после 429 — для всех сообщений процесса.
+	botOptions = append(botOptions, bot.WithHTTPClient(botPollTimeout, tgclient.New(botHTTP, tgclient.SendsPerSecond)))
 	b, err := bot.New(config.TelegramToken(), botOptions...)
 	if err != nil {
 		panic(err)

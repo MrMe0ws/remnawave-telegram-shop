@@ -24,6 +24,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/auth/tokens"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
+	"remnawave-tg-shop-bot/internal/pgerr"
 )
 
 // oauthGoogleProviderWrapper — тонкая обёртка вокруг *googleoauth.GoogleProvider.
@@ -443,16 +444,6 @@ func (s *Service) GoogleCallback(
 	return GoogleCallbackResult{Pair: pair}, nil
 }
 
-func isPGUniqueViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "23505") ||
-		strings.Contains(msg, "unique_violation") ||
-		strings.Contains(msg, "duplicate key")
-}
-
 // googleOAuthLinkFlow — привязка Google к аккаунту linkAccount_id (после OAuth).
 func (s *Service) googleOAuthLinkFlow(
 	ctx context.Context,
@@ -526,7 +517,7 @@ func (s *Service) googleOAuthLinkFlow(
 
 	rawProfile, _ := json.Marshal(info)
 	if _, err := s.ids.Create(ctx, acc.ID, repository.ProviderGoogle, info.Sub, info.Email, rawProfile); err != nil {
-		if isPGUniqueViolation(err) {
+		if pgerr.IsUniqueViolation(err) {
 			ident2, e2 := s.ids.FindByProvider(ctx, repository.ProviderGoogle, info.Sub)
 			if e2 == nil && ident2.AccountID == acc.ID {
 				_ = s.accounts.UpdateLastLogin(ctx, acc.ID)
