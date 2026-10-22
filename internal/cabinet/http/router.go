@@ -793,6 +793,9 @@ func registerAPIRoutes(
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.PostTrialActivate),
 			middleware.RequireAuth(jwtIssuer),
+			// Как подписка и оплата: иначе пробный брали на несуществующие
+			// адреса — регистрация, пропуск кода, вход по паролю.
+			middleware.RequireVerifiedEmail(),
 			middleware.CSRF(),
 			middleware.RateLimit(trialActivateAcctLim, accountKey("trial_activate")),
 		)),

@@ -23,7 +23,7 @@ import { TrafficUsageChart } from '@/components/TrafficUsageChart'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
-import { api, SUBSCRIPTION_STALE_MS, type SubscriptionResponse } from '@/lib/api'
+import { api, ApiError, SUBSCRIPTION_STALE_MS, type SubscriptionResponse } from '@/lib/api'
 import { cn, daysUntil, formatDate, trafficUsagePercent } from '@/lib/utils'
 import { daysTone, devicesTone, trafficTone } from '@/lib/subscriptionTone'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
@@ -141,7 +141,15 @@ export default function DashboardPage() {
     },
     // Без этого при ошибке кнопка просто разблокировалась, и пользователь
     // не понимал, активировался триал или нет.
-    onError: () => toast.error(t('dashboard.trialActivateFailed')),
+    onError: (err) => {
+      // Почта не подтверждена (код при регистрации пропущен, вход по паролю):
+      // пробный выдаётся только после подтверждения — ведём на ввод кода.
+      if (err instanceof ApiError && err.status === 403 && err.body.includes('email not verified')) {
+        navigate('/verify-email', { state: { email: useAuthStore.getState().user?.email ?? '' } })
+        return
+      }
+      toast.error(t('dashboard.trialActivateFailed'))
+    },
   })
 
   const trialOfferAvailable = Boolean(trial?.enabled && trial?.can_activate)
