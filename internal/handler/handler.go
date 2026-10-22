@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
@@ -110,7 +111,7 @@ func (h Handler) ForwardUserMessageToAdmin(ctx context.Context, b *bot.Bot, upda
 		Text:   msgText,
 	})
 	if err != nil {
-		// Можно добавить обработку ошибки, если нужно
+		slog.Error("send message to admin", "error", err)
 	}
 }
 

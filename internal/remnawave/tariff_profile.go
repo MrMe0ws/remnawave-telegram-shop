@@ -65,14 +65,6 @@ func (r *Client) createOrUpdateUserWithTariffProfile(ctx context.Context, custom
 	return r.updateUserWithTariffProfile(ctx, existingUser, days, profile, baseExpire)
 }
 
-func isPanelUsernameExistsErr(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "a019") && strings.Contains(msg, "username already exists")
-}
-
 func (r *Client) findUserByUsername(ctx context.Context, username string) (*User, error) {
 	username = strings.TrimSpace(strings.ToLower(username))
 	if username == "" {

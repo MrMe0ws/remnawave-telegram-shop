@@ -457,7 +457,7 @@ func registerCabinetRootRedirects(mux *http.ServeMux) {
 			if q := r.URL.RawQuery; q != "" {
 				target += "?" + q
 			}
-			http.Redirect(w, r, target, http.StatusFound)
+			http.Redirect(w, r, target, http.StatusFound) //nolint:gosec // G710: путь фиксирован, переносится только query
 		})
 	}
 }

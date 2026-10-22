@@ -377,7 +377,7 @@ func (h *MeHandler) GoogleLinkStart(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})
 		return
 	}
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound) //nolint:gosec // G710: адрес начала OAuth строит сервер, не пользователь
 }
 
 func (h *MeHandler) YandexLinkStart(w http.ResponseWriter, r *http.Request) {
@@ -406,7 +406,7 @@ func (h *MeHandler) YandexLinkStart(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})
 		return
 	}
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound) //nolint:gosec // G710: адрес начала OAuth строит сервер, не пользователь
 }
 
 func (h *MeHandler) VKLinkStart(w http.ResponseWriter, r *http.Request) {
@@ -435,7 +435,7 @@ func (h *MeHandler) VKLinkStart(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect_url": redirectURL})
 		return
 	}
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound) //nolint:gosec // G710: адрес начала OAuth строит сервер, не пользователь
 }
 
 type putLanguageReq struct {

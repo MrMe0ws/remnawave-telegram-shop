@@ -317,12 +317,12 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 		if config.RequirePaidPurchaseForStars() {
 			customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
 			if err != nil {
-				slog.Error("Error finding customer for stars check", err)
+				slog.Error("Error finding customer for stars check", "error", err)
 				shouldShowStarsButton = false
 			} else if customer != nil {
 				paidPurchase, err := h.purchaseRepository.FindSuccessfulPaidPurchaseByCustomer(ctx, customer.ID)
 				if err != nil {
-					slog.Error("Error checking paid purchase", err)
+					slog.Error("Error checking paid purchase", "error", err)
 					shouldShowStarsButton = false
 				} else if paidPurchase == nil {
 					shouldShowStarsButton = false
@@ -394,7 +394,7 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 	logEditError("Error sending sell message", err)
 }
 
-func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+func (h Handler) PaymentCallbackHandler(_ context.Context, b *bot.Bot, update *models.Update) {
 	callback := update.CallbackQuery.Message.Message
 	callbackQuery := parseCallbackData(update.CallbackQuery.Data)
 	month, err := strconv.Atoi(callbackQuery["month"])
@@ -423,7 +423,7 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	defer cancel()
 	customer, err := h.customerRepository.FindByTelegramId(ctx, callback.Chat.ID)
 	if err != nil {
-		slog.Error("Error finding customer", err)
+		slog.Error("Error finding customer", "error", err)
 		return
 	}
 	if customer == nil {
@@ -508,7 +508,7 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 		paymentURL, purchaseId, err = h.paymentService.CreatePurchase(ctxWithUsername, float64(price), month, customer, invoiceType, meta, tariffID, tariffExtras)
 	}
 	if err != nil {
-		slog.Error("Error creating payment", err)
+		slog.Error("Error creating payment", "error", err)
 		langCode := update.CallbackQuery.From.LanguageCode
 		backSell := fmt.Sprintf("%s?month=%d&amount=%d&extra=%d", CallbackSell, month, price, extra)
 		if tidStr != "" {

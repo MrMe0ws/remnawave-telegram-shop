@@ -111,7 +111,7 @@ func (s *Service) Activate(ctx context.Context, telegramID int64, username strin
 			t := time.Now().UTC().Add(time.Duration(*p.DiscountTTLHours) * time.Hour)
 			exp = &t
 		}
-		remaining := 1
+		var remaining int
 		if p.DiscountMaxSubscriptionPaymentsPerCustomer == 0 {
 			remaining = database.PendingDiscountUnlimitedPayments
 		} else {
@@ -162,9 +162,8 @@ func (s *Service) validatePromoRow(ctx context.Context, p *database.PromoCode, c
 	if has {
 		return database.ValidationErrorf("already redeemed")
 	}
-	if p.RequireCustomerInDB {
-		// Customer row already exists if we're here; reserved for future stricter checks.
-	}
+	// RequireCustomerInDB: строка customer к этому моменту уже есть — отдельная
+	// проверка не нужна.
 	if p.FirstPurchaseOnly {
 		n, err := s.PurchaseRepo.CountPaidSubscriptionsByCustomer(ctx, customer.ID)
 		if err != nil {

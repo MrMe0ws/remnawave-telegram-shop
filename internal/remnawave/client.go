@@ -346,7 +346,7 @@ func (r *Client) ListInternalSquads(ctx context.Context) ([]InternalSquad, error
 	}
 	out := make([]InternalSquad, len(items))
 	for i, s := range items {
-		out[i] = InternalSquad{UUID: s.UUID, Name: s.Name}
+		out[i] = InternalSquad(s)
 	}
 	return out, nil
 }

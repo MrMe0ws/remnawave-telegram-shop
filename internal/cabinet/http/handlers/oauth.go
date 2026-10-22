@@ -56,7 +56,7 @@ func (h *OAuthHandler) GoogleStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound) //nolint:gosec // G710: адрес начала OAuth строит сервер, не пользователь
 }
 
 // GoogleCallback — GET /cabinet/api/auth/google/callback?code=...&state=...
@@ -248,7 +248,7 @@ func (h *OAuthHandler) YandexStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound) //nolint:gosec // G710: адрес начала OAuth строит сервер, не пользователь
 }
 
 func (h *OAuthHandler) YandexCallback(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +303,7 @@ func (h *OAuthHandler) VKStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setOAuthStateCookie(w, redirectURL, h.cookieDomain)
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound) //nolint:gosec // G710: адрес начала OAuth строит сервер, не пользователь
 }
 
 func (h *OAuthHandler) VKCallback(w http.ResponseWriter, r *http.Request) {

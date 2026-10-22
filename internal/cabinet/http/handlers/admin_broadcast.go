@@ -292,7 +292,7 @@ func (h *AdminBroadcastHandler) UploadMedia(w http.ResponseWriter, r *http.Reque
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, broadcastMediaMaxBytes+1024)
-	if err := r.ParseMultipartForm(broadcastMediaMaxBytes); err != nil {
+	if err := r.ParseMultipartForm(broadcastMediaMaxBytes); err != nil { //nolint:gosec // G120: тело ограничено MaxBytesReader строкой выше
 		http.Error(w, "invalid multipart form", http.StatusBadRequest)
 		return
 	}

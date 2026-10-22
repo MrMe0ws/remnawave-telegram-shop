@@ -557,7 +557,7 @@ func resolveBrandLogoFile(raw string) string {
 	}
 	try := func(abs string) string {
 		abs = filepath.Clean(abs)
-		st, err := os.Stat(abs)
+		st, err := os.Stat(abs) //nolint:gosec // G703: путь к логотипу задаёт администратор в env
 		if err != nil || st.IsDir() {
 			return ""
 		}

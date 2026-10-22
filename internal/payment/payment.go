@@ -37,12 +37,6 @@ func skipTelegramCustomerDM(c *database.Customer) bool {
 	return c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID)
 }
 
-// sanitizeEmailLocalForPanel делегирует общей реализации: тем же правилом
-// пользуется админка при показе и поиске web-клиентов по логину.
-func sanitizeEmailLocalForPanel(email string) string {
-	return utils.PanelLoginLocalFromEmail(email)
-}
-
 func emailLocalPartForDescription(email string) string {
 	email = strings.TrimSpace(strings.ToLower(email))
 	at := strings.LastIndex(email, "@")

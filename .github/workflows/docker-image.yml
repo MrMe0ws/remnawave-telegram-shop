@@ -24,10 +24,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Go build + cabinet tests + slog check
+      - name: Go build + tests + slog check
         run: |
           go build ./...
-          go test ./internal/cabinet/...
+          go test ./...
           bash scripts/cabinet-forbid-sensitive-slogs.sh
 
       - name: Login to GitHub Container Registry

@@ -240,7 +240,7 @@ func (m *Migrator) stepTariffs(ctx context.Context) error {
 		name := t.Name
 		desc := t.Description
 
-		status := "ok"
+		var status string
 		ourID := int64(0)
 		if prev, ok := bySlug[slug]; ok {
 			ourID = prev.ID
