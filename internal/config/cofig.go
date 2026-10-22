@@ -560,6 +560,9 @@ func ExternalSquadUUID() uuid.UUID {
 	return conf.externalSquadUUID
 }
 
+// Price — цена периода в рублях (classic). Для периода, которого нет в продаже,
+// — 0: раньше любой месяц вне 1/3/6/12 стоил как один, и подделанная кнопка
+// бота продавала month=120 по цене месяца.
 func Price(month int) int {
 	switch month {
 	case 1:
@@ -571,10 +574,11 @@ func Price(month int) int {
 	case 12:
 		return conf.price12
 	default:
-		return conf.price1
+		return 0
 	}
 }
 
+// StarsPrice — цена периода в Stars (classic); 0 — периода нет в продаже (см. Price).
 func StarsPrice(month int) int {
 	switch month {
 	case 1:
@@ -586,7 +590,7 @@ func StarsPrice(month int) int {
 	case 12:
 		return conf.starsPrice12
 	default:
-		return conf.starsPrice1
+		return 0
 	}
 }
 func TelegramToken() string {

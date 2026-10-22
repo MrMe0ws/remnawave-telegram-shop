@@ -558,7 +558,6 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackAddDevicePayment, bot.MatchTypePrefix, h.AddDevicePaymentCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для продления доп. устройств
-	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackRenewExtraHwid, bot.MatchTypePrefix, h.RenewExtraHwidCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)
 
 	// Callback для истории операций (с префиксом, т.к. содержит параметры страницы)
 	b.RegisterHandler(bot.HandlerTypeCallbackQueryData, handler.CallbackPurchaseHistory, bot.MatchTypePrefix, h.PurchaseHistoryCallbackHandler, h.SuspiciousUserFilterMiddleware, h.CreateCustomerIfNotExistMiddleware, h.RequireLegalAcceptanceMiddleware, h.AnswerCallbackQueryMiddleware)

@@ -325,6 +325,10 @@ func (pr *PurchaseRepository) MarkAsPaid(ctx context.Context, purchaseID int64) 
 	return pr.UpdateFields(ctx, purchaseID, updates)
 }
 
+// buildLatestActiveTributesQuery — у кого действует подписка Tribute: последняя
+// завершённая (paid или cancel) Tribute-покупка оплачена. Незавершённые new/pending
+// не считаются вовсе: их мог создать кто угодно (подделанная кнопка бота), а
+// ночное автопродление проводило бы такую покупку без оплаты — каждый месяц.
 func buildLatestActiveTributesQuery(customerIDs []int64) sq.SelectBuilder {
 	return sq.
 		Select("*").
@@ -332,9 +336,10 @@ func buildLatestActiveTributesQuery(customerIDs []int64) sq.SelectBuilder {
 		Where(sq.And{
 			sq.Eq{"invoice_type": InvoiceTypeTribute},
 			sq.Eq{"customer_id": customerIDs},
-			sq.Expr("created_at = (SELECT MAX(created_at) FROM purchase p2 WHERE p2.customer_id = purchase.customer_id AND p2.invoice_type = ?)", InvoiceTypeTribute),
+			sq.Expr("created_at = (SELECT MAX(created_at) FROM purchase p2 WHERE p2.customer_id = purchase.customer_id AND p2.invoice_type = ? AND p2.status IN (?, ?))",
+				InvoiceTypeTribute, PurchaseStatusPaid, PurchaseStatusCancel),
 		}).
-		Where(sq.NotEq{"status": PurchaseStatusCancel})
+		Where(sq.Eq{"status": PurchaseStatusPaid})
 }
 
 func (pr *PurchaseRepository) FindLatestActiveTributesByCustomerIDs(

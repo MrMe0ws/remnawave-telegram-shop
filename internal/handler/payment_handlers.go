@@ -399,7 +399,12 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	callbackQuery := parseCallbackData(update.CallbackQuery.Data)
 	month, err := strconv.Atoi(callbackQuery["month"])
 	if err != nil {
-		slog.Error("Error getting month from query", err)
+		slog.Error("Error getting month from query", "error", err)
+		return
+	}
+	fromID := update.CallbackQuery.From.ID
+	if !validSubscriptionMonths(month) {
+		rejectForgedCallback("payment", "month", fromID, update.CallbackQuery.Data)
 		return
 	}
 
@@ -407,6 +412,10 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	extra := parseIntSafe(callbackQuery["extra"])
 	if !config.HwidExtraDevicesEnabled() && extra > 0 {
 		extra = 0
+	}
+	if !extraHwidAllowed(extra) {
+		rejectForgedCallback("payment", "extra", fromID, update.CallbackQuery.Data)
+		return
 	}
 	tidStr := callbackQuery["tid"]
 
@@ -420,6 +429,24 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	if customer == nil {
 		slog.Error("customer not exist", "chatID", callback.Chat.ID, "error", err)
 		return
+	}
+	if !h.invoiceTypeAllowed(ctx, customer, invoiceType) {
+		rejectForgedCallback("payment", "invoice_type", fromID, update.CallbackQuery.Data)
+		return
+	}
+	// В режиме тарифов кнопки без tid бот рисует, только когда активных тарифов
+	// нет (меню откатывается на классические цены). Иначе такой callback —
+	// попытка купить период по ценам из .env в обход тарифа.
+	if tidStr == "" && config.SalesMode() == "tariffs" && h.tariffRepository != nil {
+		active, err := h.tariffRepository.ListActive(ctx)
+		if err != nil {
+			slog.Error("list tariffs for payment", "error", err)
+			return
+		}
+		if len(active) > 0 {
+			rejectForgedCallback("payment", "missing_tariff", fromID, update.CallbackQuery.Data)
+			return
+		}
 	}
 
 	var price int
@@ -452,12 +479,18 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 	} else {
 		if invoiceType == database.InvoiceTypeTelegram {
 			price = config.StarsPrice(month)
-			if extra > 0 {
-				price += config.HwidAddStarsPrice() * extra * month
-			}
 		} else {
 			price = config.Price(month)
-			if extra > 0 {
+		}
+		// Период с нулевой ценой бот не продаёт — кнопки для него нет.
+		if price <= 0 {
+			rejectForgedCallback("payment", "price", fromID, update.CallbackQuery.Data)
+			return
+		}
+		if extra > 0 {
+			if invoiceType == database.InvoiceTypeTelegram {
+				price += config.HwidAddStarsPrice() * extra * month
+			} else {
 				price += config.HwidAddPrice() * extra * month
 			}
 		}
@@ -673,36 +706,6 @@ func (h Handler) appendPlategaAddDevicePaymentRows(keyboard [][]models.InlineKey
 		keyboard = append(keyboard, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
 				CallbackData: fmt.Sprintf("%s?target=%d&invoiceType=%s", CallbackAddDevicePayment, target, database.InvoiceTypeHeleket),
-			}),
-		})
-	}
-	return keyboard
-}
-
-func (h Handler) appendPlategaRenewExtraRows(keyboard [][]models.InlineKeyboardButton, langCode string, extra, months int) [][]models.InlineKeyboardButton {
-	type row struct {
-		inv database.InvoiceType
-		key string
-	}
-	for _, r := range []row{
-		{database.InvoiceTypePlategaSBP, "platega_sbp_button"},
-		{database.InvoiceTypePlategaCards, "platega_cards_button"},
-		{database.InvoiceTypePlategaAcquiring, "platega_acquiring_button"},
-		{database.InvoiceTypePlategaWorldwide, "platega_worldwide_button"},
-		{database.InvoiceTypePlategaCrypto, "platega_crypto_button"},
-	} {
-		if plategaInvoiceEnabled(r.inv) {
-			keyboard = append(keyboard, []models.InlineKeyboardButton{
-				h.translation.WithButton(langCode, r.key, models.InlineKeyboardButton{
-					CallbackData: fmt.Sprintf("%s?extra=%d&months=%d&invoiceType=%s", CallbackRenewExtraHwid, extra, months, r.inv),
-				}),
-			})
-		}
-	}
-	if config.IsHeleketEnabled() {
-		keyboard = append(keyboard, []models.InlineKeyboardButton{
-			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
-				CallbackData: fmt.Sprintf("%s?extra=%d&months=%d&invoiceType=%s", CallbackRenewExtraHwid, extra, months, database.InvoiceTypeHeleket),
 			}),
 		})
 	}
