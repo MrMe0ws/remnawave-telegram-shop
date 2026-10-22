@@ -162,6 +162,17 @@ func TestPendingDiscount_ReservedByOpenInvoices(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT status FROM purchase WHERE promo_code_id = $1 AND invoice_type = 'telegram'`, promoID).Scan(&stars); err != nil || stars != "cancel" {
 		t.Fatalf("stale stars invoice status = %q, err = %v; want cancel", stars, err)
 	}
+
+	// Счёт кассы, который так и остался new (Platega месячной давности), скидку
+	// не держит.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO purchase (amount, customer_id, month, currency, status, invoice_type, promo_code_id, discount_percent_applied, created_at)
+		VALUES (99, $1, 1, 'RUB', 'new', 'plt_ww', $2, 50, now() - interval '30 days')`, cust.ID, promoID); err != nil {
+		t.Fatalf("insert old purchase: %v", err)
+	}
+	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 50 {
+		t.Fatalf("month-old open invoice must not hold discount: pct=%d err=%v, want 50", pct, err)
+	}
 }
 
 // Выдача пробного периода сериализуется по клиенту.
