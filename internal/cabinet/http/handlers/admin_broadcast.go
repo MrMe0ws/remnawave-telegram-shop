@@ -17,6 +17,7 @@ import (
 	"remnawave-tg-shop-bot/internal/broadcast"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/utils"
 )
 
 // Потолок загрузки. 50 MiB — предел Bot API на отправку файла ботом; меньше
@@ -461,7 +462,7 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 	payload := req
 	recipientCount := len(recipients)
 
-	go func() {
+	utils.Go("cabinet broadcast", func() {
 		defer releaseBroadcastSend()
 		ctx := context.Background()
 		if adminID != 0 {
@@ -485,7 +486,7 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 			Media:     payload.recipientMedia(),
 			Buttons:   payload.recipientButtons(),
 		})
-	}()
+	})
 
 	slog.Info("admin broadcast: send started",
 		"audience", req.Audience,

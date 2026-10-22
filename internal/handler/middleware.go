@@ -82,7 +82,14 @@ func (h Handler) SuspiciousUserFilterMiddleware(next bot.HandlerFunc) bot.Handle
 			firstName = &update.CallbackQuery.From.FirstName
 			lastName = &update.CallbackQuery.From.LastName
 			userID = update.CallbackQuery.From.ID
-			chatID = update.CallbackQuery.Message.Message.Chat.ID
+			// Message бывает nil: кнопка под сообщением старше 48 часов
+			// (InaccessibleMessage) или из inline-режима. Тогда пишем в личку.
+			chatID = update.CallbackQuery.From.ID
+			if m := update.CallbackQuery.Message.Message; m != nil {
+				chatID = m.Chat.ID
+			} else if im := update.CallbackQuery.Message.InaccessibleMessage; im != nil {
+				chatID = im.Chat.ID
+			}
 			langCode = update.CallbackQuery.From.LanguageCode
 		} else {
 			next(ctx, b, update)

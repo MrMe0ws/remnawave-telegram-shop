@@ -50,7 +50,9 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
-	body, err := io.ReadAll(r.Body)
+	// Уведомление ЮKassa — несколько килобайт. Без лимита любой мог
+	// прислать гигабайтное тело и держать его в памяти целиком.
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 64<<10))
 	if err != nil {
 		slog.Error("yookassa webhook: read body error", "error", err)
 		http.Error(w, "invalid body", http.StatusBadRequest)

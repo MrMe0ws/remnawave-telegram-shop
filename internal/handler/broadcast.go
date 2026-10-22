@@ -15,6 +15,7 @@ import (
 	"remnawave-tg-shop-bot/internal/broadcast"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/utils"
 )
 
 // BroadcastType определяет тип рассылки
@@ -903,7 +904,9 @@ func (h Handler) BroadcastConfirmHandler(ctx context.Context, b *bot.Bot, update
 		Text:   h.translation.GetText(lang, "broadcast_started_wait"),
 	})
 
-	go h.sendBroadcast(ctx, b, adminID, messageText, entCopy, draftMedia, flagsCopy, broadcastType, tariffFilter)
+	utils.Go("bot broadcast", func() {
+		h.sendBroadcast(ctx, b, adminID, messageText, entCopy, draftMedia, flagsCopy, broadcastType, tariffFilter)
+	})
 }
 
 // BroadcastCancelHandler обрабатывает отмену рассылки

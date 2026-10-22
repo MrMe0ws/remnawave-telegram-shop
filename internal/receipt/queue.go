@@ -157,12 +157,12 @@ func (s *Service) Submit(ctx context.Context, purchase *database.Purchase, descr
 	// без его отмены. Свой таймаут — чтобы горутина не жила вечно.
 	queued := *row
 	s.inflight.Add(1)
-	go func() {
+	utils.Go("moynalog receipt send", func() {
 		defer s.inflight.Done()
 		bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), submitSendTimeout)
 		defer cancel()
 		s.trySend(bgCtx, queued)
-	}()
+	})
 }
 
 // ProcessDue — тик воркера: отправляет чеки, которым пора на повтор.

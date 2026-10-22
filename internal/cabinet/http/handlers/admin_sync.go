@@ -10,6 +10,7 @@ import (
 
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/sync"
+	"remnawave-tg-shop-bot/utils"
 )
 
 type AdminSyncHandler struct {
@@ -60,7 +61,16 @@ func (h *AdminSyncHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 	h.mu.Unlock()
 
 	slog.Info("admin: sync triggered via cabinet")
-	go func() {
+	utils.Go("cabinet sync", func() {
+		// Паника внутри не должна оставить страницу в «идёт» навсегда.
+		done := false
+		defer func() {
+			if !done {
+				h.mu.Lock()
+				h.status.State = "failed"
+				h.mu.Unlock()
+			}
+		}()
 		// r.Context() отменится сразу после ответа — синхронизация идёт со своим.
 		res, err := h.syncService.Sync(context.Background())
 		finished := time.Now().UTC()
@@ -83,7 +93,8 @@ func (h *AdminSyncHandler) TriggerSync(w http.ResponseWriter, r *http.Request) {
 		h.mu.Lock()
 		h.status = st
 		h.mu.Unlock()
-	}()
+		done = true
+	})
 
 	writeJSON(w, http.StatusOK, h.snapshot())
 }

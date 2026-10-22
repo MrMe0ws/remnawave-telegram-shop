@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -34,6 +35,7 @@ import (
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -51,8 +53,9 @@ var (
 
 // main - главная функция приложения, инициализирует все компоненты бота и запускает его
 func main() {
-	// Создаем контекст с обработкой сигналов прерывания (Ctrl+C) для корректного завершения
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	// Контекст отменяется по Ctrl+C и по SIGTERM (docker stop, Kubernetes) —
+	// без SIGTERM процесс обрывался посреди обработки, не дождавшись ничего.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	// Инициализация конфигурации из переменных окружения
@@ -172,7 +175,8 @@ func main() {
 	}
 
 	// Создание экземпляра Telegram бота с 3 воркерами для параллельной обработки запросов
-	botOptions := []bot.Option{bot.WithWorkers(3)}
+	botInflight := &handler.Inflight{}
+	botOptions := []bot.Option{bot.WithWorkers(3), bot.WithMiddlewares(handler.RecoverMiddleware(botInflight))}
 	if proxyURL := config.TelegramProxyURL(); proxyURL != "" {
 		parsedURL, err := url.Parse(proxyURL)
 		if err != nil {
@@ -218,9 +222,10 @@ func main() {
 	// Настройка cron-задачи для проверки статуса счетов (каждые 5 секунд)
 	// CryptoPay; YooKassa и Platega — поллинг только если не задан соответствующий WEBHOOK_URL.
 	cronScheduler := setupInvoiceChecker(purchaseRepository, cryptoPayClient, paymentService, yookasaClient, plategaClient, heleketReconciler)
+	var schedulers []*cron.Cron
 	if cronScheduler != nil {
 		cronScheduler.Start()
-		defer cronScheduler.Stop()
+		schedulers = append(schedulers, cronScheduler)
 	}
 
 	// Инициализация сервиса уведомлений о подписках
@@ -231,6 +236,7 @@ func main() {
 	// Отправляет уведомления пользователям об истечении подписки
 	subscriptionNotificationCronScheduler := subscriptionChecker(subService, infraBillingNotifyService)
 	subscriptionNotificationCronScheduler.Start()
+	schedulers = append(schedulers, subscriptionNotificationCronScheduler)
 
 	// Lifecycle notifications cron (отдельно от daily 16:00)
 	var lifecycleCronScheduler *cron.Cron
@@ -248,15 +254,15 @@ func main() {
 		)
 		lifecycleCronScheduler = lifecycleChecker(lifecycleService)
 		lifecycleCronScheduler.Start()
+		schedulers = append(schedulers, lifecycleCronScheduler)
 		slog.Info("Lifecycle notifications cron started", "schedule", config.LifecycleCron())
 	}
-	defer subscriptionNotificationCronScheduler.Stop()
 
 	// Воркер переотправки чеков «Мой налог».
 	if receiptQueue.Enabled() {
 		receiptCronScheduler := receiptRetryChecker(receiptQueue)
 		receiptCronScheduler.Start()
-		defer receiptCronScheduler.Stop()
+		schedulers = append(schedulers, receiptCronScheduler)
 		slog.Info("Moynalog receipt retry cron started",
 			"schedule", config.MoynalogRetryCron(), "maxAge", config.MoynalogRetryMaxAge())
 	}
@@ -272,7 +278,7 @@ func main() {
 	// а выключение программы не должно замораживать уже заработанное.
 	partnerHoldCronScheduler := partnerHoldReleaser(partnerRepository)
 	partnerHoldCronScheduler.Start()
-	defer partnerHoldCronScheduler.Stop()
+	schedulers = append(schedulers, partnerHoldCronScheduler)
 	slog.Info("Partner hold release cron started", "holdDays", config.PartnerHoldDays())
 
 	// Инициализация сервиса синхронизации с Remnawave
@@ -871,9 +877,16 @@ func main() {
 	}
 
 	// Запуск HTTP сервера в отдельной горутине
+	// Без таймаутов медленный клиент держит соединение сколько угодно, и
+	// сотня таких соединений съедает сервер (slowloris). Ответы у нас короткие:
+	// долгие операции админки (синхронизация, рассылка) идут в фоне.
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.GetHealthCheckPort()),
-		Handler: mux,
+		Addr:              fmt.Sprintf(":%d", config.GetHealthCheckPort()),
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		WriteTimeout:      90 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 	go func() {
 		log.Printf("Server listening on %s", srv.Addr)
@@ -894,56 +907,88 @@ func main() {
 	// Запуск бота (блокирующий вызов, работает до получения сигнала прерывания)
 	b.Start(ctx)
 
-	// Корректное завершение HTTP сервера при остановке бота
-	log.Println("Shutting down health server…")
-	shutdownCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutCancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("Health server shutdown error: %v", err)
+	shutdown(srv, botInflight, schedulers, pool)
+}
+
+// shutdownTimeout — сколько ждём незавершённую работу при остановке. Docker
+// после SIGTERM ждёт 10 секунд и убивает процесс, поэтому укладываемся в 9.
+const shutdownTimeout = 9 * time.Second
+
+// shutdown останавливает процесс по порядку: перестаёт принимать HTTP (вебхуки
+// оплат, кабинет) и дожидается начатых запросов, затем дожидается начатых
+// обработчиков бота и задач cron, и только потом закрывает пул БД — иначе
+// начатая выдача подписки обрывалась бы на полпути.
+func shutdown(srv *http.Server, botInflight *handler.Inflight, schedulers []*cron.Cron, pool *pgxpool.Pool) {
+	slog.Info("Shutting down…")
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	// Новые задачи cron не стартуют с этого момента; начатые ждём ниже.
+	cronDone := make([]context.Context, 0, len(schedulers))
+	for _, c := range schedulers {
+		cronDone = append(cronDone, c.Stop())
 	}
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("HTTP server shutdown", "error", err)
+	}
+	if left := botInflight.Wait(ctx); left > 0 {
+		slog.Warn("Shutdown: bot handlers still running", "count", left)
+	}
+	for _, done := range cronDone {
+		select {
+		case <-done.Done():
+		case <-ctx.Done():
+			slog.Warn("Shutdown: cron job still running")
+		}
+	}
+	pool.Close()
+	slog.Info("Shutdown complete")
 }
 
 // fullHealthHandler - HTTP обработчик для проверки здоровья сервиса
 // Проверяет доступность базы данных и Remnawave API
 // Используется для мониторинга и healthcheck в оркестраторах (Docker, Kubernetes и т.д.)
+//
+// Эндпоинт открыт наружу, поэтому по компонентам отдаёт только «ok»/«fail»:
+// текст ошибки раскрывал адреса и внутренности БД и панели. Подробности
+// пишутся в лог. Версия остаётся — по ней проверяют, что выкатилось.
 func fullHealthHandler(pool *pgxpool.Pool, rw *remnawave.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		status := map[string]string{
-			"status":    "ok",
-			"db":        "ok",
-			"rw":        "ok",
-			"time":      time.Now().Format(time.RFC3339),
-			"version":   Version,
-			"commit":    Commit,
-			"buildDate": BuildDate,
-		}
+		resp := struct {
+			Status    string `json:"status"`
+			DB        string `json:"db"`
+			Remnawave string `json:"remnawave"`
+			Time      string `json:"time"`
+			Version   string `json:"version"`
+			Commit    string `json:"commit"`
+			BuildDate string `json:"buildDate"`
+		}{Status: "ok", DB: "ok", Remnawave: "ok", Time: time.Now().Format(time.RFC3339),
+			Version: Version, Commit: Commit, BuildDate: BuildDate}
 
 		// Проверка доступности базы данных PostgreSQL
 		dbCtx, dbCancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer dbCancel()
 		if err := pool.Ping(dbCtx); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			status["status"] = "fail"
-			status["db"] = "error: " + err.Error()
+			slog.Error("healthcheck: database", "error", err)
+			resp.Status, resp.DB = "fail", "fail"
 		}
 
 		// Проверка доступности Remnawave API
 		rwCtx, rwCancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer rwCancel()
 		if err := rw.Ping(rwCtx); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			status["status"] = "fail"
-			status["rw"] = "error: " + err.Error()
+			slog.Error("healthcheck: remnawave", "error", err)
+			resp.Status, resp.Remnawave = "fail", "fail"
 		}
 
-		if status["status"] == "ok" {
-			w.WriteHeader(http.StatusOK)
+		code := http.StatusOK
+		if resp.Status != "ok" {
+			code = http.StatusServiceUnavailable
 		}
-
-		// Возвращаем JSON с результатами проверки
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status":"%s","db":"%s","remnawave":"%s","time":"%s","version":"%s","commit":"%s","buildDate":"%s"}`,
-			status["status"], status["db"], status["rw"], status["time"], status["version"], status["commit"], status["buildDate"])
+		w.Header().Set("Cache-Control", "no-store")
+		w.WriteHeader(code)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 }
 
@@ -975,7 +1020,7 @@ func isAdminMiddleware(next bot.HandlerFunc) bot.HandlerFunc {
 // Запускается каждый день в 16:00 (формат cron: "0 16 * * *")
 // Отправляет уведомления пользователям об истечении подписки
 func subscriptionChecker(subService *notification.SubscriptionService, infraNotify *notification.InfraBillingNotifyService) *cron.Cron {
-	c := cron.New()
+	c := newCron()
 
 	// Добавляем задачу: каждый день в 16:00 проверять истечение подписок
 	_, err := c.AddFunc("0 16 * * *", func() {
@@ -1000,7 +1045,7 @@ func subscriptionChecker(subService *notification.SubscriptionService, infraNoti
 // lifecycleChecker - настраивает cron для lifecycle-уведомлений (no-connect, win-back, trial expiring)
 // Запускается по расписанию из LIFECYCLE_CRON (по умолчанию каждые 30 минут)
 func lifecycleChecker(lifecycleService *notification.LifecycleService) *cron.Cron {
-	c := cron.New()
+	c := newCron()
 
 	cronSchedule := config.LifecycleCron()
 	_, err := c.AddFunc(cronSchedule, func() {
@@ -1021,7 +1066,7 @@ func lifecycleChecker(lifecycleService *notification.LifecycleService) *cron.Cro
 // Ошибка тика не фатальна: следующий час подберёт всё, что не успело раскрыться,
 // потому что выборка идёт по состоянию строк, а не по времени последнего запуска.
 func partnerHoldReleaser(partners *database.PartnerRepository) *cron.Cron {
-	c := cron.New()
+	c := newCron()
 
 	_, err := c.AddFunc("0 * * * *", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -1047,7 +1092,7 @@ func partnerHoldReleaser(partners *database.PartnerRepository) *cron.Cron {
 // receiptRetryChecker - cron переотправки чеков «Мой налог», застрявших из-за
 // недоступности ФНС или протухшей авторизации. Расписание — MOYNALOG_RETRY_CRON.
 func receiptRetryChecker(receiptQueue *receipt.Service) *cron.Cron {
-	c := cron.New()
+	c := newCron()
 
 	_, err := c.AddFunc(config.MoynalogRetryCron(), func() {
 		// Своя граница по времени: тик не должен висеть вечно, если ФНС
@@ -1105,6 +1150,14 @@ func invoicePollJob(run func(ctx context.Context)) cron.Job {
 	}))
 }
 
+// newCron создаёт планировщик, у которого любая задача переживает свою панику
+// и не запускается повторно, пока не закончился предыдущий проход. У robfig/cron
+// по умолчанию нет ни того ни другого: паника в задаче роняла весь процесс.
+func newCron(opts ...cron.Option) *cron.Cron {
+	chain := cron.WithChain(cron.Recover(cronSlogLogger{}), cron.SkipIfStillRunning(cron.DiscardLogger))
+	return cron.New(append([]cron.Option{chain}, opts...)...)
+}
+
 // cronSlogLogger направляет сообщения cron (в первую очередь пойманные паники) в slog.
 type cronSlogLogger struct{}
 
@@ -1148,7 +1201,7 @@ func setupInvoiceChecker(
 	if !config.CryptoPayHasCredentials() && !yookPoll && !plategaPoll && !heleketPoll {
 		return nil
 	}
-	c := cron.New(cron.WithSeconds()) // Включаем поддержку секунд в расписании
+	c := newCron(cron.WithSeconds()) // Включаем поддержку секунд в расписании
 
 	// Задача для проверки счетов CryptoPay (каждые 5 секунд)
 	if config.CryptoPayHasCredentials() {
