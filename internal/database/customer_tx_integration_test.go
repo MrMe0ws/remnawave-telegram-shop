@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // UpdateFields по исчезнувшему клиенту не должен оставлять соединение занятым.
@@ -25,7 +25,7 @@ func TestCustomerUpdateFields_MissingCustomerDoesNotLeakConnection(t *testing.T)
 		t.Fatal(err)
 	}
 	cfg.MaxConns = 2
-	small, err := pgxpool.ConnectConfig(context.Background(), cfg)
+	small, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

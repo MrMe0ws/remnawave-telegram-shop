@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	tgverify "remnawave-tg-shop-bot/internal/cabinet/auth/telegram"
 	"remnawave-tg-shop-bot/internal/cabinet/mail"

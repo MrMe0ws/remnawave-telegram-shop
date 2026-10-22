@@ -40,7 +40,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/robfig/cron/v3"
 )
 
@@ -1122,7 +1122,7 @@ func initDatabase(ctx context.Context, connString string) (*pgxpool.Pool, error)
 	config.MaxConns = 20 // Максимальное количество одновременных соединений
 	config.MinConns = 5  // Минимальное количество соединений (поддерживается постоянно)
 
-	return pgxpool.ConnectConfig(ctx, config)
+	return pgxpool.NewWithConfig(ctx, config)
 }
 
 // setupInvoiceChecker - настраивает cron-задачи для проверки статуса счетов

@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func makePurchaseWithStatus(t *testing.T, pool *pgxpool.Pool, customerID int64, status PurchaseStatus) int64 {

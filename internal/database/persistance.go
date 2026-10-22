@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
+	migratepgx "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v4/pgxpool"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -35,13 +35,13 @@ func RunMigrations(ctx context.Context, migrationConfig *MigrationConfig, pool *
 		return fmt.Errorf("migrations directory does not exist: %s", absPath)
 	}
 
-	db, err := sql.Open("postgres", config.DadaBaseUrl())
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
+	// Миграции идут через тот же пул, что и приложение: раньше отдельное
+	// подключение через lib/pq брало адрес из конфига, и тест с собственным
+	// пулом мог накатить миграции не в ту базу. Закрытие db пул не закрывает.
+	db := stdlib.OpenDBFromPool(pool)
 	defer db.Close()
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := migratepgx.WithInstance(db, &migratepgx.Config{})
 	if err != nil {
 		return fmt.Errorf("could not create migration driver: %w", err)
 	}
@@ -50,11 +50,14 @@ func RunMigrations(ctx context.Context, migrationConfig *MigrationConfig, pool *
 		// ToSlash: на Windows путь с обратными слешами ломает разбор URL
 		// («C:\...» читается как хост с портом). На Linux путь не меняется.
 		fmt.Sprintf("file://%s", filepath.ToSlash(absPath)),
-		"postgres", driver,
+		"pgx5", driver,
 	)
 	if err != nil {
 		return fmt.Errorf("migration initialization failed: %w", err)
 	}
+	// Драйвер держит соединение из пула приложения до Close: без этого оно
+	// не возвращается, и pool.Close() при остановке ждёт его вечно.
+	defer func() { _, _ = m.Close() }()
 
 	version, dirty, verErr := m.Version()
 	if verErr != nil && verErr != migrate.ErrNilVersion {
@@ -119,23 +122,24 @@ func RunMigrations(ctx context.Context, migrationConfig *MigrationConfig, pool *
 	return nil
 }
 func GetMigrationVersion(migrationsPath string) (uint, bool, error) {
-	db, err := sql.Open("postgres", config.DadaBaseUrl())
+	db, err := sql.Open("pgx", config.DadaBaseUrl())
 	if err != nil {
 		return 0, false, fmt.Errorf("failed to connect to database: %w", err)
 	}
 	defer db.Close()
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := migratepgx.WithInstance(db, &migratepgx.Config{})
 	if err != nil {
 		return 0, false, fmt.Errorf("could not create migration driver: %w", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", migrationsPath),
-		"postgres", driver)
+		fmt.Sprintf("file://%s", filepath.ToSlash(migrationsPath)),
+		"pgx5", driver)
 	if err != nil {
 		return 0, false, fmt.Errorf("migration initialization failed: %w", err)
 	}
+	defer func() { _, _ = m.Close() }()
 
 	version, dirty, err := m.Version()
 	if err != nil && err != migrate.ErrNilVersion {

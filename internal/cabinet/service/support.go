@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"

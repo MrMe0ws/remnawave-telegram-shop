@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/go-telegram/bot"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"remnawave-tg-shop-bot/internal/broadcast"
 	adminauth "remnawave-tg-shop-bot/internal/cabinet/admin/auth"
