@@ -2907,13 +2907,16 @@
       "sync": {
         "title": "Synchronization",
         "subtitle": "Import users from Remnawave panel",
-        "description": "Sync imports users from the Remnawave panel into the local database. New users will be created, existing ones updated.",
+        "description": "Sync imports users from the Remnawave panel into the local database. New users will be created, existing ones updated. Customers missing from the panel are deleted only if they have no purchases, referrals, partner records or promo codes.",
         "trigger": "Synchronize",
-        "started": "Sync started",
         "cardTitle": "Import from Remnawave",
         "inProgress": "Synchronizing…",
         "error": "Failed to start synchronization",
-        "note": "Synchronization runs in the background. Results will appear in server logs."
+        "done": "Sync completed {{when}}",
+        "counts": "New: {{created}}, updated: {{updated}}, deleted: {{deleted}}, kept with history: {{kept}}",
+        "deleteBlocked": "Customers updated, but deletion skipped: too many customers are missing from the panel. Check the panel.",
+        "busy": "Sync is already running (started from the bot). Try again later.",
+        "failed": "Sync aborted, no customers deleted. Details in server logs."
       },
       "overview": {
         "title": "Overview",

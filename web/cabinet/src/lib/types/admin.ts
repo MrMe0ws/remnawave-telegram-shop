@@ -557,6 +557,17 @@ export interface AdminBroadcastAudienceDTO {
   count: number
 }
 
+/** Итог синхронизации с панелью, запущенной из кабинета. */
+export interface AdminSyncStatusDTO {
+  state: 'idle' | 'running' | 'ok' | 'delete_blocked' | 'busy' | 'failed'
+  created: number
+  updated: number
+  deleted: number
+  kept: number
+  started_at?: string
+  finished_at?: string
+}
+
 export interface AdminOkDTO {
   ok?: boolean
   status?: string

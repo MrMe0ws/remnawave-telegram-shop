@@ -1648,14 +1648,22 @@ func registerAPIRoutes(
 
 	// Admin Sync
 	if adminSync != nil {
+		// POST запускает синхронизацию в фоне, GET отдаёт итог последнего запуска.
 		api.Handle("/cabinet/api/admin/sync",
-			onlyPOST(middleware.Chain(
-				http.HandlerFunc(adminSync.TriggerSync),
-				middleware.RequireAuth(jwtIssuer),
-				middleware.RequireAdmin(adminChecker),
-				middleware.CSRF(),
-				middleware.RateLimit(adminAcctLim, accountKey("admin_sync")),
-			)),
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(adminSync.Status),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireAdmin(adminChecker),
+				),
+				http.MethodPost: middleware.Chain(
+					http.HandlerFunc(adminSync.TriggerSync),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireAdmin(adminChecker),
+					middleware.CSRF(),
+					middleware.RateLimit(adminAcctLim, accountKey("admin_sync")),
+				),
+			}),
 		)
 	}
 }

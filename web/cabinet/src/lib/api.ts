@@ -21,6 +21,7 @@ import type {
   AdminLoyaltyStatsDTO,
   AdminLoyaltyTierDTO,
   AdminOkDTO,
+  AdminSyncStatusDTO,
   AdminPaymentsDTO,
   AdminPaymentsListDTO,
   AdminPaymentDetailDTO,
@@ -1631,7 +1632,8 @@ export const api = {
   adminBotSettingsPatch: (body: { settings: Record<string, string> }) =>
     request<AdminBotSettingsPatchDTO>('PATCH', '/admin/settings', body),
 
-  adminSync: () => request<AdminOkDTO>('POST', '/admin/sync'),
+  adminSync: () => request<AdminSyncStatusDTO>('POST', '/admin/sync'),
+  adminSyncStatus: () => request<AdminSyncStatusDTO>('GET', '/admin/sync'),
 
   // Link / Merge
   linkTelegramStart: () =>

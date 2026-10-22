@@ -625,36 +625,81 @@ func (cr *CustomerRepository) UpdateBatch(ctx context.Context, customers []Custo
 	return nil
 }
 
-// DeleteByNotInTelegramIds удаляет строки customer, которых нет в списке telegram_id
-// из Remnawave-синхронизации. Web-only клиенты кабинета (is_web_only=TRUE) не трогаем —
-// у них нет telegram_id в ответе панели, иначе каждый Sync стирал бы кабинетских пользователей.
-// См. docs/cabinet/audit-telegram-id.md, раздел 1.6.
-func (cr *CustomerRepository) DeleteByNotInTelegramIds(ctx context.Context, telegramIDs []int64) error {
+// ErrSyncTooManyDeletions — синхронизация собралась удалить слишком большую
+// долю клиентов. Так выглядит сбой панели или смена формата её ответа, а не
+// реальная чистка, поэтому удаление не выполняется.
+var ErrSyncTooManyDeletions = errors.New("sync: too many customers missing from panel")
+
+// Предохранитель удаления: больше syncDeleteMaxPercent % бот-клиентов и при
+// этом больше syncDeleteFreeRows строк за один запуск не удаляем.
+const (
+	syncDeleteMaxPercent = 20
+	syncDeleteFreeRows   = 10
+)
+
+// syncDeletableWhere — клиенты, которых синхронизация вправе удалить: бот-клиент
+// (не web-only), не привязан к кабинету, его нет в панели ($1) и у него нет
+// истории. Покупки (включая неоплаченные счета), рефералы, партнёрка и
+// использованные промокоды ушли бы каскадом — вместе с деньгами и правом на
+// одноразовые бонусы, — поэтому такие строки остаются в БД.
+const syncDeletableWhere = `
+	c.is_web_only = FALSE
+	AND c.telegram_id <> ALL($1::bigint[])
+	AND NOT EXISTS (SELECT 1 FROM cabinet_account_customer_link l WHERE l.customer_id = c.id)
+	AND NOT EXISTS (SELECT 1 FROM purchase p WHERE p.customer_id = c.id)
+	AND NOT EXISTS (SELECT 1 FROM referral r WHERE r.referrer_id = c.telegram_id OR r.referee_id = c.telegram_id)
+	AND NOT EXISTS (SELECT 1 FROM partner pt WHERE pt.customer_id = c.id)
+	AND NOT EXISTS (SELECT 1 FROM partner_attribution pa WHERE pa.customer_id = c.id)
+	AND NOT EXISTS (SELECT 1 FROM promo_redemption pr WHERE pr.customer_id = c.id)`
+
+// SyncDeleteResult — итог удаления при синхронизации.
+type SyncDeleteResult struct {
+	Deleted int64 // удалено строк
+	Kept    int64 // нет в панели, но оставлены: есть история или привязка к кабинету
+}
+
+// DeleteMissingFromPanel удаляет клиентов, пропавших из панели (telegramIDs —
+// все Telegram ID из её ответа). Клиенты с историей, web-only и привязанные к
+// кабинету не удаляются. Если к удалению набирается слишком много строк,
+// ничего не удаляет и возвращает ErrSyncTooManyDeletions.
+func (cr *CustomerRepository) DeleteMissingFromPanel(ctx context.Context, telegramIDs []int64) (SyncDeleteResult, error) {
+	var res SyncDeleteResult
 	if len(telegramIDs) == 0 {
-		// Не удаляем клиентов, связанных с cabinet_account, даже если их нет в панели.
-		// Иначе после sync рвётся account<->customer link и кабинет bootstrap'ит synthetic web-only customer.
-		_, err := cr.pool.Exec(ctx, `
-			DELETE FROM customer c
-			 WHERE c.is_web_only = FALSE
-			   AND NOT EXISTS (
-			     SELECT 1 FROM cabinet_account_customer_link l WHERE l.customer_id = c.id
-			   )`)
-		if err != nil {
-			return fmt.Errorf("failed to delete customers: %w", err)
-		}
-		return nil
+		// Пустой список означал бы «удалить всех» — так выглядит только сбой.
+		return res, ErrSyncTooManyDeletions
 	}
-	_, err := cr.pool.Exec(ctx, `
-		DELETE FROM customer c
-		 WHERE c.is_web_only = FALSE
-		   AND c.telegram_id <> ALL($1::bigint[])
-		   AND NOT EXISTS (
-		     SELECT 1 FROM cabinet_account_customer_link l WHERE l.customer_id = c.id
-		   )`, telegramIDs)
+	tx, err := cr.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to delete customers: %w", err)
+		return res, fmt.Errorf("begin sync delete: %w", err)
 	}
-	return nil
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var missing, total, deletable int64
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE c.telegram_id <> ALL($1::bigint[])), count(*)
+		  FROM customer c
+		 WHERE c.is_web_only = FALSE`, telegramIDs).Scan(&missing, &total); err != nil {
+		return res, fmt.Errorf("count customers missing from panel: %w", err)
+	}
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM customer c WHERE `+syncDeletableWhere, telegramIDs).Scan(&deletable); err != nil {
+		return res, fmt.Errorf("count deletable customers: %w", err)
+	}
+	res.Kept = missing - deletable
+	if deletable > syncDeleteFreeRows && deletable*100 > total*syncDeleteMaxPercent {
+		return res, fmt.Errorf("%w: %d of %d", ErrSyncTooManyDeletions, deletable, total)
+	}
+	if deletable == 0 {
+		return res, nil
+	}
+	ct, err := tx.Exec(ctx, `DELETE FROM customer c WHERE `+syncDeletableWhere, telegramIDs)
+	if err != nil {
+		return res, fmt.Errorf("delete customers missing from panel: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return res, fmt.Errorf("commit sync delete: %w", err)
+	}
+	res.Deleted = ct.RowsAffected()
+	return res, nil
 }
 
 // HasCabinetLink проверяет, привязан ли customer к cabinet_account.
