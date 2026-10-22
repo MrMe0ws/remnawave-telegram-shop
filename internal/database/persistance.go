@@ -35,10 +35,19 @@ func RunMigrations(ctx context.Context, migrationConfig *MigrationConfig, pool *
 		return fmt.Errorf("migrations directory does not exist: %s", absPath)
 	}
 
-	// Миграции идут через тот же пул, что и приложение: раньше отдельное
+	// Миграции идут в ту же базу, что и пул приложения: раньше отдельное
 	// подключение через lib/pq брало адрес из конфига, и тест с собственным
-	// пулом мог накатить миграции не в ту базу. Закрытие db пул не закрывает.
-	db := stdlib.OpenDBFromPool(pool)
+	// пулом мог накатить миграции не в ту базу. Пул отдельный и короткий: у
+	// приложения statement_timeout, а индекс на большой таблице строится дольше.
+	migCfg := pool.Config()
+	migCfg.MinConns, migCfg.MaxConns = 0, 2
+	delete(migCfg.ConnConfig.RuntimeParams, "statement_timeout")
+	migPool, err := pgxpool.NewWithConfig(ctx, migCfg)
+	if err != nil {
+		return fmt.Errorf("migration pool: %w", err)
+	}
+	defer migPool.Close()
+	db := stdlib.OpenDBFromPool(migPool)
 	defer db.Close()
 
 	driver, err := migratepgx.WithInstance(db, &migratepgx.Config{})

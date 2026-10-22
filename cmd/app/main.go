@@ -1122,6 +1122,18 @@ func initDatabase(ctx context.Context, connString string) (*pgxpool.Pool, error)
 	config.MaxConns = 20 // Максимальное количество одновременных соединений
 	config.MinConns = 5  // Минимальное количество соединений (поддерживается постоянно)
 
+	// Пул один на всё: бот, кабинет, cron, статистика. Без ограничений один
+	// зависший запрос или забытая открытой транзакция держали бы соединение и
+	// блокировки сколько угодно, и пул в 20 соединений кончался бы. Значения из
+	// строки подключения (options=...) имеют приоритет. Миграции идут отдельным
+	// пулом без statement_timeout — см. database.RunMigrations.
+	if _, ok := config.ConnConfig.RuntimeParams["statement_timeout"]; !ok {
+		config.ConnConfig.RuntimeParams["statement_timeout"] = "30s"
+	}
+	if _, ok := config.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"]; !ok {
+		config.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = "5min"
+	}
+
 	return pgxpool.NewWithConfig(ctx, config)
 }
 
