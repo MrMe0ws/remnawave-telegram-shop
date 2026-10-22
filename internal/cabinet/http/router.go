@@ -908,15 +908,21 @@ func registerAPIRoutes(
 				),
 			}),
 		)
-		// GET /auth/google/confirm?token=... — подтверждение привязки по ссылке из письма.
-		api.Handle("/cabinet/api/auth/google/confirm",
-			methodRouter(map[string]http.Handler{
-				http.MethodGet: middleware.Chain(
-					http.HandlerFunc(oauthH.GoogleLinkConfirm),
-					middleware.RateLimit(oauthIPLim, ipKey("google_confirm")),
-				),
-			}),
-		)
+		// GET /auth/oauth/confirm?token=... — страница подтверждения привязки по
+		// ссылке из письма (Google/Яндекс/VK), POST — сама привязка. Старый путь
+		// /auth/google/confirm оставлен для писем, отправленных до обновления.
+		oauthConfirm := methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(oauthH.GoogleLinkConfirm),
+				middleware.RateLimit(oauthIPLim, ipKey("google_confirm")),
+			),
+			http.MethodPost: middleware.Chain(
+				http.HandlerFunc(oauthH.GoogleLinkConfirm),
+				middleware.RateLimit(oauthIPLim, ipKey("google_confirm")),
+			),
+		})
+		api.Handle("/cabinet/api/auth/oauth/confirm", oauthConfirm)
+		api.Handle("/cabinet/api/auth/google/confirm", oauthConfirm)
 		// POST /auth/telegram — Widget или MiniApp. Rate-limit 10/min/IP.
 		api.Handle("/cabinet/api/auth/telegram",
 			onlyPOST(middleware.Chain(

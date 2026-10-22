@@ -71,7 +71,9 @@
       "emailPlaceholder": "you@example.com",
       "passwordPlaceholder": "••••••••",
       "emailVerifiedOk": "Email подтверждён. Войдите с паролем.",
-      "googleLinkPending": "Этот Google-аккаунт совпадает с уже зарегистрированным email в кабинете. На {{email}} отправлено письмо — перейдите по ссылке в нём, чтобы войти через Google, либо войдите по паролю ниже.",
+      "googleLinkPending": "Этот аккаунт {{provider}} совпадает с уже зарегистрированным email в кабинете. На {{email}} отправлено письмо — перейдите по ссылке в нём, чтобы войти через {{provider}}, либо войдите по паролю ниже.",
+      "oauthEmailConflict": "Почта из {{provider}} уже занята другим аккаунтом кабинета. Войдите в него по паролю или восстановите пароль.",
+      "oauthAccountBlocked": "Аккаунт заблокирован. Обратитесь в поддержку.",
       "telegramWidgetLoadError": "Не удалось загрузить виджет Telegram",
       "telegramWidgetLoading": "Загрузка виджета Telegram…"
     },

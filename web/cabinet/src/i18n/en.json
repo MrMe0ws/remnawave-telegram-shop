@@ -71,7 +71,9 @@
       "emailPlaceholder": "you@example.com",
       "passwordPlaceholder": "••••••••",
       "emailVerifiedOk": "Email verified. Sign in with your password.",
-      "googleLinkPending": "This Google account matches an existing cabinet email. We sent a message to {{email}} — open the link there to finish Google sign-in, or sign in with your password below.",
+      "googleLinkPending": "This {{provider}} account matches an existing cabinet email. We sent a message to {{email}} — open the link there to finish signing in with {{provider}}, or sign in with your password below.",
+      "oauthEmailConflict": "The email from {{provider}} already belongs to another cabinet account. Sign in to it with your password or reset the password.",
+      "oauthAccountBlocked": "This account is blocked. Please contact support.",
       "telegramWidgetLoadError": "Could not load the Telegram widget",
       "telegramWidgetLoading": "Loading Telegram widget…"
     },
