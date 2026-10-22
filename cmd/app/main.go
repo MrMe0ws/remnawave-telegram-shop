@@ -14,6 +14,7 @@ import (
 	"remnawave-tg-shop-bot/internal/broadcast"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	cabinethttp "remnawave-tg-shop-bot/internal/cabinet/http"
+	cabrepo "remnawave-tg-shop-bot/internal/cabinet/repository"
 	cabstartup "remnawave-tg-shop-bot/internal/cabinet/startup"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
@@ -282,6 +283,12 @@ func main() {
 	partnerHoldCronScheduler.Start()
 	schedulers = append(schedulers, partnerHoldCronScheduler)
 	slog.Info("Partner hold release cron started", "holdDays", config.PartnerHoldDays())
+
+	// Истёкшие сессии и коды кабинета раньше копились вечно. Таблицы есть и
+	// без CABINET_ENABLED (миграции общие), пустая таблица делает тик бесплатным.
+	cabinetCleanupScheduler := cabinetExpiredCleaner(pool)
+	cabinetCleanupScheduler.Start()
+	schedulers = append(schedulers, cabinetCleanupScheduler)
 
 	// Инициализация сервиса синхронизации с Remnawave
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
@@ -1087,6 +1094,29 @@ func partnerHoldReleaser(partners *database.PartnerRepository) *cron.Cron {
 
 	if err != nil {
 		panic(fmt.Sprintf("Failed to add partner hold cron job: %v", err))
+	}
+	return c
+}
+
+// cabinetExpiredCleaner — раз в сутки удаляет сессии и одноразовые коды
+// кабинета, истёкшие больше недели назад.
+func cabinetExpiredCleaner(pool *pgxpool.Pool) *cron.Cron {
+	c := newCron()
+	_, err := c.AddFunc("30 4 * * *", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		deleted, err := cabrepo.PurgeExpired(ctx, pool, time.Now().Add(-cabrepo.ExpiredRetention))
+		if err != nil {
+			slog.Error("Error purging expired cabinet sessions and codes", "error", err)
+		}
+		for table, n := range deleted {
+			if n > 0 {
+				slog.Info("Purged expired cabinet rows", "table", table, "rows", n)
+			}
+		}
+	})
+	if err != nil {
+		panic(fmt.Sprintf("Failed to add cabinet cleanup cron job: %v", err))
 	}
 	return c
 }
