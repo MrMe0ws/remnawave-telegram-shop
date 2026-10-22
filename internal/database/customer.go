@@ -502,26 +502,16 @@ func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, update
 		return fmt.Errorf("failed to build update query: %w", err)
 	}
 
-	tx, err := cr.pool.Begin(ctx)
+	// Один UPDATE — транзакция не нужна. Раньше она была, и при rowsAffected == 0
+	// (клиента удалили между чтением и записью) возврат шёл без Rollback:
+	// соединение навсегда оставалось в открытой транзакции. Метод зовётся на
+	// каждый апдейт бота, и MaxConns таких случаев останавливали бот и кабинет.
+	result, err := cr.pool.Exec(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-
-	result, err := tx.Exec(ctx, sql, args...)
-	if err != nil {
-		if err := tx.Rollback(ctx); err != nil {
-			return fmt.Errorf("failed to rollback transaction: %w", err)
-		}
 		return fmt.Errorf("failed to update customer: %w", err)
 	}
-
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
+	if result.RowsAffected() == 0 {
 		return fmt.Errorf("no customer found with id: %s", utils.MaskHalfInt64(id))
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
 }
@@ -559,67 +549,76 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 	return customers, nil
 }
 
+// customerBatchRows — строк в одном запросе CreateBatch/UpdateBatch. У PostgreSQL
+// предел 65535 параметров на запрос, и без разбиения синхронизация падала бы
+// примерно на 16 тыс. новых клиентов (4 параметра на строку).
+const customerBatchRows = 1000
+
+// CreateBatch вставляет клиентов пачками в одной транзакции: либо все, либо никто.
 func (cr *CustomerRepository) CreateBatch(ctx context.Context, customers []Customer) error {
 	if len(customers) == 0 {
 		return nil
 	}
-	builder := sq.Insert("customer").
-		Columns("telegram_id", "expire_at", "language", "subscription_link").
-		PlaceholderFormat(sq.Dollar)
-	for _, cust := range customers {
-		builder = builder.Values(cust.TelegramID, cust.ExpireAt, cust.Language, cust.SubscriptionLink)
-	}
-	sqlStr, args, err := builder.ToSql()
-	if err != nil {
-		return fmt.Errorf("failed to build batch insert query: %w", err)
-	}
-
 	tx, err := cr.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer func() { _ = tx.Rollback(ctx) }()
 
-	_, err = cr.pool.Exec(ctx, sqlStr, args...)
-	if err != nil {
-		if err := tx.Rollback(ctx); err != nil {
-			return fmt.Errorf("failed to rollback transaction: %w", err)
+	for start := 0; start < len(customers); start += customerBatchRows {
+		chunk := customers[start:min(start+customerBatchRows, len(customers))]
+		builder := sq.Insert("customer").
+			Columns("telegram_id", "expire_at", "language", "subscription_link").
+			PlaceholderFormat(sq.Dollar)
+		for _, cust := range chunk {
+			builder = builder.Values(cust.TelegramID, cust.ExpireAt, cust.Language, cust.SubscriptionLink)
 		}
-		return fmt.Errorf("failed to execute batch insert: %w", err)
+		sqlStr, args, err := builder.ToSql()
+		if err != nil {
+			return fmt.Errorf("failed to build batch insert query: %w", err)
+		}
+		// Через tx, а не pool: раньше запрос шёл мимо транзакции, и она лишь
+		// держала второе соединение.
+		if _, err := tx.Exec(ctx, sqlStr, args...); err != nil {
+			return fmt.Errorf("failed to execute batch insert: %w", err)
+		}
 	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	return nil
 }
 
+// UpdateBatch обновляет срок и ссылку подписки пачками в одной транзакции.
 func (cr *CustomerRepository) UpdateBatch(ctx context.Context, customers []Customer) error {
 	if len(customers) == 0 {
 		return nil
 	}
-	query := "UPDATE customer SET expire_at = c.expire_at, subscription_link = c.subscription_link FROM (VALUES "
-	var args []interface{}
-	for i, cust := range customers {
-		if i > 0 {
-			query += ", "
-		}
-		query += fmt.Sprintf("($%d::bigint, $%d::timestamp, $%d::text)", i*3+1, i*3+2, i*3+3)
-		args = append(args, cust.TelegramID, cust.ExpireAt, cust.SubscriptionLink)
-	}
-	query += ") AS c(telegram_id, expire_at, subscription_link) WHERE customer.telegram_id = c.telegram_id"
-
 	tx, err := cr.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	_, err = cr.pool.Exec(ctx, query, args...)
-	if err != nil {
-		if err := tx.Rollback(ctx); err != nil {
-			return fmt.Errorf("failed to rollback transaction: %w", err)
-		}
-		return fmt.Errorf("failed to execute batch update: %w", err)
-	}
+	defer func() { _ = tx.Rollback(ctx) }()
 
+	for start := 0; start < len(customers); start += customerBatchRows {
+		chunk := customers[start:min(start+customerBatchRows, len(customers))]
+		var query strings.Builder
+		query.WriteString("UPDATE customer SET expire_at = c.expire_at, subscription_link = c.subscription_link FROM (VALUES ")
+		args := make([]interface{}, 0, len(chunk)*3)
+		for i, cust := range chunk {
+			if i > 0 {
+				query.WriteString(", ")
+			}
+			// timestamptz, как у колонки: с ::timestamp часовой пояс отбрасывался,
+			// и при TimeZone сервера не UTC срок подписки сдвигался.
+			fmt.Fprintf(&query, "($%d::bigint, $%d::timestamptz, $%d::text)", i*3+1, i*3+2, i*3+3)
+			args = append(args, cust.TelegramID, cust.ExpireAt, cust.SubscriptionLink)
+		}
+		query.WriteString(") AS c(telegram_id, expire_at, subscription_link) WHERE customer.telegram_id = c.telegram_id")
+		if _, err := tx.Exec(ctx, query.String(), args...); err != nil {
+			return fmt.Errorf("failed to execute batch update: %w", err)
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
