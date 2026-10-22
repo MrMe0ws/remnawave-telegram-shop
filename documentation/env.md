@@ -58,7 +58,7 @@
 
 | Переменная | Описание |
 |------------|----------|
-| `DATABASE_URL` | Строка подключения PostgreSQL |
+| `DATABASE_URL` | Строка подключения PostgreSQL. Если в ней не заданы `statement_timeout` / `idle_in_transaction_session_timeout`, бот ставит 30 с и 5 мин |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Для docker-compose |
 | `HEALTH_CHECK_PORT` | Порт HTTP-сервера бота |
 
@@ -306,6 +306,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_PROFILE_DELETE_ENABLED` | Самоудаление профиля |
 | `CABINET_PUBLIC_URL` | Публичный URL кабинета |
 | `CABINET_ALLOWED_ORIGINS` | CORS allowlist |
+| `CABINET_TRUSTED_PROXIES` | Прокси, которым кабинет верит в `X-Forwarded-For` сверх loopback и частных сетей (CIDR/адреса через запятую). Нужен, только если перед nginx стоит ещё прокси с публичным адресом, например CDN; ошибка в значении останавливает старт |
 | `CABINET_JWT_SECRET` | Секрет JWT (≥ 32 байт) |
 | `CABINET_COOKIE_DOMAIN` | Домен refresh-cookie; пусто — из `CABINET_PUBLIC_URL` |
 | `CABINET_ACCESS_TTL_MINUTES` / `CABINET_REFRESH_TTL_DAYS` | TTL токенов |
@@ -333,7 +334,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_TELEGRAM_LOGIN_BOT_USERNAME` / `CABINET_TELEGRAM_LOGIN_BOT_TOKEN` | Legacy Widget |
 | `CABINET_TELEGRAM_OIDC_*` | Telegram OAuth 2.0 |
 | `CABINET_TURNSTILE_*` | Cloudflare Turnstile |
-| `CABINET_METRICS_USER` / `CABINET_METRICS_PASSWORD` | Basic-auth для `/cabinet/api/metrics` |
+| `CABINET_METRICS_USER` / `CABINET_METRICS_PASSWORD` | Basic-auth для `/cabinet/api/metrics`. Оба пустые — метрики выключены (404) |
 
 ---
 
