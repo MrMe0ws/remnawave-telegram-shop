@@ -111,6 +111,14 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// purchaseId берётся из metadata платежа — сверяем, что платёж именно тот,
+	// что выставлен этой покупке, и на ту же сумму.
+	if err := payment.MatchesPurchase(purchase); err != nil {
+		slog.Error("yookassa webhook: payment does not match purchase", "purchase_id", purchaseID, "payment_id", payment.ID, "error", err)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if payment.IsCancelled() {
 		if err := h.processor.CancelYookassaPayment(purchaseID); err != nil {
 			slog.Error("yookassa webhook: cancel failed", "purchase_id", purchaseID, "error", err)

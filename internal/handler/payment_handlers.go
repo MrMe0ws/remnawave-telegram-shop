@@ -577,35 +577,44 @@ func (h Handler) PaymentCallbackHandler(ctx context.Context, b *bot.Bot, update 
 }
 
 func (h Handler) PreCheckoutCallbackHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	_, err := b.AnswerPreCheckoutQuery(ctx, &bot.AnswerPreCheckoutQueryParams{
-		PreCheckoutQueryID: update.PreCheckoutQuery.ID,
-		OK:                 true,
-	})
+	q := update.PreCheckoutQuery
+	// Последний шанс отказать до списания звёзд: раньше ответ был всегда OK,
+	// и оплачивались отменённые или чужие по сумме счета.
+	params := &bot.AnswerPreCheckoutQueryParams{PreCheckoutQueryID: q.ID, OK: true}
+	purchase, _, err := h.checkStarsPurchase(ctx, q.InvoicePayload, q.Currency, q.TotalAmount)
+	if err == nil && purchase.Status != database.PurchaseStatusNew && purchase.Status != database.PurchaseStatusPending {
+		err = fmt.Errorf("purchase %d status %q", purchase.ID, purchase.Status)
+	}
 	if err != nil {
-		slog.Error("Error sending answer pre checkout query", err)
+		slog.Warn("stars pre-checkout rejected", "error", err, "user_id", q.From.ID)
+		params.OK = false
+		params.ErrorMessage = h.translation.GetText(q.From.LanguageCode, "stars_invoice_unavailable")
+	}
+	if _, err := b.AnswerPreCheckoutQuery(ctx, params); err != nil {
+		slog.Error("Error sending answer pre checkout query", "error", err)
 	}
 }
 
 func (h Handler) SuccessPaymentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	payload := strings.Split(update.Message.SuccessfulPayment.InvoicePayload, "&")
-	purchaseId, err := strconv.Atoi(payload[0])
-	username := payload[1]
+	sp := update.Message.SuccessfulPayment
+	purchase, username, err := h.checkStarsPurchase(ctx, sp.InvoicePayload, sp.Currency, sp.TotalAmount)
 	if err != nil {
-		slog.Error("Error parsing purchase id", err)
+		// Звёзды уже списаны: зачислять несовпавший платёж нельзя, а решить
+		// (вернуть или выдать вручную) должен админ — по charge id.
+		slog.Error("stars payment does not match purchase — check manually", "error", err,
+			"telegram_charge_id", sp.TelegramPaymentChargeID, "user_id", update.Message.From.ID)
 		return
 	}
 
 	ctxWithUsername := context.WithValue(ctx, remnawave.CtxKeyUsername, username)
-	sp := update.Message.SuccessfulPayment
 	ctxPaid := payment.WithStarsNotifyMeta(ctxWithUsername, payment.StarsNotifyMeta{
 		TelegramPaymentChargeID: sp.TelegramPaymentChargeID,
 		ProviderPaymentChargeID: sp.ProviderPaymentChargeID,
 		TotalAmount:             sp.TotalAmount,
 		Currency:                sp.Currency,
 	})
-	err = h.paymentService.ProcessPurchaseById(ctxPaid, int64(purchaseId))
-	if err != nil {
-		slog.Error("Error processing purchase", err)
+	if err := h.paymentService.ProcessPurchaseById(ctxPaid, purchase.ID); err != nil {
+		slog.Error("Error processing purchase", "error", err, "purchaseId", purchase.ID)
 	}
 }
 

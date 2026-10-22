@@ -850,7 +850,7 @@ func main() {
 		mux.Handle(config.GetYookasaWebHookURL(), yookasa.NewWebhookHandler(yookasaClient, paymentService, purchaseRepository))
 	}
 	if config.IsPlategaEnabled() && strings.TrimSpace(config.GetPlategaWebHookURL()) != "" {
-		mux.Handle(config.GetPlategaWebHookURL(), platega.NewWebhookHandler(purchaseRepository, paymentService, config.PlategaMerchantID(), config.PlategaSecret()))
+		mux.Handle(config.GetPlategaWebHookURL(), platega.NewWebhookHandler(purchaseRepository, paymentService, plategaClient, config.PlategaMerchantID(), config.PlategaSecret()))
 	}
 	// Монтируем по наличию реквизитов, а не по тумблеру: способ оплаты можно
 	// включить из админки без рестарта, и тогда счета создавались бы, а колбэк
@@ -1320,6 +1320,11 @@ func checkYookasaInvoice(
 			continue
 		}
 
+		if err := invoice.MatchesPurchase(&purchase); err != nil {
+			slog.Error("YooKassa payment does not match purchase", "purchaseId", purchase.ID, "error", err)
+			continue
+		}
+
 		// Если счет отменен, отменяем покупку в нашей системе
 		if invoice.IsCancelled() {
 			err := paymentService.CancelYookassaPayment(purchase.ID)
@@ -1398,6 +1403,10 @@ func checkPlategaInvoice(
 					slog.Error("platega poll: cancel", "purchaseId", purchase.ID, "error", cancelErr)
 				}
 			case platega.StatusConfirmed:
+				if err := platega.CheckTransaction(tx, &purchase); err != nil {
+					slog.Error("platega poll: transaction does not match purchase", "purchaseId", purchase.ID, "error", err)
+					continue
+				}
 				if err := paymentService.ProcessPurchaseById(ctx, purchase.ID); err != nil {
 					logProcessPurchaseError("platega poll: process purchase", err, "purchaseId", purchase.ID)
 				} else {

@@ -814,6 +814,13 @@ func (s *Service) ConfirmEmail(ctx context.Context, token, email, refreshFromCoo
 	if err := s.accounts.MarkEmailVerified(ctx, ev.AccountID); err != nil {
 		return nil, err
 	}
+	// Перечитываем: токен выписывается по acc, а прочитан он до подтверждения.
+	// Без этого в выданном access-токене было email_verified=false, и до
+	// следующего refresh кабинет получал 403 на подписке и оплате.
+	acc, err = s.accounts.FindByID(ctx, ev.AccountID)
+	if err != nil {
+		return nil, fmt.Errorf("confirm: reload account: %w", err)
+	}
 	// Defensive bootstrap: если линк customer отсутствует (редкий случай), подшьём.
 	s.ensureCustomer(ctx, acc.ID, acc.Language)
 	if s.ids != nil {

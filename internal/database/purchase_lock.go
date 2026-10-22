@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Блокировка обработки покупки.
@@ -46,19 +48,25 @@ func purchaseLockKey(purchaseID int64) int32 {
 // нужно перечитывать уже после захвата: предыдущий держатель мог успеть
 // записать paid.
 func (pr *PurchaseRepository) LockForProcessing(ctx context.Context, purchaseID int64) (unlock func(), err error) {
-	conn, err := pr.pool.Acquire(ctx)
+	return tryAdvisoryLock(ctx, pr.pool, purchaseLockClass, purchaseLockKey(purchaseID), ErrPurchaseLocked, "purchase")
+}
+
+// tryAdvisoryLock берёт сессионную advisory-блокировку (class, key) без
+// ожидания: занята — сразу errLocked. Блокировка держится на отдельном
+// соединении пула до вызова unlock.
+func tryAdvisoryLock(ctx context.Context, pool *pgxpool.Pool, class, key int32, errLocked error, what string) (unlock func(), err error) {
+	conn, err := pool.Acquire(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("purchase lock: acquire connection: %w", err)
+		return nil, fmt.Errorf("%s lock: acquire connection: %w", what, err)
 	}
-	key := purchaseLockKey(purchaseID)
 	var locked bool
-	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1::int4, $2::int4)`, purchaseLockClass, key).Scan(&locked); err != nil {
+	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1::int4, $2::int4)`, class, key).Scan(&locked); err != nil {
 		conn.Release()
-		return nil, fmt.Errorf("purchase lock: %w", err)
+		return nil, fmt.Errorf("%s lock: %w", what, err)
 	}
 	if !locked {
 		conn.Release()
-		return nil, ErrPurchaseLocked
+		return nil, errLocked
 	}
 
 	var once sync.Once
@@ -69,18 +77,32 @@ func (pr *PurchaseRepository) LockForProcessing(ctx context.Context, purchaseID 
 			uctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			var released bool
-			err := conn.QueryRow(uctx, `SELECT pg_advisory_unlock($1::int4, $2::int4)`, purchaseLockClass, key).Scan(&released)
+			err := conn.QueryRow(uctx, `SELECT pg_advisory_unlock($1::int4, $2::int4)`, class, key).Scan(&released)
 			if err != nil || !released {
 				// Соединение с неизвестным состоянием блокировки в пул не
-				// возвращаем: блокировка жила бы, пока его не закроют, и покупка
-				// до тех пор не обрабатывалась бы. Закрытое соединение пул выбросит.
-				slog.Error("purchase lock: unlock failed, dropping connection",
-					"purchase_id", purchaseID, "released", released, "error", err)
+				// возвращаем: блокировка жила бы, пока его не закроют. Закрытое
+				// соединение пул выбросит.
+				slog.Error(what+" lock: unlock failed, dropping connection",
+					"key", key, "released", released, "error", err)
 				_ = conn.Conn().Close(uctx)
 			}
 			conn.Release()
 		})
 	}, nil
+}
+
+// ErrTrialLocked — пробный период этому клиенту прямо сейчас выдаёт другой запрос.
+var ErrTrialLocked = errors.New("trial activation is already in progress")
+
+// trialLockClass — класс ключа блокировки выдачи пробного периода.
+const trialLockClass int32 = 0x7472696c // "tril"
+
+// LockTrial захватывает выдачу пробного периода клиенту. Проверку «пробный ещё
+// не выдан» нужно делать уже после захвата: без блокировки несколько быстрых
+// нажатий (каждый апдейт Telegram — своя горутина) проходили проверку разом и
+// складывали пробные дни.
+func (cr *CustomerRepository) LockTrial(ctx context.Context, customerID int64) (unlock func(), err error) {
+	return tryAdvisoryLock(ctx, cr.pool, trialLockClass, int32(uint32(customerID)), ErrTrialLocked, "trial")
 }
 
 // CancelIfOpen переводит покупку в cancel, только если она ещё new или pending,

@@ -172,6 +172,7 @@
   "invoice_description": "Subscription",
   "invoice_label": "Subscription",
   "invoice_title": "Subscription",
+  "stars_invoice_unavailable": "This invoice is no longer valid. Please create a new one in the bot.",
   "trial_button": "🔥 Try free",
   "trial_activated": "🔥 Trial activated",
   "trial_text": "🎁 You have a free 7-day subscription available!\n\n📊 Trial plan terms:\n• 3 GB of traffic per day\n• 1 device\n\n⚠️ Please note:\nNot all servers are available on the trial plan\n<b>Premium servers</b> and <b>Whitelist Bypass</b>  are only available on the Premium plan",

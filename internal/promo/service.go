@@ -374,10 +374,34 @@ func (s *Service) getActivePendingDiscount(ctx context.Context, customerID int64
 }
 
 // PendingDiscountForPayment returns percent 0-100 if a discount applies; clears expired pending discounts.
+//
+// Скидка гасится только при оплате, поэтому каждый неоплаченный счёт со
+// скидкой резервирует одно использование. Раньше скидку «на одну оплату»
+// можно было получить на любом числе заранее созданных счетов и оплатить их все.
 func (s *Service) PendingDiscountForPayment(ctx context.Context, customerID int64) (percent int, promoCodeID int64, err error) {
 	d, err := s.getActivePendingDiscount(ctx, customerID)
 	if err != nil || d == nil {
 		return 0, 0, err
+	}
+	if d.SubscriptionPaymentsRemaining != database.PendingDiscountUnlimitedPayments {
+		open, err := s.PromoRepo.CountOpenPurchasesWithPromo(ctx, customerID, d.PromoCodeID)
+		if err != nil {
+			return 0, 0, err
+		}
+		if open >= d.SubscriptionPaymentsRemaining {
+			// Брошенные счета Stars не истекают — освобождаем их и считаем заново.
+			if n, cerr := s.PromoRepo.CancelOpenTelegramPurchasesWithPromo(ctx, customerID, d.PromoCodeID); cerr != nil {
+				slog.Error("cancel stale stars invoices with promo", "error", cerr)
+			} else if n > 0 {
+				open, err = s.PromoRepo.CountOpenPurchasesWithPromo(ctx, customerID, d.PromoCodeID)
+				if err != nil {
+					return 0, 0, err
+				}
+			}
+		}
+		if open >= d.SubscriptionPaymentsRemaining {
+			return 0, 0, nil
+		}
 	}
 	return d.Percent, d.PromoCodeID, nil
 }

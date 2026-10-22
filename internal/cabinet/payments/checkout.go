@@ -387,6 +387,9 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		kind, amt, pk, early, rerr := payment.ResolveTariffPurchase(
 			ctx, s.tariffs, customer, *tariffID, period, invoiceType == database.InvoiceTypeTelegram,
 		)
+		if errors.Is(rerr, payment.ErrTariffUnavailable) {
+			return nil, fmt.Errorf("%w: tariff is not available", ErrInvalidInput)
+		}
 		if rerr != nil {
 			return nil, fmt.Errorf("payments: resolve tariff: %w", rerr)
 		}
@@ -907,6 +910,9 @@ func (s *CheckoutService) resolveAmount(
 		_, amt, kind, isEarly, rerr := payment.ResolveTariffPurchase(
 			ctx, s.tariffs, customer, *req.TariffID, req.Period, invoiceStars,
 		)
+		if errors.Is(rerr, payment.ErrTariffUnavailable) {
+			return 0, nil, nil, 0, fmt.Errorf("%w: tariff is not available", ErrInvalidInput)
+		}
 		if rerr != nil {
 			return 0, nil, nil, 0, fmt.Errorf("payments: resolve tariff: %w", rerr)
 		}

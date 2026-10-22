@@ -187,6 +187,7 @@
   "invoice_description": "Подписка",
   "invoice_label": "Подписка",
   "invoice_title": "Подписка",
+  "stars_invoice_unavailable": "Этот счёт больше не действует. Создайте новый в боте.",
   "trial_button": {
     "text": "Попробовать бесплатно",
     "emoji_id": "5424972470023104089",

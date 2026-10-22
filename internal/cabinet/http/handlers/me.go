@@ -1300,6 +1300,10 @@ func (h *MeHandler) PostTrialActivate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	linkURL, err := h.payments.ActivateTrial(r.Context(), cust.TelegramID)
+	if errors.Is(err, payment.ErrTrialAlreadyUsed) {
+		http.Error(w, "trial already used", http.StatusConflict)
+		return
+	}
 	if err != nil {
 		slog.Error("me trial: activate failed", "customer_id", cust.ID, "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)

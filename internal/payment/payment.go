@@ -452,7 +452,9 @@ func (s PaymentService) processDevicePurchase(ctx context.Context, purchase *dat
 			},
 		})
 		if err != nil {
-			return err
+			// Покупка уже оплачена и выдана: недоставленное сообщение (например,
+			// бот заблокирован) не должно отменять промокод, опыт и уведомления.
+			slog.Warn("payment DM not delivered", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 		}
 	}
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
@@ -704,12 +706,17 @@ func (s PaymentService) finalizePurchase(ctx context.Context, purchase *database
 			},
 		})
 		if err != nil {
-			return err
+			// Покупка уже помечена оплаченной (MarkAsPaid выше), повтор вебхука её
+			// не обработает. Раньше недоставленное сообщение — чаще всего бот
+			// заблокирован — обрывало всё ниже: реферальный бонус, партнёрскую
+			// комиссию, промокод, опыт лояльности и уведомление админу.
+			slog.Warn("payment DM not delivered", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 		}
 	}
 
 	if err := s.applyReferralBonus(ctx, purchase, customer); err != nil {
-		return err
+		// По той же причине ошибка бонуса не должна отменять партнёрку и остальное.
+		slog.Error("referral bonus after payment", "error", err, "purchase_id", utils.MaskHalfInt64(purchase.ID))
 	}
 	s.applyPartnerCommission(ctx, purchase, customer)
 	s.clearPromoDiscountIfUsed(ctx, purchase, customer)
@@ -1516,8 +1523,9 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 	}
 	purchaseId, err = s.purchaseRepository.Create(ctx, pur)
 	if err != nil {
+		// Раньше здесь возвращался nil: вызывающий получал пустую ссылку без ошибки.
 		slog.Error("Error creating purchase", "error", err)
-		return "", 0, nil
+		return "", 0, err
 	}
 
 	username, _ := ctx.Value(remnawave.CtxKeyUsername).(string)
@@ -1533,6 +1541,14 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 		Description: s.translation.GetText(customer.Language, "invoice_description"),
 		Payload:     fmt.Sprintf("%d&%s", purchaseId, username),
 	})
+	if err != nil {
+		// Без проверки покупка уходила в pending с пустой ссылкой.
+		slog.Error("Error creating telegram invoice link", "error", err, "purchaseId", purchaseId)
+		if _, cerr := s.purchaseRepository.CancelIfOpen(ctx, purchaseId); cerr != nil {
+			slog.Error("Error canceling purchase after invoice link failure", "error", cerr, "purchaseId", purchaseId)
+		}
+		return "", 0, err
+	}
 
 	updates := map[string]interface{}{
 		"status":             database.PurchaseStatusPending,
@@ -1548,6 +1564,9 @@ func (s PaymentService) createTelegramInvoice(ctx context.Context, amount float6
 	return invoiceUrl, purchaseId, nil
 }
 
+// ErrTrialAlreadyUsed — пробный период уже выдан (или выдаётся параллельным запросом).
+var ErrTrialAlreadyUsed = errors.New("trial already used")
+
 func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (string, error) {
 	if config.TrialDays() == 0 {
 		return "", nil
@@ -1559,6 +1578,27 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	}
 	if customer == nil {
 		return "", fmt.Errorf("customer %d not found", telegramId)
+	}
+	// Проверка «пробный ещё не выдан» — под блокировкой по клиенту и по
+	// перечитанной строке: раньше её делали вызывающие без блокировки, и
+	// несколько быстрых нажатий складывали пробные дни.
+	unlock, err := s.customerRepository.LockTrial(ctx, customer.ID)
+	if err != nil {
+		if errors.Is(err, database.ErrTrialLocked) {
+			return "", ErrTrialAlreadyUsed
+		}
+		return "", err
+	}
+	defer unlock()
+	customer, err = s.customerRepository.FindById(ctx, customer.ID)
+	if err != nil {
+		return "", err
+	}
+	if customer == nil {
+		return "", fmt.Errorf("customer %d not found", telegramId)
+	}
+	if customer.SubscriptionLink != nil && strings.TrimSpace(*customer.SubscriptionLink) != "" {
+		return "", ErrTrialAlreadyUsed
 	}
 	rwCtx := s.withRemnawavePanelUsername(ctx, customer)
 	rwCtx = s.ctxWithTelegramUsernameIfMissing(rwCtx, customer)
