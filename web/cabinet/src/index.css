@@ -2884,22 +2884,28 @@ html:not(.dark)[data-cabinet-decor="neon"] .cabinet-shell-gradient {
     radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.08), transparent 55%);
 }
 
+/*
+ * Рамка карточек — тихий оттенок акцента, без внешнего свечения.
+ * Раньше было 0.38–0.45 плюс ореол `0 0 28px primary`: каждая карточка
+ * горела контуром и спорила с содержимым. Тень оставляем базовую.
+ */
 html[data-cabinet-decor="neon"] .cabinet-elevated-card,
 html[data-cabinet-decor="neon"] .subscription-feature-card,
 html[data-cabinet-decor="neon"] .admin-modal-panel {
-  border-color: hsl(var(--primary) / 0.38) !important;
-  box-shadow:
-    0 0 24px hsl(var(--primary) / 0.12),
-    0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+  border-color: hsl(var(--primary) / 0.22) !important;
 }
 
 html.dark[data-cabinet-decor="neon"] .cabinet-elevated-card,
 html.dark[data-cabinet-decor="neon"] .subscription-feature-card {
-  border-color: hsl(var(--primary) / 0.45) !important;
-  box-shadow:
-    0 0 28px hsl(var(--primary) / 0.18),
-    0 12px 30px rgba(3, 10, 24, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  border-color: hsl(var(--primary) / 0.16) !important;
+}
+
+/* На наведении рамку уступаем градиентному кольцу, как в остальных темах. */
+html[data-cabinet-decor="neon"] .cabinet-shell .cabinet-elevated-card:hover,
+html[data-cabinet-decor="neon"] .cabinet-shell .cabinet-elevated-card:focus-within,
+html[data-cabinet-decor="neon"] .cabinet-shell .subscription-feature-card:hover,
+html[data-cabinet-decor="neon"] .cabinet-shell .subscription-feature-card:focus-within {
+  border-color: transparent !important;
 }
 
 /* --- halloween (оранжевый акцент) --- */
@@ -3610,22 +3616,23 @@ html:not(.dark)[data-cabinet-decor="cyber"] .cabinet-shell-gradient {
     radial-gradient(ellipse 120% 85% at 50% -25%, hsl(var(--primary) / 0.06), transparent 55%);
 }
 
+/* Рамка — тихий оттенок акцента без свечения, как у neon (см. выше). */
 html[data-cabinet-decor="cyber"] .cabinet-elevated-card,
 html[data-cabinet-decor="cyber"] .subscription-feature-card,
 html[data-cabinet-decor="cyber"] .admin-modal-panel {
-  border-color: hsl(var(--primary) / 0.35) !important;
-  box-shadow:
-    0 0 20px hsl(var(--primary) / 0.1),
-    0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
+  border-color: hsl(var(--primary) / 0.2) !important;
 }
 
 html.dark[data-cabinet-decor="cyber"] .cabinet-elevated-card,
 html.dark[data-cabinet-decor="cyber"] .subscription-feature-card {
-  border-color: hsl(var(--primary) / 0.42) !important;
-  box-shadow:
-    0 0 24px hsl(var(--primary) / 0.16),
-    0 12px 30px rgba(3, 10, 24, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  border-color: hsl(var(--primary) / 0.15) !important;
+}
+
+html[data-cabinet-decor="cyber"] .cabinet-shell .cabinet-elevated-card:hover,
+html[data-cabinet-decor="cyber"] .cabinet-shell .cabinet-elevated-card:focus-within,
+html[data-cabinet-decor="cyber"] .cabinet-shell .subscription-feature-card:hover,
+html[data-cabinet-decor="cyber"] .cabinet-shell .subscription-feature-card:focus-within {
+  border-color: transparent !important;
 }
 
 /* --- sunset --- */

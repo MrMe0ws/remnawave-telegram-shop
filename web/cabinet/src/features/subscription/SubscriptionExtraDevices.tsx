@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Smartphone, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Cpu, CreditCard, Bitcoin, Smartphone, Star, X } from 'lucide-react'
 
 import { HeleketBrandIcon } from '@/components/BrandIcons'
+import { ConfirmModal } from '@/components/ConfirmModal'
 import { LegalContinueDisclaimer } from '@/components/LegalContinueDisclaimer'
 import { PlategaPaymentExpand, enabledPlategaMethods, type PlategaMethodId } from '@/components/PlategaPaymentExpand'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -126,10 +126,7 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   const [provider, setProvider] = useState<Provider>('yookassa')
   const [payError, setPayError] = useState<string | null>(null)
   const [payLoading, setPayLoading] = useState(false)
-  const [decreaseModalMounted, setDecreaseModalMounted] = useState(false)
-  const [decreaseModalVisible, setDecreaseModalVisible] = useState(false)
-  const decreaseModalUnmountAfterTransition = useRef(false)
-  const decreaseModalVisibleRef = useRef(false)
+  const [decreaseOpen, setDecreaseOpen] = useState(false)
 
   const providerEnabled: Record<Provider, boolean> = {
     yookassa: bootstrap?.payment_providers?.yookassa ?? true,
@@ -166,41 +163,11 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
   })
 
   function openDecreaseConfirmModal() {
-    if (decreaseModalMounted) return
-    decreaseModalUnmountAfterTransition.current = false
-    setDecreaseModalMounted(true)
-    setDecreaseModalVisible(false)
+    setDecreaseOpen(true)
   }
-
-  useEffect(() => {
-    decreaseModalVisibleRef.current = decreaseModalVisible
-  }, [decreaseModalVisible])
-
-  useEffect(() => {
-    if (!decreaseModalMounted) return
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setDecreaseModalVisible(true))
-    })
-    return () => cancelAnimationFrame(id)
-  }, [decreaseModalMounted])
 
   function closeDecreaseConfirmModal() {
-    if (!decreaseModalMounted) return
-    decreaseModalUnmountAfterTransition.current = true
-    if (!decreaseModalVisibleRef.current) {
-      decreaseModalUnmountAfterTransition.current = false
-      setDecreaseModalMounted(false)
-      return
-    }
-    setDecreaseModalVisible(false)
-  }
-
-  function onDecreaseModalOverlayTransitionEnd(e: React.TransitionEvent<HTMLDivElement>) {
-    if (e.target !== e.currentTarget) return
-    if (e.propertyName !== 'opacity') return
-    if (!decreaseModalUnmountAfterTransition.current) return
-    decreaseModalUnmountAfterTransition.current = false
-    setDecreaseModalMounted(false)
+    setDecreaseOpen(false)
   }
 
   const applyDec = useMutation({
@@ -527,68 +494,23 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
         )}
       </CardContent>
 
-      {decreaseModalMounted && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              role="presentation"
-              className={cn(
-                'fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity duration-[400ms] ease-out',
-                decreaseModalVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
-              )}
-              onClick={() => !applyDec.isPending && closeDecreaseConfirmModal()}
-              onTransitionEnd={onDecreaseModalOverlayTransitionEnd}
-            >
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="hwid-decrease-warning-title"
-                className={cn(
-                  'w-full max-w-md rounded-2xl border border-border bg-background/95 p-5 shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] backdrop-blur-sm transition-[opacity,transform] duration-[400ms] ease-out',
-                  decreaseModalVisible ? 'scale-100 opacity-100' : 'scale-[0.97] opacity-0',
-                )}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                    <AlertTriangle className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-3 text-sm leading-relaxed text-foreground">
-                    <h2 id="hwid-decrease-warning-title" className="text-base font-semibold">
-                      {t('subscriptionPage.extraDevicesDecreaseModalTitle')}
-                    </h2>
-                    <p>{t('subscriptionPage.extraDevicesDecreaseModalIntro')}</p>
-                    <p className="text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseModalNoRefund')}</p>
-                    <p className="text-muted-foreground">{t('subscriptionPage.extraDevicesDecreaseModalIrreversible')}</p>
-                    <p>{t('subscriptionPage.extraDevicesDecreaseModalEnsure')}</p>
-                  </div>
-                </div>
-                <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={applyDec.isPending}
-                    onClick={() => closeDecreaseConfirmModal()}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    loading={applyDec.isPending}
-                    disabled={applyDec.isPending || decTarget >= hwid.current_limit || decTarget < hwid.base_limit}
-                    onClick={() => applyDec.mutate(decTarget)}
-                  >
-                    {t('subscriptionPage.extraDevicesDecreaseModalConfirm')}
-                  </Button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
+      <ConfirmModal
+        open={decreaseOpen}
+        tone="default"
+        title={t('subscriptionPage.extraDevicesDecreaseModalTitle')}
+        description={
+          <div className="space-y-3">
+            <p className="text-foreground">{t('subscriptionPage.extraDevicesDecreaseModalIntro')}</p>
+            <p>{t('subscriptionPage.extraDevicesDecreaseModalNoRefund')}</p>
+            <p>{t('subscriptionPage.extraDevicesDecreaseModalIrreversible')}</p>
+            <p className="text-foreground">{t('subscriptionPage.extraDevicesDecreaseModalEnsure')}</p>
+          </div>
+        }
+        confirmLabel={t('subscriptionPage.extraDevicesDecreaseModalConfirm')}
+        loading={applyDec.isPending}
+        onConfirm={() => applyDec.mutate(decTarget)}
+        onClose={closeDecreaseConfirmModal}
+      />
     </Card>
   )
 }
