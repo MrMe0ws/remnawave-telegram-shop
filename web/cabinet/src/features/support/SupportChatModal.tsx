@@ -24,6 +24,26 @@ function inMessageBubbleClass(status?: SupportMessageDTO['delivery_status']): st
   }
 }
 
+/** Точки «печатает…» как в Telegram: «.», «..», «...» и по кругу. */
+function TypingDots() {
+  const [count, setCount] = useState(1)
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setCount(3)
+      return
+    }
+    const id = window.setInterval(() => setCount((c) => (c % 3) + 1), 400)
+    return () => window.clearInterval(id)
+  }, [])
+  // Невидимый хвост держит ширину строки, чтобы текст рядом не дёргался.
+  return (
+    <span aria-hidden>
+      {'.'.repeat(count)}
+      <span className="invisible">{'.'.repeat(3 - count)}</span>
+    </span>
+  )
+}
+
 type SupportChatModalProps = {
   open: boolean
   enabled: boolean
@@ -120,6 +140,7 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
   const lastMessage = messages[messages.length - 1]
   const waitingForSupport =
     Boolean(lastMessage?.direction === 'in' && lastMessage.delivery_status === 'sent')
+  const supportTyping = waitingForSupport && Boolean(conversation.data?.support_typing)
 
   const groups = useMemo(
     () => groupByDay(conversation.data?.messages ?? [], t('supportChat.today'), t('supportChat.yesterday')),
@@ -177,7 +198,12 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
             <h2 id="support-chat-title" className="text-base font-semibold">
               {t('supportChat.title')}
             </h2>
-            {waitingForSupport ? (
+            {supportTyping ? (
+              <p className="text-xs text-primary" role="status">
+                {t('supportChat.typing')}
+                <TypingDots />
+              </p>
+            ) : waitingForSupport ? (
               <p className="text-xs text-muted-foreground">{t('supportChat.waitingHint')}</p>
             ) : null}
           </div>

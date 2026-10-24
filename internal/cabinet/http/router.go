@@ -338,8 +338,10 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	passwordChangeAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: 15 * time.Minute})
 	trialActivateAcctLim := ratelimit.New(ratelimit.Rule{Count: 5, Interval: time.Hour})
 	supportAcctLim := ratelimit.New(ratelimit.Rule{Count: 10, Interval: time.Minute})
-	// Webhook от support-bot: 100/min/IP — внутренний endpoint, но защита от flood при утечке секрета
-	supportWebhookIPLim := ratelimit.New(ratelimit.Rule{Count: 100, Interval: time.Minute})
+	// Webhook от support-bot: внутренний endpoint, но защита от flood при утечке секрета.
+	// Кроме ответов бот шлёт сюда «печатает…» каждые ~5 с по каждому тикету, где думает ИИ,
+	// поэтому 300/min/IP — запас на десяток одновременных диалогов.
+	supportWebhookIPLim := ratelimit.New(ratelimit.Rule{Count: 300, Interval: time.Minute})
 
 	for _, lim := range []*ratelimit.Limiter{loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim} {
 		lim.RunGC(ctx)

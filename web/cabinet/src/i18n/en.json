@@ -345,6 +345,7 @@
       "send": "Send",
       "sendError": "Could not send. Please try again.",
       "waitingHint": "Waiting for a reply",
+      "typing": "typing",
       "supportLabel": "Support",
       "notDelivered": "Not delivered to support",
       "unreadAria": "Unread: {{count}}",

@@ -773,6 +773,8 @@ export interface SupportSummaryResponse {
 }
 
 export interface SupportConversationResponse extends SupportSummaryResponse {
+  /** ИИ саппорт-бота готовит ответ — показываем «печатает…». */
+  support_typing?: boolean
   messages: SupportMessageDTO[]
 }
 
