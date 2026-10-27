@@ -126,10 +126,10 @@ func main() {
 	cache := cache.NewCache(30 * time.Minute)
 
 	// Создание репозиториев для работы с данными в БД
-	customerRepository := database.NewCustomerRepository(pool) // Работа с пользователями
-	purchaseRepository := database.NewPurchaseRepository(pool) // Работа с покупками
-	tariffRepository := database.NewTariffRepository(pool)     // Тарифы (SALES_MODE=tariffs)
-	referralRepository := database.NewReferralRepository(pool)             // Работа с реферальной системой
+	customerRepository := database.NewCustomerRepository(pool)                  // Работа с пользователями
+	purchaseRepository := database.NewPurchaseRepository(pool)                  // Работа с покупками
+	tariffRepository := database.NewTariffRepository(pool)                      // Тарифы (SALES_MODE=tariffs)
+	referralRepository := database.NewReferralRepository(pool)                  // Работа с реферальной системой
 	referralLedgerRepository := database.NewReferralBonusLedgerRepository(pool) // Журнал реферальных начислений
 	promoRepository := database.NewPromoRepository(pool)
 	statsRepository := database.NewStatsRepository(pool)
@@ -294,7 +294,15 @@ func main() {
 	syncService := sync.NewSyncService(remnawaveClient, customerRepository)
 
 	// Создание главного обработчика всех команд и callback'ов бота
-	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, partnerRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository, loyaltyTierRepository)
+	// Один отправитель на бота и кабинет: история рассылок общая.
+	broadcastRepository := database.NewBroadcastRepository(pool)
+	if n, err := broadcastRepository.MarkInterrupted(ctx); err != nil {
+		slog.Warn("broadcast history: mark interrupted", "error", err)
+	} else if n > 0 {
+		slog.Warn("broadcast history: broadcasts interrupted by restart", "count", n)
+	}
+	broadcastSender := broadcast.NewSender(customerRepository, broadcastRepository, tm)
+	h := handler.NewHandler(syncService, paymentService, tm, customerRepository, purchaseRepository, tariffRepository, cryptoPayClient, yookasaClient, referralRepository, partnerRepository, cache, promoRepository, promoService, remnawaveClient, statsRepository, infraBillingRepository, loyaltyTierRepository, broadcastSender)
 
 	// Получение информации о боте (username и т.д.)
 	// Используем контекст с таймаутом для GetMe, чтобы избежать зависания при проблемах с сетью
@@ -878,7 +886,6 @@ func main() {
 	// cabcfg.InitConfig() вызван ранее (сразу после миграций), здесь только
 	// монтируем роуты.
 	if cabcfg.IsEnabled() {
-		broadcastSender := broadcast.NewSender(customerRepository, tm)
 		if err := cabinethttp.Mount(ctx, mux, pool, paymentService, remnawaveClient, promoService, syncService, b, broadcastSender); err != nil {
 			panic(fmt.Errorf("failed to mount cabinet routes: %w", err))
 		}

@@ -25,24 +25,24 @@ import (
 )
 
 type Handler struct {
-	customerRepository      *database.CustomerRepository
-	purchaseRepository      *database.PurchaseRepository
-	tariffRepository        *database.TariffRepository
-	cryptoPayClient         *cryptopay.Client
-	yookasaClient           *yookasa.Client
-	translation             *translation.Manager
-	paymentService          *payment.PaymentService
-	syncService             *sync.SyncService
-	referralRepository      *database.ReferralRepository
+	customerRepository     *database.CustomerRepository
+	purchaseRepository     *database.PurchaseRepository
+	tariffRepository       *database.TariffRepository
+	cryptoPayClient        *cryptopay.Client
+	yookasaClient          *yookasa.Client
+	translation            *translation.Manager
+	paymentService         *payment.PaymentService
+	syncService            *sync.SyncService
+	referralRepository     *database.ReferralRepository
 	partnerRepository      *database.PartnerRepository
-	cache                   *cache.Cache
-	promoRepository         *database.PromoRepository
-	promoService            *promo.Service
-	remnawaveClient         *remnawave.Client
-	statsRepository         *database.StatsRepository
-	infraBillingRepository  *database.InfraBillingRepository
-	loyaltyTierRepository   *database.LoyaltyTierRepository
-	broadcastSender         *broadcast.Sender
+	cache                  *cache.Cache
+	promoRepository        *database.PromoRepository
+	promoService           *promo.Service
+	remnawaveClient        *remnawave.Client
+	statsRepository        *database.StatsRepository
+	infraBillingRepository *database.InfraBillingRepository
+	loyaltyTierRepository  *database.LoyaltyTierRepository
+	broadcastSender        *broadcast.Sender
 }
 
 func NewHandler(
@@ -63,6 +63,7 @@ func NewHandler(
 	statsRepository *database.StatsRepository,
 	infraBillingRepository *database.InfraBillingRepository,
 	loyaltyTierRepository *database.LoyaltyTierRepository,
+	broadcastSender *broadcast.Sender,
 ) *Handler {
 	return &Handler{
 		syncService:            syncService,
@@ -82,7 +83,7 @@ func NewHandler(
 		statsRepository:        statsRepository,
 		infraBillingRepository: infraBillingRepository,
 		loyaltyTierRepository:  loyaltyTierRepository,
-		broadcastSender:        broadcast.NewSender(customerRepository, translation),
+		broadcastSender:        broadcastSender,
 	}
 }
 

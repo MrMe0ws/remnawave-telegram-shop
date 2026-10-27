@@ -989,5 +989,5 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		Entities: entities,
 		Media:    media,
 		Buttons:  flags,
-	})
+	}, broadcast.SendOptions{Source: database.BroadcastSourceTelegram})
 }

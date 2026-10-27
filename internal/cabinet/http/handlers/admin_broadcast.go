@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -50,6 +52,7 @@ func releaseBroadcastSend() {
 type AdminBroadcastHandler struct {
 	customers *database.CustomerRepository
 	tariffs   *database.TariffRepository
+	history   *database.BroadcastRepository
 	sender    *broadcast.Sender
 	bot       *bot.Bot
 }
@@ -57,12 +60,14 @@ type AdminBroadcastHandler struct {
 func NewAdminBroadcast(
 	customers *database.CustomerRepository,
 	tariffs *database.TariffRepository,
+	history *database.BroadcastRepository,
 	sender *broadcast.Sender,
 	tgBot *bot.Bot,
 ) *AdminBroadcastHandler {
 	return &AdminBroadcastHandler{
 		customers: customers,
 		tariffs:   tariffs,
+		history:   history,
 		sender:    sender,
 		bot:       tgBot,
 	}
@@ -124,6 +129,8 @@ type broadcastMediaReq struct {
 	FileID string `json:"file_id"`
 	// photo | video | document — что вернул upload-media.
 	Kind string `json:"kind"`
+	// Name — имя файла у админа, только для истории рассылок.
+	Name string `json:"name,omitempty"`
 }
 
 type broadcastSendReq struct {
@@ -469,8 +476,41 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 	}
 
 	adminID := config.GetAdminTelegramId()
-	payload := req
 	recipientCount := len(recipients)
+	msg := broadcast.Message{
+		Text: req.Text,
+		/*
+		 * Редактор web-админки вставляет теги Telegram HTML (<b>, <i>,
+		 * <a href>), и без ParseMode они уходили получателю как обычный
+		 * текст: человек видел «<b>Заголовок</b>» вместо жирного.
+		 *
+		 * Entities здесь не передаём: Bot API принимает либо разметку,
+		 * либо готовые entities, и второе — способ рассылки из
+		 * Telegram-админки, где они копируются из сообщения админа.
+		 */
+		ParseMode: models.ParseModeHTML,
+		Media:     req.recipientMedia(),
+		Buttons:   req.recipientButtons(),
+	}
+	opts := broadcast.SendOptions{Source: database.BroadcastSourceCabinet}
+	if req.Media != nil {
+		opts.MediaName = strings.TrimSpace(req.Media.Name)
+	}
+
+	/*
+	 * Запись истории заводим здесь, а не в фоне: её id уходит в ответ, и по
+	 * нему страница рассылки показывает ход и итог. Не завелась — рассылка
+	 * всё равно уходит, просто без карточки итога в кабинете.
+	 */
+	if h.history != nil {
+		rec := broadcast.HistoryRecord(opts.Source, audiences, req.TariffID, msg, opts.MediaName)
+		rec.Total = recipientCount
+		id, err := h.history.Create(r.Context(), rec)
+		if err != nil {
+			slog.Warn("admin broadcast: history create", "error", err)
+		}
+		opts.BroadcastID = id
+	}
 
 	utils.Go("cabinet broadcast", func() {
 		defer releaseBroadcastSend()
@@ -481,21 +521,7 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 				Text:   "⏳ Рассылка из web-админки запущена. Ожидайте итоговое сообщение…",
 			})
 		}
-		h.sender.Send(ctx, h.bot, adminID, audiences, payload.TariffID, broadcast.Message{
-			Text: payload.Text,
-			/*
-			 * Редактор web-админки вставляет теги Telegram HTML (<b>, <i>,
-			 * <a href>), и без ParseMode они уходили получателю как обычный
-			 * текст: человек видел «<b>Заголовок</b>» вместо жирного.
-			 *
-			 * Entities здесь не передаём: Bot API принимает либо разметку,
-			 * либо готовые entities, и второе — способ рассылки из
-			 * Telegram-админки, где они копируются из сообщения админа.
-			 */
-			ParseMode: models.ParseModeHTML,
-			Media:     payload.recipientMedia(),
-			Buttons:   payload.recipientButtons(),
-		})
+		h.sender.Send(ctx, h.bot, adminID, audiences, req.TariffID, msg, opts)
 	})
 
 	slog.Info("admin broadcast: send started",
@@ -508,7 +534,122 @@ func (h *AdminBroadcastHandler) Send(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"status":          "started",
 		"recipient_count": recipientCount,
+		// 0 — история не записалась; кабинет тогда просто не покажет ход.
+		"broadcast_id": opts.BroadcastID,
 	})
+}
+
+// broadcastHistoryResp — рассылка в истории, как её видит кабинет.
+type broadcastHistoryResp struct {
+	ID        int64    `json:"id"`
+	Source    string   `json:"source"`
+	Audiences []string `json:"audiences"`
+	TariffID  *int64   `json:"tariff_id"`
+	Text      string   `json:"text"`
+	// parse_mode пустой — текст без разметки (рассылка из Telegram-админки).
+	ParseMode   string          `json:"parse_mode"`
+	MediaKind   string          `json:"media_kind"`
+	MediaFileID string          `json:"media_file_id"`
+	MediaName   string          `json:"media_name"`
+	Buttons     json.RawMessage `json:"buttons"`
+	Status      string          `json:"status"`
+	Total       int             `json:"total"`
+	Sent        int             `json:"sent"`
+	Blocked     int             `json:"blocked"`
+	Failed      int             `json:"failed"`
+	Error       string          `json:"error"`
+	StartedAt   time.Time       `json:"started_at"`
+	FinishedAt  *time.Time      `json:"finished_at"`
+}
+
+func toBroadcastHistoryResp(rec database.BroadcastRecord) broadcastHistoryResp {
+	buttons := rec.Buttons
+	if len(buttons) == 0 {
+		buttons = json.RawMessage(`{}`)
+	}
+	audiences := rec.Audiences
+	if audiences == nil {
+		audiences = []string{}
+	}
+	return broadcastHistoryResp{
+		ID:          rec.ID,
+		Source:      rec.Source,
+		Audiences:   audiences,
+		TariffID:    rec.TariffID,
+		Text:        rec.Text,
+		ParseMode:   rec.ParseMode,
+		MediaKind:   rec.MediaKind,
+		MediaFileID: rec.MediaFileID,
+		MediaName:   rec.MediaName,
+		Buttons:     buttons,
+		Status:      rec.Status,
+		Total:       rec.Total,
+		Sent:        rec.Sent,
+		Blocked:     rec.Blocked,
+		Failed:      rec.Failed,
+		Error:       rec.Error,
+		StartedAt:   rec.StartedAt,
+		FinishedAt:  rec.FinishedAt,
+	}
+}
+
+const (
+	broadcastHistoryDefaultLimit = 20
+	broadcastHistoryMaxLimit     = 50
+)
+
+// History — страница истории рассылок, свежие сверху.
+func (h *AdminBroadcastHandler) History(w http.ResponseWriter, r *http.Request) {
+	if h.history == nil {
+		http.Error(w, "broadcast history unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	q := r.URL.Query()
+	limit := broadcastHistoryDefaultLimit
+	if v, err := strconv.Atoi(q.Get("limit")); err == nil && v > 0 {
+		limit = min(v, broadcastHistoryMaxLimit)
+	}
+	offset := 0
+	if v, err := strconv.Atoi(q.Get("offset")); err == nil && v > 0 {
+		offset = v
+	}
+
+	records, total, err := h.history.List(r.Context(), limit, offset)
+	if err != nil {
+		slog.Error("admin broadcast: history list", "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	items := make([]broadcastHistoryResp, 0, len(records))
+	for _, rec := range records {
+		items = append(items, toBroadcastHistoryResp(rec))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
+}
+
+// HistoryItem — одна рассылка: по ней страница следит за ходом отправки.
+func (h *AdminBroadcastHandler) HistoryItem(w http.ResponseWriter, r *http.Request) {
+	if h.history == nil {
+		http.Error(w, "broadcast history unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	raw := strings.TrimPrefix(r.URL.Path, "/cabinet/api/admin/broadcast/history/")
+	id, err := strconv.ParseInt(strings.Trim(raw, "/"), 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	rec, err := h.history.Get(r.Context(), id)
+	if err != nil {
+		slog.Error("admin broadcast: history item", "id", id, "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if rec == nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, http.StatusOK, toBroadcastHistoryResp(*rec))
 }
 
 // CountByAudience is a helper endpoint to count for specific audience via query param.

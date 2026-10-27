@@ -387,7 +387,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo, tariffSquadsSvc)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
 	adminPartnersHandler := handlers.NewAdminPartners(partnerRepo, customerRepo, config.BotURL(), partnerNotifier)
-	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, broadcastSender, tgBot)
+	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, database.NewBroadcastRepository(pool), broadcastSender, tgBot)
 	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
 	adminSettingsHandler := handlers.NewAdminSettings(runtimeSettingsRepo)
 	adminSquadsHandler := handlers.NewAdminSquads(rw)
@@ -1569,6 +1569,28 @@ func registerAPIRoutes(
 			middleware.CSRF(),
 			middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_send")),
 		)),
+	)
+	api.Handle("/cabinet/api/admin/broadcast/history",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminBroadcast.History),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_history")),
+			),
+		}),
+	)
+	// Отдельный ключ лимита: страница опрашивает идущую рассылку раз в пару
+	// секунд, и общий с историей лимит съедался бы этим опросом.
+	api.Handle("/cabinet/api/admin/broadcast/history/",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminBroadcast.HistoryItem),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_history_item")),
+			),
+		}),
 	)
 	api.Handle("/cabinet/api/admin/broadcast/upload-media",
 		onlyPOST(middleware.Chain(

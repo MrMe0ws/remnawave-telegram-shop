@@ -16,6 +16,8 @@ import type {
   AdminBroadcastMediaDTO,
   AdminBroadcastPreviewDTO,
   AdminBroadcastSendDTO,
+  AdminBroadcastHistoryDTO,
+  AdminBroadcastHistoryItemDTO,
   AdminCustomerDTO,
   AdminFortuneStatsDTO,
   AdminLoyaltyStatsDTO,
@@ -1601,8 +1603,17 @@ export const api = {
     media?: {
       file_id: string
       kind: string
+      /** Имя файла — только для истории рассылок. */
+      name?: string
     } | null
   }) => request<AdminBroadcastSendDTO>('POST', '/admin/broadcast/send', body),
+  adminBroadcastHistory: (params: { limit: number; offset: number }) =>
+    request<AdminBroadcastHistoryDTO>(
+      'GET',
+      `/admin/broadcast/history?limit=${params.limit}&offset=${params.offset}`,
+    ),
+  adminBroadcastHistoryItem: (id: number) =>
+    request<AdminBroadcastHistoryItemDTO>('GET', `/admin/broadcast/history/${id}`),
 
   adminInfraNodes: () => request<AdminInfraNodesDTO>('GET', '/admin/infra/nodes'),
   adminInfraCreateNode: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
