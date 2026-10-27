@@ -6,6 +6,7 @@
 //	go run ./tools/release preview
 //	go run ./tools/release github
 //	go run ./tools/release telegram
+//	go run ./tools/release photos <message_id>
 //	go run ./tools/release publish
 package main
 
@@ -13,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -72,6 +74,14 @@ func run(args []string) error {
 		fmt.Println(notes.GitHubBody)
 		fmt.Println("--- Telegram HTML ---")
 		fmt.Println(html)
+		photos, err := listReleasePhotos(releasePhotosDir(root))
+		if err != nil {
+			return err
+		}
+		fmt.Printf("--- Telegram album: %d screenshot(s) ---\n", len(photos))
+		for _, p := range photos {
+			fmt.Println(filepath.Base(p))
+		}
 		return nil
 	case "github":
 		return createGitHubRelease(notes.Version, notes.GitHubBody, repo)
@@ -80,11 +90,29 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		html := FormatTelegramHTML(notes, cfg.Footer)
-		if err := sendTelegramHTML(cfg, html); err != nil {
+		return announceTelegram(root, notes, cfg)
+	case "photos":
+		// Повтор одного альбома, если пост ушёл, а картинки нет: второй
+		// `telegram` отправил бы дубликат поста.
+		if len(args) < 2 {
+			return fmt.Errorf("usage: go run ./tools/release photos <message_id of the release post>")
+		}
+		replyTo, err := strconv.Atoi(args[1])
+		if err != nil || replyTo <= 0 {
+			return fmt.Errorf("invalid message_id %q", args[1])
+		}
+		cfg, err := loadTelegramConfig()
+		if err != nil {
 			return err
 		}
-		fmt.Println("telegram: message sent")
+		photos, err := listReleasePhotos(releasePhotosDir(root))
+		if err != nil {
+			return err
+		}
+		if err := sendTelegramPhotos(cfg, replyTo, photosCaption(notes.Version), photos); err != nil {
+			return err
+		}
+		fmt.Printf("telegram: album sent (%d)\n", len(photos))
 		return nil
 	case "publish":
 		if err := createGitHubRelease(notes.Version, notes.GitHubBody, repo); err != nil {
@@ -95,11 +123,9 @@ func run(args []string) error {
 		if err != nil {
 			return fmt.Errorf("github release created, but telegram config invalid: %w", err)
 		}
-		html := FormatTelegramHTML(notes, cfg.Footer)
-		if err := sendTelegramHTML(cfg, html); err != nil {
-			return fmt.Errorf("github release created, but telegram failed (retry: go run ./tools/release telegram): %w", err)
+		if err := announceTelegram(root, notes, cfg); err != nil {
+			return fmt.Errorf("github release created, but telegram failed: %w", err)
 		}
-		fmt.Println("telegram: message sent")
 		return nil
 	default:
 		printUsage()
@@ -107,12 +133,39 @@ func run(args []string) error {
 	}
 }
 
+// announceTelegram — пост релиза и, если есть скриншоты, альбом ответом на него.
+func announceTelegram(root string, notes *ReleaseNotes, cfg telegramConfig) error {
+	// Скриншоты проверяются до поста: битая папка не должна оставить пост без них.
+	photos, err := listReleasePhotos(releasePhotosDir(root))
+	if err != nil {
+		return err
+	}
+	html := FormatTelegramHTML(notes, cfg.Footer)
+	messageID, err := sendTelegramHTML(cfg, html)
+	if err != nil {
+		return fmt.Errorf("%w (retry: go run ./tools/release telegram)", err)
+	}
+	fmt.Printf("telegram: message sent (id %d)\n", messageID)
+	if len(photos) == 0 {
+		return nil
+	}
+	if err := sendTelegramPhotos(cfg, messageID, photosCaption(notes.Version), photos); err != nil {
+		return fmt.Errorf("post sent, album failed (retry only the album: go run ./tools/release photos %d): %w", messageID, err)
+	}
+	fmt.Printf("telegram: album sent (%d)\n", len(photos))
+	return nil
+}
+
 func printUsage() {
 	fmt.Fprintf(os.Stderr, `usage:
   go run ./tools/release preview    # print parsed GitHub + Telegram HTML
   go run ./tools/release github     # gh release create from RELEASE_NOTES.md
-  go run ./tools/release telegram   # send Telegram HTML to forum topic
+  go run ./tools/release telegram   # send Telegram HTML (+ screenshots album) to forum topic
+  go run ./tools/release photos ID  # resend only the screenshots album as a reply to post ID
   go run ./tools/release publish    # github + telegram
+
+Screenshots: release-screenshots/*.png|jpg|webp in repo root (or RELEASE_TG_PHOTOS_DIR),
+sent in file-name order as an album replying to the post. No folder — no album.
 
 Config: .env.release in repo root (see .env.release.sample).
 `)
