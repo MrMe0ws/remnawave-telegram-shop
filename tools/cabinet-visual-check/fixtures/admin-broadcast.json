@@ -1,0 +1,15 @@
+{
+  "/admin/broadcast/audiences": {
+    "audiences": [
+      { "audience": "all", "label": "all", "count": 1442 },
+      { "audience": "test_broadcast", "label": "test_broadcast", "count": 1 },
+      { "audience": "active_all", "label": "active_all", "count": 164 },
+      { "audience": "active_paid", "label": "active_paid", "count": 125 },
+      { "audience": "active_trial", "label": "active_trial", "count": 39 },
+      { "audience": "inactive_all", "label": "inactive_all", "count": 1278 },
+      { "audience": "inactive_paid", "label": "inactive_paid", "count": 78 },
+      { "audience": "inactive_trial", "label": "inactive_trial", "count": 1200 }
+    ]
+  },
+  "/admin/broadcast/preview": { "audiences": ["active_all", "inactive_paid"], "recipient_count": 242 }
+}

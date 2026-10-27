@@ -1242,7 +1242,9 @@
         "slugRequired": "Укажите slug тарифа.",
         "payloadTooLarge": "Файл слишком большой для загрузки. Уменьшите изображение или поднимите client_max_body_size в nginx.",
         "testBroadcastNoAdmin": "Тестовая рассылка уходит админу — задайте ADMIN_TELEGRAM_ID в .env и перезапустите бота.",
-        "broadcastNoRecipients": "В выбранной аудитории нет получателей в Telegram."
+        "broadcastNoRecipients": "В выбранной аудитории нет получателей в Telegram.",
+        "broadcastNoAudience": "Выберите хотя бы одну аудиторию.",
+        "broadcastTestCombined": "Тест рассылки уходит только админу — его нельзя отправить вместе с другими аудиториями."
       },
       "feedback": {
         "saved": "Изменения сохранены.",
@@ -2223,6 +2225,12 @@
         "title": "Рассылка",
         "subtitle": "Массовая отправка сообщений через Telegram",
         "audienceTitle": "Аудитория",
+        "audienceNone": "не выбрана",
+        "audienceAndMore": "{{first}} и ещё {{count}}",
+        "audienceIncluded": "входит",
+        "audienceIncludedHint": "Уже входит в «{{parent}}»",
+        "audienceMultiHint": "Можно отметить несколько. Кто попал в две аудитории сразу, получит сообщение один раз.",
+        "audienceTestAlone": "Тест уходит только вам, поэтому другие аудитории с ним не отмечаются.",
         "recipients": "Получателей",
         "audience": {
           "all": "Все",

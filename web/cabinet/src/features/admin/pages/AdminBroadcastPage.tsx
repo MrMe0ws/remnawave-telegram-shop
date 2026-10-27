@@ -36,6 +36,7 @@ import {
   type BroadcastButtonsState,
 } from '../components/BroadcastButtonsPicker'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
+import { useAdminShell } from '../layout/AdminShellContext'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
 import { BROADCAST_LINK_KEYS, broadcastLinkLabelKey } from '../utils/broadcastLinks'
 import { telegramTextLength } from '../utils/telegramHtml'
@@ -86,17 +87,21 @@ function useBroadcastTariffs(enabled: boolean) {
 
 /**
  * Число получателей считает сервер: у платных сегментов оно зависит от фильтра
- * по тарифу, и цифра из списка аудиторий там уже неверна. Запрос идёт сам при
- * смене выбора — раньше для этого была отдельная кнопка «Предпросмотр», и до
- * подтверждения отправки админ не знал, скольким людям уйдёт сообщение.
+ * по тарифу, а при нескольких сегментах один человек может быть в двух сразу —
+ * сумма цифр из списка аудиторий тогда врёт. Запрос идёт сам при смене выбора:
+ * раньше для этого была отдельная кнопка «Предпросмотр», и до подтверждения
+ * отправки админ не знал, скольким людям уйдёт сообщение.
  */
-function useRecipientCount(audience: string, tariffId: number | null) {
+function useRecipientCount(audiences: string[], tariffId: number | null) {
   return useQuery({
-    queryKey: ['admin-broadcast-count', audience, tariffId],
-    queryFn: () => api.adminBroadcastPreview({ audience, tariff_id: tariffId }),
+    queryKey: ['admin-broadcast-count', audiences, tariffId],
+    queryFn: () => api.adminBroadcastPreview({ audiences, tariff_id: tariffId }),
+    enabled: audiences.length > 0,
     staleTime: 30_000,
   })
 }
+
+const PAID_AUDIENCES = ['active_paid', 'inactive_paid']
 
 export default function AdminBroadcastPage() {
   const { t } = useTranslation()
@@ -105,7 +110,7 @@ export default function AdminBroadcastPage() {
   const { data: bootstrap } = useAdminBootstrap()
   const { data, isLoading } = useAudiences()
 
-  const [selectedAudience, setSelectedAudience] = useState('active_all')
+  const [selectedAudiences, setSelectedAudiences] = useState<string[]>(['active_all'])
   const [selectedTariff, setSelectedTariff] = useState<number | null>(null)
   const [html, setHtml] = useState('')
   const [buttons, setButtons] = useState<BroadcastButtonsState>(defaultButtons)
@@ -117,9 +122,11 @@ export default function AdminBroadcastPage() {
 
   const isTariffsMode = bootstrap?.sales_mode === 'tariffs'
   const { data: tariffsData } = useBroadcastTariffs(isTariffsMode)
-  const { data: countData, isFetching: countLoading } = useRecipientCount(selectedAudience, selectedTariff)
+  const hasAudience = selectedAudiences.length > 0
+  const hasPaidAudience = selectedAudiences.some((aud) => PAID_AUDIENCES.includes(aud))
+  const { data: countData, isFetching: countLoading } = useRecipientCount(selectedAudiences, selectedTariff)
 
-  const recipientCount = countData?.recipient_count ?? null
+  const recipientCount = hasAudience ? (countData?.recipient_count ?? null) : 0
   const hasContent = Boolean(html.trim() || media)
   const limit = media ? LIMIT_CAPTION : LIMIT_TEXT
   const length = useMemo(() => telegramTextLength(html), [html])
@@ -140,7 +147,7 @@ export default function AdminBroadcastPage() {
   const sendMutation = useMutation({
     mutationFn: () =>
       api.adminBroadcastSend({
-        audience: selectedAudience,
+        audiences: selectedAudiences,
         tariff_id: selectedTariff,
         text: html,
         buttons,
@@ -169,6 +176,7 @@ export default function AdminBroadcastPage() {
     inactive_paid: t('admin.broadcast.audience.inactivePaid'),
     inactive_trial: t('admin.broadcast.audience.inactiveTrial'),
   }
+  const selectedAudienceLabels = selectedAudiences.map((aud) => audienceLabels[aud] ?? aud)
 
   const selectedButtonLabels = [
     buttons.buy ? t('admin.broadcast.buttons.buy') : null,
@@ -187,7 +195,7 @@ export default function AdminBroadcastPage() {
     setSendSuccess(null)
   }
 
-  const canSend = hasContent && !overLimit && !sendMutation.isPending
+  const canSend = hasAudience && hasContent && !overLimit && !sendMutation.isPending
 
   const preview = (
     <div className="rounded-lg border border-border/50 bg-card">
@@ -205,10 +213,14 @@ export default function AdminBroadcastPage() {
 
         <dl className="space-y-1 text-sm">
           <SummaryRow label={t('admin.broadcast.audienceTitle')}>
-            {audienceLabels[selectedAudience] ?? selectedAudience}
+            {/* Переносом, а не многоточием: сегментов теперь несколько, и
+                обрезанный хвост списка прятал как раз второй из них. */}
+            <span className={cn('block whitespace-normal', !hasAudience && 'text-destructive')}>
+              {hasAudience ? selectedAudienceLabels.join(', ') : t('admin.broadcast.audienceNone')}
+            </span>
           </SummaryRow>
           <SummaryRow label={t('admin.broadcast.recipients')}>
-            {countLoading || recipientCount === null ? '…' : recipientCount}
+            {hasAudience && (countLoading || recipientCount === null) ? '…' : recipientCount}
           </SummaryRow>
           <SummaryRow label={t('admin.broadcast.buttonsTitle')}>
             {selectedButtonLabels.length || t('admin.broadcast.buttons.none')}
@@ -247,59 +259,61 @@ export default function AdminBroadcastPage() {
 
         {/* На узком экране форма и предпросмотр — две вкладки: иначе за
             результатом приходится листать через весь экран и обратно. */}
-        <div className={surface('well', 'flex gap-1 rounded-xl p-1 lg:hidden')}>
-          {(['compose', 'preview'] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={mobileTab === tab}
-              onClick={() => setMobileTab(tab)}
-              className={cn(
-                'flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
-                mobileTab === tab
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {tab === 'compose' ? t('admin.broadcast.compose') : t('admin.broadcast.preview')}
-            </button>
-          ))}
-        </div>
+        <StickyMobileTabs>
+          <div className={surface('well', 'flex gap-1 rounded-xl p-1')}>
+            {(['compose', 'preview'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={mobileTab === tab}
+                onClick={() => setMobileTab(tab)}
+                className={cn(
+                  'flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                  mobileTab === tab
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {tab === 'compose' ? t('admin.broadcast.compose') : t('admin.broadcast.preview')}
+              </button>
+            ))}
+          </div>
+        </StickyMobileTabs>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className={cn('min-w-0 space-y-4', mobileTab === 'preview' && 'hidden lg:block')}>
             <BroadcastAudienceSelector
               audiences={data?.audiences ?? []}
               isLoading={isLoading}
-              selectedAudience={selectedAudience}
-              onSelectAudience={(audience) => {
-                setSelectedAudience(audience)
-                setSelectedTariff(null)
+              selectedAudiences={selectedAudiences}
+              onChange={(next) => {
+                setSelectedAudiences(next)
+                if (!next.some((aud) => PAID_AUDIENCES.includes(aud))) setSelectedTariff(null)
                 setSendSuccess(null)
               }}
               audienceLabels={audienceLabels}
+              recipientCount={countLoading ? null : recipientCount}
             >
-              {isTariffsMode &&
-                (selectedAudience === 'active_paid' || selectedAudience === 'inactive_paid') && (
-                  <>
-                    <label className="mb-1.5 block text-xs text-muted-foreground">
-                      {t('admin.broadcast.filterTariff')}
-                    </label>
-                    <AdminSelect<number>
-                      value={selectedTariff}
-                      allowEmpty
-                      emptyLabel={t('admin.broadcast.allTariffs')}
-                      placeholder={t('admin.broadcast.allTariffs')}
-                      ariaLabel={t('admin.broadcast.filterTariff')}
-                      options={(tariffsData?.tariffs ?? []).map((tariff) => ({
-                        value: tariff.id,
-                        label: tariff.name,
-                      }))}
-                      onChange={setSelectedTariff}
-                    />
-                  </>
-                )}
+              {isTariffsMode && hasPaidAudience && (
+                <>
+                  <label className="mb-1.5 block text-xs text-muted-foreground">
+                    {t('admin.broadcast.filterTariff')}
+                  </label>
+                  <AdminSelect<number>
+                    value={selectedTariff}
+                    allowEmpty
+                    emptyLabel={t('admin.broadcast.allTariffs')}
+                    placeholder={t('admin.broadcast.allTariffs')}
+                    ariaLabel={t('admin.broadcast.filterTariff')}
+                    options={(tariffsData?.tariffs ?? []).map((tariff) => ({
+                      value: tariff.id,
+                      label: tariff.name,
+                    }))}
+                    onChange={setSelectedTariff}
+                  />
+                </>
+              )}
             </BroadcastAudienceSelector>
 
             {/* Сообщение */}
@@ -479,7 +493,11 @@ export default function AdminBroadcastPage() {
             <p className="text-sm text-muted-foreground">{t('admin.broadcast.confirmLead')}</p>
             <dl className={surface('raised', 'divide-y divide-border/60 rounded-lg')}>
               <ConfirmRow icon={Users} label={t('admin.broadcast.audienceTitle')}>
-                {audienceLabels[selectedAudience] ?? selectedAudience}
+                {selectedAudienceLabels.map((name) => (
+                  <span key={name} className="block">
+                    {name}
+                  </span>
+                ))}
               </ConfirmRow>
               <ConfirmRow icon={UsersRound} label={t('admin.broadcast.recipients')}>
                 {recipientCount === null ? '…' : recipientCount}
@@ -512,6 +530,32 @@ export default function AdminBroadcastPage() {
         }
       />
     </AdminLayout>
+  )
+}
+
+/**
+ * Полоса вкладок липнет под шапку: раньше она уезжала вверх вместе с формой, и
+ * чтобы из кнопок под сообщением глянуть предпросмотр, приходилось сначала
+ * долистать до начала страницы. Шапка на телефоне прячется при прокрутке вниз
+ * (до md), и полоса тогда поднимается к самому краю — так же, как панель
+ * периода на странице статистики.
+ *
+ * Отдельный компонент, потому что useAdminShell работает только внутри
+ * AdminLayout, а сама страница его и рисует.
+ */
+function StickyMobileTabs({ children }: { children: React.ReactNode }) {
+  const { mobileHeaderVisible } = useAdminShell()
+  return (
+    <div
+      className={cn(
+        'sticky z-40 -mx-3 border-b border-border/80 bg-card/92 px-3 py-2 backdrop-blur-xl transition-[top] duration-200 ease-out sm:-mx-4 sm:px-4 dark:border-primary/12 lg:hidden',
+        mobileHeaderVisible
+          ? 'top-[calc(3.5rem+var(--cabinet-tg-safe-top))]'
+          : 'top-[var(--cabinet-tg-safe-top)] md:top-[calc(3.5rem+var(--cabinet-tg-safe-top))]',
+      )}
+    >
+      {children}
+    </div>
   )
 }
 

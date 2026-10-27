@@ -889,6 +889,28 @@ func (cr *CustomerRepository) GetInactiveTelegramIds(ctx context.Context) ([]int
 // tariffID ограничивает сегменты active_paid / inactive_paid по customer.current_tariff_id (режим tariffs).
 // Web-only клиенты кабинета исключаются (нет доставки в Telegram).
 func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audience string, tariffID *int64) ([]BroadcastRecipient, error) {
+	return cr.GetBroadcastRecipientsForAudiences(ctx, []string{audience}, tariffID)
+}
+
+// GetBroadcastRecipientsForAudiences — получатели сразу нескольких сегментов.
+//
+// Сегменты собираются одним запросом через OR, а не склейкой нескольких
+// списков: строка customer в выборке одна на человека, поэтому тот, кто попал
+// в два выбранных сегмента, получит сообщение один раз. tariffID действует на
+// платные сегменты так же, как в одиночном выборе.
+func (cr *CustomerRepository) GetBroadcastRecipientsForAudiences(ctx context.Context, audiences []string, tariffID *int64) ([]BroadcastRecipient, error) {
+	normalized, err := NormalizeBroadcastAudiences(audiences)
+	if err != nil {
+		return nil, err
+	}
+	if len(normalized) == 0 {
+		return nil, errors.New("no broadcast audience selected")
+	}
+	if normalized[0] == BroadcastAudienceTestBroadcast {
+		// Тестовая рассылка уходит только админу (ADMIN_TELEGRAM_ID), минуя фильтры аудитории.
+		return cr.testBroadcastRecipients(ctx)
+	}
+
 	now := time.Now()
 	buildSelect := sq.Select("telegram_id", "language").
 		From("customer").
@@ -899,34 +921,37 @@ func (cr *CustomerRepository) GetBroadcastRecipients(ctx context.Context, audien
 	paidSubscription := sq.Expr(`EXISTS (SELECT 1 FROM purchase p WHERE p.customer_id = customer.id AND p.status = 'paid' AND p.month > 0)`)
 	noPaidSubscription := sq.Expr(`NOT EXISTS (SELECT 1 FROM purchase p WHERE p.customer_id = customer.id AND p.status = 'paid' AND p.month > 0)`)
 
-	switch audience {
-	case BroadcastAudienceAll:
-		// no extra filter
-	case BroadcastAudienceActive, BroadcastAudienceActiveAll:
-		buildSelect = buildSelect.Where(activeVPN)
-	case BroadcastAudienceInactive, BroadcastAudienceInactiveAll:
-		buildSelect = buildSelect.Where(inactiveVPN)
-	case BroadcastAudienceActivePaid:
-		ap := sq.And{activeVPN, paidSubscription}
-		if tariffID != nil {
-			ap = sq.And{ap, sq.Eq{"current_tariff_id": *tariffID}}
+	// «Все» поглощает остальные сегменты ещё в NormalizeBroadcastAudiences,
+	// так что здесь он может прийти только один и фильтра не добавляет.
+	if normalized[0] != BroadcastAudienceAll {
+		var segments sq.Or
+		for _, audience := range normalized {
+			switch audience {
+			case BroadcastAudienceActiveAll:
+				segments = append(segments, activeVPN)
+			case BroadcastAudienceInactiveAll:
+				segments = append(segments, inactiveVPN)
+			case BroadcastAudienceActivePaid:
+				ap := sq.And{activeVPN, paidSubscription}
+				if tariffID != nil {
+					ap = sq.And{ap, sq.Eq{"current_tariff_id": *tariffID}}
+				}
+				segments = append(segments, ap)
+			case BroadcastAudienceActiveTrial:
+				segments = append(segments, sq.And{activeVPN, noPaidSubscription})
+			case BroadcastAudienceInactivePaid:
+				ip := sq.And{inactiveVPN, paidSubscription}
+				if tariffID != nil {
+					ip = sq.And{ip, sq.Eq{"current_tariff_id": *tariffID}}
+				}
+				segments = append(segments, ip)
+			case BroadcastAudienceInactiveTrial:
+				segments = append(segments, sq.And{inactiveVPN, noPaidSubscription})
+			default:
+				return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
+			}
 		}
-		buildSelect = buildSelect.Where(ap)
-	case BroadcastAudienceActiveTrial:
-		buildSelect = buildSelect.Where(sq.And{activeVPN, noPaidSubscription})
-	case BroadcastAudienceInactivePaid:
-		ip := sq.And{inactiveVPN, paidSubscription}
-		if tariffID != nil {
-			ip = sq.And{ip, sq.Eq{"current_tariff_id": *tariffID}}
-		}
-		buildSelect = buildSelect.Where(ip)
-	case BroadcastAudienceInactiveTrial:
-		buildSelect = buildSelect.Where(sq.And{inactiveVPN, noPaidSubscription})
-	case BroadcastAudienceTestBroadcast:
-		// Тестовая рассылка уходит только админу (ADMIN_TELEGRAM_ID), минуя фильтры аудитории.
-		return cr.testBroadcastRecipients(ctx)
-	default:
-		return nil, fmt.Errorf("unknown broadcast audience: %s", audience)
+		buildSelect = buildSelect.Where(segments)
 	}
 
 	buildSelect = buildSelect.Where(sq.Eq{"is_web_only": false})

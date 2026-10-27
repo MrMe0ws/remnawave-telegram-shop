@@ -1220,7 +1220,9 @@
         "slugRequired": "Tariff slug is required.",
         "payloadTooLarge": "File is too large to upload. Shrink the image or raise client_max_body_size in nginx.",
         "testBroadcastNoAdmin": "Test broadcast goes to the admin — set ADMIN_TELEGRAM_ID in .env and restart the bot.",
-        "broadcastNoRecipients": "The selected audience has no Telegram recipients."
+        "broadcastNoRecipients": "The selected audience has no Telegram recipients.",
+        "broadcastNoAudience": "Select at least one audience.",
+        "broadcastTestCombined": "A test broadcast goes to the admin only and can't be sent together with other audiences."
       },
       "feedback": {
         "saved": "Changes saved.",
@@ -2170,6 +2172,12 @@
         "title": "Broadcast",
         "subtitle": "Mass messaging via Telegram",
         "audienceTitle": "Audience",
+        "audienceNone": "none selected",
+        "audienceAndMore": "{{first}} and {{count}} more",
+        "audienceIncluded": "included",
+        "audienceIncludedHint": "Already part of “{{parent}}”",
+        "audienceMultiHint": "You can pick several. Someone in two audiences at once gets the message once.",
+        "audienceTestAlone": "The test goes to you only, so it can't be combined with other audiences.",
         "recipients": "Recipients",
         "audience": {
           "all": "All",

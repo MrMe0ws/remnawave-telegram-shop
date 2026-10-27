@@ -11,6 +11,8 @@ const BODY_KEY_MAP: Record<string, string> = {
   'broadcast already in progress': 'admin.errors.broadcastInProgress',
   'test broadcast requires admin_telegram_id': 'admin.errors.testBroadcastNoAdmin',
   'no recipients': 'admin.errors.broadcastNoRecipients',
+  'audience required': 'admin.errors.broadcastNoAudience',
+  'test broadcast cannot be combined': 'admin.errors.broadcastTestCombined',
   'method not allowed': 'admin.errors.methodNotAllowed',
   'invalid id': 'admin.errors.invalidId',
   'no valid fields': 'admin.errors.noValidFields',

@@ -1558,7 +1558,8 @@ export const api = {
   adminBroadcastTariffs: () =>
     request<{ tariffs: { id: number; name: string; slug: string }[] }>('GET', '/admin/broadcast/tariffs'),
   adminBroadcastPreview: (body: {
-    audience: string
+    /** Выбранные сегменты; сервер считает людей без повторов. */
+    audiences: string[]
     tariff_id?: number | null
     text?: string
   }) => request<AdminBroadcastPreviewDTO>('POST', '/admin/broadcast/preview', body),
@@ -1584,7 +1585,8 @@ export const api = {
     return res.json() as Promise<AdminBroadcastMediaDTO>
   },
   adminBroadcastSend: (body: {
-    audience: string
+    /** Выбранные сегменты; человек из нескольких получит сообщение один раз. */
+    audiences: string[]
     tariff_id?: number | null
     text: string
     buttons?: {

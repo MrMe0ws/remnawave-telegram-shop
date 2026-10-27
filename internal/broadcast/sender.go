@@ -35,12 +35,13 @@ func NewSender(customers *database.CustomerRepository, tm *translation.Manager) 
 	return &Sender{customers: customers, tm: tm}
 }
 
-// Send рассылает сообщение выбранной аудитории. При adminID != 0 шлёт итог админу в Telegram.
+// Send рассылает сообщение выбранным сегментам аудитории; человек из нескольких
+// сегментов получит его один раз. При adminID != 0 шлёт итог админу в Telegram.
 func (s *Sender) Send(
 	ctx context.Context,
 	b *bot.Bot,
 	adminID int64,
-	audience string,
+	audiences []string,
 	tariffID *int64,
 	msg Message,
 ) SendResult {
@@ -49,9 +50,9 @@ func (s *Sender) Send(
 		return result
 	}
 
-	recipients, err := s.customers.GetBroadcastRecipients(ctx, audience, tariffID)
+	recipients, err := s.customers.GetBroadcastRecipientsForAudiences(ctx, audiences, tariffID)
 	if err != nil {
-		slog.Error("broadcast: get recipients", "error", err, "audience", audience)
+		slog.Error("broadcast: get recipients", "error", err, "audiences", audiences)
 		if adminID != 0 {
 			_, _ = b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID: adminID,
@@ -143,7 +144,7 @@ func (s *Sender) Send(
 		"eligibleUsers", eligibleUsers,
 		"sent", sentCount,
 		"failed", failedCount,
-		"audience", audience,
+		"audiences", audiences,
 	)
 	return result
 }

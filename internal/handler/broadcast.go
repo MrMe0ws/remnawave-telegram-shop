@@ -981,7 +981,7 @@ func (h Handler) sendBroadcast(ctx context.Context, b *bot.Bot, adminID int64, m
 		slog.Error("broadcast sender not configured")
 		return
 	}
-	h.broadcastSender.Send(ctx, b, adminID, audience, tf, broadcast.Message{
+	h.broadcastSender.Send(ctx, b, adminID, []string{audience}, tf, broadcast.Message{
 		Text: messageText,
 		// Форматирование приходит готовыми entities из исходного сообщения
 		// админа, поэтому ParseMode здесь не нужен и вреден: Bot API принимает
