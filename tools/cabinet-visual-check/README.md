@@ -72,10 +72,12 @@ Recharts переизмеряет ширину, когда Playwright растя
 
 ## Требования
 
-Playwright с браузером:
+Playwright с браузером. Он прописан в `package.json` этого каталога, а не в
+кабинете: в сборку фронтенда и в Docker-образ он не попадает. Один раз после
+клона:
 
 ```bash
-npm i -D playwright && npx playwright install chromium
+cd tools/cabinet-visual-check && npm ci && npx playwright install chromium
 ```
 
 В Git Bash на Windows аргумент вида `/cabinet/...` MSYS разворачивает в путь
