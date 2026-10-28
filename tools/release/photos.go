@@ -4,17 +4,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
-// Скриншоты к релизу уходят альбомом ответом на пост: в одном сообщении
-// Telegram не умеет и длинный текст, и картинки — подпись к фото режется на
-// 1024 символах, а пост релиза обычно длиннее.
+// Скриншоты к релизу: короткий пост уходит подписью к альбому — одно сообщение
+// с картинками. Подпись к фото Telegram режет на 1024 символах, поэтому
+// длинный пост уходит отдельно, а альбом — ответом на него.
 
 const (
 	defaultPhotosDir = "release-screenshots"
@@ -22,7 +25,22 @@ const (
 	telegramMaxAlbum = 10
 	// Предел Bot API на фото, загружаемое файлом.
 	telegramMaxPhotoBytes = 10 << 20
+	// Предел подписи к фото, а значит и к альбому: она живёт у первого фото.
+	telegramMaxCaptionRunes = 1024
 )
+
+var htmlTag = regexp.MustCompile(`<[^>]*>`)
+
+// telegramTextRunes — длина поста так, как её считает Telegram: без тегов,
+// сущности вроде &amp; — один символ.
+func telegramTextRunes(htmlText string) int {
+	return utf8.RuneCountInString(html.UnescapeString(htmlTag.ReplaceAllString(htmlText, "")))
+}
+
+// fitsCaption — пост влезает в подпись альбома и может уйти вместе с картинками.
+func fitsCaption(htmlText string) bool {
+	return telegramTextRunes(htmlText) <= telegramMaxCaptionRunes
+}
 
 var photoExts = map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".webp": true}
 
@@ -73,14 +91,16 @@ func listReleasePhotos(dir string) ([]string, error) {
 }
 
 type inputMediaPhoto struct {
-	Type    string `json:"type"`
-	Media   string `json:"media"`
-	Caption string `json:"caption,omitempty"`
+	Type      string `json:"type"`
+	Media     string `json:"media"`
+	Caption   string `json:"caption,omitempty"`
+	ParseMode string `json:"parse_mode,omitempty"`
 }
 
 // buildMediaGroup — тело sendMediaGroup: файлы прикладываются частями
-// multipart и упоминаются в media как attach://<имя части>.
-func buildMediaGroup(cfg telegramConfig, replyTo int, caption string, photos []string) ([]byte, string, error) {
+// multipart и упоминаются в media как attach://<имя части>. parseMode "HTML" —
+// подпись это сам пост релиза с разметкой; пусто — простой текст.
+func buildMediaGroup(cfg telegramConfig, replyTo int, caption, parseMode string, photos []string) ([]byte, string, error) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 
@@ -91,6 +111,7 @@ func buildMediaGroup(cfg telegramConfig, replyTo int, caption string, photos []s
 		// Подпись у первого фото Telegram показывает как подпись всего альбома.
 		if i == 0 {
 			item.Caption = caption
+			item.ParseMode = parseMode
 		}
 		media = append(media, item)
 
@@ -133,17 +154,29 @@ func buildMediaGroup(cfg telegramConfig, replyTo int, caption string, photos []s
 	return buf.Bytes(), w.FormDataContentType(), nil
 }
 
-// sendTelegramPhotos отправляет скриншоты альбомом ответом на пост replyTo.
-func sendTelegramPhotos(cfg telegramConfig, replyTo int, caption string, photos []string) error {
+// sendTelegramPhotos отправляет скриншоты альбомом — ответом на пост replyTo,
+// если он задан, — и возвращает message_id первого фото.
+func sendTelegramPhotos(cfg telegramConfig, replyTo int, caption, parseMode string, photos []string) (int, error) {
 	if len(photos) == 0 {
-		return nil
+		return 0, nil
 	}
-	body, contentType, err := buildMediaGroup(cfg, replyTo, caption, photos)
+	body, contentType, err := buildMediaGroup(cfg, replyTo, caption, parseMode, photos)
 	if err != nil {
-		return fmt.Errorf("build album: %w", err)
+		return 0, fmt.Errorf("build album: %w", err)
 	}
-	_, err = callTelegram(cfg, "sendMediaGroup", contentType, body)
-	return err
+	result, err := callTelegram(cfg, "sendMediaGroup", contentType, body)
+	if err != nil {
+		return 0, err
+	}
+	var msgs []struct {
+		MessageID int `json:"message_id"`
+	}
+	// Альбом уже ушёл: без message_id только не напечатаем номер.
+	_ = json.Unmarshal(result, &msgs)
+	if len(msgs) == 0 {
+		return 0, nil
+	}
+	return msgs[0].MessageID, nil
 }
 
 func photosCaption(version string) string {

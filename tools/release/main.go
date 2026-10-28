@@ -78,7 +78,14 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("--- Telegram album: %d screenshot(s) ---\n", len(photos))
+		switch n := telegramTextRunes(html); {
+		case len(photos) == 0:
+			fmt.Println("--- Telegram album: none ---")
+		case fitsCaption(html):
+			fmt.Printf("--- Telegram album: %d screenshot(s), post is their caption (%d/%d chars) ---\n", len(photos), n, telegramMaxCaptionRunes)
+		default:
+			fmt.Printf("--- Telegram album: %d screenshot(s), reply to the post (post %d chars > caption limit %d) ---\n", len(photos), n, telegramMaxCaptionRunes)
+		}
 		for _, p := range photos {
 			fmt.Println(filepath.Base(p))
 		}
@@ -109,7 +116,7 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := sendTelegramPhotos(cfg, replyTo, photosCaption(notes.Version), photos); err != nil {
+		if _, err := sendTelegramPhotos(cfg, replyTo, photosCaption(notes.Version), "", photos); err != nil {
 			return err
 		}
 		fmt.Printf("telegram: album sent (%d)\n", len(photos))
@@ -133,7 +140,8 @@ func run(args []string) error {
 	}
 }
 
-// announceTelegram — пост релиза и, если есть скриншоты, альбом ответом на него.
+// announceTelegram — пост релиза и, если есть скриншоты, альбом: короткий пост
+// уходит подписью к нему, длинный — отдельно, а альбом ответом на него.
 func announceTelegram(root string, notes *ReleaseNotes, cfg telegramConfig) error {
 	// Скриншоты проверяются до поста: битая папка не должна оставить пост без них.
 	photos, err := listReleasePhotos(releasePhotosDir(root))
@@ -141,6 +149,17 @@ func announceTelegram(root string, notes *ReleaseNotes, cfg telegramConfig) erro
 		return err
 	}
 	html := FormatTelegramHTML(notes, cfg.Footer)
+	if len(photos) > 0 && fitsCaption(html) {
+		if strings.TrimSpace(cfg.Token) == "" || strings.TrimSpace(cfg.ChatID) == "" {
+			return fmt.Errorf("RELEASE_TG_BOT_TOKEN and RELEASE_TG_CHAT_ID must be set")
+		}
+		messageID, err := sendTelegramPhotos(cfg, 0, html, "HTML", photos)
+		if err != nil {
+			return fmt.Errorf("%w (retry: go run ./tools/release telegram)", err)
+		}
+		fmt.Printf("telegram: post sent with %d screenshot(s) attached (id %d)\n", len(photos), messageID)
+		return nil
+	}
 	messageID, err := sendTelegramHTML(cfg, html)
 	if err != nil {
 		return fmt.Errorf("%w (retry: go run ./tools/release telegram)", err)
@@ -149,7 +168,7 @@ func announceTelegram(root string, notes *ReleaseNotes, cfg telegramConfig) erro
 	if len(photos) == 0 {
 		return nil
 	}
-	if err := sendTelegramPhotos(cfg, messageID, photosCaption(notes.Version), photos); err != nil {
+	if _, err := sendTelegramPhotos(cfg, messageID, photosCaption(notes.Version), "", photos); err != nil {
 		return fmt.Errorf("post sent, album failed (retry only the album: go run ./tools/release photos %d): %w", messageID, err)
 	}
 	fmt.Printf("telegram: album sent (%d)\n", len(photos))
@@ -165,7 +184,9 @@ func printUsage() {
   go run ./tools/release publish    # github + telegram
 
 Screenshots: release-screenshots/*.png|jpg|webp in repo root (or RELEASE_TG_PHOTOS_DIR),
-sent in file-name order as an album replying to the post. No folder — no album.
+sent in file-name order as an album. A post of up to 1024 visible chars becomes the
+album's caption (one message); a longer post goes first and the album replies to it.
+No folder — no album.
 
 Config: .env.release in repo root (see .env.release.sample).
 `)

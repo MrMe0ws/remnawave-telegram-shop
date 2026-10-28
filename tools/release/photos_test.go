@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -58,7 +59,7 @@ func TestBuildMediaGroup(t *testing.T) {
 	dir := t.TempDir()
 	writeFiles(t, dir, "a.png", "b.png")
 	cfg := telegramConfig{ChatID: "@chat", MessageThreadID: 31}
-	body, contentType, err := buildMediaGroup(cfg, 777, "Как это выглядит", []string{filepath.Join(dir, "a.png"), filepath.Join(dir, "b.png")})
+	body, contentType, err := buildMediaGroup(cfg, 777, "Как это выглядит", "", []string{filepath.Join(dir, "a.png"), filepath.Join(dir, "b.png")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,5 +90,44 @@ func TestBuildMediaGroup(t *testing.T) {
 	}
 	if len(form.File["photo0"]) != 1 || len(form.File["photo1"]) != 1 {
 		t.Fatalf("files = %v", form.File)
+	}
+}
+
+// Пост-подпись: разметка у первого фото, и альбом ни на что не отвечает.
+func TestBuildMediaGroupHTMLCaption(t *testing.T) {
+	dir := t.TempDir()
+	writeFiles(t, dir, "a.png")
+	body, contentType, err := buildMediaGroup(telegramConfig{ChatID: "@chat"}, 0, "<b>5.0.0</b>", "HTML", []string{filepath.Join(dir, "a.png")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	form, err := multipart.NewReader(bytes.NewReader(body), params["boundary"]).ReadForm(1 << 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := form.Value["reply_parameters"]; ok {
+		t.Fatalf("caption post must not reply to anything: %v", form.Value)
+	}
+	var media []inputMediaPhoto
+	if err := json.Unmarshal([]byte(form.Value["media"][0]), &media); err != nil {
+		t.Fatal(err)
+	}
+	if media[0].ParseMode != "HTML" || media[0].Caption != "<b>5.0.0</b>" {
+		t.Fatalf("media = %+v", media)
+	}
+}
+
+// Длина подписи — по видимому тексту: теги не в счёт, сущность — один символ.
+func TestTelegramTextRunes(t *testing.T) {
+	got := telegramTextRunes(`<a href="https://example.com/very/long/url">5.0.0</a> &amp; <b>Новое</b>`)
+	if want := len([]rune("5.0.0 & Новое")); got != want {
+		t.Fatalf("telegramTextRunes = %d, want %d", got, want)
+	}
+	if !fitsCaption(strings.Repeat("я", 1024)) || fitsCaption(strings.Repeat("я", 1025)) {
+		t.Fatal("caption limit must be 1024 visible chars")
 	}
 }
