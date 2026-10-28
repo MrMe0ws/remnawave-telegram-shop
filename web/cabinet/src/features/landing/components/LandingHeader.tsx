@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, Shield, X } from 'lucide-react'
 
 import { LangToggle } from '@/components/LangToggle'
+import { HolidayTrim, useHolidayTheme } from '@/features/decor/HolidayAtmosphere'
 import { LANDING_NAV_SECTIONS } from '../landingContent'
 import type { LandingBrand } from '../useLandingBrand'
 import { Rise } from './LandingMotion'
@@ -34,12 +35,14 @@ export function LandingHeader({ brand }: { brand: LandingBrand }) {
     return () => mq.removeEventListener('change', close)
   }, [menuOpen])
 
+  const holiday = useHolidayTheme()
   const cabinetLabel = brand.authenticated
     ? t('landing.nav.cabinet')
     : t('landing.nav.login')
 
   return (
     <header className="landing-header" data-stuck={stuck}>
+      {holiday && <HolidayTrim theme={holiday} />}
       <Rise duration={0.5}>
         <div className="mx-auto flex h-[var(--lp-header-h)] w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link

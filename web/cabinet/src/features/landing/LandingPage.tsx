@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from 'react'
 
 import './landing.css'
+import { HolidayAtmosphere, HolidayWeather, useHolidayTheme } from '@/features/decor/HolidayAtmosphere'
 import { resolveLandingLayout } from './landingLayout'
 import { useLandingBrand } from './useLandingBrand'
 import { LandingHeader } from './components/LandingHeader'
@@ -47,17 +48,26 @@ export default function LandingPage() {
   }, [])
 
   const brand = useLandingBrand()
+  // halloween_2 / new_year_2: вместо сетки и пятен — сцена праздника.
+  const holiday = useHolidayTheme()
   // Раскладка фиксируется на монтировании: смена варианта идёт через перезагрузку.
   const [layout] = useState(resolveLandingLayout)
 
   return (
-    <div className="dark landing-root">
+    <div className="dark landing-root" data-holiday={holiday ?? undefined}>
       <div className="landing-backdrop" aria-hidden>
-        <div className="landing-backdrop__grid" />
-        <div className="landing-orb landing-orb--cyan" />
-        <div className="landing-orb landing-orb--violet" />
-        <div className="landing-orb landing-orb--emerald" />
+        {holiday ? (
+          <HolidayAtmosphere theme={holiday} />
+        ) : (
+          <>
+            <div className="landing-backdrop__grid" />
+            <div className="landing-orb landing-orb--cyan" />
+            <div className="landing-orb landing-orb--violet" />
+            <div className="landing-orb landing-orb--emerald" />
+          </>
+        )}
       </div>
+      {holiday && <HolidayWeather theme={holiday} />}
 
       <div className="relative z-10">
         <LandingHeader brand={brand} />

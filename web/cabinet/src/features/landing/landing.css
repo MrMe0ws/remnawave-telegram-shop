@@ -70,7 +70,8 @@ html[data-cabinet-decor="spring"] .landing-root { --lp-cyan: 142 55% 46%; --lp-v
 html[data-cabinet-decor="cyber"] .landing-root { --lp-cyan: 140 90% 46%; --lp-violet: 172 90% 52%; }
 html[data-cabinet-decor="neon"] .landing-root { --lp-cyan: 186 100% 50%; --lp-violet: 300 90% 66%; }
 html[data-cabinet-decor="ocean"] .landing-root { --lp-cyan: 205 85% 52%; --lp-violet: 178 72% 52%; }
-html[data-cabinet-decor="new_year"] .landing-root { --lp-cyan: 198 85% 52%; --lp-violet: 220 70% 80%; }
+html[data-cabinet-decor="new_year"] .landing-root,
+html[data-cabinet-decor="new_year_2"] .landing-root { --lp-cyan: 198 85% 52%; --lp-violet: 220 70% 80%; }
 html[data-cabinet-decor="slate"] .landing-root { --lp-cyan: 215 20% 62%; --lp-violet: 250 30% 74%; }
 html[data-cabinet-decor="carbon"] .landing-root { --lp-cyan: 217 90% 60%; --lp-violet: 190 70% 60%; }
 html[data-cabinet-decor="aurora"] .landing-root { --lp-cyan: 168 75% 48%; --lp-violet: 262 80% 68%; }
@@ -81,7 +82,8 @@ html[data-cabinet-decor="valentine"] .landing-root { --lp-cyan: 338 78% 52%; --l
 html[data-cabinet-decor="wine"] .landing-root { --lp-cyan: 346 66% 52%; --lp-violet: 300 50% 62%; }
 html[data-cabinet-decor="sunset"] .landing-root { --lp-cyan: 18 92% 56%; --lp-violet: 330 85% 65%; }
 html[data-cabinet-decor="orange"] .landing-root { --lp-cyan: 28 95% 48%; --lp-violet: 350 80% 64%; }
-html[data-cabinet-decor="halloween"] .landing-root { --lp-cyan: 28 95% 48%; --lp-violet: 270 72% 66%; }
+html[data-cabinet-decor="halloween"] .landing-root,
+html[data-cabinet-decor="halloween_2"] .landing-root { --lp-cyan: 28 95% 48%; --lp-violet: 270 72% 66%; }
 html[data-cabinet-decor="yellow"] .landing-root { --lp-cyan: 38 92% 46%; --lp-violet: 12 85% 62%; }
 html[data-cabinet-decor="summer"] .landing-root { --lp-cyan: 38 92% 46%; --lp-violet: 190 80% 55%; }
 html[data-cabinet-decor="black_friday"] .landing-root { --lp-cyan: 45 95% 46%; --lp-violet: 20 90% 58%; }
@@ -868,4 +870,83 @@ html[data-cabinet-decor="black_friday"] .landing-root {
     transform: scale(1.28);
     opacity: 0;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * halloween_2 / new_year_2: сцена праздника вместо сетки и пятен
+ * (HolidayAtmosphere в .landing-backdrop) и своё полотно под неё —
+ * фон, карточки, шапка и сплошная главная кнопка.
+ * ───────────────────────────────────────────────────────────── */
+
+html[data-cabinet-decor="halloween_2"] .landing-root {
+  --background: 275 46% 8%;
+  --foreground: 32 40% 96%;
+  --card: 272 32% 12%;
+  --border: 28 42% 32%;
+  --muted-foreground: 28 18% 76%;
+  --primary: 28 95% 56%;
+  --secondary: 272 28% 16%;
+  --lp-cyan: 28 95% 56%;
+  --lp-violet: 274 62% 64%;
+  --lp-on-accent: #2a1208;
+  background-color: #140816;
+}
+
+html[data-cabinet-decor="new_year_2"] .landing-root {
+  --background: 214 48% 8%;
+  --foreground: 200 40% 97%;
+  --card: 214 36% 13%;
+  --border: 198 30% 32%;
+  --muted-foreground: 200 18% 76%;
+  --primary: 198 90% 62%;
+  --secondary: 214 32% 16%;
+  --lp-cyan: 198 90% 62%;
+  --lp-violet: 168 55% 62%;
+  --lp-on-accent: #062033;
+  background-color: #07131f;
+}
+
+html[data-cabinet-decor="halloween_2"] .landing-header[data-stuck="true"] {
+  background-color: rgb(20 8 22 / 0.9);
+  border-bottom-color: hsl(28 80% 48% / 0.45);
+}
+
+html[data-cabinet-decor="new_year_2"] .landing-header[data-stuck="true"] {
+  background-color: rgb(7 19 31 / 0.9);
+  border-bottom-color: hsl(198 70% 62% / 0.4);
+}
+
+html[data-cabinet-decor="halloween_2"] .landing-card {
+  border-color: hsl(28 75% 48% / 0.4);
+  background-color: hsl(272 32% 11% / 0.78);
+  background-image: linear-gradient(165deg, hsl(28 50% 18% / 0.35), hsl(272 32% 10% / 0.82));
+  box-shadow:
+    inset 0 1px 0 hsl(32 90% 70% / 0.14),
+    0 16px 36px hsl(270 40% 4% / 0.4);
+}
+
+html[data-cabinet-decor="new_year_2"] .landing-card {
+  border-color: hsl(198 60% 70% / 0.35);
+  background-color: hsl(214 40% 12% / 0.78);
+  background-image: linear-gradient(165deg, hsl(198 40% 24% / 0.28), hsl(214 40% 10% / 0.84));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.2),
+    0 16px 36px hsl(214 50% 4% / 0.4);
+}
+
+html[data-cabinet-decor="halloween_2"] .landing-cta--primary {
+  background-image: none;
+  background-color: hsl(28 95% 56%);
+  box-shadow: 0 10px 28px -12px hsl(28 95% 48% / 0.8);
+}
+
+html[data-cabinet-decor="new_year_2"] .landing-cta--primary {
+  background-image: none;
+  background-color: hsl(198 90% 62%);
+  box-shadow: 0 10px 28px -12px hsl(198 90% 48% / 0.75);
+}
+
+/* Фон лендинга fixed: земля с персонажами висела бы поверх текста на каждом экране. */
+.landing-root .holiday-ground {
+  display: none;
 }

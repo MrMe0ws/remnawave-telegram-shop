@@ -2291,20 +2291,23 @@ html:not(.dark) .cabinet-decor-particle--dot {
 }
 
 /* --- new_year --- */
-html[data-cabinet-decor="new_year"] {
+html[data-cabinet-decor="new_year"],
+html[data-cabinet-decor="new_year_2"] {
   --primary: 195 72% 46%;
   --accent: 195 72% 46%;
   --ring: 195 72% 46%;
 }
 
-html.dark[data-cabinet-decor="new_year"] {
+html.dark[data-cabinet-decor="new_year"],
+html.dark[data-cabinet-decor="new_year_2"] {
   --primary: 198 85% 52%;
   --accent: 198 85% 52%;
   --ring: 198 85% 52%;
 }
 
 /* Зимняя ночь: холодное свечение сверху, лёгкий «северный» отсвет, светлее у снега. */
-html.dark[data-cabinet-decor="new_year"] body {
+html.dark[data-cabinet-decor="new_year"] body,
+html.dark[data-cabinet-decor="new_year_2"] body {
   background-image:
     radial-gradient(ellipse 120% 70% at 50% -20%, hsl(205 80% 42% / 0.22), transparent 58%),
     radial-gradient(ellipse 60% 40% at 12% 0%, hsl(170 60% 38% / 0.12), transparent 60%),
@@ -2312,7 +2315,8 @@ html.dark[data-cabinet-decor="new_year"] body {
     linear-gradient(180deg, hsl(218 50% 9%) 0%, hsl(var(--background)) 50%, hsl(214 40% 12%) 100%);
 }
 
-html.dark[data-cabinet-decor="new_year"] .cabinet-shell-gradient {
+html.dark[data-cabinet-decor="new_year"] .cabinet-shell-gradient,
+html.dark[data-cabinet-decor="new_year_2"] .cabinet-shell-gradient {
   background-image:
     radial-gradient(ellipse 120% 70% at 50% -20%, hsl(205 80% 42% / 0.22), transparent 58%),
     radial-gradient(ellipse 60% 40% at 12% 0%, hsl(170 60% 38% / 0.12), transparent 60%),
@@ -2909,14 +2913,16 @@ html[data-cabinet-decor="neon"] .cabinet-shell .subscription-feature-card:focus-
 }
 
 /* --- halloween (оранжевый акцент) --- */
-html[data-cabinet-decor="halloween"] {
+html[data-cabinet-decor="halloween"],
+html[data-cabinet-decor="halloween_2"] {
   --primary: 28 95% 48%;
   --accent: 28 95% 48%;
   --ring: 28 95% 48%;
 }
 
 /* Ночное небо: фиолетовый верх, лунный отсвет справа, оранжевый «горизонт» снизу. */
-html.dark[data-cabinet-decor="halloween"] body {
+html.dark[data-cabinet-decor="halloween"] body,
+html.dark[data-cabinet-decor="halloween_2"] body {
   background-image:
     radial-gradient(ellipse 45% 35% at 92% 6%, hsl(45 80% 70% / 0.1), transparent 70%),
     radial-gradient(ellipse 120% 70% at 50% -12%, hsl(275 55% 24% / 0.42), transparent 58%),
@@ -2924,7 +2930,8 @@ html.dark[data-cabinet-decor="halloween"] body {
     linear-gradient(180deg, hsl(270 35% 7%) 0%, hsl(var(--background)) 46%, hsl(22 45% 7%) 100%);
 }
 
-html.dark[data-cabinet-decor="halloween"] .cabinet-shell-gradient {
+html.dark[data-cabinet-decor="halloween"] .cabinet-shell-gradient,
+html.dark[data-cabinet-decor="halloween_2"] .cabinet-shell-gradient {
   background-image:
     radial-gradient(ellipse 45% 35% at 92% 6%, hsl(45 80% 70% / 0.1), transparent 70%),
     radial-gradient(ellipse 120% 70% at 50% -12%, hsl(275 55% 24% / 0.42), transparent 58%),
@@ -4114,7 +4121,9 @@ html:not(.dark) .cabinet-decor-scene__wine-sheen {
 
 /* new_year: иней на карточках */
 html[data-cabinet-decor="new_year"] .subscription-feature-card,
-html[data-cabinet-decor="new_year"] .cabinet-elevated-card {
+html[data-cabinet-decor="new_year_2"] .subscription-feature-card,
+html[data-cabinet-decor="new_year"] .cabinet-elevated-card,
+html[data-cabinet-decor="new_year_2"] .cabinet-elevated-card {
   box-shadow:
     0 4px 6px -1px rgb(0 0 0 / 0.1),
     0 2px 4px -2px rgb(0 0 0 / 0.1),
@@ -4122,7 +4131,9 @@ html[data-cabinet-decor="new_year"] .cabinet-elevated-card {
 }
 
 html.dark[data-cabinet-decor="new_year"] .subscription-feature-card,
-html.dark[data-cabinet-decor="new_year"] .cabinet-elevated-card {
+html.dark[data-cabinet-decor="new_year_2"] .subscription-feature-card,
+html.dark[data-cabinet-decor="new_year"] .cabinet-elevated-card,
+html.dark[data-cabinet-decor="new_year_2"] .cabinet-elevated-card {
   box-shadow:
     0 12px 30px rgba(3, 10, 24, 0.42),
     inset 0 1px 0 hsl(210 40% 98% / 0.1),

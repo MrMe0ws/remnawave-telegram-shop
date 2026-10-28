@@ -83,9 +83,9 @@ export function resolveDecorNavIcon(
   defaultIcon: LucideIcon,
 ): LucideIcon | typeof DecorSnowmanIcon | typeof DecorPumpkinIcon | typeof DecorTreeIcon {
   if (theme === 'valentine' && to === '/support') return Heart
-  if (theme === 'halloween' && to === '/dashboard') return DecorPumpkinIcon
-  if (theme === 'new_year' && to === '/profile') return DecorSnowmanIcon
-  if (theme === 'new_year' && to === '/dashboard') return DecorTreeIcon
+  if ((theme === 'halloween' || theme === 'halloween_2') && to === '/dashboard') return DecorPumpkinIcon
+  if ((theme === 'new_year' || theme === 'new_year_2') && to === '/profile') return DecorSnowmanIcon
+  if ((theme === 'new_year' || theme === 'new_year_2') && to === '/dashboard') return DecorTreeIcon
   return defaultIcon
 }
 

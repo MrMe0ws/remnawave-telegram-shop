@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 
 import { JackOLanternShape, SpiderSvg } from './DecorEffects'
 import type { DecorThemeId } from './decorThemes'
+import { HolidayAtmosphere } from './HolidayAtmosphere'
 import { NewYearScene } from './NewYearScene'
 import { useCabinetDecorTheme } from './useCabinetDecorTheme'
 
@@ -289,6 +290,10 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
       return <SummerTree />
     case 'halloween':
       return <HalloweenScene />
+    case 'new_year_2':
+      return <HolidayAtmosphere theme="new_year" />
+    case 'halloween_2':
+      return <HolidayAtmosphere theme="halloween" />
     case 'spring':
       return <SpringScene />
     case 'valentine':

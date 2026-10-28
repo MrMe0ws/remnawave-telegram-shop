@@ -1,4 +1,5 @@
 import { SpiderSvg } from './DecorEffects'
+import { HolidayTrim } from './HolidayAtmosphere'
 import { NewYearHeaderDecor } from './NewYearScene'
 import { useCabinetDecorTheme } from './useCabinetDecorTheme'
 
@@ -26,12 +27,14 @@ function HalloweenHeaderAccent() {
   )
 }
 
-/** Декор нижнего края sticky-хедера (гирлянда, неон и т.д.). */
+/** Декор нижнего края sticky-хедера (гирлянда, неон, флажки, сосульки). */
 export function CabinetDecorHeader() {
   const theme = useCabinetDecorTheme()
 
   if (theme === 'new_year') return <NewYearHeaderDecor />
   if (theme === 'neon') return <NeonHeaderAccent />
   if (theme === 'halloween') return <HalloweenHeaderAccent />
+  if (theme === 'halloween_2') return <HolidayTrim theme="halloween" />
+  if (theme === 'new_year_2') return <HolidayTrim theme="new_year" />
   return null
 }
