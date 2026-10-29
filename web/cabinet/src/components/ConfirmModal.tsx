@@ -19,6 +19,8 @@ type ConfirmModalProps = {
   /** danger — красная кнопка подтверждения и красный бейдж иконки. */
   tone?: 'danger' | 'default'
   icon?: LucideIcon
+  /** Заголовок на одной линии с иконкой, пояснение — отдельным абзацем под ними. */
+  inlineTitle?: boolean
   loading?: boolean
   onConfirm: () => void
   onClose: () => void
@@ -39,6 +41,7 @@ export function ConfirmModal({
   cancelLabel,
   tone = 'danger',
   icon: Icon = AlertTriangle,
+  inlineTitle = false,
   loading = false,
   onConfirm,
   onClose,
@@ -116,7 +119,10 @@ export function ConfirmModal({
         </div>
 
         <div
-          className={cn('flex touch-none gap-3 sm:touch-auto', description ? 'items-start' : 'items-center')}
+          className={cn(
+            'flex touch-none gap-3 sm:touch-auto',
+            description && !inlineTitle ? 'items-start' : 'items-center',
+          )}
           {...dragHandlers}
         >
           <div
@@ -131,11 +137,14 @@ export function ConfirmModal({
           </div>
           <div className="min-w-0 flex-1 space-y-1.5">
             <h2 className="text-base font-semibold leading-snug text-foreground">{title}</h2>
-            {description ? (
+            {description && !inlineTitle ? (
               <div className="text-sm leading-relaxed text-muted-foreground">{description}</div>
             ) : null}
           </div>
         </div>
+        {description && inlineTitle ? (
+          <div className="mt-3 text-sm leading-relaxed text-muted-foreground">{description}</div>
+        ) : null}
 
         {/* Подтверждение слева, отмена справа — одинаковая ширина, без переноса на мобиле. */}
         <div className="mt-5 flex items-center gap-2">

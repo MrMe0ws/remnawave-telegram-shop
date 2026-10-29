@@ -10,12 +10,13 @@ import { ConfirmModal } from '@/components/ConfirmModal'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
 import { SubscriptionActions } from '@/components/SubscriptionActions'
 import { SubscriptionExpireAtBlock } from '@/components/SubscriptionExpireAtBlock'
+import { SubscriptionStatusBadge } from '@/components/SubscriptionStatusBadge'
 import { TrafficUsageBar } from '@/components/TrafficUsageBar'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { AddDeviceSlot, ConnectExtraDeviceCard, ConnectInviteModal } from '@/features/subscription/ConnectExtraDevice'
 import { DeviceRow } from '@/features/subscription/DeviceRow'
 import { SubscriptionLinkResetLink, SubscriptionLinkResetSheet } from '@/features/subscription/SubscriptionLinkReset'
-import { SubscriptionExtraDevices } from '@/features/subscription/SubscriptionExtraDevices'
+import { DeviceSlotsFullCta, DeviceSlotsModal, DeviceSlotsRow } from '@/features/subscription/DeviceSlots'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -69,6 +70,11 @@ export default function SubscriptionPage() {
   const [connectOpen, setConnectOpen] = useState(false)
   // Сброс ссылки открывают из шторки приглашения и из окна удаления устройства.
   const [resetOpen, setResetOpen] = useState(false)
+  // Окно мест открывают три входа: строка под устройствами, плашка «Все места
+  // заняты» и «докупите» под полосой устройств. Первая открывает на текущем
+  // числе, две другие — сразу с +1.
+  const [slotsOpen, setSlotsOpen] = useState(false)
+  const [slotsInitial, setSlotsInitial] = useState(0)
 
   const days = sub?.expire_at ? daysUntil(sub.expire_at) : null
   const isExpiredByDate = sub?.expire_at != null && sub.expire_at !== '' && days !== null && days <= 0
@@ -96,6 +102,20 @@ export default function SubscriptionPage() {
       hasLink &&
       (deviceLimit === 0 || connectedDevices < deviceLimit),
   )
+  const hwid = sub?.hwid_extra
+  // Блок мест: докупка включена, подписка оплачена и активна. Бэкенд сам
+  // прячет его у истёкших по дате; истёкших по трафику отсекаем здесь.
+  const slotsVisible = Boolean(hwid?.enabled && hwid.ui_visible && !isExpired)
+  const canBuySlot = Boolean(slotsVisible && hwid?.can_increase)
+  const allSlotsTaken = Boolean(
+    devices?.enabled && !devicesLoading && deviceLimit > 0 && connectedDevices >= deviceLimit,
+  )
+
+  function openSlots(withExtra: boolean) {
+    if (!hwid) return
+    setSlotsInitial(hwid.current_limit + (withExtra ? 1 : 0))
+    setSlotsOpen(true)
+  }
 
   async function handleRefresh() {
     if (isRefreshing) return
@@ -175,7 +195,7 @@ export default function SubscriptionPage() {
                     </span>
                     <p className="mt-2 font-heading text-2xl font-bold">{subscriptionTariffLabel(sub, t)}</p>
                   </div>
-                  <StatusBadge isActive={isActive} isExpired={isExpired} hasSubscription={Boolean(sub?.expire_at)} />
+                  <SubscriptionStatusBadge days={isExpired ? 0 : days} isActive={isActive} />
                 </div>
 
                 {/* Показатели полосами: трафик и устройства рядом, одинаковой формы. */}
@@ -194,6 +214,7 @@ export default function SubscriptionPage() {
                     loading={devicesLoading}
                     title={t('subscriptionPage.devices')}
                     allTakenHint={t('subscriptionPage.devicesAllTaken')}
+                    onBuy={canBuySlot ? () => openSlots(true) : undefined}
                     unlimitedLabel={t('subscriptionPage.unlimited')}
                   />
                 </div>
@@ -236,12 +257,6 @@ export default function SubscriptionPage() {
                 <div id="cabinet-loyalty">
                   <LoyaltyCompactCard />
                 </div>
-              </RevealItem>
-            )}
-
-            {sub?.hwid_extra?.ui_visible && sub.hwid_extra.enabled && (
-              <RevealItem>
-                <SubscriptionExtraDevices hwid={sub.hwid_extra} inactive={isExpired} onUpdated={() => void refetch()} />
               </RevealItem>
             )}
 
@@ -295,6 +310,11 @@ export default function SubscriptionPage() {
                 {canAddDevice && (
                   <AddDeviceSlot onOpen={() => setConnectOpen(true)} />
                 )}
+                {canBuySlot && allSlotsTaken && hwid && (
+                  <DeviceSlotsFullCta hwid={hwid} expireAt={sub?.expire_at} onOpen={() => openSlots(true)} />
+                )}
+
+                {slotsVisible && hwid && <DeviceSlotsRow hwid={hwid} onOpen={() => openSlots(false)} />}
               </CardContent>
             </Card>
             </RevealItem>
@@ -315,6 +335,18 @@ export default function SubscriptionPage() {
                         setResetOpen(true)
                       }
                 }
+              />
+            )}
+
+            {slotsVisible && hwid && (
+              <DeviceSlotsModal
+                open={slotsOpen}
+                hwid={hwid}
+                connected={connectedDevices}
+                expireAt={sub?.expire_at}
+                initialTarget={slotsInitial}
+                onClose={() => setSlotsOpen(false)}
+                onUpdated={() => void Promise.all([refetch(), refetchDevices()])}
               />
             )}
 
@@ -404,42 +436,6 @@ function DeviceCardIcon({ className }: { className?: string }) {
   )
 }
 
-function StatusBadge({
-  isActive,
-  isExpired,
-  hasSubscription,
-}: {
-  isActive: boolean
-  isExpired: boolean
-  hasSubscription: boolean
-}) {
-  const { t } = useTranslation()
-
-  if (isActive) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
-        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        {t('subscriptionPage.statusActive')}
-      </span>
-    )
-  }
-  if (isExpired) {
-    return (
-      <span className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
-        {t('subscriptionPage.statusExpired')}
-      </span>
-    )
-  }
-  if (!hasSubscription) {
-    return (
-      <span className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-        {t('subscriptionPage.statusNone')}
-      </span>
-    )
-  }
-  return null
-}
-
 /**
  * Заглушка страницы подписки: повторяет реальную раскладку (карточка тарифа,
  * блок ссылки, список устройств), чтобы после ответа сервера ничего не «прыгало».
@@ -502,6 +498,7 @@ function DevicesUsageBar({
   title,
   allTakenHint,
   unlimitedLabel,
+  onBuy,
 }: {
   used: number
   limit: number
@@ -509,7 +506,10 @@ function DevicesUsageBar({
   title: string
   allTakenHint: string
   unlimitedLabel: string
+  /** Есть — подсказка зовёт докупить место, слово «докупите» открывает окно мест. */
+  onBuy?: () => void
 }) {
+  const { t } = useTranslation()
   const unlimited = limit <= 0
   const percent = unlimited ? 0 : Math.min(100, (used / limit) * 100)
   const full = !unlimited && used >= limit
@@ -544,7 +544,24 @@ function DevicesUsageBar({
           />
         </div>
       )}
-      {full && <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-300">{allTakenHint}</p>}
+      {full && (
+        <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-300">
+          {onBuy ? (
+            <>
+              {t('subscriptionPage.devicesAllTakenBuyPrefix')}{' '}
+              <button
+                type="button"
+                onClick={onBuy}
+                className="underline decoration-current/60 underline-offset-2 transition-colors hover:text-foreground"
+              >
+                {t('subscriptionPage.devicesAllTakenBuyLink')}
+              </button>
+            </>
+          ) : (
+            allTakenHint
+          )}
+        </p>
+      )}
     </div>
   )
 }
