@@ -1177,12 +1177,20 @@ func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, mont
 	}
 }
 
+// ErrHwidLimitPinned — лимит устройств закреплён админом: доп. устройства в
+// счёт не берём, оплата ничего бы не изменила. Интерфейсы кнопку докупки таким
+// клиентам не показывают; это последняя линия на случай подделанного запроса.
+var ErrHwidLimitPinned = errors.New("hwid limit is pinned by admin")
+
 func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount float64, months int, extraHwid int, customer *database.Customer, invoiceType database.InvoiceType, meta *PromoMeta, tariffID *int64, extras *TariffPurchaseExtras) (url string, purchaseId int64, err error) {
 	if extraHwid < 0 {
 		return "", 0, fmt.Errorf("invalid extra hwid: %d", extraHwid)
 	}
 	if !config.HwidExtraDevicesEnabled() && extraHwid > 0 {
 		return "", 0, fmt.Errorf("extra hwid purchases are disabled")
+	}
+	if extraHwid > 0 && customer != nil && customer.HwidLimitOverride != nil {
+		return "", 0, ErrHwidLimitPinned
 	}
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:
@@ -1209,6 +1217,9 @@ func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, 
 	}
 	if !config.HwidExtraDevicesEnabled() {
 		return "", 0, fmt.Errorf("extra hwid purchases are disabled")
+	}
+	if customer != nil && customer.HwidLimitOverride != nil {
+		return "", 0, ErrHwidLimitPinned
 	}
 	switch invoiceType {
 	case database.InvoiceTypeCrypto:

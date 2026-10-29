@@ -338,6 +338,8 @@ export interface AdminCustomerDTO {
   subscription_link?: string | null
   extra_hwid: number
   extra_hwid_expires_at?: string | null
+  /** Закреплённый админом лимит устройств; null — считается как обычно. */
+  hwid_limit_override?: number | null
   current_tariff_id?: number | null
   subscription_period_start?: string | null
   subscription_period_months?: number | null
@@ -657,6 +659,8 @@ export interface AdminUserPanelDTO {
   traffic_presets_gb: number[]
   strategies: string[]
   tariffs?: AdminTariffBriefDTO[]
+  /** Лимит без закрепления: тариф + действующие докупленные слоты. */
+  hwid_unpinned_limit?: number
 }
 
 export interface AdminDeviceDTO {

@@ -40,6 +40,12 @@ func (h Handler) AddDeviceCallbackHandler(ctx context.Context, b *bot.Bot, updat
 		slog.Error("Error cleaning expired extra hwid", "error", err)
 		return
 	}
+	// Лимит закреплён админом: докупка или уменьшение его бы не изменили,
+	// а деньги за докупку списались бы впустую.
+	if customer.HwidLimitOverride != nil {
+		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_pinned_by_admin"), CallbackConnect)
+		return
+	}
 	if !config.HwidExtraDevicesEnabled() {
 		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_extra_disabled"), CallbackConnect)
 		return
@@ -99,6 +105,12 @@ func (h Handler) AddDeviceConfirmCallbackHandler(ctx context.Context, b *bot.Bot
 		slog.Error("Error cleaning expired extra hwid", "error", err)
 		return
 	}
+	// Лимит закреплён админом: докупка или уменьшение его бы не изменили,
+	// а деньги за докупку списались бы впустую.
+	if customer.HwidLimitOverride != nil {
+		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_pinned_by_admin"), CallbackConnect)
+		return
+	}
 	if !config.HwidExtraDevicesEnabled() {
 		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_extra_disabled"), CallbackConnect)
 		return
@@ -156,6 +168,12 @@ func (h Handler) AddDeviceApplyCallbackHandler(ctx context.Context, b *bot.Bot, 
 	}
 	if err := h.cleanupExpiredExtraHwid(ctx, customer); err != nil {
 		slog.Error("Error cleaning expired extra hwid", "error", err)
+		return
+	}
+	// Лимит закреплён админом: докупка или уменьшение его бы не изменили,
+	// а деньги за докупку списались бы впустую.
+	if customer.HwidLimitOverride != nil {
+		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_pinned_by_admin"), CallbackConnect)
 		return
 	}
 	if !config.HwidExtraDevicesEnabled() {
@@ -253,6 +271,12 @@ func (h Handler) AddDevicePaymentCallbackHandler(ctx context.Context, b *bot.Bot
 	}
 	if err := h.cleanupExpiredExtraHwid(ctx, customer); err != nil {
 		slog.Error("Error cleaning expired extra hwid", "error", err)
+		return
+	}
+	// Лимит закреплён админом: докупка или уменьшение его бы не изменили,
+	// а деньги за докупку списались бы впустую.
+	if customer.HwidLimitOverride != nil {
+		h.editSimpleMessage(ctx, b, callbackMessage, langCode, h.translation.GetText(langCode, "hwid_pinned_by_admin"), CallbackConnect)
 		return
 	}
 	if !config.HwidExtraDevicesEnabled() {

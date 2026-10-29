@@ -151,6 +151,7 @@ func main() {
 	// Инициализация клиентов для работы с внешними сервисами
 	cryptoPayClient := cryptopay.NewCryptoPayClient(config.CryptoPayUrl(), config.CryptoPayToken())                // Криптоплатежи
 	remnawaveClient := remnawave.NewClient(config.RemnawaveUrl(), config.RemnawaveToken(), config.RemnawaveMode()) // Remnawave API
+	remnawaveClient.SetHwidLimitPin(customerRepository.HwidLimitOverride)                                          // Закреплённые админом лимиты устройств
 	yookasaClient := yookasa.NewClient(config.YookasaUrl(), config.YookasaShopId(), config.YookasaSecretKey())     // YooKassa платежи
 	plategaClient := platega.NewClient(config.PlategaMerchantID(), config.PlategaSecret())
 

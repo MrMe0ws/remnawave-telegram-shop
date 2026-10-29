@@ -39,6 +39,54 @@ const CtxKeyPanelUsername ctxKey = "panel_username"
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
+	hwidPin    HwidLimitPinLookup
+}
+
+// HwidLimitPinLookup возвращает лимит устройств, закреплённый админом за
+// клиентом; ok=false — не закреплён. customerID может быть 0 — тогда ищут по
+// telegramID.
+type HwidLimitPinLookup func(ctx context.Context, customerID, telegramID int64) (limit int, ok bool, err error)
+
+// SetHwidLimitPin подключает источник закреплённых лимитов. Лимит в панель
+// пишут оплата, докупка, промокоды, смена тарифа и очистка протухших слотов —
+// подмена здесь, в единственной точке записи, держит закреплённое число при
+// любом из них и при любом будущем месте записи.
+func (r *Client) SetHwidLimitPin(lookup HwidLimitPinLookup) {
+	r.hwidPin = lookup
+}
+
+// pinnedHwidLimit подменяет расчётный лимит закреплённым. Ошибка чтения из БД
+// не останавливает запись: оплата важнее, а закреплённое число вернётся при
+// следующей записи лимита.
+func (r *Client) pinnedHwidLimit(ctx context.Context, customerID, telegramID int64, computed int) int {
+	if r.hwidPin == nil {
+		return computed
+	}
+	limit, ok, err := r.hwidPin(ctx, customerID, telegramID)
+	if err != nil {
+		slog.Error("hwid limit pin lookup failed, using computed limit", "error", err)
+		return computed
+	}
+	if !ok || limit <= 0 {
+		return computed
+	}
+	if limit != computed {
+		slog.Info("hwid limit pinned by admin", "computed", computed, "pinned", limit)
+	}
+	return limit
+}
+
+// pinHwidLimitField подставляет закреплённый лимит в запрос. Если запрос лимит
+// не трогал (nil), а закрепление есть, лимит всё равно выставляется — так
+// заново созданный профиль панели сразу получает закреплённое число.
+func (r *Client) pinHwidLimitField(ctx context.Context, customerID, telegramID int64, field **int) {
+	computed := 0
+	if *field != nil {
+		computed = **field
+	}
+	if v := r.pinnedHwidLimit(ctx, customerID, telegramID, computed); v > 0 && v != computed {
+		*field = &v
+	}
 }
 
 type headerTransport struct {
@@ -383,7 +431,7 @@ func (r *Client) DecreaseSubscription(ctx context.Context, telegramId int64, tra
 
 	existingUser := findUserBySuffix(users, telegramId)
 
-	updated, err := r.updateUser(ctx, existingUser, trafficLimit, days, false)
+	updated, err := r.updateUser(ctx, 0, telegramId, existingUser, trafficLimit, days, false)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +451,7 @@ func (r *Client) CreateOrUpdateUser(ctx context.Context, customerId int64, teleg
 	if existingUser == nil {
 		return r.createUser(ctx, customerId, telegramId, trafficLimit, days, isTrialUser)
 	}
-	return r.updateUser(ctx, existingUser, trafficLimit, days, isTrialUser)
+	return r.updateUser(ctx, customerId, telegramId, existingUser, trafficLimit, days, isTrialUser)
 }
 
 // ExtendSubscriptionByDaysPreserveSquads продлевает только expire_at (рефералка, промо-дни и т.п.):
@@ -498,7 +546,7 @@ func (r *Client) CreateOrUpdateUserFromNow(ctx context.Context, customerId int64
 		return r.createUser(ctx, customerId, telegramId, trafficLimit, days, isTrialUser)
 	}
 	base := time.Now().UTC().Add(-time.Second)
-	return r.updateUserWithBase(ctx, existingUser, trafficLimit, days, isTrialUser, &base)
+	return r.updateUserWithBase(ctx, customerId, telegramId, existingUser, trafficLimit, days, isTrialUser, &base)
 }
 
 // ---------------------------------------------------------------------------
@@ -570,11 +618,11 @@ func (r *Client) findExistingUserForCustomer(ctx context.Context, customerID int
 	return nil, nil
 }
 
-func (r *Client) updateUser(ctx context.Context, existingUser *User, trafficLimit int, days int, isTrialUser bool) (*User, error) {
-	return r.updateUserWithBase(ctx, existingUser, trafficLimit, days, isTrialUser, nil)
+func (r *Client) updateUser(ctx context.Context, customerID, telegramID int64, existingUser *User, trafficLimit int, days int, isTrialUser bool) (*User, error) {
+	return r.updateUserWithBase(ctx, customerID, telegramID, existingUser, trafficLimit, days, isTrialUser, nil)
 }
 
-func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, trafficLimit int, days int, isTrialUser bool, baseExpire *time.Time) (*User, error) {
+func (r *Client) updateUserWithBase(ctx context.Context, customerID, telegramID int64, existingUser *User, trafficLimit int, days int, isTrialUser bool, baseExpire *time.Time) (*User, error) {
 	expireBase := existingUser.ExpireAt
 	if baseExpire != nil {
 		expireBase = *baseExpire
@@ -614,6 +662,7 @@ func (r *Client) updateUserWithBase(ctx context.Context, existingUser *User, tra
 			userUpdate.HwidDeviceLimit = &trialLimit
 		}
 	}
+	r.pinHwidLimitField(ctx, customerID, telegramID, &userUpdate.HwidDeviceLimit)
 
 	externalSquad := config.ExternalSquadUUID()
 	if isTrialUser {
@@ -702,6 +751,7 @@ func (r *Client) createUser(ctx context.Context, customerId int64, telegramId in
 			createReq.HwidDeviceLimit = &trialLimit
 		}
 	}
+	r.pinHwidLimitField(ctx, customerId, telegramId, &createReq.HwidDeviceLimit)
 	if externalSquad != uuid.Nil {
 		createReq.ExternalSquadUuid = &externalSquad
 	}
@@ -916,6 +966,7 @@ func (r *Client) UpdateUserDeviceLimit(ctx context.Context, telegramId int64, ne
 		return nil, ErrUserNotFound
 	}
 	user := findUserBySuffix(users, telegramId)
+	newLimit = r.pinnedHwidLimit(ctx, 0, telegramId, newLimit)
 	if newLimit <= 0 {
 		return nil, fmt.Errorf("invalid device limit: %d", newLimit)
 	}
@@ -942,6 +993,7 @@ func (r *Client) UpdateUserDeviceLimitByCustomer(ctx context.Context, customerID
 	if user == nil {
 		return nil, ErrUserNotFound
 	}
+	newLimit = r.pinnedHwidLimit(ctx, customerID, telegramID, newLimit)
 	if newLimit <= 0 {
 		return nil, fmt.Errorf("invalid device limit: %d", newLimit)
 	}

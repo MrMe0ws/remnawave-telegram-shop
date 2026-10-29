@@ -264,7 +264,9 @@ func (h Handler) SellCallbackHandler(ctx context.Context, b *bot.Bot, update *mo
 			slog.Error("Error cleaning expired extra hwid", "error", err)
 			return
 		}
-		if config.HwidExtraDevicesEnabled() && customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
+		// При закреплённом админом лимите доп. устройства в счёт не входят:
+		// за них заплатили бы, а лимит остался бы закреплённым.
+		if config.HwidExtraDevicesEnabled() && customer.HwidLimitOverride == nil && customer.ExtraHwid > 0 && customer.ExtraHwidExpiresAt != nil && customer.ExtraHwidExpiresAt.After(time.Now()) {
 			monthInt := parseIntSafe(month)
 			promptText := fmt.Sprintf(h.translation.GetText(langCode, "hwid_renew_prompt"), customer.ExtraHwid, monthInt, config.HwidAddPrice()*customer.ExtraHwid*monthInt)
 			sellRenew := fmt.Sprintf("%s?month=%s&amount=%s", CallbackSell, month, amount)
@@ -433,6 +435,9 @@ func (h Handler) PaymentCallbackHandler(_ context.Context, b *bot.Bot, update *m
 	if !h.invoiceTypeAllowed(ctx, customer, invoiceType) {
 		rejectForgedCallback("payment", "invoice_type", fromID, update.CallbackQuery.Data)
 		return
+	}
+	if customer.HwidLimitOverride != nil {
+		extra = 0
 	}
 	// В режиме тарифов кнопки без tid бот рисует, только когда активных тарифов
 	// нет (меню откатывается на классические цены). Иначе такой callback —

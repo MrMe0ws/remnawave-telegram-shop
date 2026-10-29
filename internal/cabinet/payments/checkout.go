@@ -177,10 +177,10 @@ type StatusResult struct {
 
 	// Реквизиты чека на экране успешной оплаты. Всё читается из уже
 	// загруженного purchase — дополнительных запросов в БД не добавляют.
-	PaymentID   int64      `json:"payment_id,omitempty"`
-	Amount      float64    `json:"amount,omitempty"`
-	Currency    string     `json:"currency,omitempty"`
-	InvoiceType string     `json:"invoice_type,omitempty"`
+	PaymentID   int64   `json:"payment_id,omitempty"`
+	Amount      float64 `json:"amount,omitempty"`
+	Currency    string  `json:"currency,omitempty"`
+	InvoiceType string  `json:"invoice_type,omitempty"`
 	// PaidAt — момент оплаты; если провайдер его не проставил, отдаём время
 	// создания счёта: на чеке пустая строка времени выглядит как сбой.
 	PaidAt *time.Time `json:"paid_at,omitempty"`
@@ -376,9 +376,9 @@ func (s *CheckoutService) Preview(ctx context.Context, accountID int64, period i
 		out.Currency = "RUB"
 	}
 
-	activeExtra := cabsvc.ActiveExtraSlots(customer)
+	activeExtra := cabsvc.BillableExtraSlots(customer)
 	out.ExtraHwidActive = activeExtra
-	out.ExtraHwidIncluded = reqBoolFalse(reqRenewExtraHwidFromContext(ctx))
+	out.ExtraHwidIncluded = activeExtra > 0 && reqBoolFalse(reqRenewExtraHwidFromContext(ctx))
 
 	if mode == "tariffs" {
 		if tariffID == nil || *tariffID <= 0 {
@@ -607,6 +607,9 @@ func (s *CheckoutService) hwidPrecheck(ctx context.Context, accountID int64) (*d
 	}
 	if customer.IsWebOnly || utils.IsSyntheticTelegramID(customer.TelegramID) {
 		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: not available for this account", ErrForbidden)
+	}
+	if cabsvc.IsHwidLimitPinned(customer) {
+		return nil, cabsvc.HwidExtraLimits{}, fmt.Errorf("%w: device limit is pinned by admin", ErrForbidden)
 	}
 	paid, err := s.purchases.HasPaidSubscription(ctx, customer.ID)
 	if err != nil {
@@ -899,7 +902,7 @@ func (s *CheckoutService) resolveAmount(
 	req CreateRequest,
 ) (amount int, tariffID *int64, extras *payment.TariffPurchaseExtras, extraHwid int, err error) {
 	invoiceStars := invoiceType == database.InvoiceTypeTelegram
-	activeExtra := cabsvc.ActiveExtraSlots(customer)
+	activeExtra := cabsvc.BillableExtraSlots(customer)
 	if req.RenewExtraHwid && activeExtra > 0 {
 		extraHwid = activeExtra
 	}

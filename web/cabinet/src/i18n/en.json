@@ -231,6 +231,7 @@
       "extraDevicesDecreaseHint": "You can lower the limit down to your plan minimum",
       "extraDevicesCurrentLimit": "Current limit: {{n}}",
       "extraDevicesNoActions": "No device limit actions available right now.",
+      "extraDevicesPinned": "Your device limit is set by the administrator.",
       "extraDevicesNewLimit": "New device limit",
       "extraDevicesPaySummary_one": "+{{count}} device ({{from}} → {{to}} of {{max}})",
       "extraDevicesPaySummary_other": "+{{count}} devices ({{from}} → {{to}} of {{max}})",
@@ -899,7 +900,8 @@
         "inactive": "Promo code is inactive, expired, or max uses reached.",
         "not_found": "Promo code not found.",
         "pending_discount": "You already have an active pending discount from another promo.",
-        "tariff_mismatch": "Promo code does not match your current tariff."
+        "tariff_mismatch": "Promo code does not match your current tariff.",
+        "hwid_pinned": "This promo code adds devices, but your device limit is set by the administrator."
       }
     },
     "stub": {
@@ -1711,6 +1713,12 @@
           "extraHwidHint": "Slots above the tariff base limit. Changing these recalculates the panel limit automatically.",
           "extraHwidExpires": "Valid until {{date}}",
           "extraHwidInactive": "{{count}} slot(s) in DB but expired — not counted in limit",
+          "pinLimitTitle": "Pin limit",
+          "pinLimitHint": "Survives payments, tariff changes and promo codes. Buying extra devices is hidden for the customer.",
+          "pinnedLimitTitle": "Pinned limit",
+          "pinnedLimitHint": "Without pin: {{n}}",
+          "pinBelowTariff": "Lower than the tariff gives ({{n}}). Make sure it isn't a typo.",
+          "devicesOverLimit": "{{used}} connected, but the limit is {{limit}}. You can unbind extra devices below.",
           "decreaseLimit": "Decrease limit",
           "increaseLimit": "Increase limit",
           "decreaseExtra": "Remove extra slot",

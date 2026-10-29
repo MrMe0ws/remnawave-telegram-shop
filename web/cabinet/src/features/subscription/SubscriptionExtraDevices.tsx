@@ -292,7 +292,9 @@ export function SubscriptionExtraDevices({ hwid, inactive, onUpdated }: Props) {
                     </button>
                   )}
                   {!hwid.can_increase && !hwid.can_decrease && (
-                    <p className="text-sm text-muted-foreground">{t('subscriptionPage.extraDevicesNoActions')}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t(hwid.pinned ? 'subscriptionPage.extraDevicesPinned' : 'subscriptionPage.extraDevicesNoActions')}
+                    </p>
                   )}
                 </div>
               </div>

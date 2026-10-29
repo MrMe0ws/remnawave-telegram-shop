@@ -402,6 +402,8 @@ export interface SubscriptionHwidExtraInfo {
   price_rub_month: number
   stars_price_month: number
   days_left: number
+  /** Лимит закреплён админом: докупки и уменьшения нет. */
+  pinned?: boolean
 }
 
 export interface SubscriptionResponse {
@@ -1399,6 +1401,9 @@ export const api = {
     request<AdminOkDTO>('DELETE', `/admin/users/${id}/devices/${encodeURIComponent(hwid)}`),
   adminUserExtraHwid: (id: number, delta: number) =>
     request<AdminOkDTO>('POST', `/admin/users/${id}/extra-hwid`, { delta }),
+  /** limit = null снимает закрепление и возвращает расчётный лимит. */
+  adminUserSetHwidPin: (id: number, limit: number | null) =>
+    request<AdminCustomerDTO>('PUT', `/admin/users/${id}/hwid-pin`, { limit }),
 
   adminSquads: () => request<{ items: { uuid: string; name: string }[] }>('GET', '/admin/squads'),
 

@@ -25,7 +25,7 @@ func NewCustomerRepository(poll *pgxpool.Pool) *CustomerRepository {
 
 // customerSelectColumns порядок полей для SELECT (не использовать * — совместимость со схемой).
 // Порядок столбцов синхронизирован со всеми Scan-вызовами и с struct Customer.
-const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only, legal_accepted_at, remnawave_user_id, remnawave_short_uuid"
+const customerSelectColumns = "id, telegram_id, expire_at, created_at, subscription_link, language, extra_hwid, extra_hwid_expires_at, current_tariff_id, subscription_period_start, subscription_period_months, loyalty_xp, telegram_username, is_web_only, legal_accepted_at, remnawave_user_id, remnawave_short_uuid, hwid_limit_override"
 
 type Customer struct {
 	ID                       int64      `db:"id"`
@@ -53,6 +53,10 @@ type Customer struct {
 	RemnawaveUserID *int64 `db:"remnawave_user_id"`
 	// RemnawaveShortUUID — shortUuid профиля панели (используется в публичных ссылках).
 	RemnawaveShortUUID *string `db:"remnawave_short_uuid"`
+	// HwidLimitOverride — лимит устройств, закреплённый админом. Пока он задан,
+	// любая запись лимита в панель подставляет его вместо расчётного
+	// (см. remnawave.Client.SetHwidLimitPin); nil — обычный расчёт.
+	HwidLimitOverride *int `db:"hwid_limit_override"`
 }
 
 func scanCustomer(sc interface{ Scan(dest ...any) error }, c *Customer) error {
@@ -74,6 +78,7 @@ func scanCustomer(sc interface{ Scan(dest ...any) error }, c *Customer) error {
 		&c.LegalAcceptedAt,
 		&c.RemnawaveUserID,
 		&c.RemnawaveShortUUID,
+		&c.HwidLimitOverride,
 	)
 }
 
@@ -275,6 +280,41 @@ func (cr *CustomerRepository) SetLegalAcceptedAt(ctx context.Context, customerID
 	return cr.UpdateFields(ctx, customerID, map[string]interface{}{
 		"legal_accepted_at": at,
 	})
+}
+
+// SetHwidLimitOverride закрепляет лимит устройств клиента; nil снимает закрепление.
+func (cr *CustomerRepository) SetHwidLimitOverride(ctx context.Context, customerID int64, limit *int) error {
+	var v any
+	if limit != nil {
+		v = *limit
+	}
+	return cr.UpdateFields(ctx, customerID, map[string]interface{}{
+		"hwid_limit_override": v,
+	})
+}
+
+// HwidLimitOverride возвращает закреплённый лимит клиента: по id, если он
+// известен, иначе по telegram_id (часть записей в панель знает только его).
+// ok=false — клиента нет или лимит не закреплён.
+func (cr *CustomerRepository) HwidLimitOverride(ctx context.Context, customerID, telegramID int64) (limit int, ok bool, err error) {
+	var v *int
+	if customerID > 0 {
+		err = cr.pool.QueryRow(ctx,
+			`SELECT hwid_limit_override FROM customer WHERE id = $1`, customerID).Scan(&v)
+	} else {
+		err = cr.pool.QueryRow(ctx,
+			`SELECT hwid_limit_override FROM customer WHERE telegram_id = $1`, telegramID).Scan(&v)
+	}
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, false, nil
+		}
+		return 0, false, fmt.Errorf("load hwid_limit_override: %w", err)
+	}
+	if v == nil {
+		return 0, false, nil
+	}
+	return *v, true, nil
 }
 
 // SetRemnawaveIdentity сохраняет идентификатор профиля панели Remnawave у клиента.
@@ -484,6 +524,7 @@ func (cr *CustomerRepository) UpdateFields(ctx context.Context, id int64, update
 		"telegram_username":          {},
 		"is_web_only":                {},
 		"legal_accepted_at":          {},
+		"hwid_limit_override":        {},
 	}
 
 	buildUpdate := sq.Update("customer").

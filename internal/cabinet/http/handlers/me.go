@@ -1077,6 +1077,10 @@ func (h *MeHandler) PostHwidExtraApply(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
+	if cabsvc.IsHwidLimitPinned(c) {
+		http.Error(w, "device limit is pinned by admin", http.StatusForbidden)
+		return
+	}
 	paid, err := h.purchases.HasPaidSubscription(ctx, c.ID)
 	if err != nil || !paid {
 		http.Error(w, "forbidden", http.StatusForbidden)
