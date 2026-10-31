@@ -5078,3 +5078,16 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
 .cabinet-tg-text:not(.cabinet-tg-text--preview) blockquote.is-expandable {
   border-left-style: dashed;
 }
+
+/*
+ * Рамка карточки «Трафик» на главной по тону (SPEC §5.1). Отдельным классом:
+ * .dark .cabinet-elevated-card задаёт border-color с !important, утилитой его не перебить.
+ */
+.cabinet-shell .home-card-warn.cabinet-elevated-card,
+.dark .cabinet-shell .home-card-warn.cabinet-elevated-card {
+  border-color: rgb(245 158 11 / 0.5) !important;
+}
+.cabinet-shell .home-card-danger.cabinet-elevated-card,
+.dark .cabinet-shell .home-card-danger.cabinet-elevated-card {
+  border-color: hsl(var(--destructive) / 0.5) !important;
+}

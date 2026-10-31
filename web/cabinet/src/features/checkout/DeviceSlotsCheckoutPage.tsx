@@ -120,7 +120,7 @@ export default function DeviceSlotsCheckoutPage() {
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">{t('checkout.notAvailable')}</p>
                   <Button asChild variant="outline" size="sm">
-                    <Link to="/subscription">{t('subscriptionPage.title')}</Link>
+                    <Link to="/dashboard#devices">{t('home.myDevices')}</Link>
                   </Button>
                 </div>
               ) : (

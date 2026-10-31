@@ -46,7 +46,6 @@ const ThemePreviewPage = lazy(() => import('@/features/dev/ThemePreviewPage'))
 const RedesignPreviewPage = lazy(() => import('@/features/dev/RedesignPreviewPage'))
 
 // Protected pages (9b)
-const SubscriptionPage = lazy(() => import('@/features/subscription/SubscriptionPage'))
 const TariffsPage = lazy(() => import('@/features/tariffs/TariffsPage'))
 const CheckoutPage = lazy(() => import('@/features/checkout/CheckoutPage'))
 const DeviceSlotsCheckoutPage = lazy(() => import('@/features/checkout/DeviceSlotsCheckoutPage'))
@@ -190,14 +189,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/subscription"
-        element={
-          <ProtectedRoute requireVerified>
-            <SubscriptionPage />
-          </ProtectedRoute>
-        }
-      />
+      {/* «Подписка» слилась с главной; старые ссылки (бот, оплата, письма) ведут к устройствам. */}
+      <Route path="/subscription" element={<Navigate to={{ pathname: '/dashboard', hash: '#devices' }} replace />} />
       <Route
         path="/tariffs"
         element={

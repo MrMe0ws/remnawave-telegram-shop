@@ -429,6 +429,10 @@ export interface SubscriptionResponse {
   link_reset_at?: string | null
   /** С какого момента сброс снова доступен — только пока идёт пауза. */
   link_reset_available_at?: string | null
+  /** Как панель обнуляет счётчик трафика; только при лимите трафика. */
+  traffic_reset_strategy?: 'DAY' | 'WEEK' | 'MONTH' | 'MONTH_ROLLING' | 'NO_RESET' | string | null
+  /** Следующий сброс счётчика трафика (ISO). */
+  next_traffic_reset_at?: string | null
 }
 
 /** POST /me/subscription/reset-link */
