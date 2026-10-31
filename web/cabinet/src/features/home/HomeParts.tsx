@@ -1,20 +1,11 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import {
-  ChevronRight,
-  Infinity as InfinityIcon,
-  MessageCircle,
-  MonitorSmartphone,
-  QrCode,
-  TicketPercent,
-  Users,
-  Zap,
-  type LucideIcon,
-} from 'lucide-react'
+import { ChevronRight, Infinity as InfinityIcon, MonitorSmartphone, QrCode, Zap, type LucideIcon } from 'lucide-react'
 
 import { DevicePlatformIcon } from '@/components/DevicePlatformIcon'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { StatRing, UnboundedRing } from '@/components/StatRing'
 import { ConnectDeviceButton, RenewNowButton, RenewWarnButton } from '@/components/SubscriptionActions'
 import { SubscriptionStatusBadge } from '@/components/SubscriptionStatusBadge'
@@ -23,6 +14,12 @@ import type { SubscriptionResponse, TrafficUsageResponse } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
 import type { ToneLevel } from '@/lib/subscriptionTone'
 import { useDeviceManager } from './DeviceManager'
+import {
+  DEFAULT_HOME_QUICK_ACTIONS,
+  HOME_QUICK_ACTIONS,
+  resolveHomeQuickActions,
+  type HomeQuickActionId,
+} from './homeQuickActions'
 import { formatGbValue, type HomeData } from './useHomeData'
 
 /** Опорный горизонт для кольца дней: 90 суток закрывают типичные периоды подписки. */
@@ -249,25 +246,52 @@ export function HomeMainButton({ data }: { data: HomeData }) {
 
 // ─── Быстрые действия ───────────────────────────────────────────────────
 
-type QuickAction = { key: string; icon: LucideIcon; label: string; to?: string; onClick?: () => void; disabled?: boolean }
+type QuickAction = {
+  key: string
+  icon: LucideIcon
+  label: string
+  to?: string
+  href?: string
+  onClick?: () => void
+  disabled?: boolean
+}
 
+/*
+ * Места 1 и 2 зависят от состояния подписки и не настраиваются; места 3 и 4
+ * задаёт админ (CABINET_HOME_QUICK_ACTIONS). Когда подписка истекла, первых
+ * двух нет — остаются настроенные и «Написать в поддержку».
+ */
 function useQuickActions(data: HomeData): QuickAction[] {
   const { t } = useTranslation()
   const { openConnect } = useDeviceManager()
+  const { data: bootstrap } = useAuthBootstrap()
   const { state, isTrial, hasLink } = data
+  const configured = resolveHomeQuickActions(bootstrap)
+  const toAction = (id: HomeQuickActionId): QuickAction => {
+    const meta = HOME_QUICK_ACTIONS[id]
+    return { key: id, icon: meta.icon, label: t(meta.labelKey), to: meta.to, href: meta.href?.(bootstrap) }
+  }
+  const tail = configured.map(toAction)
   const addExtra: QuickAction = { key: 'extra', icon: QrCode, label: t('home.qaAddExtra'), onClick: openConnect, disabled: !hasLink }
-  const promo: QuickAction = { key: 'promo', icon: TicketPercent, label: t('home.qaPromo'), to: '/promocodes' }
-  const invite: QuickAction = { key: 'invite', icon: Users, label: t('home.qaInvite'), to: '/referral' }
   if (state === 'expired' || state === 'traffic') {
-    return [promo, invite, { key: 'support', icon: MessageCircle, label: t('home.qaSupport'), to: '/support' }]
+    const fallbacks: HomeQuickActionId[] = ['support', ...DEFAULT_HOME_QUICK_ACTIONS]
+    const third = fallbacks.find((id) => !configured.includes(id))
+    return third ? [...tail, toAction(third)] : tail
   }
   if (state === 'crit') {
-    return [addExtra, { key: 'connect', icon: MonitorSmartphone, label: t('home.qaConnect'), to: '/connections' }, promo, invite]
+    return [addExtra, { key: 'connect', icon: MonitorSmartphone, label: t('home.qaConnect'), to: '/connections' }, ...tail]
   }
-  return [addExtra, { key: 'renew', icon: Zap, label: isTrial ? t('home.qaBuy') : t('home.qaRenew'), to: '/tariffs' }, promo, invite]
+  return [addExtra, { key: 'renew', icon: Zap, label: isTrial ? t('home.qaBuy') : t('home.qaRenew'), to: '/tariffs' }, ...tail]
 }
 
 function ActionTarget({ action, className, children }: { action: QuickAction; className: string; children: ReactNode }) {
+  if (action.href) {
+    return (
+      <a href={action.href} target="_blank" rel="noopener noreferrer" className={className}>
+        {children}
+      </a>
+    )
+  }
   if (action.to) {
     return (
       <Link to={action.to} className={className}>
@@ -364,9 +388,10 @@ const CHART_DAYS = 14
  * ширины, а не растягиваются на всю карточку.
  */
 function chartWindow(usage: TrafficUsageResponse | undefined) {
-  if (!usage?.enabled || usage.categories.length === 0) return { points: [] as number[], cats: [] as string[] }
+  if (!usage?.enabled || usage.categories.length === 0) return { points: [] as number[], cats: [] as string[], pad: 0 }
   const points = usage.points.slice(-CHART_DAYS)
   const cats = usage.categories.slice(-CHART_DAYS)
+  const real = points.length
   const first = new Date(`${cats[0]}T00:00:00Z`)
   if (Number.isFinite(first.getTime())) {
     for (let i = 1; points.length < CHART_DAYS; i++) {
@@ -374,7 +399,86 @@ function chartWindow(usage: TrafficUsageResponse | undefined) {
       cats.unshift(new Date(first.getTime() - i * 86_400_000).toISOString().slice(0, 10))
     }
   }
-  return { points, cats }
+  // pad — сколько дней слева дописано до начала периода: про них данных нет
+  return { points, cats, pad: points.length - real }
+}
+
+/**
+ * График расхода по дням. Под каждым столбиком — число месяца; выбранный
+ * день (нажатием, на ПК — наведением) подписан над столбиком: «370 МБ · 27 окт».
+ * Сразу выбран последний день с расходом — чаще всего это «сегодня» или
+ * «вчера», то, что и хотят увидеть. Дни до начала периода серые и не
+ * нажимаются: это не «ноль», а «не считалось».
+ */
+function UsageChart({ points, cats, pad, lang }: { points: number[]; cats: string[]; pad: number; lang: string }) {
+  const { t } = useTranslation()
+  const lastWithData = points.reduce((acc, p, i) => (p > 0 ? i : acc), points.length - 1)
+  const [sel, setSel] = useState(lastWithData)
+  // Данные пришли позже первого рендера (или обновились) — выбор переводим на свежий день.
+  useEffect(() => setSel(lastWithData), [lastWithData])
+
+  const max = Math.max(...points, 1)
+  const n = points.length
+  // Столбики занимают до 76% высоты: сверху остаётся место под подпись.
+  const h = (p: number) => Math.max(3, (p / max) * 76)
+  const align = sel <= 1 ? '-translate-x-[18%]' : sel >= n - 2 ? '-translate-x-[82%]' : '-translate-x-1/2'
+
+  return (
+    <div className="mt-1">
+      <div className="relative h-[190px] border-b border-border/70">
+        {sel >= pad && (
+          <div
+            className={cn(
+              'pointer-events-none absolute z-10 whitespace-nowrap rounded-lg bg-secondary px-2 py-1 text-xs font-bold text-foreground shadow-md transition-[left,bottom] duration-150',
+              align,
+            )}
+            style={{ left: `${((sel + 0.5) / n) * 100}%`, bottom: `calc(${h(points[sel])}% + 8px)` }}
+          >
+            {formatBytes(points[sel], t)}
+            <span className="font-medium text-muted-foreground"> · {shortDate(cats[sel], lang)}</span>
+          </div>
+        )}
+        <div className="absolute inset-0 grid items-end gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+          {points.map((p, i) =>
+            i < pad ? (
+              <span key={i} className="block w-full self-end rounded-[5px] bg-muted-foreground/15" style={{ height: '3%' }} />
+            ) : (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSel(i)}
+                onMouseEnter={() => setSel(i)}
+                aria-pressed={i === sel}
+                aria-label={`${shortDate(cats[i], lang)}: ${formatBytes(p, t)}`}
+                className="flex h-full w-full items-end"
+              >
+                <span
+                  className={cn(
+                    'block w-full rounded-[5px] transition-colors',
+                    i === sel ? 'bg-primary' : 'bg-primary/40 hover:bg-primary/60',
+                  )}
+                  style={{ height: `${h(p)}%` }}
+                />
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+      <div className="mt-1.5 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden>
+        {cats.map((c, i) => (
+          <span
+            key={c}
+            className={cn(
+              'text-center text-[11px] tabular-nums',
+              i === sel ? 'font-bold text-foreground' : i < pad ? 'text-muted-foreground/50' : 'text-muted-foreground',
+            )}
+          >
+            {Number(c.slice(8, 10)) || ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function TrafficBar({ pct, tone, className }: { pct: number; tone: ToneLevel; className?: string }) {
@@ -437,8 +541,7 @@ function UsageTile({ label, value, unit }: { label: string; value: string; unit:
 export function TrafficDetails({ data, lang }: { data: HomeData; lang: string }) {
   const { t } = useTranslation()
   const { sub, usage, trafficLimit, trafficUsed, trafficTone } = data
-  const { points, cats } = chartWindow(usage)
-  const max = Math.max(...points, 1)
+  const { points, cats, pad } = chartWindow(usage)
   const hasPoints = points.some((p) => p > 0)
   const totalBytes = usage?.enabled ? usage.total_bytes : trafficUsed * 1024 ** 3
   const peakIdx = hasPoints ? points.indexOf(Math.max(...points)) : -1
@@ -448,7 +551,6 @@ export function TrafficDetails({ data, lang }: { data: HomeData; lang: string })
     sub?.traffic_reset_strategy && sub.traffic_reset_strategy !== 'NO_RESET' && sub.next_traffic_reset_at
       ? t('home.resetsOn', { date: formatDayMonth(sub.next_traffic_reset_at, lang) })
       : ''
-  const lastCat = cats[cats.length - 1]
 
   const [avgValue, avgUnit] = bytesParts(avg, t)
   const [peakValue, peakUnit] = peakIdx >= 0 ? bytesParts(points[peakIdx], t) : ['', '']
@@ -478,26 +580,7 @@ export function TrafficDetails({ data, lang }: { data: HomeData; lang: string })
         </div>
       )}
 
-      {points.length > 0 && (
-        <div className="mt-1.5" aria-hidden>
-          <div
-            className="grid h-[170px] items-end gap-1.5 border-b border-border/70"
-            style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}
-          >
-            {points.map((p, i) => (
-              <span
-                key={i}
-                className={cn('block w-full rounded-[5px]', i === peakIdx ? 'bg-primary' : 'bg-primary/45')}
-                style={{ height: `${Math.max(4, (p / max) * 100)}%` }}
-              />
-            ))}
-          </div>
-          <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
-            <span>{cats[0] ? shortDate(cats[0], lang) : ''}</span>
-            <span>{lastCat && lastCat === usage?.period_end ? t('home.today') : lastCat ? shortDate(lastCat, lang) : ''}</span>
-          </div>
-        </div>
-      )}
+      {points.length > 0 && <UsageChart points={points} cats={cats} pad={pad} lang={lang} />}
 
       {hasPoints && (
         <div className="grid grid-cols-2 gap-2.5">

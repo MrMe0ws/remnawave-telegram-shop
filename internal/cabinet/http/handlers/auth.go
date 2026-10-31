@@ -151,6 +151,8 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		// CABINET_SUBSCRIPTION_SHOW_LOYALTY: плашка уровня на /subscription.
 		// Раздел /loyalty и плашка в профиле от флага не зависят.
 		"subscription_loyalty_visible": cabcfg.SubscriptionLoyaltyVisible(),
+		// CABINET_HOME_QUICK_ACTIONS: кнопки на местах 3 и 4 быстрых действий главной.
+		"home_quick_actions": botcfg.HomeQuickActions(),
 		// Шифрование deep link'ов подключения (см. /me/deeplink): фронт узнаёт,
 		// что для Happ/INCY надо запросить зашифрованную ссылку вместо .../add/.
 		"deeplink_happ_encrypt": cabcfg.DeeplinkHappEncryptEnabled(),

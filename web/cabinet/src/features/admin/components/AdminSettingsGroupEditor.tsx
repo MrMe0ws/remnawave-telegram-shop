@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { AdminToggleRow } from './AdminToggleSwitch'
 import { AdminSelect } from './AdminSelect'
 import { AdminDecorScheduleEditor } from './AdminDecorScheduleEditor'
+import { AdminHomeQuickActionsEditor } from './AdminHomeQuickActionsEditor'
 import { SettingsSubsectionTitle } from './SettingsSubsectionTitle'
 import {
   ADMIN_SETTINGS_GROUP_ICONS,
@@ -143,6 +144,18 @@ export function AdminSettingsGroupEditor({
           <AdminDecorScheduleEditor
             value={value}
             autoEnabled={parseBool(draft.CABINET_DECOR_AUTO_ENABLED ?? 'false')}
+            disabled={saving}
+            onChange={(next) => onDraftChange(field.key, next)}
+          />
+        </div>
+      )
+    }
+
+    if (field.key === 'CABINET_HOME_QUICK_ACTIONS') {
+      return (
+        <div key={field.key} className="border-b border-border/50 py-3 last:border-0">
+          <AdminHomeQuickActionsEditor
+            value={value}
             disabled={saving}
             onChange={(next) => onDraftChange(field.key, next)}
           />

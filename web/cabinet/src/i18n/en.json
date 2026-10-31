@@ -144,6 +144,11 @@
       "qaInvite": "Invite a friend",
       "qaConnect": "Connect device",
       "qaSupport": "Contact support",
+      "qaPartner": "Partners",
+      "qaFortune": "Fortune wheel",
+      "qaInfo": "Info",
+      "qaNews": "News",
+      "qaFeedback": "Reviews",
       "myDevices": "My devices",
       "manageDevices": "Manage devices",
       "addDevice": "Add device",
@@ -151,7 +156,6 @@
       "connectedN": "{{used}} connected",
       "resetsOn": "resets {{date}}",
       "unlimitedTariff": "Unlimited plan",
-      "today": "today",
       "slotsLabel": "Device places",
       "noDevicesTitle": "No devices yet",
       "noDevicesHint": "Tap “Connect device” — it takes a couple of minutes",
@@ -2513,7 +2517,8 @@
           "cabinet": {
             "decor": "Appearance",
             "schedule": "Holiday auto-switch",
-            "sections": "Subscription page sections"
+            "sections": "Subscription page sections",
+            "homeActions": "Home page buttons"
           },
           "cabinet_connect": {
             "deeplink": "Connection deep links",
@@ -2559,6 +2564,17 @@
           "noneActive": "No window is active today — the theme selected above is shown",
           "autoOff": "Auto-switch is off: the schedule is saved but not applied",
           "priorityHint": "Windows repeat every year. When two windows overlap the upper one wins — reorder them with the arrows. A window may cross December 31 (e.g. December 1 → January 31)"
+        },
+        "homeQuickActions": {
+          "intro": "Four buttons below “Connect device”. The first two follow the subscription state and cannot be changed. Slots 3 and 4 are yours: pick what goes there and swap them.",
+          "lockedHint": "Depends on subscription",
+          "lockedExtra": "Add another device",
+          "lockedRenew": "Renew subscription",
+          "slot": "Slot {{n}}",
+          "swap": "Swap",
+          "reset": "Reset to default",
+          "unavailable": "This section is turned off — customers will see “{{fallback}}” here",
+          "expiredNote": "When the subscription has expired, the first two buttons are hidden: slots 3 and 4 remain, plus “Contact support”."
         },
         "fortune": {
           "basic": "Rules & limits",
@@ -2843,6 +2859,10 @@
           "CABINET_SUBSCRIPTION_SHOW_LOYALTY": {
             "label": "Loyalty card on subscription page",
             "hint": "Turn on to show the level card on the Subscription page; it is hidden by default. The Loyalty section and the profile card are always available — use \"Loyalty program\" to disable the program itself"
+          },
+          "CABINET_HOME_QUICK_ACTIONS": {
+            "label": "Home quick actions",
+            "hint": ""
           },
           "CABINET_DEEPLINK_HAPP_ENCRYPT": {
             "label": "Encrypt Happ deep link",

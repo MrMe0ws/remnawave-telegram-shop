@@ -529,6 +529,11 @@ func RuntimeSettingsRegistry() []SettingField {
 			Apply:   applyFortuneBool("CABINET_SUBSCRIPTION_SHOW_LOYALTY"),
 			Current: cabinetBoolCurrent("CABINET_SUBSCRIPTION_SHOW_LOYALTY", false),
 		},
+		{
+			Key: "CABINET_HOME_QUICK_ACTIONS", Group: "cabinet", Type: SettingText,
+			Apply:   applyCabinetHomeQuickActions(),
+			Current: cabinetHomeQuickActionsCurrent(),
+		},
 
 		// --- cabinet_connect (подключение и кнопки в Telegram) ---
 		{

@@ -9,6 +9,7 @@ import {
   Gem,
   Gift,
   Handshake,
+  LayoutGrid,
   LayoutList,
   Link2,
   ListFilter,
@@ -460,6 +461,12 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       titleKey: 'admin.settings.subsections.cabinet.sections',
       icon: LayoutList,
       keys: ['CABINET_SUBSCRIPTION_SHOW_LOYALTY'],
+    },
+    {
+      id: 'homeActions',
+      titleKey: 'admin.settings.subsections.cabinet.homeActions',
+      icon: LayoutGrid,
+      keys: ['CABINET_HOME_QUICK_ACTIONS'],
     },
     {
       id: 'schedule',

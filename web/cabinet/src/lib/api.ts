@@ -148,6 +148,8 @@ export interface AuthBootstrapResponse {
   deeplink_incy_encrypt?: boolean
   /** true — на странице подписки показывается плашка уровня лояльности (CABINET_SUBSCRIPTION_SHOW_LOYALTY, по умолчанию выключено); раздел /loyalty доступен всегда. */
   subscription_loyalty_visible?: boolean
+  /** Кнопки на местах 3 и 4 быстрых действий главной (CABINET_HOME_QUICK_ACTIONS), id из features/home/homeQuickActions.ts. */
+  home_quick_actions?: string[]
   /** Декоративная тема кабинета (CABINET_DECOR_THEME) */
   decor_theme?:
     | 'off'
