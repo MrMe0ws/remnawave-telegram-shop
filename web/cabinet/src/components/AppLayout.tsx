@@ -11,7 +11,6 @@ import {
   TicketPercent,
   Users,
   Handshake,
-  Gift,
   LogOut,
   ShieldCheck,
   FileText,
@@ -27,6 +26,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { LangToggle } from './LangToggle'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
+import { FortuneWheelIcon } from '@/features/fortune/FortuneWheelIcon'
 import { hapticImpactLight } from '@/lib/telegram-web-app'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useAuthStore } from '@/store/auth'
@@ -169,7 +169,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       })
     }
     if (bootstrap?.fortune_nav_visible !== false) {
-      bonuses.push({ key: 'fortune', icon: Gift, label: t('nav.fortune'), to: '/fortune', decorTo: '/fortune' })
+      bonuses.push({ key: 'fortune', icon: FortuneWheelIcon, label: t('nav.fortune'), to: '/fortune', decorTo: '/fortune' })
     }
     const about: MenuItem[] = [{ key: 'info', icon: FileText, label: t('nav.info'), to: '/support#cabinet-info' }]
     if (newsUrl) about.push({ key: 'news', icon: Newspaper, label: t('dashboard.newsCardTitle'), href: newsUrl })

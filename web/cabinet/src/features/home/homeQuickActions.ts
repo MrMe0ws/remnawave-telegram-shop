@@ -1,6 +1,5 @@
 import {
   FileText,
-  Gift,
   Handshake,
   MessageCircle,
   Newspaper,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import type { AuthBootstrapResponse } from '@/lib/api'
+import { FortuneWheelIcon } from '@/features/fortune/FortuneWheelIcon'
 
 /*
  * Быстрые действия главной на местах 3 и 4 (CABINET_HOME_QUICK_ACTIONS).
@@ -47,7 +47,7 @@ export const HOME_QUICK_ACTIONS: Record<HomeQuickActionId, HomeQuickActionMeta> 
     available: (b) => b?.partner_nav_visible !== false,
   },
   fortune: {
-    icon: Gift,
+    icon: FortuneWheelIcon,
     labelKey: 'home.qaFortune',
     to: '/fortune',
     available: (b) => b?.fortune_nav_visible !== false,
