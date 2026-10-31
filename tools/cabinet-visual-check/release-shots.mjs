@@ -8,11 +8,11 @@
 // Запуск из корня репозитория, после `cd web/cabinet && npm run build`:
 //
 //   node tools/cabinet-visual-check/release-shots.mjs internal/cabinet/web/dist \
-//     tools/cabinet-visual-check/fixtures/release-connect-holiday.json release-screenshots
+//     tools/cabinet-visual-check/fixtures/release-device-slots.json release-screenshots
 //
 // Под новый релиз меняются только сценарии в конце файла: какую страницу
-// открыть, что нажать и что обвести. Здесь — сценарии релиза 5.23.0 (ночные
-// декор-темы и первый шаг гида подключения).
+// открыть, что нажать и что обвести. Здесь — сценарии релиза 5.24.0 (места
+// для устройств, оплата мест, закреплённый лимит, продление).
 // mark(locator, 'Подпись', side): side — top | bottom | left | inside | inside-low.
 // Каждый снимок после съёмки посмотреть глазами: подпись не должна закрывать
 // текст интерфейса, рамка — резать соседние строки.
@@ -123,40 +123,73 @@ async function caption(page, label, top = 128) {
 }
 const shot = (page, name) => page.screenshot({ path: path.join(outDir, name) })
 
+// Сцена со своими данными поверх общей фикстуры.
+const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscription'], ...patch } })
+
 {
-  // Земля со снеговиком прижата к низу окна — нужен высокий кадр, чтобы она не заслоняла карточки.
-  const { ctx, page, errors } = await open(1440, 1200, withDecor('new_year_2'), '/subscription')
-  // Между гирляндой и карточкой, по центру — заголовок страницы слева не задевает.
-  await caption(page, 'Новая тема «Новый год 2»', 96)
-  await shot(page, '01-new-year-2.png')
+  const { ctx, page, errors } = await open(390, 844, base, '/subscription')
+  const cta = page.getByRole('button', { name: /Все места заняты/ })
+  // Долистать до низа: под карточкой устройств остаётся полоса над нижним меню,
+  // туда и ставим подпись — выше неё строки устройств, ниже — меню.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(500)
+  await mark(cta, '', 'top')
+  const card = await cta.locator('xpath=ancestor::div[contains(@class,"rounded")][last()]').boundingBox()
+  await caption(page, 'Докупить место — прямо здесь', card ? card.y + card.height + 6 : 640)
+  await shot(page, '01-slots-full-phone.png')
   console.log('1', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(1440, 900, withDecor('halloween_2'), '/landing')
-  await caption(page, 'Новая тема «Хэллоуин 2» — и на лендинге', 140)
-  await shot(page, '02-halloween-2-landing.png')
+  const { ctx, page, errors } = await open(390, 844, base, '/subscription')
+  await page.getByRole('button', { name: /Нужно больше устройств/ }).click()
+  await page.waitForTimeout(700)
+  await page.getByRole('button', { name: 'Больше мест' }).click()
+  await page.waitForTimeout(900)
+  await mark(page.getByText('+1 место до').locator('xpath=../../..'), 'Цена видна сразу', 'top')
+  await shot(page, '02-slots-modal-phone.png')
   console.log('2', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(390, 844, withDecor('off'), '/connections')
-  const yes = page.getByRole('button', { name: 'Да, добавить подписку' })
-  await yes.scrollIntoViewIfNeeded()
+  const { ctx, page, errors } = await open(1440, 900, base, '/checkout/devices?target=3')
+  await page.getByRole('button', { name: /Картой/ }).first().click()
   await page.waitForTimeout(400)
-  // Над кнопками — описание шага, под ними — помощь: подпись уходит на пустой низ картинки.
-  await mark(yes.locator('xpath=..'), '', 'top')
-  const ill = await page.locator('.cg-step-enter > :first-child').first().boundingBox()
-  await caption(page, 'Приложение уже есть — один тап', ill ? ill.y + ill.height - 46 : 360)
-  await shot(page, '03-connect-phone.png')
+  await mark(page.getByText('Что вы получаете').locator('xpath=ancestor::div[2]'), 'Оплата мест — как подписки', 'left')
+  await shot(page, '03-slots-checkout.png')
   console.log('3', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(1440, 900, withDecor('off'), '/connections')
-  await mark(page.getByRole('button', { name: 'Уже есть — добавить' }), 'Сразу добавить подписку', 'bottom')
-  await shot(page, '04-connect-desktop.png')
+  const { ctx, page, errors } = await open(1440, 900, base, '/admin/users/1560')
+  await page.getByText('Устройства', { exact: true }).first().click()
+  await page.waitForTimeout(900)
+  const sw = page.getByRole('switch', { name: 'Закрепить лимит' })
+  await sw.click()
+  await page.waitForTimeout(500)
+  await mark(sw.locator('xpath=ancestor::div[2]'), 'Лимит не сбросится при оплате', 'top')
+  await shot(page, '04-admin-pin.png')
   console.log('4', errors)
+  await ctx.close()
+}
+{
+  const { ctx, page, errors } = await open(390, 844, base, '/checkout?tariff=base&months=1')
+  const sw = page.getByRole('switch', { name: 'Продлить доп. устройства' })
+  await mark(sw.locator('xpath=..'), '', 'top')
+  // Подпись — в просвет между сводкой и способами оплаты, чтобы не закрыть «Итого».
+  const sum = await page.getByText('Что вы получаете').locator('xpath=ancestor::div[2]').boundingBox()
+  await caption(page, 'Доп. устройства — переключателем', sum ? sum.y + sum.height - 4 : 430)
+  await shot(page, '05-renew-extra-switch.png')
+  console.log('5', errors)
+  await ctx.close()
+}
+{
+  const fx = withSub({ expire_at: '2026-11-04T12:00:00Z' })
+  fx['/me/devices'] = { ...base['/me/devices'], connected: 1, devices: base['/me/devices'].devices.slice(0, 1) }
+  const { ctx, page, errors } = await open(1440, 900, fx, '/subscription')
+  await mark(page.getByRole('link', { name: 'Продлить подписку' }), 'Статус и «Продлить» — как на главной', 'bottom')
+  await shot(page, '06-renew-warn.png')
+  console.log('6', errors)
   await ctx.close()
 }
 await b.close()
