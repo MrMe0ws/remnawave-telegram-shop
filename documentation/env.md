@@ -90,6 +90,8 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `YOOKASA_ENABLED` | Вкл/выкл |
 | `YOOKASA_SECRET_KEY` / `YOOKASA_SHOP_ID` / `YOOKASA_URL` / `YOOKASA_EMAIL` | Учётные данные API |
 | `YOOKASA_WEBHOOK_URL` | Путь для вебхука (без домена). Пусто — только поллинг. См. [payments.md](./payments.md) |
+| `YOOKASA_PAYMENT_METHODS` | Кнопки ЮKassa по способам, через запятую в порядке показа: `all` (форма со всеми способами), `sbp`, `bank_card`, `sberbank`, `tinkoff_bank`, `yoo_money`. Для всех, кроме `all`, в ЮKassa уходит `payment_method_data`: покупатель сразу попадает на этот способ, но сменить его на форме не сможет. Каждый способ должен быть подключён в кабинете ЮKassa. Пусто — одна кнопка, форма со всеми способами (как раньше). Меняется в админке |
+| `CABINET_CHECKOUT_DEFAULT_METHOD` | Способ, выбранный заранее на странице оплаты кабинета для тех, кто ещё не платил: `yookassa:<способ>` или провайдер (`platega_sbp`, `telegram`, `heleket`…). Кто уже платил, видит свой прошлый способ. Пусто — ничего не выбрано. Меняется в админке |
 | `YOOKASA_PROXY_URL` | Прокси **только** для запросов к API ЮKassa: `http://`, `https://` или `socks5://`, можно с `логин:пароль@`. Пусто — прямое соединение. Нужен, если сеть до `api.yookassa.ru` нестабильна или блокируется. См. [payments.md](./payments.md#прокси-для-юkassa) |
 
 ---

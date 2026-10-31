@@ -10,6 +10,7 @@ import { AdminToggleRow } from './AdminToggleSwitch'
 import { AdminSelect } from './AdminSelect'
 import { AdminDecorScheduleEditor } from './AdminDecorScheduleEditor'
 import { AdminHomeQuickActionsEditor } from './AdminHomeQuickActionsEditor'
+import { AdminCheckoutDefaultMethodEditor, AdminYookassaMethodsEditor } from './AdminPaymentMethodsEditors'
 import { SettingsSubsectionTitle } from './SettingsSubsectionTitle'
 import {
   ADMIN_SETTINGS_GROUP_ICONS,
@@ -144,6 +145,33 @@ export function AdminSettingsGroupEditor({
           <AdminDecorScheduleEditor
             value={value}
             autoEnabled={parseBool(draft.CABINET_DECOR_AUTO_ENABLED ?? 'false')}
+            disabled={saving}
+            onChange={(next) => onDraftChange(field.key, next)}
+          />
+        </div>
+      )
+    }
+
+    if (field.key === 'YOOKASA_PAYMENT_METHODS') {
+      return (
+        <div key={field.key} className="border-b border-border/50 py-3 last:border-0">
+          <AdminYookassaMethodsEditor
+            value={value}
+            disabled={saving}
+            onChange={(next) => onDraftChange(field.key, next)}
+          />
+        </div>
+      )
+    }
+
+    if (field.key === 'CABINET_CHECKOUT_DEFAULT_METHOD') {
+      return (
+        <div key={field.key} className="border-b border-border/50 py-3 last:border-0">
+          <AdminCheckoutDefaultMethodEditor
+            value={value}
+            yookassaMethodsValue={
+              draft.YOOKASA_PAYMENT_METHODS ?? fieldByKey.get('YOOKASA_PAYMENT_METHODS')?.value ?? ''
+            }
             disabled={saving}
             onChange={(next) => onDraftChange(field.key, next)}
           />

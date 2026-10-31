@@ -24,7 +24,9 @@ export function useAdminBotSettingsPatch() {
         'CABINET_DEEPLINK_HAPP_ENCRYPT' in variables ||
         'CABINET_DEEPLINK_INCY_ENCRYPT' in variables ||
         'CABINET_SUBSCRIPTION_SHOW_LOYALTY' in variables ||
-        'CABINET_HOME_QUICK_ACTIONS' in variables
+        'CABINET_HOME_QUICK_ACTIONS' in variables ||
+        'YOOKASA_PAYMENT_METHODS' in variables ||
+        'CABINET_CHECKOUT_DEFAULT_METHOD' in variables
       ) {
         void queryClient.invalidateQueries({ queryKey: ['auth-bootstrap'] })
       }

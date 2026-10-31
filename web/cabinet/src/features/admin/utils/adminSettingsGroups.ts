@@ -321,6 +321,18 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
         'PLATEGA_CRYPTO_ENABLED',
       ],
     },
+    {
+      id: 'yookassa',
+      titleKey: 'admin.settings.subsections.payments.yookassa',
+      icon: CreditCard,
+      keys: ['YOOKASA_PAYMENT_METHODS'],
+    },
+    {
+      id: 'checkout',
+      titleKey: 'admin.settings.subsections.payments.checkout',
+      icon: Wallet,
+      keys: ['CABINET_CHECKOUT_DEFAULT_METHOD'],
+    },
   ],
   moynalog: [
     {

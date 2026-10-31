@@ -95,6 +95,21 @@
   "month_12": "12 мес - %d₽",
   "crypto_button": "₿ Криптовалютой",
   "card_button": "💳 СБП / Карта 💸",
+  "yookasa_sbp_button": {
+    "text": "⚡ СБП"
+  },
+  "yookasa_bank_card_button": {
+    "text": "💳 Банковская карта"
+  },
+  "yookasa_sberbank_button": {
+    "text": "🟢 SberPay"
+  },
+  "yookasa_tinkoff_bank_button": {
+    "text": "🟡 T-Pay"
+  },
+  "yookasa_yoo_money_button": {
+    "text": "👛 ЮMoney"
+  },
   "platega_sbp_button": {
     "text": "💳 СБП - Platega"
   },

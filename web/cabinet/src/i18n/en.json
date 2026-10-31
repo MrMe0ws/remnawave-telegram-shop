@@ -1020,6 +1020,16 @@
       "plategaAcquiring": "Card",
       "plategaWorldwide": "Card",
       "plategaCrypto": "Crypto",
+      "yookassaMethod": {
+        "sbp": "SBP",
+        "bank_card": "Card",
+        "sberbank": "SberPay",
+        "tinkoff_bank": "T-Pay",
+        "yoo_money": "YooMoney"
+      },
+      "changeMethod": "Change",
+      "recommendedBadge": "Recommended",
+      "otherMethods": "Other methods",
       "total": "Total",
       "rub": "₽",
       "stars": "Stars",
@@ -2495,7 +2505,9 @@
           },
           "payments": {
             "providers": "Payment methods",
-            "platega": "Platega"
+            "platega": "Platega",
+            "yookassa": "YooKassa buttons",
+            "checkout": "Preselected in the cabinet"
           },
           "moynalog": {
             "toggle": "Receipt sending",
@@ -2546,6 +2558,21 @@
           "cabinet": "Cabinet appearance",
           "cabinet_connect": "Connection and Telegram",
           "tariffs": "Price display"
+        },
+        "yookassaMethods": {
+          "intro": "Each checked method is a separate button in the bot and cabinet, in this order. The buyer lands on the chosen YooKassa method right away but can't switch to another one on the form.",
+          "all": "YooKassa form with all methods",
+          "allHint": "Same as without the setting: one “Card / Bank transfer” button",
+          "connectWarning": "Each method has to be enabled in your YooKassa account, or the payment won't be created.",
+          "noAllWarning": "No form with all methods: methods missing from the list aren't available via YooKassa.",
+          "moveUp": "Up",
+          "moveDown": "Down",
+          "reset": "Reset to default"
+        },
+        "checkoutDefault": {
+          "intro": "Returning buyers see the method they paid with last time. This one is preselected for first-time buyers: it's shown large with a “Recommended” badge, the rest as tiles below.",
+          "none": "Don't preselect — plain list",
+          "unavailable": "This method is turned off — buyers will see the plain list with nothing selected."
         },
         "decorSchedule": {
           "from": "From",
@@ -2687,6 +2714,14 @@
           "HELEKET_ENABLED": {
             "label": "Other crypto",
             "hint": "Crypto payments via Heleket. Credentials live in .env"
+          },
+          "YOOKASA_PAYMENT_METHODS": {
+            "label": "YooKassa methods",
+            "hint": ""
+          },
+          "CABINET_CHECKOUT_DEFAULT_METHOD": {
+            "label": "Default method",
+            "hint": ""
           },
           "MOYNALOG_ENABLED": {
             "label": "Send income to Moy Nalog",

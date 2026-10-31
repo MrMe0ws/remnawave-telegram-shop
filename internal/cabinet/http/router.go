@@ -1220,6 +1220,16 @@ func registerAPIRoutes(
 				),
 			}),
 		)
+		// GET /payments/last-method — способ прошлой оплаты для страницы оплаты.
+		api.Handle("/cabinet/api/payments/last-method",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(pay.LastMethod),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+				),
+			}),
+		)
 		api.Handle("/cabinet/api/payments/hwid/preview",
 			methodRouter(map[string]http.Handler{
 				http.MethodGet: middleware.Chain(

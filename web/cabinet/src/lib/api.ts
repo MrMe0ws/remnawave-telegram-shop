@@ -188,6 +188,10 @@ export interface AuthBootstrapResponse {
     platega_crypto?: boolean
     heleket?: boolean
   }
+  /** Кнопки ЮKassa по способам (YOOKASA_PAYMENT_METHODS); ["all"] — одна кнопка с формой ЮKassa со всеми способами. */
+  yookassa_methods?: string[]
+  /** Способ, выбранный заранее для тех, кто ещё не платил (CABINET_CHECKOUT_DEFAULT_METHOD): «yookassa:sbp», «platega_sbp»…; пусто — не выбран. */
+  checkout_default_method?: string
 }
 
 export interface MeResponse {
@@ -1270,15 +1274,24 @@ export const api = {
   // Tariffs
   tariffs: () => request<TariffsRawResponse>('GET', '/tariffs').then(normalizeTariffsResponse),
 
-  // Payments — тело как в internal/cabinet/http/handlers/payments.go: period, tariff_id, provider.
+  // Payments — тело как в internal/cabinet/http/handlers/payments.go: period, tariff_id, provider, yookassa_method.
   checkout: (
-    input: { period: number; provider: string; tariffId?: number | null; renewExtraHwid?: boolean },
+    input: {
+      period: number
+      provider: string
+      yookassaMethod?: string
+      tariffId?: number | null
+      renewExtraHwid?: boolean
+    },
     idempotencyKey: string,
   ) => {
     const body: Record<string, unknown> = {
       period: input.period,
       provider: input.provider,
       renew_extra_hwid: Boolean(input.renewExtraHwid),
+    }
+    if (input.yookassaMethod) {
+      body.yookassa_method = input.yookassaMethod
     }
     if (input.tariffId != null && input.tariffId > 0) {
       body.tariff_id = input.tariffId
@@ -1302,10 +1315,16 @@ export const api = {
     return request<HwidExtraPreviewResponse>('GET', `/payments/hwid/preview?${q.toString()}`)
   },
 
-  hwidExtraCheckout: (targetLimit: number, provider: string, idempotencyKey: string) =>
-    request<CheckoutResponse>('POST', '/payments/hwid/checkout', { target_limit: targetLimit, provider }, {
-      'Idempotency-Key': idempotencyKey,
-    }),
+  hwidExtraCheckout: (targetLimit: number, provider: string, idempotencyKey: string, yookassaMethod?: string) =>
+    request<CheckoutResponse>(
+      'POST',
+      '/payments/hwid/checkout',
+      { target_limit: targetLimit, provider, ...(yookassaMethod ? { yookassa_method: yookassaMethod } : {}) },
+      { 'Idempotency-Key': idempotencyKey },
+    ),
+
+  /** Способ прошлой оплаты: «yookassa:sbp», «platega_sbp»…; пусто — оплат не было. */
+  paymentLastMethod: () => request<{ method: string }>('GET', '/payments/last-method'),
 
   hwidExtraApply: (targetLimit: number) =>
     request<{ ok: boolean; device_limit: number }>('POST', '/me/hwid-extra/apply', { target_limit: targetLimit }),

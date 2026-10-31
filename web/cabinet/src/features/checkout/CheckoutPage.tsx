@@ -15,14 +15,9 @@ import { newIdempotencyKey } from '@/lib/utils'
 import { reservePaymentWindow } from '@/lib/payment-window'
 import { formatNumber } from '@/lib/format'
 import { AdminToggleSwitch } from '@/features/admin/components/AdminToggleSwitch'
-import {
-  CheckoutPayButton,
-  PROVIDER_ORDER,
-  ProviderPickerCard,
-  SummaryRow,
-  useProviderEnabled,
-  type Provider,
-} from '@/features/checkout/checkoutShared'
+import { CheckoutPayButton, PROVIDER_ORDER, SummaryRow, type Provider } from '@/features/checkout/checkoutShared'
+import { PaymentMethodPicker } from '@/features/checkout/PaymentMethodPicker'
+import { useCheckoutMethod } from '@/features/checkout/paymentMethods'
 
 export default function CheckoutPage() {
   const { t } = useTranslation()
@@ -32,7 +27,6 @@ export default function CheckoutPage() {
   const tariffSlug = searchParams.get('tariff') ?? ''
   const months = parseInt(searchParams.get('months') ?? '1', 10)
 
-  const [provider, setProvider] = useState<Provider | null>(null)
   const [renewExtraHwid, setRenewExtraHwid] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,10 +60,11 @@ export default function CheckoutPage() {
       ? tariff.id
       : undefined
 
-  const providerEnabled = useProviderEnabled()
+  const checkoutMethod = useCheckoutMethod()
+  const { providerEnabled, provider: selectedProvider } = checkoutMethod
   const defaultPreviewProvider =
     PROVIDER_ORDER.find((p) => providerEnabled[p]) ?? ('yookassa' as Provider)
-  const selectedProviderForPreview: Provider = provider ?? defaultPreviewProvider
+  const selectedProviderForPreview: Provider = selectedProvider ?? defaultPreviewProvider
   const { data: preview, isError: previewError } = useQuery({
     queryKey: [
       'paymentPreview',
@@ -122,6 +117,7 @@ export default function CheckoutPage() {
         {
           period: tariff.months,
           provider: selectedProvider,
+          yookassaMethod: checkoutMethod.yookassaMethod,
           tariffId,
           renewExtraHwid: shouldAskExtraRenew ? Boolean(renewExtraHwid) : false,
         },
@@ -152,12 +148,9 @@ export default function CheckoutPage() {
     preview != null &&
     (preview.scenario === 'upgrade' || preview.scenario === 'downgrade') &&
     typeof preview.tariff_switch_total_days === 'number'
-  const availableProviders: Provider[] = PROVIDER_ORDER.filter((p) => providerEnabled[p])
-  const selectedProvider = provider && providerEnabled[provider] ? provider : null
   const canInitiatePay =
     Boolean(selectedProvider) &&
     Boolean(tariff) &&
-    availableProviders.length > 0 &&
     (!shouldAskExtraRenew || renewExtraHwid != null)
   const payButtonDisabled = !canInitiatePay || loading
 
@@ -300,11 +293,14 @@ export default function CheckoutPage() {
 
         {/* Provider selection */}
         <RevealItem>
-          <ProviderPickerCard
+          <PaymentMethodPicker
+            methods={checkoutMethod.methods}
+            method={checkoutMethod.method}
+            initialId={checkoutMethod.initial.id}
+            initialSource={checkoutMethod.initial.source}
+            loading={checkoutMethod.loading}
             providerEnabled={providerEnabled}
-            provider={provider}
-            selectedProvider={selectedProvider}
-            onSelect={setProvider}
+            onSelect={checkoutMethod.setMethod}
           />
         </RevealItem>
 

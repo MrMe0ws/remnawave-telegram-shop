@@ -168,6 +168,12 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 			"platega_crypto":    botcfg.IsPlategaEnabled() && botcfg.IsPlategaCryptoEnabled(),
 			"heleket":           botcfg.IsHeleketEnabled(),
 		},
+		// YOOKASA_PAYMENT_METHODS: кнопки ЮKassa по способам; ["all"] — одна
+		// кнопка с формой ЮKassa со всеми способами, как до настройки.
+		"yookassa_methods": botcfg.YookasaPaymentMethods(),
+		// CABINET_CHECKOUT_DEFAULT_METHOD: способ, выбранный заранее для тех,
+		// кто ещё не платил. Пусто — ничего не выбрано.
+		"checkout_default_method": botcfg.CheckoutDefaultMethod(),
 	}
 	if cabcfg.TurnstileEnabled() && strings.TrimSpace(cabcfg.TurnstileSiteKey()) != "" {
 		body["turnstile_site_key"] = cabcfg.TurnstileSiteKey()

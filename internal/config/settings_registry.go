@@ -172,6 +172,16 @@ func RuntimeSettingsRegistry() []SettingField {
 				func(v bool) { conf.isHeleketEnabled = v }),
 			Current: func() string { return boolStr(conf.isHeleketEnabled) },
 		},
+		{
+			Key: "YOOKASA_PAYMENT_METHODS", Group: "payments", Type: SettingText,
+			Apply:   applyYookasaPaymentMethods(),
+			Current: yookasaPaymentMethodsCurrent(),
+		},
+		{
+			Key: "CABINET_CHECKOUT_DEFAULT_METHOD", Group: "payments", Type: SettingText,
+			Apply:   applyCheckoutDefaultMethod(),
+			Current: checkoutDefaultMethodCurrent(),
+		},
 
 		// --- moynalog ---
 		//

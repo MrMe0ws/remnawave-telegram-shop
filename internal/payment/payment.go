@@ -1373,10 +1373,15 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		return "", 0, err
 	}
 
+	// Выбор покупателя сверяем с настройкой здесь, а не в боте и кабинете по
+	// отдельности: клиент ЮKassa получает уже итоговый код.
+	method := config.ResolveYookasaPaymentMethod(yookasa.PaymentMethodFromCtx(ctx))
+	ctx = context.WithValue(ctx, yookasa.CtxKeyPaymentMethod, method)
+
 	invDesc := buildRubReceiptDescription(months, extraHwid, extras, database.InvoiceTypeYookasa)
 	invoice, err := s.yookasaClient.CreateInvoice(ctx, int(amount), invDesc, customer.ID, purchaseId)
 	if err != nil {
-		slog.Error("Error creating invoice", "error", err)
+		slog.Error("Error creating invoice", "error", err, "payment_method", method)
 		return "", 0, err
 	}
 
@@ -1384,6 +1389,9 @@ func (s PaymentService) createYookasaInvoice(ctx context.Context, amount float64
 		"yookasa_url": invoice.Confirmation.ConfirmationURL,
 		"yookasa_id":  invoice.ID,
 		"status":      database.PurchaseStatusPending,
+	}
+	if method != "" {
+		updates["yookasa_payment_method"] = method
 	}
 
 	err = s.purchaseRepository.UpdateFields(ctx, purchaseId, updates)
