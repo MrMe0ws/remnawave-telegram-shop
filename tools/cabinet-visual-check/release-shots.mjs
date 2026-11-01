@@ -143,11 +143,20 @@ const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscr
   await ctx.close()
 }
 {
+  // Телефоном пользуются чаще — главная целиком, подпись в пустом месте под «Моими устройствами».
+  const { ctx, page, errors } = await open(390, 844, base, '/dashboard')
+  const card = await page.getByText('Управление устройствами').first().locator('xpath=ancestor::*[self::a or self::button][1]').boundingBox()
+  await caption(page, 'Всё главное — на одном экране', card ? card.y + card.height + 40 : 600)
+  await shot(page, '02-home-phone.png')
+  console.log('1b', errors)
+  await ctx.close()
+}
+{
   const { ctx, page, errors } = await open(390, 844, base, '/dashboard')
   await page.getByText('32/100 ГБ').first().click()
   await page.waitForTimeout(900)
   await mark(page.getByText(/обнулится/).first(), 'Видно, когда обнулится трафик', 'bottom')
-  await shot(page, '02-traffic-sheet-phone.png')
+  await shot(page, '03-traffic-sheet-phone.png')
   console.log('2', errors)
   await ctx.close()
 }
@@ -161,7 +170,7 @@ const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscr
   await mark(page.getByText(/^Четыре кнопки под/).locator('xpath=..'), '', 'top')
   const hb = await head.boundingBox()
   await caption(page, 'Кнопки 3 и 4 — на ваш выбор', hb ? hb.y - 8 : 150)
-  await shot(page, '03-admin-home-actions.png')
+  await shot(page, '04-admin-home-actions.png')
   console.log('3', errors)
   await ctx.close()
 }
@@ -170,7 +179,7 @@ const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscr
   const rec = page.getByText('Рекомендуем').first()
   await scrollToBlock(page, page.getByText('Способ оплаты', { exact: true }), 140)
   await mark(rec.locator('xpath=ancestor::button[1]'), 'Способ выбран заранее', 'top')
-  await shot(page, '04-checkout-methods.png')
+  await shot(page, '05-checkout-methods.png')
   console.log('4', errors)
   await ctx.close()
 }
@@ -185,7 +194,7 @@ const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscr
   await mark(page.getByText(/^Каждый отмеченный способ/).locator('xpath=..'), '', 'top')
   const hb = await head.boundingBox()
   await caption(page, 'Каждый способ ЮKassa — своей кнопкой', hb ? hb.y - 8 : 150)
-  await shot(page, '05-admin-yookassa.png')
+  await shot(page, '06-admin-yookassa.png')
   console.log('5', errors)
   await ctx.close()
 }
