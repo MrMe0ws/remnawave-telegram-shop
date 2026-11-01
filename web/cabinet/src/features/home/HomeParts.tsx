@@ -81,29 +81,39 @@ function RingCard({
   label,
   labelClass,
   onClick,
+  chevron = true,
   compact,
 }: {
   children: ReactNode
   label: ReactNode
   labelClass?: string
   onClick?: () => void
+  /** Шеврон у подписи — знак, что карточка открывает подробности. Только при onClick. */
+  chevron?: boolean
   compact?: boolean
 }) {
   const cls = cn(
     'cabinet-elevated-card flex min-w-0 flex-col items-center gap-2 text-center',
-    compact ? 'px-1 pb-3 pt-3.5' : 'px-2 pb-4 pt-[18px]',
-    onClick && 'cursor-pointer',
+    // На телефоне карточка — контейнер: размер подписи считается от её ширины.
+    compact ? 'px-1 pb-3 pt-3.5 [container-type:inline-size]' : 'px-2 pb-4 pt-[18px]',
+    onClick && 'cursor-pointer transition-transform active:scale-[0.97] active:duration-100',
   )
   const inner = (
     <>
       {children}
       <span
         className={cn(
-          'text-[11px] font-semibold uppercase leading-[1.3] tracking-[0.08em] text-muted-foreground',
+          'whitespace-nowrap font-semibold uppercase leading-[1.3] text-muted-foreground',
+          // Подпись всегда в одну строку вместе с шевроном: на узком телефоне
+          // (карточка уже ~90 px) шрифт уменьшается под ширину карточки.
+          compact ? 'text-[length:min(11px,12cqi)] tracking-[0.04em]' : 'text-[11px] tracking-[0.08em]',
           labelClass,
         )}
       >
         {label}
+        {onClick && chevron && (
+          <ChevronRight aria-hidden className="-mr-1 ml-px inline-block h-3 w-3 align-[-2px]" strokeWidth={2.5} />
+        )}
       </span>
     </>
   )
@@ -122,11 +132,14 @@ export function HomeRings({
   compact,
   onTraffic,
   onDevices,
+  devicesChevron = true,
 }: {
   data: HomeData
   compact?: boolean
   onTraffic?: () => void
   onDevices?: () => void
+  /** На ПК «Мои устройства» и так раскрыты ниже — карточка только прокручивает к ним. */
+  devicesChevron?: boolean
 }) {
   const { t } = useTranslation()
   const { isExpiredByDate, days, dayTone, trafficLimit, trafficUsed, trafficPct, trafficTone, connected, deviceLimit, allSlotsTaken } = data
@@ -166,8 +179,13 @@ export function HomeRings({
       <RingCard
         compact={compact}
         onClick={onDevices}
+        chevron={devicesChevron}
         labelClass={allSlotsTaken ? 'font-bold text-amber-600 dark:text-amber-400' : undefined}
-        label={allSlotsTaken ? t('home.devicesAllTaken') : t('home.statDevices', { count: connected })}
+        label={
+          allSlotsTaken
+            ? t(compact ? 'home.devicesAllTakenShort' : 'home.devicesAllTaken')
+            : t('home.statDevices', { count: connected })
+        }
       >
         <StatRing value={deviceLimit > 0 ? (connected / deviceLimit) * 100 : 0} tone={data.devicesTone} size={size}>
           <span className={numCls}>{connected}</span>

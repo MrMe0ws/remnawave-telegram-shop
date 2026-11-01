@@ -208,6 +208,7 @@ function HomeDesktop({
           data={data}
           onTraffic={onTraffic}
           onDevices={() => document.getElementById('devices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          devicesChevron={false}
         />
       </RevealItem>
       <RevealItem className="empty:hidden">

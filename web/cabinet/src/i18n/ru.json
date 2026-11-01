@@ -133,6 +133,7 @@
       "statTraffic": "трафик",
       "trafficUsedOfLimit": "{{used}}/{{limit}} ГБ",
       "devicesAllTaken": "все места заняты",
+      "devicesAllTakenShort": "мест нет",
       "statusTrafficExhausted": "Трафик исчерпан",
       "expiredSince": "закончилась {{date}}",
       "alertWarn": "Продлите заранее, чтобы VPN не отключился",

@@ -129,6 +129,7 @@
       "statTraffic": "traffic",
       "trafficUsedOfLimit": "{{used}}/{{limit}} GB",
       "devicesAllTaken": "all places taken",
+      "devicesAllTakenShort": "full",
       "statusTrafficExhausted": "Traffic used up",
       "expiredSince": "ended {{date}}",
       "alertWarn": "Renew in advance so your VPN keeps working",
