@@ -11,8 +11,8 @@
 //     tools/cabinet-visual-check/fixtures/release-device-slots.json release-screenshots
 //
 // Под новый релиз меняются только сценарии в конце файла: какую страницу
-// открыть, что нажать и что обвести. Здесь — сценарии релиза 5.25.0 (новая
-// главная, кнопки быстрых действий, способы ЮKassa и выбор способа заранее).
+// открыть, что нажать и что обвести. Здесь — сценарии релиза 5.25.1 (шеврон
+// у колец трафика и устройств на главной).
 // mark(locator, 'Подпись', side): side — top | bottom | left | inside | inside-low.
 // Каждый снимок после съёмки посмотреть глазами: подпись не должна закрывать
 // текст интерфейса, рамка — резать соседние строки.
@@ -135,67 +135,32 @@ const shot = (page, name) => page.screenshot({ path: path.join(outDir, name) })
 const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscription'], ...patch } })
 
 {
-  const { ctx, page, errors } = await open(1440, 900, base, '/dashboard')
+  const { ctx, page, errors } = await open(390, 844, base, '/dashboard')
   const rings = page.locator('div.grid.grid-cols-3').filter({ hasText: /дней/i })
-  await mark(rings, 'Подписка, трафик и устройства — на главной', 'top')
-  await shot(page, '01-home-desktop.png')
+  await mark(rings, '', 'top')
+  // Под кольцами — кнопка «Подключить», над ними — дата: подпись справа в строке даты.
+  const date = await page.getByText(/^до \d/).first().boundingBox()
+  await page.evaluate(([y, h]) => {
+    const tag = document.createElement('div')
+    tag.textContent = 'Кольца нажимаются ↓'
+    Object.assign(tag.style, {
+      position: 'fixed', right: '16px', background: '#FFB020', color: '#1d1400',
+      font: '800 15px/1.2 Manrope, Inter, system-ui, sans-serif', padding: '7px 12px', borderRadius: '10px',
+      zIndex: 2147483647, whiteSpace: 'nowrap', boxShadow: '0 6px 18px rgba(0,0,0,.35)',
+    })
+    document.body.appendChild(tag)
+    tag.style.top = `${y + (h - tag.offsetHeight) / 2}px`
+  }, [date ? date.y : 130, date ? date.height : 20])
+  await shot(page, '01-rings-phone.png')
   console.log('1', errors)
   await ctx.close()
 }
 {
-  // Телефоном пользуются чаще — главная целиком, подпись в пустом месте под «Моими устройствами».
-  const { ctx, page, errors } = await open(390, 844, base, '/dashboard')
-  const card = await page.getByText('Управление устройствами').first().locator('xpath=ancestor::*[self::a or self::button][1]').boundingBox()
-  await caption(page, 'Всё главное — на одном экране', card ? card.y + card.height + 40 : 600)
-  await shot(page, '02-home-phone.png')
-  console.log('1b', errors)
-  await ctx.close()
-}
-{
-  const { ctx, page, errors } = await open(390, 844, base, '/dashboard')
-  await page.getByText('32/100 ГБ').first().click()
-  await page.waitForTimeout(900)
-  await mark(page.getByText(/обнулится/).first(), 'Видно, когда обнулится трафик', 'bottom')
-  await shot(page, '03-traffic-sheet-phone.png')
+  const { ctx, page, errors } = await open(1440, 900, base, '/dashboard')
+  const traffic = page.getByRole('button', { name: /32\/100/ })
+  await mark(traffic, '«›» — откроется график трафика', 'top')
+  await shot(page, '02-rings-desktop.png')
   console.log('2', errors)
-  await ctx.close()
-}
-{
-  const { ctx, page, errors } = await open(1440, 900, base, '/admin/settings')
-  await page.getByRole('button', { name: /Оформление кабинета/ }).first().click()
-  await page.waitForTimeout(600)
-  const head = page.getByText('Кнопки на главной', { exact: true }).first()
-  await scrollToBlock(page, head, 150)
-  // Подпись — в строке заголовка справа от него: так она не закрывает ни заголовок, ни описание.
-  await mark(page.getByText(/^Четыре кнопки под/).locator('xpath=..'), '', 'top')
-  const hb = await head.boundingBox()
-  await caption(page, 'Кнопки 3 и 4 — на ваш выбор', hb ? hb.y - 8 : 150)
-  await shot(page, '04-admin-home-actions.png')
-  console.log('3', errors)
-  await ctx.close()
-}
-{
-  const { ctx, page, errors } = await open(1440, 900, base, '/checkout?tariff=base&months=1')
-  const rec = page.getByText('Рекомендуем').first()
-  await scrollToBlock(page, page.getByText('Способ оплаты', { exact: true }), 140)
-  await mark(rec.locator('xpath=ancestor::button[1]'), 'Способ выбран заранее', 'top')
-  await shot(page, '05-checkout-methods.png')
-  console.log('4', errors)
-  await ctx.close()
-}
-{
-  const { ctx, page, errors } = await open(1440, 900, base, '/admin/settings')
-  await page.getByText('Финансы', { exact: true }).first().click()
-  await page.waitForTimeout(500)
-  await page.getByRole('button', { name: /Способы оплаты/ }).first().click()
-  await page.waitForTimeout(600)
-  const head = page.getByText('Кнопки ЮKassa', { exact: true }).first()
-  await scrollToBlock(page, head, 150)
-  await mark(page.getByText(/^Каждый отмеченный способ/).locator('xpath=..'), '', 'top')
-  const hb = await head.boundingBox()
-  await caption(page, 'Каждый способ ЮKassa — своей кнопкой', hb ? hb.y - 8 : 150)
-  await shot(page, '06-admin-yookassa.png')
-  console.log('5', errors)
   await ctx.close()
 }
 await b.close()
