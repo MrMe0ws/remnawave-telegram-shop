@@ -11,8 +11,8 @@
 //     tools/cabinet-visual-check/fixtures/release-device-slots.json release-screenshots
 //
 // Под новый релиз меняются только сценарии в конце файла: какую страницу
-// открыть, что нажать и что обвести. Здесь — сценарии релиза 5.24.0 (места
-// для устройств, оплата мест, закреплённый лимит, продление).
+// открыть, что нажать и что обвести. Здесь — сценарии релиза 5.25.0 (новая
+// главная, кнопки быстрых действий, способы ЮKassa и выбор способа заранее).
 // mark(locator, 'Подпись', side): side — top | bottom | left | inside | inside-low.
 // Каждый снимок после съёмки посмотреть глазами: подпись не должна закрывать
 // текст интерфейса, рамка — резать соседние строки.
@@ -121,75 +121,72 @@ async function caption(page, label, top = 128) {
     document.body.appendChild(tag)
   }, [label, top])
 }
+// Прокрутить так, чтобы блок оказался под шапкой, и обвести его.
+async function scrollToBlock(page, locator, offset = 120) {
+  await locator.first().evaluate((el, off) => {
+    const y = el.getBoundingClientRect().top + window.scrollY - off
+    window.scrollTo(0, y)
+  }, offset)
+  await page.waitForTimeout(500)
+}
 const shot = (page, name) => page.screenshot({ path: path.join(outDir, name) })
 
 // Сцена со своими данными поверх общей фикстуры.
 const withSub = (patch) => ({ ...base, '/me/subscription': { ...base['/me/subscription'], ...patch } })
 
 {
-  const { ctx, page, errors } = await open(390, 844, base, '/subscription')
-  const cta = page.getByRole('button', { name: /Все места заняты/ })
-  // Долистать до низа: под карточкой устройств остаётся полоса над нижним меню,
-  // туда и ставим подпись — выше неё строки устройств, ниже — меню.
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-  await page.waitForTimeout(500)
-  await mark(cta, '', 'top')
-  const card = await cta.locator('xpath=ancestor::div[contains(@class,"rounded")][last()]').boundingBox()
-  await caption(page, 'Докупить место — прямо здесь', card ? card.y + card.height + 6 : 640)
-  await shot(page, '01-slots-full-phone.png')
+  const { ctx, page, errors } = await open(1440, 900, base, '/dashboard')
+  const rings = page.locator('div.grid.grid-cols-3').filter({ hasText: /дней/i })
+  await mark(rings, 'Подписка, трафик и устройства — на главной', 'top')
+  await shot(page, '01-home-desktop.png')
   console.log('1', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(390, 844, base, '/subscription')
-  await page.getByRole('button', { name: /Нужно больше устройств/ }).click()
-  await page.waitForTimeout(700)
-  await page.getByRole('button', { name: 'Больше мест' }).click()
+  const { ctx, page, errors } = await open(390, 844, base, '/dashboard')
+  await page.getByText('32/100 ГБ').first().click()
   await page.waitForTimeout(900)
-  await mark(page.getByText('+1 место до').locator('xpath=../../..'), 'Цена видна сразу', 'top')
-  await shot(page, '02-slots-modal-phone.png')
+  await mark(page.getByText(/обнулится/).first(), 'Видно, когда обнулится трафик', 'bottom')
+  await shot(page, '02-traffic-sheet-phone.png')
   console.log('2', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(1440, 900, base, '/checkout/devices?target=3')
-  await page.getByRole('button', { name: /Картой/ }).first().click()
-  await page.waitForTimeout(400)
-  await mark(page.getByText('Что вы получаете').locator('xpath=ancestor::div[2]'), 'Оплата мест — как подписки', 'left')
-  await shot(page, '03-slots-checkout.png')
+  const { ctx, page, errors } = await open(1440, 900, base, '/admin/settings')
+  await page.getByRole('button', { name: /Оформление кабинета/ }).first().click()
+  await page.waitForTimeout(600)
+  const head = page.getByText('Кнопки на главной', { exact: true }).first()
+  await scrollToBlock(page, head, 150)
+  // Подпись — в строке заголовка справа от него: так она не закрывает ни заголовок, ни описание.
+  await mark(page.getByText(/^Четыре кнопки под/).locator('xpath=..'), '', 'top')
+  const hb = await head.boundingBox()
+  await caption(page, 'Кнопки 3 и 4 — на ваш выбор', hb ? hb.y - 8 : 150)
+  await shot(page, '03-admin-home-actions.png')
   console.log('3', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(1440, 900, base, '/admin/users/1560')
-  await page.getByText('Устройства', { exact: true }).first().click()
-  await page.waitForTimeout(900)
-  const sw = page.getByRole('switch', { name: 'Закрепить лимит' })
-  await sw.click()
-  await page.waitForTimeout(500)
-  await mark(sw.locator('xpath=ancestor::div[2]'), 'Лимит не сбросится при оплате', 'top')
-  await shot(page, '04-admin-pin.png')
+  const { ctx, page, errors } = await open(1440, 900, base, '/checkout?tariff=base&months=1')
+  const rec = page.getByText('Рекомендуем').first()
+  await scrollToBlock(page, page.getByText('Способ оплаты', { exact: true }), 140)
+  await mark(rec.locator('xpath=ancestor::button[1]'), 'Способ выбран заранее', 'top')
+  await shot(page, '04-checkout-methods.png')
   console.log('4', errors)
   await ctx.close()
 }
 {
-  const { ctx, page, errors } = await open(390, 844, base, '/checkout?tariff=base&months=1')
-  const sw = page.getByRole('switch', { name: 'Продлить доп. устройства' })
-  await mark(sw.locator('xpath=..'), '', 'top')
-  // Подпись — в просвет между сводкой и способами оплаты, чтобы не закрыть «Итого».
-  const sum = await page.getByText('Что вы получаете').locator('xpath=ancestor::div[2]').boundingBox()
-  await caption(page, 'Доп. устройства — переключателем', sum ? sum.y + sum.height - 4 : 430)
-  await shot(page, '05-renew-extra-switch.png')
+  const { ctx, page, errors } = await open(1440, 900, base, '/admin/settings')
+  await page.getByText('Финансы', { exact: true }).first().click()
+  await page.waitForTimeout(500)
+  await page.getByRole('button', { name: /Способы оплаты/ }).first().click()
+  await page.waitForTimeout(600)
+  const head = page.getByText('Кнопки ЮKassa', { exact: true }).first()
+  await scrollToBlock(page, head, 150)
+  await mark(page.getByText(/^Каждый отмеченный способ/).locator('xpath=..'), '', 'top')
+  const hb = await head.boundingBox()
+  await caption(page, 'Каждый способ ЮKassa — своей кнопкой', hb ? hb.y - 8 : 150)
+  await shot(page, '05-admin-yookassa.png')
   console.log('5', errors)
-  await ctx.close()
-}
-{
-  const fx = withSub({ expire_at: '2026-11-04T12:00:00Z' })
-  fx['/me/devices'] = { ...base['/me/devices'], connected: 1, devices: base['/me/devices'].devices.slice(0, 1) }
-  const { ctx, page, errors } = await open(1440, 900, fx, '/subscription')
-  await mark(page.getByRole('link', { name: 'Продлить подписку' }), 'Статус и «Продлить» — как на главной', 'bottom')
-  await shot(page, '06-renew-warn.png')
-  console.log('6', errors)
   await ctx.close()
 }
 await b.close()
