@@ -491,14 +491,16 @@ export interface ConnectInviteResponse {
 /**
  * Ответ GET /public/connect: чем подключаться на устройстве без кабинета.
  *
- * mode=encrypted — админ включил шифрование deep link, и сырая ссылка
- * подписки наружу не отдаётся: только готовые ссылки по приложениям.
+ * mode=encrypted — админ включил шифрование deep link: Happ/INCY получают
+ * готовые зашифрованные ссылки из links, остальные приложения — сырую
+ * subscription_link. encrypted — для каких приложений шифрование включено.
  * mode=plain — шифрование выключено, страница собирает deep link сама.
  */
 export interface ConnectResolveResponse {
   mode: 'plain' | 'encrypted'
   subscription_link?: string
   links?: Record<string, string>
+  encrypted?: string[]
 }
 
 export interface LoyaltyTierDTO {

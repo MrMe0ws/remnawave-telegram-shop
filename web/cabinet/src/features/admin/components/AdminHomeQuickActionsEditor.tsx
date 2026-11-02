@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeftRight, Lock, QrCode, RotateCcw, TriangleAlert, Zap, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, CalendarPlus, Lock, RotateCcw, TriangleAlert, type LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { AddDeviceIcon } from '@/components/AddDeviceIcon'
 import { Button } from '@/components/ui/button'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import {
@@ -63,8 +64,8 @@ export function AdminHomeQuickActionsEditor({ value, disabled, onChange }: Admin
 
       {/* На телефоне места 3 и 4 — во всю ширину, иначе название в селекте обрезается. */}
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <LockedSlot n={1} icon={QrCode} label={t('admin.settings.homeQuickActions.lockedExtra')} />
-        <LockedSlot n={2} icon={Zap} label={t('admin.settings.homeQuickActions.lockedRenew')} />
+        <LockedSlot n={1} icon={AddDeviceIcon} label={t('admin.settings.homeQuickActions.lockedExtra')} />
+        <LockedSlot n={2} icon={CalendarPlus} label={t('admin.settings.homeQuickActions.lockedRenew')} />
 
         {slots.map((id, index) => {
           const Icon = HOME_QUICK_ACTIONS[id].icon

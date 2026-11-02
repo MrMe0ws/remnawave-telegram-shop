@@ -2,8 +2,9 @@ import { createContext, type ReactNode, useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Minus, MonitorSmartphone, Plus, QrCode, Smartphone, Trash2 } from 'lucide-react'
+import { Minus, MonitorSmartphone, Plus, Smartphone, Trash2 } from 'lucide-react'
 
+import { AddDeviceIcon } from '@/components/AddDeviceIcon'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { ConnectDeviceButton } from '@/components/SubscriptionActions'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -175,7 +176,7 @@ export function AddExtraDeviceButton({ className, size = 'sm' }: { className?: s
           className,
         )}
       >
-        <QrCode size={18} />
+        <AddDeviceIcon size={18} />
         {t('home.qaAddExtra')}
       </button>
     )
@@ -189,7 +190,7 @@ export function AddExtraDeviceButton({ className, size = 'sm' }: { className?: s
         className,
       )}
     >
-      <QrCode size={17} className="shrink-0" />
+      <AddDeviceIcon size={17} className="shrink-0" />
       <span className="truncate">{t('home.qaAddExtra')}</span>
     </button>
   )

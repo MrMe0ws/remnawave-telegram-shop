@@ -1,6 +1,7 @@
 import {
   FileText,
   Handshake,
+  Link2,
   MessageCircle,
   Newspaper,
   Star,
@@ -18,7 +19,17 @@ import { FortuneWheelIcon } from '@/features/fortune/FortuneWheelIcon'
  * Список id дублируется в internal/config/home_quick_actions.go.
  */
 
-export const HOME_QUICK_ACTION_IDS = ['promo', 'invite', 'partner', 'fortune', 'support', 'info', 'news', 'feedback'] as const
+export const HOME_QUICK_ACTION_IDS = [
+  'promo',
+  'invite',
+  'partner',
+  'fortune',
+  'support',
+  'info',
+  'news',
+  'feedback',
+  'sublink',
+] as const
 
 export type HomeQuickActionId = (typeof HOME_QUICK_ACTION_IDS)[number]
 
@@ -31,6 +42,8 @@ export interface HomeQuickActionMeta {
   to?: string
   /** Внешняя ссылка из bootstrap (новости и отзывы ведут в Telegram). */
   href?: (b: AuthBootstrapResponse | undefined) => string | undefined
+  /** Кнопка не ведёт на страницу, а копирует ссылку подписки (см. HomeParts). */
+  copiesSubscriptionLink?: boolean
   /** false — раздел выключен, кнопку на главной показывать нельзя. */
   available?: (b: AuthBootstrapResponse | undefined) => boolean
 }
@@ -61,6 +74,7 @@ export const HOME_QUICK_ACTIONS: Record<HomeQuickActionId, HomeQuickActionMeta> 
     href: siteLink('feedback'),
     available: (b) => !!siteLink('feedback')(b),
   },
+  sublink: { icon: Link2, labelKey: 'home.qaSubLink', copiesSubscriptionLink: true },
 }
 
 export function isHomeQuickActionId(v: string): v is HomeQuickActionId {

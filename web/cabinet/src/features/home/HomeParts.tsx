@@ -2,10 +2,13 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { ChevronRight, Infinity as InfinityIcon, MonitorSmartphone, QrCode, Zap, type LucideIcon } from 'lucide-react'
+import { CalendarPlus, Check, ChevronRight, Infinity as InfinityIcon, MonitorSmartphone, Zap, type LucideIcon } from 'lucide-react'
 
+import { AddDeviceIcon } from '@/components/AddDeviceIcon'
 import { DevicePlatformIcon } from '@/components/DevicePlatformIcon'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { useToast } from '@/components/ui/toast'
 import { StatRing, UnboundedRing } from '@/components/StatRing'
 import { ConnectDeviceButton, RenewNowButton, RenewWarnButton } from '@/components/SubscriptionActions'
 import { SubscriptionStatusBadge } from '@/components/SubscriptionStatusBadge'
@@ -283,14 +286,39 @@ function useQuickActions(data: HomeData): QuickAction[] {
   const { t } = useTranslation()
   const { openConnect } = useDeviceManager()
   const { data: bootstrap } = useAuthBootstrap()
-  const { state, isTrial, hasLink } = data
+  const toast = useToast()
+  const { state: linkCopyState, copy: copyLink } = useCopyToClipboard()
+  const { state, isTrial, hasLink, sub } = data
   const configured = resolveHomeQuickActions(bootstrap)
+
+  // «Ссылка подписки» копирует сразу, без модалки: её ставят на главную для
+  // тех, кто вставляет подписку в приложение сам. Кнопка видна и без
+  // подписки — иначе сетка кнопок прыгала бы от состояния аккаунта.
+  const copySubscriptionLink = async () => {
+    const link = sub?.subscription_link?.trim()
+    if (!link) {
+      toast.info(t('home.qaSubLinkNone'))
+      return
+    }
+    if (await copyLink(link)) toast.success(t('home.qaSubLinkCopied'))
+    else toast.error(t('common.copyFailed'))
+  }
+
   const toAction = (id: HomeQuickActionId): QuickAction => {
     const meta = HOME_QUICK_ACTIONS[id]
+    if (meta.copiesSubscriptionLink) {
+      const done = linkCopyState === 'done'
+      return {
+        key: id,
+        icon: done ? Check : meta.icon,
+        label: done ? t('subscriptionPage.copied') : t(meta.labelKey),
+        onClick: () => void copySubscriptionLink(),
+      }
+    }
     return { key: id, icon: meta.icon, label: t(meta.labelKey), to: meta.to, href: meta.href?.(bootstrap) }
   }
   const tail = configured.map(toAction)
-  const addExtra: QuickAction = { key: 'extra', icon: QrCode, label: t('home.qaAddExtra'), onClick: openConnect, disabled: !hasLink }
+  const addExtra: QuickAction = { key: 'extra', icon: AddDeviceIcon, label: t('home.qaAddExtra'), onClick: openConnect, disabled: !hasLink }
   if (state === 'expired' || state === 'traffic') {
     const fallbacks: HomeQuickActionId[] = ['support', ...DEFAULT_HOME_QUICK_ACTIONS]
     const third = fallbacks.find((id) => !configured.includes(id))
@@ -299,7 +327,12 @@ function useQuickActions(data: HomeData): QuickAction[] {
   if (state === 'crit') {
     return [addExtra, { key: 'connect', icon: MonitorSmartphone, label: t('home.qaConnect'), to: '/connections' }, ...tail]
   }
-  return [addExtra, { key: 'renew', icon: Zap, label: isTrial ? t('home.qaBuy') : t('home.qaRenew'), to: '/tariffs' }, ...tail]
+  // Календарь с плюсом — «добавить дни к сроку». У пробного продлевать
+  // нечего, там покупка, и остаётся молния.
+  const renew: QuickAction = isTrial
+    ? { key: 'renew', icon: Zap, label: t('home.qaBuy'), to: '/tariffs' }
+    : { key: 'renew', icon: CalendarPlus, label: t('home.qaRenew'), to: '/tariffs' }
+  return [addExtra, renew, ...tail]
 }
 
 function ActionTarget({ action, className, children }: { action: QuickAction; className: string; children: ReactNode }) {
