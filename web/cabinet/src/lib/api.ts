@@ -16,6 +16,7 @@ import type {
   AdminBroadcastMediaDTO,
   AdminBroadcastPreviewDTO,
   AdminBroadcastSendDTO,
+  AdminBroadcastChannel,
   AdminBroadcastHistoryDTO,
   AdminBroadcastHistoryItemDTO,
   AdminCustomerDTO,
@@ -501,6 +502,35 @@ export interface ConnectResolveResponse {
   subscription_link?: string
   links?: Record<string, string>
   encrypted?: string[]
+}
+
+/** Уведомление в ленте под колокольчиком. */
+export interface NotificationDTO {
+  id: number
+  /** broadcast — рассылка; остальное — личные события (payment, expiring…). */
+  kind: string
+  important: boolean
+  /** Пусто у рассылок: их заголовок — в тексте. */
+  title: string
+  /** Telegram HTML. */
+  body: string
+  /** Переходы по разделам кабинета: tariffs, connections… */
+  buttons: { key: string }[]
+  created_at: string
+  read: boolean
+}
+
+export interface NotificationsUnreadDTO {
+  total: number
+  important: number
+  /** Свежее непрочитанное важное — его плашка висит на главной. */
+  latest_important: NotificationDTO | null
+}
+
+export interface NotificationsListDTO {
+  items: NotificationDTO[]
+  total: number
+  unread: NotificationsUnreadDTO
 }
 
 export interface LoyaltyTierDTO {
@@ -1146,6 +1176,20 @@ export const api = {
   connectInvite: () =>
     request<ConnectInviteResponse>('GET', '/me/connect-invite'),
 
+  notifications: (params: { limit: number; offset: number }) =>
+    request<NotificationsListDTO>('GET', `/me/notifications?limit=${params.limit}&offset=${params.offset}`),
+  notificationsUnread: () => request<NotificationsUnreadDTO>('GET', '/me/notifications/unread'),
+  notificationsRead: (body: { ids?: number[]; all?: boolean }) =>
+    request<NotificationsUnreadDTO>('POST', '/me/notifications/read', body),
+  /** Крестик: убрать уведомления из своей ленты. У других получателей они остаются. */
+  notificationsDelete: (ids: number[]) =>
+    request<NotificationsUnreadDTO>('POST', '/me/notifications/delete', { ids }),
+  pushKey: () => request<{ public_key: string }>('GET', '/me/push/key'),
+  pushSubscribe: (sub: PushSubscriptionJSON) =>
+    request<{ subscribed: boolean }>('POST', '/me/push/subscribe', sub),
+  pushUnsubscribe: (endpoint: string) =>
+    request<{ subscribed: boolean }>('POST', '/me/push/unsubscribe', { endpoint }),
+
   /**
    * Резолв приглашения на публичной странице /connect.
    *
@@ -1640,7 +1684,17 @@ export const api = {
       /** Имя файла — только для истории рассылок. */
       name?: string
     } | null
+    /** Каналы доставки; без поля сервер шлёт только в Telegram. */
+    channels?: AdminBroadcastChannel[]
+    /** Важное в кабинете: закреплено и висит плашкой на главной. */
+    important?: boolean
   }) => request<AdminBroadcastSendDTO>('POST', '/admin/broadcast/send', body),
+  /** Снять или поставить важность уведомлению рассылки в кабинете. */
+  adminBroadcastSetCabinetImportant: (id: number, important: boolean) =>
+    request<AdminBroadcastHistoryItemDTO>('PATCH', `/admin/broadcast/history/${id}/cabinet`, { important }),
+  /** Убрать уведомление рассылки из кабинета у всех. Telegram-сообщения остаются. */
+  adminBroadcastDeleteCabinet: (id: number) =>
+    request<AdminBroadcastHistoryItemDTO>('DELETE', `/admin/broadcast/history/${id}/cabinet`),
   adminBroadcastHistory: (params: { limit: number; offset: number }) =>
     request<AdminBroadcastHistoryDTO>(
       'GET',

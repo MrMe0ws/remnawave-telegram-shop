@@ -297,6 +297,28 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 ---
 
+## Push в браузер из кабинета
+
+Под колокольчиком кабинета уведомления появляются всегда. Эти переключатели решают, какие из них ещё и дублировать системным уведомлением в браузере тем, кто включил push. Меняются в админке без рестарта: «Настройки бота» → «Уведомления».
+
+| Переменная | По умолчанию | Что шлёт push |
+|------------|--------------|---------------|
+| `CABINET_PUSH_IMPORTANT` | `true` | Важное любого вида: важная рассылка, «подписка заканчивается завтра» |
+| `CABINET_PUSH_SUPPORT` | `true` | Ответ поддержки |
+| `CABINET_PUSH_TORRENT` | `true` | «Сервер временно недоступен» — блокировка за торренты |
+| `CABINET_PUSH_EXPIRING` | `true` | Напоминания о конце подписки |
+| `CABINET_PUSH_TEST_BROADCAST` | `true` | Тестовая рассылка (только админу) |
+| `CABINET_PUSH_BROADCAST` | `false` | Обычные рассылки без отметки «Важное» |
+| `CABINET_PUSH_PAYMENT` | `false` | Оплата прошла |
+| `CABINET_PUSH_DEVICES` | `false` | Стало больше мест для устройств |
+| `CABINET_PUSH_REFERRAL` | `false` | Бонус за друга |
+| `CABINET_PUSH_LOYALTY` | `false` | Новый уровень лояльности |
+| `CABINET_PUSH_PARTNER` | `false` | События партнёрской программы |
+
+Важное проверяется своим переключателем: если `CABINET_PUSH_IMPORTANT=false`, важная рассылка пойдёт по правилу обычной (`CABINET_PUSH_BROADCAST`).
+
+---
+
 ## Web-кабинет
 
 Полный setup: [`cabinet/SETUP-GUIDE-RU.md`](./cabinet/SETUP-GUIDE-RU.md).

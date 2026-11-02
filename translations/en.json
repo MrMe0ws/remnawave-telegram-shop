@@ -425,5 +425,18 @@
   "broadcast_link_loyalty": "⭐ Loyalty",
   "broadcast_link_dashboard": "🏠 Cabinet home",
   "broadcast_link_connections": "🔗 Connections",
-  "broadcast_link_fortune": "🎰 Wheel of fortune"
+  "broadcast_link_fortune": "🎰 Wheel of fortune",
+  "cabinet_notify_payment_title": "Payment received",
+  "cabinet_notify_payment_body": "Your subscription is active until %s.",
+  "cabinet_notify_expiring_title": "Subscription ending soon",
+  "cabinet_notify_expiring_body": "Your subscription ends on %s. Renew in advance so your VPN keeps working.",
+  "cabinet_notify_referral_title": "Referral bonus",
+  "cabinet_notify_referral_body": "Your friend paid for a subscription — you get +%d days.",
+  "cabinet_notify_support_title": "Support replied",
+  "cabinet_notify_partner_title": "Partner program",
+  "cabinet_notify_devices_title": "Device slots",
+  "cabinet_notify_devices_body": "You have more device slots now: %d → %d.",
+  "cabinet_notify_loyalty_title": "New loyalty level",
+  "cabinet_notify_loyalty_body": "You reached level %d — %d%% off renewals.",
+  "cabinet_notify_torrent_title": "Server temporarily unavailable"
 }

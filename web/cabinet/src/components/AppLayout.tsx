@@ -22,8 +22,6 @@ import {
 
 import { ConfirmModal } from './ConfirmModal'
 import { Logo } from './Logo'
-import { ThemeToggle } from './ThemeToggle'
-import { LangToggle } from './LangToggle'
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
 import { FortuneWheelIcon } from '@/features/fortune/FortuneWheelIcon'
@@ -35,6 +33,7 @@ import { CabinetDecorHeader } from '@/features/decor/CabinetDecorHeader'
 import { DecorNavIcon } from '@/features/decor/decorNavIcons'
 import { useCabinetDecorTheme } from '@/features/decor/useCabinetDecorTheme'
 import { CabinetOnboarding } from '@/features/onboarding/CabinetOnboarding'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useSupportSummary } from '@/features/support/useSupportChat'
 
 interface AppLayoutProps {
@@ -128,6 +127,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation()
   const decorTheme = useCabinetDecorTheme()
   const { data: bootstrap } = useAuthBootstrap()
+  // Публичные страницы (переход по deep link) тоже в этой шапке: без сессии
+  // колокольчик спрашивал бы счётчик и получал 401.
+  const hasSession = Boolean(useAuthStore((st) => st.accessToken))
   const user = useAuthStore((s) => s.user)
   const partnerMaxPercent = bootstrap?.partner_max_percent ?? 0
   const newsUrl = bootstrap?.site_links?.channel?.trim()
@@ -378,9 +380,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           </nav>
 
           <div className="flex items-center gap-0.5 sm:gap-1 ml-auto shrink-0">
-            {/* Язык и тема на телефоне — в профиле («Настройки»), шапка там только лого и ☰. */}
-            <LangToggle className="hidden h-10 px-4 sm:inline-flex" />
-            <ThemeToggle className="hidden size-10 sm:inline-flex [&_svg]:size-[18px]" />
+            {/* Колокольчик — всем вошедшим, с подпиской или без. */}
+            {hasSession && <NotificationBell />}
+            {/* Язык и тема — только в профиле («Настройки»): тёмная тема стоит по
+                умолчанию, язык берётся из браузера, менять их часто незачем. */}
             <div className="relative" ref={menuRef}>
               <Button
                 variant="ghost"

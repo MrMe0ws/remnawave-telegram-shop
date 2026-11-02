@@ -21,6 +21,7 @@ export function ResponsiveSheet({
   onClose,
   title,
   subtitle,
+  actions,
   children,
   className,
 }: {
@@ -28,6 +29,8 @@ export function ResponsiveSheet({
   onClose: () => void
   title: ReactNode
   subtitle?: ReactNode
+  /** Кнопки в шапке слева от крестика. */
+  actions?: ReactNode
   children: ReactNode
   className?: string
 }) {
@@ -106,6 +109,7 @@ export function ResponsiveSheet({
             <p className="font-heading text-[22px] font-extrabold leading-tight">{title}</p>
             {subtitle && <p className="mt-0.5 text-[13px] text-muted-foreground">{subtitle}</p>}
           </div>
+          {actions}
           <button
             type="button"
             onClick={onClose}

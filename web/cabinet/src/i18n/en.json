@@ -348,6 +348,40 @@
       "manualCopyHint": "Or copy the link and paste it into the app:",
       "addDeviceSlot": "Add a device"
     },
+    "notifications": {
+      "title": "Notifications",
+      "bellUnread_one": "Notifications: {{count}} unread",
+      "bellUnread_other": "Notifications: {{count}} unread",
+      "readAll": "Mark all as read",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "empty": "Service news, support replies and subscription reminders will show up here.",
+      "more": "Show more",
+      "unread": "Unread",
+      "importantBadge": "Important",
+      "pushTitle": "Notifications on this device",
+      "pushHint": "Get important updates even when the cabinet is closed.",
+      "pushEnable": "Turn on",
+      "pushDenied": "Notifications are blocked in your browser settings — allow them for this site to get important updates.",
+      "pushIosInstall": "On iPhone, notifications work once you add the cabinet to your Home Screen: Share → Add to Home Screen.",
+      "pushFailed": "Couldn't turn them on. Try again.",
+      "remove": "Delete notification",
+      "pushPromptBlocked": "Your browser didn't show the prompt. Allow notifications for this site — the icon left of the address bar — and press “Turn on” again.",
+      "kinds": {
+        "important": "Important",
+        "broadcast": "News",
+        "payment": "Payment",
+        "expiring": "Subscription",
+        "referral": "Referrals",
+        "support": "Support",
+        "partner": "Partners",
+        "devices": "Devices",
+        "loyalty": "Loyalty",
+        "torrent": "Restriction"
+      },
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
     "linkReset": {
       "inviteEntry": "Link ended up with the wrong people? Reset it",
       "deviceHint": "Not your device? It will connect again using your link.",
@@ -2261,7 +2295,7 @@
       },
       "broadcast": {
         "title": "Broadcast",
-        "subtitle": "Mass messaging via Telegram",
+        "subtitle": "Mass messaging to Telegram and the cabinet",
         "audienceTitle": "Audience",
         "audienceNone": "none selected",
         "draftSaved": "Draft saved",
@@ -2320,7 +2354,21 @@
           "mediaPlaceholderNoName": "{{kind}} — history keeps the Telegram file itself, without a preview.",
           "plainTextNote": "Sent from the Telegram admin: formatting is stored separately there, so this text has none.",
           "reuse": "Use as a starting point",
-          "reuseReplaces": "This replaces your current draft."
+          "reuseReplaces": "This replaces your current draft.",
+          "cabinet": {
+            "title": "Cabinet notification",
+            "stats": "Received {{recipients}} · read {{read}}",
+            "important": "Important",
+            "deleted": "Removed from cabinet",
+            "makeImportant": "Mark important",
+            "unsetImportant": "Unmark important",
+            "delete": "Remove from cabinet",
+            "deleteConfirm": "The notification disappears from every recipient's feed. Telegram messages stay.",
+            "importantHint": "Currently pinned and shown on the home page for those who haven't read it.",
+            "badge": "Cabinet",
+            "line": "Cabinet: received {{recipients}} · read {{read}}",
+            "receivedRead": "received in the cabinet · read {{read}}"
+          }
         },
         "previewMediaFromDraft": "“{{name}}” from the draft will be sent with the broadcast. Attach the file again to see a preview.",
         "audienceAndMore": "{{first}} and {{count}} more",
@@ -2422,7 +2470,24 @@
         "confirmWebOnly": "People without Telegram will not get it — they only have an email login in the cabinet.",
         "attachment": "Attachment",
         "attachmentNone": "none, text only",
-        "previewEmpty": "Your broadcast text will appear here"
+        "previewEmpty": "Your broadcast text will appear here",
+        "delivery": {
+          "title": "Where to send",
+          "telegram": "Telegram",
+          "telegramHint": "A bot message to everyone who has the bot open.",
+          "cabinet": "Cabinet",
+          "cabinetHint": "Under the bell — including people without Telegram. Text and buttons only: the cabinet doesn't show attachments yet.",
+          "important": "Important",
+          "importantHint": "Pinned in the feed, shown on the home page until read, and sent as a browser push if enabled in the Notifications settings. Only one broadcast is important: the previous one becomes regular. You can unpin it later in the history.",
+          "noChannel": "Pick at least one channel.",
+          "cabinetNeedsText": "Cabinet-only broadcasts need text: attachments aren't shown there yet.",
+          "summary": "Channels"
+        },
+        "recipientsCabinet": "In cabinet",
+        "confirmCabinet": "People without Telegram will see the message in the cabinet under the bell.",
+        "confirmImportant": "Important: pinned and shown on the home page for every recipient.",
+        "recipientsCabinetWebOnly_one": "{{count}} of them without Telegram",
+        "recipientsCabinetWebOnly_other": "{{count}} of them without Telegram"
       },
       "infra": {
         "title": "Infrastructure",
@@ -2490,7 +2555,8 @@
           "marketing": "Marketing",
           "finance": "Finance",
           "operations": "Operations",
-          "access": "Access"
+          "access": "Access",
+          "notifications": "Notifications"
         },
         "subsections": {
           "trial": {
@@ -2544,6 +2610,11 @@
           },
           "tariffs": {
             "showcase": "Tariff showcase"
+          },
+          "notifications": {
+            "urgent": "Important and urgent",
+            "broadcasts": "Broadcasts",
+            "account": "Account events"
           }
         },
         "groups": {
@@ -2563,7 +2634,11 @@
           "fortune": "Fortune wheel",
           "cabinet": "Cabinet appearance",
           "cabinet_connect": "Connection and Telegram",
-          "tariffs": "Price display"
+          "tariffs": "Price display",
+          "notifications": "Browser push"
+        },
+        "groupIntros": {
+          "notifications": "This doesn't turn cabinet notifications on or off: they always appear under the bell for everyone. These toggles decide what is also sent as a system notification to the browser or phone of those who tapped \"Turn on\" in the notification feed. People who didn't subscribe get nothing."
         },
         "yookassaMethods": {
           "intro": "Each checked method is a separate button in the bot and cabinet, in this order. The buyer lands on the chosen YooKassa method right away but can't switch to another one on the form.",
@@ -3116,6 +3191,50 @@
           "FORTUNE_REWARD_DAYS_180": {
             "label": "Days for +180 prize",
             "hint": ""
+          },
+          "CABINET_PUSH_IMPORTANT": {
+            "label": "Important",
+            "hint": "The important broadcast and \"subscription ends tomorrow\"."
+          },
+          "CABINET_PUSH_SUPPORT": {
+            "label": "Support reply",
+            "hint": "A reply reaches the person even when the tab is closed."
+          },
+          "CABINET_PUSH_TORRENT": {
+            "label": "Server temporarily unavailable",
+            "hint": "Torrent block: without a push the person won't know why the VPN stopped."
+          },
+          "CABINET_PUSH_EXPIRING": {
+            "label": "Subscription ending",
+            "hint": "Reminders that the subscription ends soon. The last day is important and follows the \"Important\" toggle."
+          },
+          "CABINET_PUSH_TEST_BROADCAST": {
+            "label": "Test broadcast",
+            "hint": "Sent only to you, to see what the push looks like."
+          },
+          "CABINET_PUSH_BROADCAST": {
+            "label": "Regular broadcasts",
+            "hint": "News without the \"Important\" mark. Use with care: people turn off sites that push often, and Chrome revokes the permission itself — then even important ones won't arrive."
+          },
+          "CABINET_PUSH_PAYMENT": {
+            "label": "Payment received",
+            "hint": "The person is usually on the site at that moment."
+          },
+          "CABINET_PUSH_DEVICES": {
+            "label": "Device slots",
+            "hint": "More slots after a purchase."
+          },
+          "CABINET_PUSH_REFERRAL": {
+            "label": "Referral bonus",
+            "hint": "A friend paid — days added."
+          },
+          "CABINET_PUSH_LOYALTY": {
+            "label": "Loyalty level",
+            "hint": "New level and renewal discount."
+          },
+          "CABINET_PUSH_PARTNER": {
+            "label": "Partner program",
+            "hint": "Application, payouts and other partner events."
           }
         }
       },

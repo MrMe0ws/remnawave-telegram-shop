@@ -30,6 +30,7 @@ import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 import { useAuthStore } from '@/store/auth'
+import { ImportantNotificationBanner } from '@/features/notifications/ImportantNotificationBanner'
 import { BackupLoginRow, TariffsOfferCard, TrialOfferCard } from './TrialOffer'
 
 /**
@@ -173,6 +174,10 @@ export default function DashboardPage() {
         </DeviceManagerProvider>
       ) : (
         <PageReveal className="space-y-4">
+          {/* Важное нужно видеть и без подписки: «перебои» касаются и тех, кто только выбирает тариф. */}
+          <RevealItem className="empty:hidden">
+            <ImportantNotificationBanner />
+          </RevealItem>
           <RevealItem>
             {/* Пробный доступен — предлагаем его; недоступен — витрину тарифов. */}
             {trialOfferAvailable ? (
@@ -202,6 +207,9 @@ function HomeDesktop({
     <PageReveal className="space-y-[18px]">
       <RevealItem>
         <HomeTitle data={data} lang={lang} />
+      </RevealItem>
+      <RevealItem className="empty:hidden">
+        <ImportantNotificationBanner />
       </RevealItem>
       <RevealItem>
         <HomeRings
@@ -251,6 +259,9 @@ function HomeMobile({
     <PageReveal className="space-y-3">
       <RevealItem>
         <HomeTitle data={data} lang={lang} compact />
+      </RevealItem>
+      <RevealItem className="empty:hidden">
+        <ImportantNotificationBanner />
       </RevealItem>
       <RevealItem>
         <HomeRings data={data} compact onTraffic={onTraffic} onDevices={onDevices} />
