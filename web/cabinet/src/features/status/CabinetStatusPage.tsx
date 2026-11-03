@@ -12,15 +12,6 @@ import { StateChip, stateTint } from './StateChip'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-function countryName(code: string | undefined, locale: string): string {
-  if (!code || code.length !== 2) return ''
-  try {
-    return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? ''
-  } catch {
-    return ''
-  }
-}
-
 function historyLevel(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return ''
   if (value >= 0.99) return 'up'
@@ -171,7 +162,6 @@ function LocationCard({
   onToggle: () => void
 }) {
   const { t, i18n } = useTranslation()
-  const region = countryName(node.country, locale)
   const probe = node.probe
   const whitelist = Boolean(node.whitelist)
   const hits = whitelist ? whitelistHits(probe) : russiaHits(probe)
@@ -181,7 +171,8 @@ function LocationCard({
     ? Math.round((measured.reduce((sum, value) => sum + value, 0) / measured.length) * 1000) / 10
     : null
   const note = node.note?.trim()
-  const subtitle = note || (region && region !== node.name ? region : '')
+  // Подпись только та, что задал админ. Название страны сюда не подставляем.
+  const subtitle = note
 
   return (
       <div className={cn('cabinet-elevated-card overflow-hidden', stateTint(node))}>

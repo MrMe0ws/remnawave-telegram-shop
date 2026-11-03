@@ -535,6 +535,9 @@ function EditServerModal({
   if (!row) return <AdminModal open={false} onClose={onClose} title="">{null}</AdminModal>
 
   const bypass = row.kind === 'bypass'
+  // Адрес так и остался адресом самой ноды из панели: для обхода проверять нужно хост из белого списка.
+  const boundNode = nodes.find((node) => node.uuid === row.node_uuid)
+  const addressIsNode = Boolean(boundNode && boundNode.address.trim() !== '' && boundNode.address.trim() === row.address.trim())
   const choice = (kind: 'regular' | 'bypass', title: string, text: string) => (
     <button
       type="button"
@@ -604,7 +607,10 @@ function EditServerModal({
           </div>
         </div>
 
-        <Field label={t('admin.statusPage.fAddress')} hint={t('admin.statusPage.fAddressHint')}>
+        <Field
+          label={bypass ? t('admin.statusPage.fAddressBypass') : t('admin.statusPage.fAddress')}
+          hint={bypass ? t('admin.statusPage.fAddressBypassHint') : t('admin.statusPage.fAddressHint')}
+        >
           <input
             className={inputClass}
             value={row.address}
@@ -613,6 +619,11 @@ function EditServerModal({
             onChange={(e) => onPatch({ address: e.target.value })}
           />
         </Field>
+        {bypass && addressIsNode && (
+          <p className="-mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+            {t('admin.statusPage.addressIsNode')}
+          </p>
+        )}
 
         <div className={cn('grid gap-3', bypass && 'sm:grid-cols-2')}>
           <Field

@@ -3454,7 +3454,10 @@
         "howLl": "Latency Lab: an ll_… key in your profile at",
         "llQuota": "The service does not report the remaining limit; see it in the console at",
         "pausedUntil": "Limit reached, checks are paused until {{time}}",
-        "titleHint": "Only for the /status page opened without signing in. The \"Servers\" section inside the cabinet has its own title."
+        "titleHint": "Only for the /status page opened without signing in. The \"Servers\" section inside the cabinet has its own title.",
+        "fAddressBypass": "Host to check",
+        "fAddressBypassHint": "The address users open through the whitelists (for example a Yandex domain). Not the node address.",
+        "addressIsNode": "This is the address of the panel node itself. For a bypass enter the whitelisted host, otherwise operators will not reach it."
       }
     },
     "landing": {
@@ -3675,11 +3678,11 @@
         "worldDown": "Down",
         "worldPending": "Still measuring",
         "worldPing": "ping {{ms}} ms",
-        "russiaUp": "Address reachable",
+        "russiaUp": "Reachable",
         "inWhitelist": "On whitelists",
         "whitelistUp": "Reachable",
         "whitelistRatio": "{{ok}} of {{total}} operators",
-        "russiaDown": "Address unreachable",
+        "russiaDown": "Unreachable",
         "russiaRatio": "{{ok}} of {{total}} providers",
         "historyEmpty": "No measurements yet",
         "historyPct": "{{pct}}% over {{days}} days",

@@ -7,15 +7,6 @@ import { cn } from '@/lib/utils'
 import { StateChip, stateRowTint } from '@/features/status/StateChip'
 import type { StatusMapNode, StatusProbe, StatusProbeHit } from './StatusMap'
 
-function countryName(code: string | undefined, locale: string): string {
-  if (!code || code.length !== 2) return ''
-  try {
-    return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? ''
-  } catch {
-    return ''
-  }
-}
-
 function historyLevel(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return ''
   if (value >= 0.99) return 'up'
@@ -61,7 +52,6 @@ export function StatusNodeList({ nodes, bypassProbes = true }: { nodes: StatusMa
         <ul>
           {nodes.map((node, index) => {
             const key = node.id || `${node.country}-${node.name}-${index}`
-            const region = countryName(node.country, i18n.language)
             const probe = node.probe
             const hits = russiaHits(probe)
             const whitelist = whitelistHits(probe)
@@ -93,9 +83,6 @@ export function StatusNodeList({ nodes, bypassProbes = true }: { nodes: StatusMa
                         <StateChip node={node} />
                       </span>
                       {note ? <span className="mt-0.5 block text-sm text-muted-foreground">{note}</span> : null}
-                      {!note && region && region !== node.name ? (
-                        <span className="mt-0.5 block text-sm text-muted-foreground">{region}</span>
-                      ) : null}
                     </span>
                   </span>
                   <ProbeWorld node={node} />
