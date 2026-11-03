@@ -39,6 +39,9 @@ const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage')
 
 // Публичный лендинг (9a): отдельный маршрут, корень SPA по-прежнему ведёт в кабинет.
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
+// Статус серверов: /status без префикса — публичная страница, /cabinet/status — карточки кабинета.
+const StatusPage = lazy(() => import('@/features/landing/StatusPage'))
+const CabinetStatusPage = lazy(() => import('@/features/status/CabinetStatusPage'))
 
 // Dev-превью компонентов. Маршруты ниже регистрируются только при import.meta.env.DEV;
 // через lazy модули не попадают и в прод-чанки.
@@ -77,6 +80,7 @@ const AdminLoyaltyPage = lazy(() => import('@/features/admin/pages/AdminLoyaltyP
 const AdminPartnersPage = lazy(() => import('@/features/admin/pages/AdminPartnersPage'))
 const AdminBroadcastPage = lazy(() => import('@/features/admin/pages/AdminBroadcastPage'))
 const AdminInfraPage = lazy(() => import('@/features/admin/pages/AdminInfraPage'))
+const AdminStatusPage = lazy(() => import('@/features/admin/pages/AdminStatusPage'))
 const AdminSyncPage = lazy(() => import('@/features/admin/pages/AdminSyncPage'))
 const AdminSettingsPage = lazy(() => import('@/features/admin/pages/AdminSettingsPage'))
 
@@ -125,7 +129,21 @@ function normalizePath(pathname: string): string {
 }
 
 function isPublicShellPath(pathname: string): boolean {
+  // /status вне /cabinet — публичная страница, внутри — за авторизацией.
+  if (normalizePath(pathname) === '/status') {
+    return typeof window === 'undefined' || !window.location.pathname.startsWith('/cabinet')
+  }
   return PUBLIC_SHELL_PATHS.has(normalizePath(pathname))
+}
+
+function StatusEntry() {
+  const inCabinet = typeof window !== 'undefined' && window.location.pathname.startsWith('/cabinet')
+  if (!inCabinet) return <StatusPage />
+  return (
+    <ProtectedRoute requireVerified>
+      <CabinetStatusPage />
+    </ProtectedRoute>
+  )
 }
 
 function AppRoutes() {
@@ -169,6 +187,7 @@ function AppRoutes() {
 
       {/* Витрина проекта. Доступна и гостю, и авторизованному — редиректа нет. */}
       <Route path="/landing" element={<LandingPage />} />
+      <Route path="/status" element={<StatusEntry />} />
 
       {/* Только dev: превью акцентной кнопки «Подключить устройство». */}
       {import.meta.env.DEV && (
@@ -437,6 +456,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AdminRoute>
               <AdminBroadcastPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/status"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminStatusPage />
             </AdminRoute>
           </ProtectedRoute>
         }

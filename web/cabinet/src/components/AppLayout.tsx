@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
+  Activity,
   Home,
   Zap,
   MessageCircle,
@@ -173,7 +174,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (bootstrap?.fortune_nav_visible !== false) {
       bonuses.push({ key: 'fortune', icon: FortuneWheelIcon, label: t('nav.fortune'), to: '/fortune', decorTo: '/fortune' })
     }
-    const about: MenuItem[] = [{ key: 'info', icon: FileText, label: t('nav.info'), to: '/support#cabinet-info' }]
+    const about: MenuItem[] = [
+      { key: 'info', icon: FileText, label: t('nav.info'), to: '/support#cabinet-info' },
+      { key: 'servers', icon: Activity, label: t('nav.servers'), to: '/status', decorTo: '/status' },
+    ]
     if (newsUrl) about.push({ key: 'news', icon: Newspaper, label: t('dashboard.newsCardTitle'), href: newsUrl })
     if (feedbackUrl) about.push({ key: 'feedback', icon: Star, label: t('dashboard.feedbackCardTitle'), href: feedbackUrl })
     return [

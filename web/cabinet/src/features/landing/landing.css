@@ -950,3 +950,190 @@ html[data-cabinet-decor="new_year_2"] .landing-cta--primary {
 .landing-root .holiday-ground {
   display: none;
 }
+
+/* --- страница статуса серверов (/status) --- */
+.landing-status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: hsl(var(--muted-foreground));
+  box-shadow: 0 0 0 4px hsl(var(--muted-foreground) / 0.12);
+}
+.landing-status-dot--up {
+  background: hsl(152 48% 46%);
+  box-shadow: 0 0 0 4px hsl(152 48% 46% / 0.16);
+}
+.landing-status-dot--partial {
+  background: hsl(36 86% 52%);
+  box-shadow: 0 0 0 4px hsl(36 86% 52% / 0.16);
+}
+.landing-status-dot--down {
+  background: hsl(0 68% 58%);
+  box-shadow: 0 0 0 4px hsl(0 68% 58% / 0.16);
+}
+.landing-status-dot--ru {
+  background: hsl(222 90% 66%);
+  box-shadow: 0 0 0 4px hsl(222 90% 66% / 0.18);
+  border-radius: 0.2rem;
+}
+
+.landing-status-map {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background: #0c1428;
+  border: 1px solid rgb(255 255 255 / 0.06);
+}
+.landing-status-map__stage {
+  position: relative;
+}
+.landing-status-map__timer {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 2;
+  margin: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgb(8 12 24 / 0.72);
+  color: rgb(226 232 240);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.landing-status-map__stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.landing-status-map svg,
+.landing-status-map__canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  cursor: grab;
+}
+.landing-status-map__canvas:active {
+  cursor: grabbing;
+}
+@media (max-width: 700px) {
+  .landing-status-map__tag {
+    font-size: 0;
+  }
+  .landing-status-map__tag img {
+    width: 1rem;
+    height: 0.7rem;
+  }
+}
+.landing-status-map__land {
+  fill: #1a2748;
+  stroke: #2a3d68;
+  stroke-width: 0.6;
+}
+.landing-status-map__line {
+  fill: none;
+  stroke: rgb(167 139 250 / 0.85);
+  stroke-width: 1.4;
+  stroke-dasharray: 5 6;
+  vector-effect: non-scaling-stroke;
+}
+.landing-status-map__leaders path {
+  fill: none;
+  stroke: #6e84a8;
+  stroke-width: 0.7;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+.landing-status-map__label {
+  fill: #f4f7ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.landing-status-map__toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: rgb(8 12 24 / 0.72);
+}
+.landing-status-map__toggle button {
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: rgb(226 232 240 / 0.82);
+}
+.landing-status-map__toggle button[data-on='1'] {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.landing-status-bar {
+  display: flex;
+  gap: 2px;
+  height: 1.35rem;
+  align-items: flex-end;
+}
+.landing-status-bar i {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  background: rgb(148 163 184 / 0.28);
+}
+.landing-status-bar i[data-level='up'] { background: #3dd68c; }
+.landing-status-bar i[data-level='partial'] { background: #f5b942; }
+.landing-status-bar i[data-level='down'] { background: #f07178; }
+
+.landing-status-mark {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+}
+.landing-status-mark--world {
+  background: #3dd68c;
+  box-shadow: 0 0 0 5px rgb(61 214 140 / 0.18);
+}
+.landing-status-mark--ru {
+  border-radius: 0.2rem;
+  background: #6f97ff;
+  box-shadow: 0 0 0 5px rgb(111 151 255 / 0.18);
+}
+.landing-status-note {
+  background: hsl(var(--card) / 0.72);
+}
+
+.landing-status-map__dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-dot-in 0.7s var(--lp-ease) both;
+}
+.landing-status-map__pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-map-ping 2.6s ease-out infinite;
+}
+.landing-status-map__line {
+  animation: landing-dash 22s linear infinite;
+}
+@keyframes landing-dash {
+  to { stroke-dashoffset: -280; }
+}
+@keyframes landing-dot-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes landing-map-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  75%, 100% { transform: scale(2.5); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-status-map__dot,
+  .landing-status-map__pulse,
+  .landing-status-map__line {
+    animation: none;
+  }
+}

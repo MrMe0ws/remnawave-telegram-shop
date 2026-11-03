@@ -29,6 +29,20 @@ const BODY_KEY_MAP: Record<string, string> = {
   'max uses must be positive': 'admin.errors.promoMaxUses',
   'valid until is in the past': 'admin.errors.promoValidUntilPast',
   'slug is required': 'admin.errors.slugRequired',
+  'name is required': 'admin.errors.statusName',
+  'name is too long': 'admin.errors.statusName',
+  'country must be 2 letters': 'admin.errors.statusCountry',
+  'address is not a public host': 'admin.errors.statusAddress',
+  'note is too long': 'admin.errors.statusNote',
+  'too many targets': 'admin.errors.statusTooMany',
+  'interval must be between 5 and 180': 'admin.errors.statusInterval',
+  'world probes must be between 1 and 10': 'admin.errors.statusWorld',
+  'russia probes must be between 1 and 30': 'admin.errors.statusRussia',
+  'kind must be regular or bypass': 'admin.errors.statusKind',
+  'node id is invalid': 'admin.errors.statusNode',
+  'panel unavailable': 'admin.errors.panelUnavailable',
+  'probe already running': 'admin.errors.statusProbeBusy',
+  'no targets': 'admin.errors.statusProbeEmpty',
 }
 
 function normalizeBody(body: string): string {

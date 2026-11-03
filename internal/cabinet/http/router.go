@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -49,6 +50,7 @@ import (
 	botpayment "remnawave-tg-shop-bot/internal/payment"
 	"remnawave-tg-shop-bot/internal/promo"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"remnawave-tg-shop-bot/internal/statusprobe"
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/tariffsquads"
 	"remnawave-tg-shop-bot/internal/translation"
@@ -408,6 +410,49 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		oauthIPLim, telegramIPLim, linkAcctLim)
 	registerNotificationRoutes(api, notificationsHandler, jwtIssuer)
 
+	// Страница статуса серверов: замер в фоне, список и узлы — в админке.
+	statusTargets := statusprobe.NewKVTargets(runtimeSettingsRepo)
+	statusStore := statusprobe.NewPGStore(pool)
+	if err := statusStore.ImportLegacy(ctx, statusprobe.NewKVHistory(runtimeSettingsRepo)); err != nil {
+		slog.Warn("status probe history import", "error", err)
+	}
+	statusRunner := statusprobe.NewRunner(statusStore)
+	statusRunner.Watch(ctx, func(c context.Context) ([]statusprobe.Target, error) {
+		list, err := statusTargets.Load(c)
+		if err != nil {
+			return nil, err
+		}
+		return statusprobe.TargetsFrom(list), nil
+	})
+	publicStatus := handlers.NewPublicStatus(rw, statusRunner, statusTargets)
+	publicStatusIPLim := ratelimit.New(ratelimit.Rule{Count: 60, Interval: time.Minute})
+	publicStatusIPLim.RunGC(ctx)
+	api.Handle("/cabinet/api/public/status",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(publicStatus.Get),
+				middleware.RateLimit(publicStatusIPLim, ipKey("public-status")),
+			),
+		}),
+	)
+	adminStatusTargets := handlers.NewAdminStatusTargets(statusTargets, statusRunner, rw, publicStatus.Invalidate)
+	for route, handler := range map[string]http.HandlerFunc{
+		"/cabinet/api/admin/status/targets": adminStatusTargets.Handle,
+		"/cabinet/api/admin/status/probe":   adminStatusTargets.Probe,
+		"/cabinet/api/admin/status/nodes":   adminStatusTargets.Nodes,
+		"/cabinet/api/admin/status/quota":   adminStatusTargets.Quota,
+	} {
+		api.Handle(route,
+			middleware.Chain(
+				handler,
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.CSRF(),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_"+strings.TrimPrefix(route, "/cabinet/api/admin/"))),
+			),
+		)
+	}
+
 	// 404 JSON на любой неизвестный /cabinet/api/*.
 	api.HandleFunc("/cabinet/api/", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -446,6 +491,9 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// поэтому один и тот же бандл обслуживает оба адреса.
 	mux.Handle("/landing", spaChain)
 	mux.Handle("/landing/", spaChain)
+	// Публичный статус серверов: тот же бандл, basename выбирается по пути.
+	mux.Handle("/status", spaChain)
+	mux.Handle("/status/", spaChain)
 
 	// Часто открывают кабинет как https://host/login без префикса /cabinet — иначе 404.
 	registerCabinetRootRedirects(mux)

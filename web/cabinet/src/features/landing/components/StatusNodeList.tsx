@@ -1,0 +1,295 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ChevronDown } from 'lucide-react'
+
+import { CountryFlag } from '@/features/admin/components/CountryFlag'
+import { cn } from '@/lib/utils'
+import { StateChip, stateRowTint } from '@/features/status/StateChip'
+import type { StatusMapNode, StatusProbe, StatusProbeHit } from './StatusMap'
+
+function countryName(code: string | undefined, locale: string): string {
+  if (!code || code.length !== 2) return ''
+  try {
+    return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function historyLevel(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return ''
+  if (value >= 0.99) return 'up'
+  if (value > 0) return 'partial'
+  return 'down'
+}
+
+function russiaHits(probe?: StatusProbe): StatusProbeHit[] {
+  return (probe?.hits ?? []).filter((hit) => (hit.country ?? '').toUpperCase() === 'RU' && hit.kind !== 'whitelist')
+}
+
+function whitelistHits(probe?: StatusProbe): StatusProbeHit[] {
+  return (probe?.hits ?? [])
+    .filter((hit) => hit.kind === 'whitelist' && !(hit.city ?? '').trim())
+    .sort((a, b) => (a.network ?? '').localeCompare(b.network ?? '', 'ru'))
+}
+
+function protocolText(ok: boolean | undefined, ms: number | undefined, up: string, down: string, ping: string) {
+  if (ok == null && ms == null) return '—'
+  if (ok === false) return down
+  if (ms != null) return ping
+  return up
+}
+
+/** Строки локаций: раскрытие и таблица зондов, с которых шёл пинг. */
+export function StatusNodeList({ nodes, bypassProbes = true }: { nodes: StatusMapNode[]; bypassProbes?: boolean }) {
+  const { t, i18n } = useTranslation()
+  const [open, setOpen] = useState<string | null>(null)
+  const [providers, setProviders] = useState<string | null>(null)
+
+  return (
+    <div className="landing-card mt-6">
+      <div className="hidden grid-cols-[1.2fr_1fr_1.1fr_1.3fr_auto] gap-3 border-b border-border/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid sm:px-6">
+        <span>{t('landing.status.colLocation')}</span>
+        <span>{t('landing.status.colWorld')}</span>
+        <span>{t('landing.status.colRussia')}</span>
+        <span>{t('landing.status.colHistory')}</span>
+        <span className="sr-only">{t('landing.status.expand')}</span>
+      </div>
+      {nodes.length === 0 ? (
+        <p className="px-4 py-8 text-sm text-muted-foreground sm:px-6">{t('landing.status.emptyHint')}</p>
+      ) : (
+        <ul>
+          {nodes.map((node, index) => {
+            const key = node.id || `${node.country}-${node.name}-${index}`
+            const region = countryName(node.country, i18n.language)
+            const probe = node.probe
+            const hits = russiaHits(probe)
+            const whitelist = whitelistHits(probe)
+            const isWhitelist = Boolean(node.whitelist)
+            const expanded = open === key
+            const showHits = providers === key
+            const history = probe?.history ?? []
+            const measured = history.filter((v): v is number => typeof v === 'number')
+            const pct = measured.length
+              ? Math.round((measured.reduce((sum, v) => sum + v, 0) / measured.length) * 1000) / 10
+              : null
+            const note = node.note?.trim()
+            return (
+              <li key={key} className={cn('border-b border-border/50 last:border-b-0', stateRowTint(node))}>
+                <button
+                  type="button"
+                  className="grid w-full grid-cols-1 gap-4 px-4 py-4 text-left md:grid-cols-[1.2fr_1fr_1.1fr_1.3fr_auto] md:items-center md:gap-3 sm:px-6"
+                  aria-expanded={expanded}
+                  onClick={() => {
+                    setOpen(expanded ? null : key)
+                    if (expanded) setProviders(null)
+                  }}
+                >
+                  <span className="flex items-center gap-3">
+                    <CountryFlag code={node.country} className="h-5 w-7 rounded-[3px]" />
+                    <span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-heading text-base font-bold">{node.name}</span>
+                        <StateChip node={node} />
+                      </span>
+                      {note ? <span className="mt-0.5 block text-sm text-muted-foreground">{note}</span> : null}
+                      {!note && region && region !== node.name ? (
+                        <span className="mt-0.5 block text-sm text-muted-foreground">{region}</span>
+                      ) : null}
+                    </span>
+                  </span>
+                  <ProbeWorld node={node} />
+                  <ProbeRussia probe={probe} whitelist={isWhitelist} skipped={Boolean(node.no_probe) || (isWhitelist && !bypassProbes)} />
+                  <History history={history} measured={measured} pct={pct} />
+                  <ChevronDown className={cn('hidden size-4 text-muted-foreground transition-transform md:block', expanded && 'rotate-180')} />
+                </button>
+                {expanded && !isWhitelist && (
+                  <div className="flex flex-col gap-3 px-4 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <p className="text-sm text-muted-foreground">
+                      {probe && probe.russia_total > 0
+                        ? probe.russia_ok === probe.russia_total
+                          ? t('landing.status.providersLeadAll', { total: probe.russia_total })
+                          : t('landing.status.providersLeadSome', { ok: probe.russia_ok, total: probe.russia_total })
+                        : t('landing.status.providersPending')}
+                    </p>
+                    {hits.length > 0 && (
+                      <button
+                        type="button"
+                        className="landing-cta landing-cta--ghost inline-flex h-10 shrink-0 items-center justify-center rounded-full px-4 text-sm font-semibold"
+                        onClick={() => setProviders(showHits ? null : key)}
+                      >
+                        {showHits
+                          ? t('landing.status.providersHide')
+                          : t('landing.status.providersOpen', { count: hits.length })}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {expanded && isWhitelist && (
+                  <div className="overflow-x-auto px-4 pb-4 sm:px-6">
+                    {whitelist.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">{t('landing.status.worldPending')}</p>
+                    ) : (
+                      <table className="w-full text-left text-sm">
+                        <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                          <tr>
+                            <th className="py-2 pr-3 font-semibold">{t('landing.status.colOperator')}</th>
+                            <th className="py-2 pr-3 font-semibold">{t('landing.status.colRtt')}</th>
+                            <th className="py-2 pr-3 font-semibold">{t('landing.status.colIcmp')}</th>
+                            <th className="py-2 font-semibold">{t('landing.status.colTcp')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {whitelist.map((hit, index) => (
+                            <tr key={`${hit.network}-${index}`} className="border-t border-border/40">
+                              <td className="py-2 pr-3">{hit.network || '—'}</td>
+                              <td className="py-2 pr-3">
+                                <span className="inline-flex items-center gap-2">
+                                  <span className={cn('landing-status-dot', hit.ok ? 'landing-status-dot--up' : 'landing-status-dot--down')} />
+                                  {protocolText(hit.ok, hit.ping_ms, t('landing.status.whitelistUp'), t('landing.status.protocolNo'), t('landing.status.hitPing', { ms: hit.ping_ms }))}
+                                </span>
+                              </td>
+                              <td className="py-2 pr-3 text-muted-foreground">{protocolText(hit.icmp_ok, hit.icmp_ms, t('landing.status.whitelistUp'), t('landing.status.protocolNo'), t('landing.status.hitPing', { ms: hit.icmp_ms }))}</td>
+                              <td className="py-2 text-muted-foreground">{protocolText(hit.tcp_ok, hit.tcp_ms, t('landing.status.whitelistUp'), t('landing.status.protocolNo'), t('landing.status.hitPing', { ms: hit.tcp_ms }))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+                {expanded && !isWhitelist && showHits && (
+                  <div className="overflow-x-auto px-4 pb-4 sm:px-6">
+                    <table className="w-full min-w-[36rem] text-left text-sm">
+                      <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th className="py-2 pr-3 font-semibold">{t('landing.status.colCity')}</th>
+                          <th className="py-2 pr-3 font-semibold">{t('landing.status.colProvider')}</th>
+                          <th className="py-2 font-semibold">{t('landing.status.colResult')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hits.map((hit, index) => (
+                          <tr key={`${hit.city}-${hit.network}-${index}`} className="border-t border-border/40">
+                            <td className="py-2 pr-3">{hit.city || '—'}</td>
+                            <td className="py-2 pr-3 text-muted-foreground">{hit.network || '—'}</td>
+                            <td className="py-2">
+                              <span className="inline-flex items-center gap-2">
+                                <span className={cn('landing-status-dot', hit.ok ? 'landing-status-dot--up' : 'landing-status-dot--down')} />
+                                {hit.ok
+                                  ? hit.ping_ms != null
+                                    ? t('landing.status.hitPing', { ms: hit.ping_ms })
+                                    : t('landing.status.hitUp')
+                                  : t('landing.status.hitDown')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function ProbeWorld({ node }: { node: StatusMapNode }) {
+  const { t } = useTranslation()
+  return (
+    <span>
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:hidden">
+        {t('landing.status.colWorld')}
+      </span>
+      {node.no_probe ? (
+        <span className="text-sm text-muted-foreground">—</span>
+      ) : !node.probe || node.probe.world_total === 0 ? (
+        <span className="text-sm text-muted-foreground">{t('landing.status.worldPending')}</span>
+      ) : (
+        <span className="block">
+          <span className="inline-flex items-center gap-2 text-sm font-medium">
+            <span className={cn('landing-status-dot', node.probe.world_ok > 0 ? 'landing-status-dot--up' : 'landing-status-dot--down')} />
+            {node.probe.world_ok > 0 ? t('landing.status.worldUp') : t('landing.status.worldDown')}
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}
+
+function ProbeRussia({ probe, whitelist, skipped }: { probe?: StatusProbe; whitelist?: boolean; skipped?: boolean }) {
+  const { t } = useTranslation()
+  const operators = whitelistHits(probe)
+  const total = whitelist ? operators.length : (probe?.russia_total ?? 0)
+  const ok = whitelist ? operators.filter((hit) => hit.ok).length : (probe?.russia_ok ?? 0)
+  const pings = operators.map((hit) => hit.ping_ms).filter((ms): ms is number => typeof ms === 'number')
+  const avg = pings.length ? Math.round(pings.reduce((sum, ms) => sum + ms, 0) / pings.length) : null
+  return (
+    <span>
+      <span className={cn('mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground', !whitelist && 'md:hidden')}>
+        {whitelist ? t('landing.status.whitelistProbes') : t('landing.status.colRussia')}
+      </span>
+      {skipped ? (
+        <span className="text-sm text-muted-foreground">—</span>
+      ) : !probe || total === 0 ? (
+        <span className="text-sm text-muted-foreground">{t('landing.status.worldPending')}</span>
+      ) : (
+        <span className="block">
+          <span className="inline-flex items-center gap-2 text-sm font-medium">
+            <span className={cn('landing-status-dot', ok > 0 ? 'landing-status-dot--up' : 'landing-status-dot--down')} />
+            {whitelist
+              ? ok > 0
+                ? t('landing.status.whitelistUp')
+                : t('landing.status.hitDown')
+              : ok > 0
+                ? t('landing.status.russiaUp')
+                : t('landing.status.russiaDown')}
+          </span>
+          <span className="mt-0.5 block text-sm text-muted-foreground">
+            {whitelist ? t('landing.status.whitelistRatio', { ok, total }) : t('landing.status.russiaRatio', { ok, total })}
+            {whitelist && avg != null ? ` · ${t('landing.status.hitPing', { ms: avg })}` : ''}
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}
+
+function History({
+  history,
+  measured,
+  pct,
+}: {
+  history: Array<number | null>
+  measured: number[]
+  pct: number | null
+}) {
+  const { t } = useTranslation()
+  return (
+    <span>
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:hidden">
+        {t('landing.status.colHistory')}
+      </span>
+      {measured.length === 0 ? (
+        <span className="text-sm text-muted-foreground">{t('landing.status.historyEmpty')}</span>
+      ) : (
+        <span className="block">
+          <span className="landing-status-bar" aria-hidden>
+            {Array.from({ length: 30 }, (_, i) => (
+              <i key={i} data-level={historyLevel(history[i])} />
+            ))}
+          </span>
+          <span className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+            <span>{t('landing.status.historyPast')}</span>
+            <span>{t('landing.status.historyPct', { pct, days: measured.length })}</span>
+            <span>{t('landing.status.historyNow')}</span>
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}

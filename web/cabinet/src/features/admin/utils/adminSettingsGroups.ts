@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Activity,
   BadgeRussianRuble,
   Bell,
   BellRing,
@@ -39,6 +40,7 @@ import {
 /** Порядок и иконки секций (синхрон с backend buildAdminSettingsResponse). */
 export const ADMIN_SETTINGS_GROUP_ORDER = [
   'cabinet',
+  'status',
   'cabinet_connect',
   'tariffs',
   'trial',
@@ -78,6 +80,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   notifications: BellRing,
   fortune: CircleDot,
   cabinet: Sparkles,
+  status: Activity,
   cabinet_connect: Settings2,
 }
 
@@ -104,6 +107,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   notifications: { box: 'bg-red-500/10 dark:bg-red-500/20', icon: 'text-red-500' },
   fortune: { box: 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20', icon: 'text-fuchsia-500' },
   cabinet: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
+  status: { box: 'bg-cyan-500/10 dark:bg-cyan-500/20', icon: 'text-cyan-500' },
   cabinet_connect: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
 }
 
@@ -123,6 +127,9 @@ export function adminSettingsGroupIconStyle(id: string): AdminSettingsGroupIconS
  * экране. Поэтому в ADMIN_SETTINGS_CATEGORIES этих групп нет.
  */
 export const ADMIN_PRODUCT_SETTINGS_GROUPS = ['tariffs', 'trial', 'hwid', 'stars'] as const
+
+/** Группа живёт на отдельной странице «Статус серверов», не в общих настройках и не на тарифах. */
+export const ADMIN_STATUS_SETTINGS_GROUP: AdminSettingsGroupId = 'status'
 
 /** Крупные категории на странице «Настройки бота». */
 export const ADMIN_SETTINGS_CATEGORY_ORDER = [
@@ -205,7 +212,11 @@ const GROUP_TO_CATEGORY = new Map<AdminSettingsGroupId, AdminSettingsCategoryId>
 if (import.meta.env.DEV) {
   // Каждая группа должна быть либо в категории «Настроек бота», либо в
   // продуктовом блоке страницы «Тарифы» — иначе она не отрендерится нигде.
-  const placed = new Set<string>([...GROUP_TO_CATEGORY.keys(), ...ADMIN_PRODUCT_SETTINGS_GROUPS])
+  const placed = new Set<string>([
+    ...GROUP_TO_CATEGORY.keys(),
+    ...ADMIN_PRODUCT_SETTINGS_GROUPS,
+    ADMIN_STATUS_SETTINGS_GROUP,
+  ])
   for (const groupId of ADMIN_SETTINGS_GROUP_ORDER) {
     if (!placed.has(groupId)) {
       console.error(`[adminSettingsGroups] group "${groupId}" is not assigned to any category`)
