@@ -187,7 +187,7 @@ type gpResult struct {
 
 // MeasurePing запускает один замер Globalping: несколько зондов из мира и из России.
 func MeasurePing(ctx context.Context, client *http.Client, target string) (Sample, error) {
-	return MeasurePingCounts(ctx, client, target, 3, 5, true)
+	return MeasurePingCounts(ctx, client, target, 1, 5, true)
 }
 
 // MeasurePingCounts — то же, но число зондов задаёт админка.
@@ -197,10 +197,10 @@ func MeasurePingCounts(ctx context.Context, client *http.Client, target string, 
 		client = http.DefaultClient
 	}
 	if world < 1 || world > 10 {
-		world = 3
+		world = 1
 	}
 	if russia < 1 || russia > 30 {
-		russia = 20
+		russia = 10
 	}
 	body, _ := json.Marshal(gpCreate{
 		Type:              "ping",

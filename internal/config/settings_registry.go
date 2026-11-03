@@ -560,19 +560,19 @@ func baseRuntimeSettings() []SettingField {
 			Key: "STATUS_WORLD_PROBES", Group: "status", Type: SettingInt, Instant: true,
 			MinInt: intPtr(1), MaxInt: intPtr(10),
 			Apply:   applyBoundedInt("STATUS_WORLD_PROBES", 1, 10),
-			Current: cabinetIntCurrent("STATUS_WORLD_PROBES", 3),
+			Current: cabinetIntCurrent("STATUS_WORLD_PROBES", 1),
 		},
 		{
 			Key: "STATUS_RUSSIA_PROBES", Group: "status", Type: SettingInt, Instant: true,
 			MinInt: intPtr(1), MaxInt: intPtr(30),
 			Apply:   applyBoundedInt("STATUS_RUSSIA_PROBES", 1, 30),
-			Current: cabinetIntCurrent("STATUS_RUSSIA_PROBES", 20),
+			Current: cabinetIntCurrent("STATUS_RUSSIA_PROBES", 10),
 		},
 		{
 			Key: "STATUS_PROBE_INTERVAL_MIN", Group: "status", Type: SettingInt, Instant: true,
 			MinInt: intPtr(5), MaxInt: intPtr(180),
 			Apply:   applyBoundedInt("STATUS_PROBE_INTERVAL_MIN", 5, 180),
-			Current: cabinetIntCurrent("STATUS_PROBE_INTERVAL_MIN", 20),
+			Current: cabinetIntCurrent("STATUS_PROBE_INTERVAL_MIN", 60),
 		},
 		{
 			Key: "STATUS_SHOW_MAP", Group: "status", Type: SettingBool, Instant: true,

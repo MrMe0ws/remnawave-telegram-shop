@@ -74,9 +74,9 @@ export default function StatusPage() {
     if (down === 0) return t('landing.status.allUp')
     return t('landing.status.partial')
   }, [available, data, down, query.isLoading, t, total])
-  const probeWorld = data?.probe_world || 3
-  const probeRussia = data?.probe_russia || 20
-  const probeMinutes = data?.probe_interval_min || 20
+  const probeWorld = data?.probe_world || 1
+  const probeRussia = data?.probe_russia || 10
+  const probeMinutes = data?.probe_interval_min || 60
   const title = data?.title?.trim() || liveTitle
   const lead =
     data?.lead?.trim() ||

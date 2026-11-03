@@ -3663,9 +3663,7 @@
         "nextSoon": "Update soon",
         "leadProbes": "Probes check whether the server address opens from the world and from Russia.",
         "cardWorldTitle": "Check from the world",
-        "cardWorldBody": "{{count}} probes in other countries check whether the server opens. A measurement runs about every {{minutes}} min.",
         "cardRussiaTitle": "Check from Russia",
-        "cardRussiaBody": "{{count}} Globalping probes on home providers in Russia check whether the address opens. That shows if a particular network is blocking it.",
         "cardSupportTitle": "Trouble connecting?",
         "cardSupportBody": "If the server is reachable at your provider but the VPN does not connect, write to us and we will sort it out.",
         "cardSupportCta": "Contact support",
@@ -3691,7 +3689,11 @@
           "up": "Up",
           "partial": "Partial",
           "down": "Down"
-        }
+        },
+        "cardWorldBody_one": "{{count}} probe in another country checks whether the server opens. A measurement runs about every {{minutes}} min.",
+        "cardWorldBody_other": "{{count}} probes in other countries check whether the server opens. A measurement runs about every {{minutes}} min.",
+        "cardRussiaBody_one": "{{count}} Globalping probe on a home provider in Russia checks whether the address opens. That shows if a particular network is blocking it.",
+        "cardRussiaBody_other": "{{count}} Globalping probes on home providers in Russia check whether the address opens. That shows if a particular network is blocking it."
       }
     },
     "cabinetStatus": {
