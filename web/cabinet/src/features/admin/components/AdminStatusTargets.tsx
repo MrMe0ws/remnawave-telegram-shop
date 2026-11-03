@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -118,6 +118,12 @@ export function AdminStatusTargets() {
   const [adding, setAdding] = useState(false)
   const listRef = useRef<HTMLUListElement>(null)
   const [dragId, setDragId] = useState<string | null>(null)
+  const rowRefs = useRef(new Map<string, HTMLLIElement>())
+  // Где строка стояла в прошлый раз (offsetTop не зависит от transform): по разнице играем анимацию переезда.
+  const prevTops = useRef(new Map<string, number>())
+  const pointerY = useRef(0)
+  // Насколько ниже верхнего края строки пользователь взялся за ручку.
+  const grabOffset = useRef(0)
 
   const query = useQuery({
     queryKey: ['admin-status-targets'],
@@ -187,15 +193,31 @@ export function AdminStatusTargets() {
     })
   }
 
-  // Перетаскивание за ручку из шести точек: строка идёт за курсором, соседи расступаются.
+  // Перетаскивание за ручку из шести точек. Строка поднимается (тень, чуть крупнее) и идёт за
+  // курсором, а соседи плавно расступаются: их переезд проигрывается в useLayoutEffect ниже.
+  function placeDragged() {
+    const el = dragId ? rowRefs.current.get(dragId) : undefined
+    const ul = listRef.current
+    if (!el || !ul) return
+    const layoutTop = ul.getBoundingClientRect().top + el.offsetTop
+    const dy = pointerY.current - grabOffset.current - layoutTop
+    el.style.transition = 'none'
+    el.style.transform = `translateY(${dy}px) scale(1.02)`
+  }
+
   function dragMove(clientY: number) {
     if (!dragId || !listRef.current) return
+    pointerY.current = clientY
+    placeDragged()
+    const dragged = rowRefs.current.get(dragId)
     const from = rows.findIndex((row) => row.id === dragId)
-    if (from < 0) return
-    const others = (Array.from(listRef.current.children) as HTMLElement[]).filter((_, i) => i !== from)
-    const to = others.filter((el) => {
-      const r = el.getBoundingClientRect()
-      return r.top + r.height / 2 < clientY
+    if (!dragged || from < 0) return
+    const ulTop = listRef.current.getBoundingClientRect().top
+    const draggedCenter = clientY - grabOffset.current + dragged.offsetHeight / 2
+    const to = rows.filter((row) => {
+      if (row.id === dragId) return false
+      const el = rowRefs.current.get(row.id)
+      return el ? ulTop + el.offsetTop + el.offsetHeight / 2 < draggedCenter : false
     }).length
     if (to === from) return
     setRows((prev) => {
@@ -207,6 +229,45 @@ export function AdminStatusTargets() {
       return copy
     })
   }
+
+  function endDrag() {
+    if (!dragId) return
+    // Строка плавно садится на своё место.
+    const el = rowRefs.current.get(dragId)
+    if (el) {
+      el.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms, border-color 200ms'
+      el.style.transform = ''
+    }
+    setDragId(null)
+  }
+
+  // Анимация переезда: после смены порядка каждая строка «отъезжает» от старого места к новому.
+  useLayoutEffect(() => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    rowRefs.current.forEach((el, id) => {
+      const top = el.offsetTop
+      const prev = prevTops.current.get(id)
+      if (!reduce && prev != null && prev !== top && id !== dragId) {
+        el.style.transition = 'none'
+        el.style.transform = `translateY(${prev - top}px)`
+        void el.getBoundingClientRect()
+        el.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+        el.style.transform = ''
+      }
+      prevTops.current.set(id, top)
+    })
+    placeDragged()
+  }, [rows, dragId])
+
+  // Курсор «схватил» на всём экране, пока тянем.
+  useEffect(() => {
+    if (!dragId) return
+    const prev = document.body.style.cursor
+    document.body.style.cursor = 'grabbing'
+    return () => {
+      document.body.style.cursor = prev
+    }
+  }, [dragId])
 
   function addRow(base: Partial<StatusTargetDraft>) {
     const row = { ...emptyTarget(), ...base }
@@ -231,7 +292,7 @@ export function AdminStatusTargets() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {rows.length > 0 && (
-            <span className="mr-1 text-sm text-muted-foreground">
+            <span className="mr-1 text-xs text-muted-foreground">
               {minutesAgo == null
                 ? t('admin.statusPage.neverMeasured')
                 : minutesAgo < 1
@@ -288,10 +349,10 @@ export function AdminStatusTargets() {
         ) : (
           <ul
             ref={listRef}
-            className={cn('space-y-2', dragId && 'select-none')}
+            className={cn('relative space-y-2', dragId && 'select-none')}
             onPointerMove={(e) => dragMove(e.clientY)}
-            onPointerUp={() => setDragId(null)}
-            onPointerCancel={() => setDragId(null)}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
           >
             {rows.map((row, index) => (
               <TargetRow
@@ -299,11 +360,18 @@ export function AdminStatusTargets() {
                 row={row}
                 node={nodes.find((n) => n.uuid === row.node_uuid)}
                 dragging={dragId === row.id}
+                liRef={(el) => {
+                  if (el) rowRefs.current.set(row.id, el)
+                  else rowRefs.current.delete(row.id)
+                }}
                 onToggle={(enabled) => patch(row.id, { enabled })}
                 onEdit={() => setEditingId(row.id)}
                 onHandleDown={(e) => {
                   e.preventDefault()
                   e.currentTarget.setPointerCapture(e.pointerId)
+                  const el = rowRefs.current.get(row.id)
+                  pointerY.current = e.clientY
+                  grabOffset.current = el ? e.clientY - el.getBoundingClientRect().top : 0
                   setDragId(row.id)
                 }}
                 onHandleKey={(dir) => move(index, dir)}
@@ -371,6 +439,7 @@ function TargetRow({
   row,
   node,
   dragging,
+  liRef,
   onToggle,
   onEdit,
   onHandleDown,
@@ -379,6 +448,7 @@ function TargetRow({
   row: StatusTargetDraft
   node?: AdminStatusNodeDTO
   dragging: boolean
+  liRef: (el: HTMLLIElement | null) => void
   onToggle: (enabled: boolean) => void
   onEdit: () => void
   onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
@@ -388,10 +458,11 @@ function TargetRow({
   const bypass = row.kind === 'bypass'
   return (
     <li
+      ref={liRef}
       className={cn(
-        'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-3 transition-opacity',
+        'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-3 transition-[opacity,box-shadow,border-color,background-color] duration-200',
         !row.enabled && 'opacity-60',
-        dragging && 'relative z-10 border-primary/60 bg-card opacity-100 shadow-lg',
+        dragging && 'relative z-20 border-primary/60 bg-card opacity-100 shadow-2xl shadow-black/40',
       )}
     >
       <button
