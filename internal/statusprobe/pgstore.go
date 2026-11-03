@@ -118,7 +118,7 @@ func (s *PGStore) LoadLatest(ctx context.Context) (map[string]Sample, error) {
 			slog.Warn("status probe sample skipped", "key", key, "error", err)
 			continue
 		}
-		out[key] = item.sample()
+		out[key] = Sample(item)
 	}
 	return out, rows.Err()
 }
@@ -131,7 +131,7 @@ func (s *PGStore) SaveLatest(ctx context.Context, samples map[string]Sample) err
 	keys := make([]string, 0, len(samples))
 	payloads := make([]string, 0, len(samples))
 	for key, sample := range samples {
-		raw, err := json.Marshal(newPersistedSample(sample))
+		raw, err := json.Marshal(persistedSample(sample))
 		if err != nil {
 			return err
 		}
@@ -191,40 +191,4 @@ func (s *PGStore) ImportLegacy(ctx context.Context, legacy *KVHistory) error {
 	}
 	slog.Info("status probe history imported", "targets", len(days), "samples", len(latest))
 	return nil
-}
-
-func newPersistedSample(sample Sample) persistedSample {
-	return persistedSample{
-		WorldPingMs:     sample.WorldPingMs,
-		WorldOK:         sample.WorldOK,
-		WorldTotal:      sample.WorldTotal,
-		RussiaOK:        sample.RussiaOK,
-		RussiaTotal:     sample.RussiaTotal,
-		WhitelistOK:     sample.WhitelistOK,
-		WhitelistTotal:  sample.WhitelistTotal,
-		WhitelistPingMs: sample.WhitelistPingMs,
-		WhitelistAt:     sample.WhitelistAt,
-		WhitelistDone:   sample.WhitelistDone,
-		MeasuredAt:      sample.MeasuredAt,
-		Probes:          sample.Probes,
-		FailStreak:      sample.FailStreak,
-	}
-}
-
-func (p persistedSample) sample() Sample {
-	return Sample{
-		WorldPingMs:     p.WorldPingMs,
-		WorldOK:         p.WorldOK,
-		WorldTotal:      p.WorldTotal,
-		RussiaOK:        p.RussiaOK,
-		RussiaTotal:     p.RussiaTotal,
-		WhitelistOK:     p.WhitelistOK,
-		WhitelistTotal:  p.WhitelistTotal,
-		WhitelistPingMs: p.WhitelistPingMs,
-		WhitelistAt:     p.WhitelistAt,
-		WhitelistDone:   p.WhitelistDone,
-		MeasuredAt:      p.MeasuredAt,
-		Probes:          p.Probes,
-		FailStreak:      p.FailStreak,
-	}
 }

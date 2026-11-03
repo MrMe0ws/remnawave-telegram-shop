@@ -77,7 +77,7 @@ export const HOME_QUICK_ACTIONS: Record<HomeQuickActionId, HomeQuickActionMeta> 
     available: (b) => !!siteLink('feedback')(b),
   },
   sublink: { icon: Link2, labelKey: 'home.qaSubLink', copiesSubscriptionLink: true },
-  servers: { icon: Activity, labelKey: 'home.qaServers', to: '/status' },
+  servers: { icon: Activity, labelKey: 'home.qaServers', to: '/status', available: (b) => b?.status_nav_visible !== false },
 }
 
 export function isHomeQuickActionId(v: string): v is HomeQuickActionId {

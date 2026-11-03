@@ -44,6 +44,11 @@ func NewPublicStatus(rw *remnawave.Client, probes *statusprobe.Runner, configure
 	return &PublicStatus{rw: rw, probes: probes, configured: configured}
 }
 
+// HasServers — в списке есть хотя бы один включённый сервер. Список берётся из кэша на 15 секунд.
+func (h *PublicStatus) HasServers(ctx context.Context) bool {
+	return hasEnabledTargets(h.savedTargets(ctx))
+}
+
 // Invalidate сбрасывает кэши: после правки списка админ сразу видит результат.
 func (h *PublicStatus) Invalidate() {
 	h.cfgMu.Lock()

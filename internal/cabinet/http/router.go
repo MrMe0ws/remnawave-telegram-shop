@@ -425,6 +425,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		return statusprobe.TargetsFrom(list), nil
 	})
 	publicStatus := handlers.NewPublicStatus(rw, statusRunner, statusTargets)
+	authHandler.SetStatusVisible(publicStatus.HasServers)
 	publicStatusIPLim := ratelimit.New(ratelimit.Rule{Count: 60, Interval: time.Minute})
 	publicStatusIPLim.RunGC(ctx)
 	api.Handle("/cabinet/api/public/status",

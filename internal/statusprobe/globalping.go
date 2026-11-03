@@ -223,7 +223,7 @@ func MeasurePingCounts(ctx context.Context, client *http.Client, target string, 
 		return Sample{}, err
 	}
 	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
-	res.Body.Close()
+	_ = res.Body.Close()
 	if res.StatusCode == http.StatusTooManyRequests {
 		return Sample{}, &RateLimitError{RetryAfter: retryAfter(res.Header)}
 	}
@@ -337,7 +337,7 @@ func russiaCities(ctx context.Context, client *http.Client, n int) []string {
 	if len(ranked) == 0 {
 		ranked = fallbackRussiaCities
 	}
-	take := n
+	var take int
 	if len(ranked) > n {
 		take = n + 5
 		if take > len(ranked) {

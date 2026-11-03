@@ -96,21 +96,7 @@ func (h *KVHistory) LoadLatest(ctx context.Context) (map[string]Sample, error) {
 	}
 	out := make(map[string]Sample, len(parsed))
 	for key, item := range parsed {
-		out[key] = Sample{
-			WorldPingMs:     item.WorldPingMs,
-			WorldOK:         item.WorldOK,
-			WorldTotal:      item.WorldTotal,
-			RussiaOK:        item.RussiaOK,
-			RussiaTotal:     item.RussiaTotal,
-			WhitelistOK:     item.WhitelistOK,
-			WhitelistTotal:  item.WhitelistTotal,
-			WhitelistPingMs: item.WhitelistPingMs,
-			WhitelistAt:     item.WhitelistAt,
-			WhitelistDone:   item.WhitelistDone,
-			MeasuredAt:      item.MeasuredAt,
-			Probes:          item.Probes,
-			FailStreak:      item.FailStreak,
-		}
+		out[key] = Sample(item)
 	}
 	return out, nil
 }
@@ -133,21 +119,7 @@ func (h *KVHistory) SaveLatest(ctx context.Context, samples map[string]Sample) e
 	}
 	payload := make(map[string]persistedSample, len(existing))
 	for key, sample := range existing {
-		payload[key] = persistedSample{
-			WorldPingMs:     sample.WorldPingMs,
-			WorldOK:         sample.WorldOK,
-			WorldTotal:      sample.WorldTotal,
-			RussiaOK:        sample.RussiaOK,
-			RussiaTotal:     sample.RussiaTotal,
-			WhitelistOK:     sample.WhitelistOK,
-			WhitelistTotal:  sample.WhitelistTotal,
-			WhitelistPingMs: sample.WhitelistPingMs,
-			WhitelistAt:     sample.WhitelistAt,
-			WhitelistDone:   sample.WhitelistDone,
-			MeasuredAt:      sample.MeasuredAt,
-			Probes:          sample.Probes,
-			FailStreak:      sample.FailStreak,
-		}
+		payload[key] = persistedSample(sample)
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {

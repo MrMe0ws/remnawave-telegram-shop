@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next'
 import { NavPendingTracker } from '@/lib/navPending'
 import i18n from '@/i18n'
 import { useAuthStore } from '@/store/auth'
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
 import { AdminRoute } from '@/components/AdminRoute'
@@ -137,7 +138,11 @@ function isPublicShellPath(pathname: string): boolean {
 }
 
 function StatusEntry() {
+  const { data, isLoading } = useAuthBootstrap()
   const inCabinet = typeof window !== 'undefined' && window.location.pathname.startsWith('/cabinet')
+  // Пока в списке статуса нет серверов, страница пуста: уводим на главную, а не показываем пустоту.
+  if (isLoading && !data) return null
+  if (data?.status_nav_visible === false) return <Navigate to={inCabinet ? '/dashboard' : '/landing'} replace />
   if (!inCabinet) return <StatusPage />
   return (
     <ProtectedRoute requireVerified>

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -76,7 +77,7 @@ func TestMergeStatusTargetsBindsByNodeUUID(t *testing.T) {
 }
 
 func TestPublicStatusBodyHidesAddresses(t *testing.T) {
-	h := NewPublicStatus(nil, nil, nil)
+	h := NewPublicStatus(nil, nil, statusprobe.NewKVTargets(&memKV{data: map[string]string{}}))
 	h.cfgCached = []statusprobe.ConfiguredTarget{{
 		ID: "a", Name: "NL", Country: "NL", Address: "198.51.100.7", Enabled: true,
 		NodeUUID: "11111111-2222", ExitNodeUUID: "33333333-4444",
@@ -84,6 +85,9 @@ func TestPublicStatusBodyHidesAddresses(t *testing.T) {
 	h.cfgOK = true
 	h.cfgAt = time.Now()
 	raw := string(h.cachedBody())
+	if !strings.Contains(raw, `"name":"NL"`) {
+		t.Fatalf("the row must be in the response, otherwise the leak check proves nothing: %s", raw)
+	}
 	for _, secret := range []string{"198.51.100.7", "11111111-2222", "33333333-4444"} {
 		if strings.Contains(raw, secret) {
 			t.Fatalf("public JSON leaks %q: %s", secret, raw)
@@ -103,5 +107,31 @@ func TestUsableForState(t *testing.T) {
 	t.Setenv("STATUS_PROBES_ENABLED", "false")
 	if usableForState(fresh) {
 		t.Fatal("disabled probes must not keep a stale failure")
+	}
+}
+
+func TestHasServersAndBootstrapFlag(t *testing.T) {
+	h := NewPublicStatus(nil, nil, statusprobe.NewKVTargets(&memKV{data: map[string]string{}}))
+	h.cfgOK, h.cfgAt = true, time.Now()
+	h.cfgCached = nil
+	if h.HasServers(context.Background()) {
+		t.Fatal("empty list must hide the page")
+	}
+	h.cfgCached = []statusprobe.ConfiguredTarget{{Name: "x", Address: "8.8.8.8", Enabled: false}}
+	if h.HasServers(context.Background()) {
+		t.Fatal("only disabled rows must hide the page")
+	}
+	h.cfgCached = []statusprobe.ConfiguredTarget{{Name: "x", Address: "8.8.8.8", Enabled: true}}
+	if !h.HasServers(context.Background()) {
+		t.Fatal("an enabled row must show the page")
+	}
+
+	a := &AuthHandler{}
+	if !a.statusNavVisible(context.Background()) {
+		t.Fatal("without a provider the flag defaults to visible")
+	}
+	a.SetStatusVisible(func(context.Context) bool { return false })
+	if a.statusNavVisible(context.Background()) {
+		t.Fatal("provider result must be passed through")
 	}
 }

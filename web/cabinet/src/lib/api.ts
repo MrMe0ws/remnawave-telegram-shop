@@ -135,6 +135,8 @@ export interface AuthBootstrapResponse {
   pwa_short_name?: string
   /** false при FORTUNE_ENABLED=false — пункт «Колесо фортуны» в меню кабинета скрыт (маршрут /fortune доступен по ссылке). */
   fortune_nav_visible?: boolean
+  /** false, пока в списке статуса нет ни одного сервера: пункт меню, кнопка главной и сама страница скрыты. */
+  status_nav_visible?: boolean
   /** false при PARTNER_PROGRAM_ENABLED=false — пункт «Партнёрам» скрыт. */
   partner_nav_visible?: boolean
   /** Максимальная ставка партнёрки — бейдж «до N%» рядом с пунктом меню. */
