@@ -3,8 +3,8 @@
 Полный справочник. Шаблон с комментариями — [`.env.sample`](../.env.sample).  
 Краткий минимум для старта — в [`readme.md`](../readme.md).
 
-Часть ключей можно менять без рестарта через web-админку **«Настройки бота»** (`/cabinet/admin/settings`).  
-Только через `.env` (+ рестарт): токены провайдеров, `MOYNALOG_*`, `LIFECYCLE_CRON`, вкл/выкл способов оплаты.
+Часть ключей можно менять без рестарта через web-админку **«Настройки бота»** (`/cabinet/admin/settings`): вкл/выкл способов оплаты, способы ЮKassa, `MOYNALOG_ENABLED` / `MOYNALOG_RECEIPT_FOR` / `MOYNALOG_RETRY_MAX_AGE_HOURS`, триал, HWID, рефералы, партнёрка, лояльность, ссылки меню, оформление кабинета, push-уведомления, колесо фортуны и др. Значение из админки хранится в БД и перекрывает `.env`.  
+Только через `.env` (+ рестарт): токены и реквизиты провайдеров, логин/пароль/URL «Мой налог», `MOYNALOG_RETRY_CRON`, `LIFECYCLE_CRON` и `LIFECYCLE_NOTIFY_ENABLED`, всё про БД, панель, домен и вход в кабинет.
 
 ---
 
@@ -168,6 +168,10 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `MOYNALOG_USERNAME` / `MOYNALOG_PASSWORD` | Логин/пароль |
 | `MOYNALOG_PROXY_URL` | Прокси http/https/socks5. См. [moynalog-proxy.md](./moynalog-proxy.md) |
 | `MOYNALOG_RECEIPT_FOR` | Способы: `yookassa`, `platega`, `crypto`. Не задано = yookassa+platega. Пустая строка = никто |
+| `MOYNALOG_RETRY_CRON` | Расписание повторной отправки чеков, которые не ушли (ФНС недоступна, протухла авторизация). По умолчанию `*/10 * * * *`. Только `.env` |
+| `MOYNALOG_RETRY_MAX_AGE_HOURS` | Сколько часов повторять чек, считая от времени **оплаты** (по умолчанию `720`). Потом чек снимается с повторов и приходит уведомление админу — доход вносится вручную |
+
+Чек сначала записывается в БД, потом отправляется; при сбое повторяется по расписанию, админу приходит одно сообщение о сбое и одно — когда чек всё-таки ушёл. `MOYNALOG_ENABLED`, `MOYNALOG_RECEIPT_FOR` и `MOYNALOG_RETRY_MAX_AGE_HOURS` меняются в админке без рестарта.
 
 ---
 
@@ -336,13 +340,13 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_ACCESS_TTL_MINUTES` / `CABINET_REFRESH_TTL_DAYS` | TTL токенов |
 | `CABINET_WEB_TELEGRAM_ID_BASE` | База synthetic Telegram ID для web-only |
 | `CABINET_BRAND_NAME` | Название в UI |
-| `CABINET_BRAND_LOGO_URL` / `CABINET_BRAND_LOGO_FILE` / `CABINET_BRAND_LOGO_FILE_BASE` | Логотип |
+| `CABINET_BRAND_LOGO_URL` / `CABINET_BRAND_LOGO_FILE` | Логотип: URL или файл на диске процесса бота (относительный путь ищется рядом с бинарником, затем в рабочем каталоге). URL важнее файла |
 | `CABINET_PWA_ENABLED` / `CABINET_PWA_APP_NAME` / `CABINET_PWA_SHORT_NAME` | PWA |
 | `CABINET_LIGHT_THEME_ENABLED` | Светлая тема (`true` по умолчанию) |
 | `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `neon`, `ocean`, `new_year`, `new_year_2`, `slate`, `carbon`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `wine`, `sunset`, `orange`, `halloween`, `halloween_2`, `yellow`, `summer`, `black_friday`. `new_year_2` и `halloween_2` — ночные сцены на весь экран, в том числе на лендинге; светлой темы у них нет, переключатель темы на это время скрыт. Меняется в админке без рестарта |
 | `CABINET_DECOR_AUTO_ENABLED` | Авто-смена декор-темы по календарю (`false` по умолчанию). В праздничном окне тема окна перекрывает `CABINET_DECOR_THEME`, вне окон возвращается она же |
 | `CABINET_DECOR_SCHEDULE` | Окна авто-смены: JSON `[{"theme":"new_year","from":"12-01","to":"01-31","enabled":true}]`. Пусто — встроенный пресет праздников. Побеждает первое совпавшее окно; `from > to` — окно через 31 декабря. Редактируется в админке |
-| `CABINET_SUBSCRIPTION_SHOW_LOYALTY` | Плашка уровня лояльности на странице «Подписка» (`false` по умолчанию). Флаг влияет только на эту страницу: раздел `/loyalty` и плашка в профиле доступны всегда, программу целиком выключает `LOYALTY_ENABLED`. Меняется в админке без рестарта |
+| `CABINET_SUBSCRIPTION_SHOW_LOYALTY` | Плашка уровня лояльности на главной кабинета (бывшая страница «Подписка», `false` по умолчанию). Флаг влияет только на эту плашку: раздел `/loyalty` и плашка в профиле доступны всегда, программу целиком выключает `LOYALTY_ENABLED`. Меняется в админке без рестарта |
 | `CABINET_HOME_QUICK_ACTIONS` | Кнопки на местах 3 и 4 быстрых действий главной: два разных id через запятую в порядке показа — `promo`, `invite`, `partner`, `fortune`, `support`, `info`, `news`, `feedback`, `sublink` (копирует ссылку подписки). Пусто — `promo,invite`. Места 1 и 2 зависят от подписки и не настраиваются. Выключенный раздел заменяется кнопкой по умолчанию. Меняется в админке без рестарта |
 | `CABINET_TARIFF_PRICE_DISPLAY` | Витрина: `monthly` или `marketing` |
 | `CABINET_TARIFF_SAVINGS_BADGE` | Плашка «−N %» на карточках сроков: `none` (по умолчанию), `corner` (в углу карточки) или `old_price` (зачёркнутая база «цена 1 мес × N»). Меняется в админке без рестарта |
@@ -386,6 +390,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | Переменная | Описание |
 |------------|----------|
 | `DISABLE_ENV_FILE` | Не читать `.env` из файла (CI и т.п.) |
+| `NO_COLOR` | Если задана (любое значение) — стартовый баннер в логе без цветов |
 
 После правок `.env`:
 
