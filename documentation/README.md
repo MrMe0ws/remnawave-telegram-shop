@@ -28,6 +28,7 @@
 | [moynalog-proxy.md](./moynalog-proxy.md) | «Мой налог» через прокси вне РФ |
 | [reverse-proxy.md](./reverse-proxy.md) | Обратный прокси (Traefik и др.) |
 | [cabinet/landing.md](./cabinet/landing.md) | Публичный лендинг проекта: адреса, что настраивать |
+| [cabinet/server-status.md](./cabinet/server-status.md) | Статус серверов: публичная страница, кабинет, поддержка, настройка и ключи |
 | [updating.md](./updating.md) | Обновление Docker-образа |
 | [compatibility.md](./compatibility.md) | Совместимость версий бота и Remnawave |
 | [cabinet/](./cabinet/) | Web-кабинет: setup, upgrade, support bridge |

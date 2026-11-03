@@ -50,7 +50,7 @@ curl -sI https://ваш-домен/landing | head -1   # ждём 200, а не 3
 | На странице | Откуда |
 |-------------|--------|
 | Название и логотип | `CABINET_BRAND_NAME`, `CABINET_BRAND_LOGO_URL` / `CABINET_BRAND_LOGO_FILE` |
-| Кнопка бота, поддержка, канал, статус серверов, документы | `BOT_URL`, `SUPPORT_URL`, `CHANNEL_URL`, `SERVER_STATUS_URL`, `PUBLIC_OFFER_URL`, `PRIVACY_POLICY_URL`, `TERMS_OF_SERVICE_URL` |
+| Кнопка бота, поддержка, канал, статус серверов, документы | `BOT_URL`, `SUPPORT_URL`, `CHANNEL_URL`, `SERVER_STATUS_URL` (если не задан и в админке «Статус серверов» есть серверы, в подвале ссылка на свою `/status`), `PUBLIC_OFFER_URL`, `PRIVACY_POLICY_URL`, `TERMS_OF_SERVICE_URL` |
 | Цвета акцентов и праздничный фон | декор-тема кабинета, см. ниже |
 | Тарифы и цены | ваша витрина тарифов; работают оба режима `SALES_MODE` |
 

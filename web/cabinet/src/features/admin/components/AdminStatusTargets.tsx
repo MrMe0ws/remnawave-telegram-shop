@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
   ChevronDown,
-  ChevronUp,
+  GripVertical,
   Download,
   Loader2,
   Pencil,
@@ -39,6 +39,16 @@ export interface StatusTargetDraft {
   node_uuid: string
   exit_node_uuid: string
   no_external: boolean
+}
+
+/** Самое свежее время замера по всем серверам, мс. Нет замеров — null. */
+function newestMeasuredAt(nodes: { probe?: { measured_at?: string } }[] | undefined): number | null {
+  let best: number | null = null
+  for (const node of nodes ?? []) {
+    const ts = node.probe?.measured_at ? Date.parse(node.probe.measured_at) : NaN
+    if (!Number.isNaN(ts) && (best == null || ts > best)) best = ts
+  }
+  return best
 }
 
 function newDraftId(): string {
@@ -106,6 +116,8 @@ export function AdminStatusTargets() {
   const [feedback, setFeedback] = useState<AdminFeedbackState | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const listRef = useRef<HTMLUListElement>(null)
+  const [dragId, setDragId] = useState<string | null>(null)
 
   const query = useQuery({
     queryKey: ['admin-status-targets'],
@@ -118,6 +130,15 @@ export function AdminStatusTargets() {
     staleTime: 60_000,
   })
   const nodes = useMemo(() => nodesQuery.data?.nodes ?? [], [nodesQuery.data])
+  // «Обновлено N мин назад»: берём тот же публичный ответ, что видят пользователи.
+  const publicQuery = useQuery({
+    queryKey: ['public-status'],
+    queryFn: () => api.publicStatus(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+  const measuredAt = newestMeasuredAt(publicQuery.data?.nodes)
+  const minutesAgo = measuredAt ? Math.max(0, Math.round((Date.now() - measuredAt) / 60000)) : null
 
   useEffect(() => {
     if (!query.data || ready) return
@@ -166,6 +187,27 @@ export function AdminStatusTargets() {
     })
   }
 
+  // Перетаскивание за ручку из шести точек: строка идёт за курсором, соседи расступаются.
+  function dragMove(clientY: number) {
+    if (!dragId || !listRef.current) return
+    const from = rows.findIndex((row) => row.id === dragId)
+    if (from < 0) return
+    const others = (Array.from(listRef.current.children) as HTMLElement[]).filter((_, i) => i !== from)
+    const to = others.filter((el) => {
+      const r = el.getBoundingClientRect()
+      return r.top + r.height / 2 < clientY
+    }).length
+    if (to === from) return
+    setRows((prev) => {
+      const i = prev.findIndex((row) => row.id === dragId)
+      if (i < 0) return prev
+      const copy = [...prev]
+      const [row] = copy.splice(i, 1)
+      copy.splice(to, 0, row)
+      return copy
+    })
+  }
+
   function addRow(base: Partial<StatusTargetDraft>) {
     const row = { ...emptyTarget(), ...base }
     setRows((prev) => [...prev, row])
@@ -187,7 +229,16 @@ export function AdminStatusTargets() {
           <h2 className="text-base font-semibold tracking-tight">{t('admin.statusPage.serversTitle')}</h2>
           <p className="text-sm text-muted-foreground">{t('admin.statusPage.serversHint')}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {rows.length > 0 && (
+            <span className="mr-1 text-sm text-muted-foreground">
+              {minutesAgo == null
+                ? t('admin.statusPage.neverMeasured')
+                : minutesAgo < 1
+                  ? t('landing.status.updatedJust')
+                  : t('landing.status.updatedMin', { count: minutesAgo })}
+            </span>
+          )}
           <button
             type="button"
             disabled={probe.isPending || rows.length === 0 || dirty}
@@ -235,17 +286,27 @@ export function AdminStatusTargets() {
             </button>
           </div>
         ) : (
-          <ul className="space-y-2">
+          <ul
+            ref={listRef}
+            className={cn('space-y-2', dragId && 'select-none')}
+            onPointerMove={(e) => dragMove(e.clientY)}
+            onPointerUp={() => setDragId(null)}
+            onPointerCancel={() => setDragId(null)}
+          >
             {rows.map((row, index) => (
               <TargetRow
                 key={row.id}
                 row={row}
                 node={nodes.find((n) => n.uuid === row.node_uuid)}
-                first={index === 0}
-                last={index === rows.length - 1}
+                dragging={dragId === row.id}
                 onToggle={(enabled) => patch(row.id, { enabled })}
                 onEdit={() => setEditingId(row.id)}
-                onMove={(dir) => move(index, dir)}
+                onHandleDown={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.setPointerCapture(e.pointerId)
+                  setDragId(row.id)
+                }}
+                onHandleKey={(dir) => move(index, dir)}
               />
             ))}
           </ul>
@@ -309,19 +370,19 @@ export function AdminStatusTargets() {
 function TargetRow({
   row,
   node,
-  first,
-  last,
+  dragging,
   onToggle,
   onEdit,
-  onMove,
+  onHandleDown,
+  onHandleKey,
 }: {
   row: StatusTargetDraft
   node?: AdminStatusNodeDTO
-  first: boolean
-  last: boolean
+  dragging: boolean
   onToggle: (enabled: boolean) => void
   onEdit: () => void
-  onMove: (dir: -1 | 1) => void
+  onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onHandleKey: (dir: -1 | 1) => void
 }) {
   const { t } = useTranslation()
   const bypass = row.kind === 'bypass'
@@ -330,8 +391,27 @@ function TargetRow({
       className={cn(
         'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-3 transition-opacity',
         !row.enabled && 'opacity-60',
+        dragging && 'relative z-10 border-primary/60 bg-card opacity-100 shadow-lg',
       )}
     >
+      <button
+        type="button"
+        aria-label={t('admin.statusPage.drag')}
+        title={t('admin.statusPage.drag')}
+        onPointerDown={onHandleDown}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault()
+            onHandleKey(e.key === 'ArrowUp' ? -1 : 1)
+          }
+        }}
+        className={cn(
+          '-ml-1 flex h-9 w-6 shrink-0 touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          dragging ? 'cursor-grabbing' : 'cursor-grab',
+        )}
+      >
+        <GripVertical className="size-5" />
+      </button>
       <div className="flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
         {row.country ? (
           <CountryFlag code={row.country} className="h-full w-full object-cover" />
@@ -363,26 +443,6 @@ function TargetRow({
           <span className="truncate">· {row.address || t('admin.statusPage.noAddress')}</span>
         </p>
       </button>
-      <div className="hidden flex-col sm:flex">
-        <button
-          type="button"
-          aria-label={t('admin.statusPage.moveUp')}
-          disabled={first}
-          onClick={() => onMove(-1)}
-          className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-25"
-        >
-          <ChevronUp className="size-4" />
-        </button>
-        <button
-          type="button"
-          aria-label={t('admin.statusPage.moveDown')}
-          disabled={last}
-          onClick={() => onMove(1)}
-          className="rounded p-0.5 text-muted-foreground hover:bg-muted disabled:opacity-25"
-        >
-          <ChevronDown className="size-4" />
-        </button>
-      </div>
       <AdminToggleSwitch checked={row.enabled} onChange={onToggle} aria-label={t('admin.statusPage.showOnPage')} />
       <button
         type="button"

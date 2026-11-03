@@ -3457,7 +3457,9 @@
         "titleHint": "Only for the /status page opened without signing in. The \"Servers\" section inside the cabinet has its own title.",
         "fAddressBypass": "Host to check",
         "fAddressBypassHint": "The address users open through the whitelists (for example a Yandex domain). Not the node address.",
-        "addressIsNode": "This is the address of the panel node itself. For a bypass enter the whitelisted host, otherwise operators will not reach it."
+        "addressIsNode": "This is the address of the panel node itself. For a bypass enter the whitelisted host, otherwise operators will not reach it.",
+        "drag": "Drag to reorder (or use the up and down arrows)",
+        "neverMeasured": "Not checked yet"
       }
     },
     "landing": {
