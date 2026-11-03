@@ -85,6 +85,7 @@ export default function AdminSettingsPage() {
     setDraftValue,
     togglingKey,
     isGroupSaving,
+    savingGroup,
     handleToggle,
     handleInstantEnum,
     handleSaveSection,
@@ -252,6 +253,7 @@ export default function AdminSettingsPage() {
               onInstantEnum={handleInstantEnum}
               onSave={(keys) => handleSaveSection(group.id, keys)}
               saving={isGroupSaving(group.id)}
+              sectionSaving={savingGroup === group.id}
               togglingKey={togglingKey}
             />
           ))}

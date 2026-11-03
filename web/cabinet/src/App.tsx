@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
+import { NavPendingTracker } from '@/lib/navPending'
 import i18n from '@/i18n'
 import { useAuthStore } from '@/store/auth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -498,6 +499,7 @@ export default function App() {
             <BrandFavicon />
             <CabinetDecorThemeSync />
             <BrowserRouter basename={resolveBasename()}>
+              <NavPendingTracker />
               <AppRoutes />
             </BrowserRouter>
           </ToastProvider>
