@@ -103,7 +103,7 @@ func TestResolveTariffPurchase_InactiveTariff(t *testing.T) {
 	}
 }
 
-// Скидка «на одну оплату»: пока открыт один счёт с ней, второй её не получает.
+// Скидка «на одну оплату»: открытых счетов с ней не больше MinOpenInvoicesWithPromo.
 // Брошенный счёт Stars освобождает скидку.
 func TestPendingDiscount_ReservedByOpenInvoices(t *testing.T) {
 	pool := guardsTestPool(t)
@@ -146,8 +146,13 @@ func TestPendingDiscount_ReservedByOpenInvoices(t *testing.T) {
 		}
 	}
 	openInvoice(database.InvoiceTypeYookasa)
+	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 50 {
+		t.Fatalf("second invoice while first is open: pct=%d err=%v, want 50", pct, err)
+	}
+	openInvoice(database.InvoiceTypeYookasa)
+	openInvoice(database.InvoiceTypeYookasa)
 	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 0 {
-		t.Fatalf("second invoice while first is open: pct=%d err=%v, want 0", pct, err)
+		t.Fatalf("invoice over the limit of %d: pct=%d err=%v, want 0", promo.MinOpenInvoicesWithPromo, pct, err)
 	}
 
 	// Внешний счёт отменился (истёк в кассе), открыт брошенный счёт Stars.
