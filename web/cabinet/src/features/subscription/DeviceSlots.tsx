@@ -29,8 +29,8 @@ import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
 
 const PRICE_PROVIDER_ORDER = [
   'yookassa',
+  'platega',
   'platega_sbp',
-  'platega_cards',
   'platega_acquiring',
   'platega_worldwide',
   'platega_crypto',

@@ -170,7 +170,6 @@ export default function DeviceSlotsCheckoutPage() {
               initialId={checkoutMethod.initial.id}
               initialSource={checkoutMethod.initial.source}
               loading={checkoutMethod.loading}
-              providerEnabled={providerEnabled}
               onSelect={checkoutMethod.setMethod}
             />
           </RevealItem>

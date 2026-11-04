@@ -184,8 +184,8 @@ export interface AuthBootstrapResponse {
     yookassa?: boolean
     cryptopay?: boolean
     telegram?: boolean
+    platega?: boolean
     platega_sbp?: boolean
-    platega_cards?: boolean
     platega_acquiring?: boolean
     platega_worldwide?: boolean
     platega_crypto?: boolean
@@ -193,6 +193,8 @@ export interface AuthBootstrapResponse {
   }
   /** Кнопки ЮKassa по способам (YOOKASA_PAYMENT_METHODS); ["all"] — одна кнопка с формой ЮKassa со всеми способами. */
   yookassa_methods?: string[]
+  /** Кнопки Platega по способам (PLATEGA_PAYMENT_METHODS), порядок как в настройке; ["all"] — общая форма. */
+  platega_methods?: string[]
   /** Способ, выбранный заранее для тех, кто ещё не платил (CABINET_CHECKOUT_DEFAULT_METHOD): «yookassa:sbp», «platega_sbp»…; пусто — не выбран. */
   checkout_default_method?: string
 }

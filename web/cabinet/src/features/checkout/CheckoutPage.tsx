@@ -299,7 +299,6 @@ export default function CheckoutPage() {
             initialId={checkoutMethod.initial.id}
             initialSource={checkoutMethod.initial.source}
             loading={checkoutMethod.loading}
-            providerEnabled={providerEnabled}
             onSelect={checkoutMethod.setMethod}
           />
         </RevealItem>

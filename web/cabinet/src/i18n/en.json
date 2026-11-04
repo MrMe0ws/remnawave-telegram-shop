@@ -525,7 +525,8 @@
       "kindUpgrade": "Plan upgrade",
       "kindExtraHwid": "Extra devices",
       "kindExtraHwidSlots": "Extra devices (+{{n}})",
-      "kindSubscriptionWithHwid": "Subscription + extra devices ({{months}} mo., +{{n}})"
+      "kindSubscriptionWithHwid": "Subscription + extra devices ({{months}} mo., +{{n}})",
+      "methodPlatega": "Platega"
     },
     "support": {
       "title": "Support",
@@ -1118,7 +1119,8 @@
       "extraHwidRenewToggle": "Renew extra devices",
       "extraHwidRenewToggleHint": "{{slots}} · +{{amount}} {{unit}}",
       "extraHwidRenewLabel": "Extra devices",
-      "extraHwidRenewValue": "+{{n}}"
+      "extraHwidRenewValue": "+{{n}}",
+      "plategaAll": "All methods"
     },
     "paymentStatus": {
       "title": "Payment",
@@ -2593,7 +2595,7 @@
           },
           "payments": {
             "providers": "Payment methods",
-            "platega": "Platega",
+            "platega": "Platega buttons",
             "yookassa": "YooKassa buttons",
             "checkout": "Preselected in the cabinet"
           },
@@ -2658,14 +2660,10 @@
           "notifications": "This doesn't turn cabinet notifications on or off: they always appear under the bell for everyone. These toggles decide what is also sent as a system notification to the browser or phone of those who tapped \"Turn on\" in the notification feed. People who didn't subscribe get nothing."
         },
         "yookassaMethods": {
-          "intro": "Each checked method is a separate button in the bot and cabinet, in this order. The buyer lands on the chosen YooKassa method right away but can't switch to another one on the form.",
           "all": "YooKassa form with all methods",
           "allHint": "Same as without the setting: one “Card / Bank transfer” button",
           "connectWarning": "Each method has to be enabled in your YooKassa account, or the payment won't be created.",
-          "noAllWarning": "No form with all methods: methods missing from the list aren't available via YooKassa.",
-          "moveUp": "Up",
-          "moveDown": "Down",
-          "reset": "Reset to default"
+          "noAllWarning": "No form with all methods: methods missing from the list aren't available via YooKassa."
         },
         "checkoutDefault": {
           "intro": "Returning buyers see the method they paid with last time. This one is preselected for first-time buyers: it's shown large with a “Recommended” badge, the rest as tiles below.",
@@ -2788,26 +2786,6 @@
           "TELEGRAM_STARS_ENABLED": {
             "label": "Telegram Stars",
             "hint": "Paid with Stars through the bot itself"
-          },
-          "PLATEGA_SBP_ENABLED": {
-            "label": "SBP",
-            "hint": "Russian instant payments"
-          },
-          "PLATEGA_CARDS_ENABLED": {
-            "label": "Cards",
-            "hint": "Cards via Platega"
-          },
-          "PLATEGA_ACQUIRING_ENABLED": {
-            "label": "Acquiring",
-            "hint": ""
-          },
-          "PLATEGA_WORLDWIDE_ENABLED": {
-            "label": "International cards",
-            "hint": ""
-          },
-          "PLATEGA_CRYPTO_ENABLED": {
-            "label": "Crypto",
-            "hint": "Crypto via Platega"
           },
           "HELEKET_ENABLED": {
             "label": "Other crypto",
@@ -3280,7 +3258,24 @@
           "STATUS_PAGE_LEAD": {
             "label": "Subtitle",
             "hint": "Empty — cabinet translation"
+          },
+          "PLATEGA_ENABLED": {
+            "label": "Platega",
+            "hint": "Credentials are set in .env"
+          },
+          "PLATEGA_PAYMENT_METHODS": {
+            "label": "Platega buttons",
+            "hint": ""
           }
+        },
+        "plategaMethods": {
+          "all": "Platega general form",
+          "allHint": "The payer picks the method on the Platega page",
+          "sbp": "SBP",
+          "acquiring": "Acquiring (cards)",
+          "worldwide": "Visa / international cards",
+          "crypto": "Crypto",
+          "connectWarning": "Every method except the general form must be enabled in your Platega account, otherwise the payment will not be created."
         }
       },
       "sync": {

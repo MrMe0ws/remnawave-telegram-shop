@@ -532,7 +532,8 @@
       "extraHwidRenewToggle": "Продлить доп. устройства",
       "extraHwidRenewToggleHint": "{{slots}} · +{{amount}} {{unit}}",
       "extraHwidRenewLabel": "Доп. устройства",
-      "extraHwidRenewValue": "+{{n}}"
+      "extraHwidRenewValue": "+{{n}}",
+      "plategaAll": "Все способы"
     },
     "paymentStatus": {
       "title": "Оплата",
@@ -681,7 +682,8 @@
       "kindUpgrade": "Смена тарифа",
       "kindExtraHwid": "Доп. устройства",
       "kindExtraHwidSlots": "Доп. устройства (+{{n}})",
-      "kindSubscriptionWithHwid": "Подписка + доп. устройства ({{months}} мес., +{{n}})"
+      "kindSubscriptionWithHwid": "Подписка + доп. устройства ({{months}} мес., +{{n}})",
+      "methodPlatega": "Platega"
     },
     "support": {
       "title": "Поддержка",
@@ -2664,8 +2666,8 @@
           },
           "payments": {
             "providers": "Способы оплаты",
-            "platega": "Platega",
-            "yookassa": "Кнопки ЮKassa",
+            "platega": "Platega: кнопки",
+            "yookassa": "ЮKassa: кнопки",
             "checkout": "Выбор заранее в кабинете"
           },
           "moynalog": {
@@ -2729,14 +2731,10 @@
           "notifications": "Это не включение уведомлений в кабинете: под колокольчиком они появляются всегда, у всех. Здесь — что ещё и прилетает системным уведомлением в браузер или на телефон тем, кто сам нажал «Включить» в ленте уведомлений. Кто не подписывался, ничего не получит."
         },
         "yookassaMethods": {
-          "intro": "Каждый отмеченный способ — отдельная кнопка в боте и кабинете, порядок кнопок — как здесь. Покупатель сразу попадает на выбранный способ ЮKassa, но переключиться на другой на форме уже не сможет.",
           "all": "Форма ЮKassa со всеми способами",
           "allHint": "Как без настройки: одна кнопка «Картой / СБП»",
           "connectWarning": "Каждый способ должен быть подключён в личном кабинете ЮKassa, иначе платёж не создастся.",
-          "noAllWarning": "Формы со всеми способами нет: способы, которых нет в списке, через ЮKassa недоступны.",
-          "moveUp": "Выше",
-          "moveDown": "Ниже",
-          "reset": "Как по умолчанию"
+          "noAllWarning": "Формы со всеми способами нет: способы, которых нет в списке, через ЮKassa недоступны."
         },
         "checkoutDefault": {
           "intro": "Кто уже платил, видит на странице оплаты свой прошлый способ. Этот способ выбран заранее для тех, кто платит впервые: он показывается крупно с отметкой «Рекомендуем», остальные — плитками ниже.",
@@ -2859,26 +2857,6 @@
           "TELEGRAM_STARS_ENABLED": {
             "label": "Telegram Stars",
             "hint": "Оплата звёздами через самого бота"
-          },
-          "PLATEGA_SBP_ENABLED": {
-            "label": "СБП",
-            "hint": "Система быстрых платежей"
-          },
-          "PLATEGA_CARDS_ENABLED": {
-            "label": "Карты",
-            "hint": "Карты через Platega"
-          },
-          "PLATEGA_ACQUIRING_ENABLED": {
-            "label": "Эквайринг",
-            "hint": ""
-          },
-          "PLATEGA_WORLDWIDE_ENABLED": {
-            "label": "Зарубежные карты",
-            "hint": ""
-          },
-          "PLATEGA_CRYPTO_ENABLED": {
-            "label": "Криптовалюта",
-            "hint": "Крипта через Platega"
           },
           "HELEKET_ENABLED": {
             "label": "Другая крипта",
@@ -3351,7 +3329,24 @@
           "STATUS_PAGE_LEAD": {
             "label": "Подзаголовок",
             "hint": "Пусто — перевод кабинета"
+          },
+          "PLATEGA_ENABLED": {
+            "label": "Platega",
+            "hint": "Реквизиты — в .env"
+          },
+          "PLATEGA_PAYMENT_METHODS": {
+            "label": "Кнопки Platega",
+            "hint": ""
           }
+        },
+        "plategaMethods": {
+          "all": "Общая форма Platega",
+          "allHint": "Способ выбирает плательщик на странице Platega",
+          "sbp": "СБП",
+          "acquiring": "Эквайринг (карты)",
+          "worldwide": "Visa / международные карты",
+          "crypto": "Крипта",
+          "connectWarning": "Каждый способ, кроме общей формы, должен быть включён в личном кабинете Platega, иначе платёж не создастся."
         }
       },
       "sync": {

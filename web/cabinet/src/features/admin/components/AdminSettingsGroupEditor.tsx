@@ -10,7 +10,11 @@ import { AdminToggleRow } from './AdminToggleSwitch'
 import { AdminSelect } from './AdminSelect'
 import { AdminDecorScheduleEditor } from './AdminDecorScheduleEditor'
 import { AdminHomeQuickActionsEditor } from './AdminHomeQuickActionsEditor'
-import { AdminCheckoutDefaultMethodEditor, AdminYookassaMethodsEditor } from './AdminPaymentMethodsEditors'
+import {
+  AdminCheckoutDefaultMethodEditor,
+  AdminPlategaMethodsEditor,
+  AdminYookassaMethodsEditor,
+} from './AdminPaymentMethodsEditors'
 import { SettingsSubsectionTitle } from './SettingsSubsectionTitle'
 import {
   ADMIN_SETTINGS_GROUP_ICONS,
@@ -170,6 +174,18 @@ export function AdminSettingsGroupEditor({
       )
     }
 
+    if (field.key === 'PLATEGA_PAYMENT_METHODS') {
+      return (
+        <div key={field.key} className="border-b border-border/50 py-3 last:border-0">
+          <AdminPlategaMethodsEditor
+            value={value}
+            disabled={saving}
+            onChange={(next) => onDraftChange(field.key, next)}
+          />
+        </div>
+      )
+    }
+
     if (field.key === 'CABINET_CHECKOUT_DEFAULT_METHOD') {
       return (
         <div key={field.key} className="border-b border-border/50 py-3 last:border-0">
@@ -177,6 +193,9 @@ export function AdminSettingsGroupEditor({
             value={value}
             yookassaMethodsValue={
               draft.YOOKASA_PAYMENT_METHODS ?? fieldByKey.get('YOOKASA_PAYMENT_METHODS')?.value ?? ''
+            }
+            plategaMethodsValue={
+              draft.PLATEGA_PAYMENT_METHODS ?? fieldByKey.get('PLATEGA_PAYMENT_METHODS')?.value ?? ''
             }
             disabled={saving}
             onChange={(next) => onDraftChange(field.key, next)}

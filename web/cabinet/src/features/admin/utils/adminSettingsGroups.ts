@@ -352,25 +352,19 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'providers',
       titleKey: 'admin.settings.subsections.payments.providers',
       icon: Wallet,
-      keys: ['YOOKASA_ENABLED', 'CRYPTO_PAY_ENABLED', 'HELEKET_ENABLED', 'TELEGRAM_STARS_ENABLED'],
-    },
-    {
-      id: 'platega',
-      titleKey: 'admin.settings.subsections.payments.platega',
-      icon: CreditCard,
-      keys: [
-        'PLATEGA_SBP_ENABLED',
-        'PLATEGA_CARDS_ENABLED',
-        'PLATEGA_ACQUIRING_ENABLED',
-        'PLATEGA_WORLDWIDE_ENABLED',
-        'PLATEGA_CRYPTO_ENABLED',
-      ],
+      keys: ['YOOKASA_ENABLED', 'PLATEGA_ENABLED', 'CRYPTO_PAY_ENABLED', 'HELEKET_ENABLED', 'TELEGRAM_STARS_ENABLED'],
     },
     {
       id: 'yookassa',
       titleKey: 'admin.settings.subsections.payments.yookassa',
       icon: CreditCard,
       keys: ['YOOKASA_PAYMENT_METHODS'],
+    },
+    {
+      id: 'platega',
+      titleKey: 'admin.settings.subsections.payments.platega',
+      icon: CreditCard,
+      keys: ['PLATEGA_PAYMENT_METHODS'],
     },
     {
       id: 'checkout',
