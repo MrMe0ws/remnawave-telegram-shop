@@ -370,6 +370,7 @@ var invoiceTypeCsvLabels = map[database.InvoiceType]string{
 	database.InvoiceTypeYookasa:          "ЮKassa",
 	database.InvoiceTypeTelegram:         "Telegram Stars",
 	database.InvoiceTypeTribute:          "Tribute",
+	database.InvoiceTypePlatega:          "Platega",
 	database.InvoiceTypePlategaSBP:       "Platega СБП",
 	database.InvoiceTypePlategaCards:     "Platega карты",
 	database.InvoiceTypePlategaAcquiring: "Platega эквайринг",

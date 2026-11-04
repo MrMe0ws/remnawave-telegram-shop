@@ -27,9 +27,7 @@ type config struct {
 	botURL                                                                       string
 	yookasaURL, yookasaShopId, yookasaSecretKey, yookasaEmail, yookasaWebhookURL string
 	plategaMerchantID, plategaSecret, plategaWebhookURL                          string
-	isPlategaSBPEnabled, isPlategaCardsEnabled                                   bool
-	isPlategaAcquiringEnabled, isPlategaWorldwideEnabled                         bool
-	isPlategaCryptoEnabled                                                       bool
+	isPlategaEnabled                                                             bool
 	heleketMerchantID, heleketAPIKey, heleketWebhookURL, heleketCurrency         string
 	heleketOrderPrefix                                                           string
 	heleketLifetime                                                              int
@@ -198,31 +196,9 @@ func GetPlategaWebHookURL() string {
 	return conf.plategaWebhookURL
 }
 
-func IsPlategaSBPEnabled() bool {
-	return conf.isPlategaSBPEnabled
-}
-
-func IsPlategaCardsEnabled() bool {
-	return conf.isPlategaCardsEnabled
-}
-
-func IsPlategaAcquiringEnabled() bool {
-	return conf.isPlategaAcquiringEnabled
-}
-
-func IsPlategaWorldwideEnabled() bool {
-	return conf.isPlategaWorldwideEnabled
-}
-
-func IsPlategaCryptoEnabled() bool {
-	return conf.isPlategaCryptoEnabled
-}
-
-// IsPlategaEnabled — true, если включён хотя бы один метод Platega (и PLATEGA_ENABLED в env).
+// IsPlategaEnabled — включена ли Platega (одна кнопка, способ выбирает плательщик).
 func IsPlategaEnabled() bool {
-	return conf.isPlategaSBPEnabled || conf.isPlategaCardsEnabled ||
-		conf.isPlategaAcquiringEnabled || conf.isPlategaWorldwideEnabled ||
-		conf.isPlategaCryptoEnabled
+	return conf.isPlategaEnabled
 }
 
 func HeleketMerchantID() string {
@@ -1160,18 +1136,17 @@ func InitConfig() {
 	conf.plategaMerchantID = strings.TrimSpace(os.Getenv("PLATEGA_MERCHANT_ID"))
 	conf.plategaSecret = strings.TrimSpace(os.Getenv("PLATEGA_SECRET"))
 	conf.plategaWebhookURL = strings.TrimSpace(os.Getenv("PLATEGA_WEBHOOK_URL"))
-	// PLATEGA_ENABLED — общий рубильник: при выключенном ни один подметод не
-	// поднимается, как и раньше.
 	if envBool("PLATEGA_ENABLED") {
 		if !credentialsPresent(conf.plategaMerchantID, conf.plategaSecret) {
 			log.Panicf("PLATEGA_ENABLED=true requires PLATEGA_MERCHANT_ID and PLATEGA_SECRET")
 		}
 		warnIfPlaceholders("platega", conf.plategaMerchantID, conf.plategaSecret)
-		conf.isPlategaSBPEnabled = envBool("PLATEGA_SBP_ENABLED")
-		conf.isPlategaCardsEnabled = envBool("PLATEGA_CARDS_ENABLED")
-		conf.isPlategaAcquiringEnabled = envBool("PLATEGA_ACQUIRING_ENABLED")
-		conf.isPlategaWorldwideEnabled = envBool("PLATEGA_WORLDWIDE_ENABLED")
-		conf.isPlategaCryptoEnabled = envBool("PLATEGA_CRYPTO_ENABLED")
+		conf.isPlategaEnabled = true
+		for _, legacy := range []string{"PLATEGA_SBP_ENABLED", "PLATEGA_CARDS_ENABLED", "PLATEGA_ACQUIRING_ENABLED", "PLATEGA_WORLDWIDE_ENABLED", "PLATEGA_CRYPTO_ENABLED"} {
+			if os.Getenv(legacy) != "" {
+				slog.Warn("legacy Platega method flag is ignored: Platega is now one button and the payer picks the method on its page", "var", legacy)
+			}
+		}
 	}
 
 	conf.heleketMerchantID = strings.TrimSpace(os.Getenv("HELEKET_MERCHANT_ID"))

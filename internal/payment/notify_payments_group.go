@@ -36,7 +36,7 @@ func invoiceTypeTitle(t database.InvoiceType) string {
 		return "Telegram Stars"
 	case database.InvoiceTypeTribute:
 		return "Tribute"
-	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+	case database.InvoiceTypePlatega, database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return "Platega"
 	case database.InvoiceTypeHeleket:
@@ -101,7 +101,7 @@ func paymentLinkBlock(p *database.Purchase) string {
 		if p.CryptoInvoiceLink != nil && strings.TrimSpace(*p.CryptoInvoiceLink) != "" {
 			return "🔗 счёт Stars:\n   " + htmlCode(strings.TrimSpace(*p.CryptoInvoiceLink))
 		}
-	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+	case database.InvoiceTypePlatega, database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		if p.PlategaID != nil && strings.TrimSpace(*p.PlategaID) != "" {
 			return "🔗 платёж Platega: " + htmlCode(strings.TrimSpace(*p.PlategaID))

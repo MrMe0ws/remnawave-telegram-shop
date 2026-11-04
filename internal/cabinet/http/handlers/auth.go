@@ -176,16 +176,18 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 			"yookassa":          botcfg.IsYookasaEnabled(),
 			"cryptopay":         botcfg.IsCryptoPayEnabled(),
 			"telegram":          botcfg.IsTelegramStarsEnabled(),
-			"platega_sbp":       botcfg.IsPlategaEnabled() && botcfg.IsPlategaSBPEnabled(),
-			"platega_cards":     botcfg.IsPlategaEnabled() && botcfg.IsPlategaCardsEnabled(),
-			"platega_acquiring": botcfg.IsPlategaEnabled() && botcfg.IsPlategaAcquiringEnabled(),
-			"platega_worldwide": botcfg.IsPlategaEnabled() && botcfg.IsPlategaWorldwideEnabled(),
-			"platega_crypto":    botcfg.IsPlategaEnabled() && botcfg.IsPlategaCryptoEnabled(),
+			"platega":           botcfg.PlategaMethodEnabled("all"),
+			"platega_sbp":       botcfg.PlategaMethodEnabled("sbp"),
+			"platega_acquiring": botcfg.PlategaMethodEnabled("acquiring"),
+			"platega_worldwide": botcfg.PlategaMethodEnabled("worldwide"),
+			"platega_crypto":    botcfg.PlategaMethodEnabled("crypto"),
 			"heleket":           botcfg.IsHeleketEnabled(),
 		},
 		// YOOKASA_PAYMENT_METHODS: кнопки ЮKassa по способам; ["all"] — одна
 		// кнопка с формой ЮKassa со всеми способами, как до настройки.
 		"yookassa_methods": botcfg.YookasaPaymentMethods(),
+		// PLATEGA_PAYMENT_METHODS: кнопки Platega по способам, порядок как в настройке.
+		"platega_methods": botcfg.PlategaPaymentMethods(),
 		// CABINET_CHECKOUT_DEFAULT_METHOD: способ, выбранный заранее для тех,
 		// кто ещё не платил. Пусто — ничего не выбрано.
 		"checkout_default_method": botcfg.CheckoutDefaultMethod(),

@@ -110,14 +110,14 @@
   "yookasa_yoo_money_button": {
     "text": "👛 ЮMoney"
   },
+  "platega_button": {
+    "text": "💳 Platega"
+  },
   "platega_sbp_button": {
     "text": "💳 СБП - Platega"
   },
-  "platega_cards_button": {
-    "text": "💳 Карта МИР - Platega"
-  },
   "platega_acquiring_button": {
-    "text": "💳 Эквайринг - Platega"
+    "text": "💳 Карта - Platega"
   },
   "platega_worldwide_button": {
     "text": "💳 Visa Карта - Platega"

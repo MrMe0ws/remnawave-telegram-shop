@@ -20,7 +20,9 @@ const (
 	InvoiceTypeYookasa  InvoiceType = "yookasa"
 	InvoiceTypeTelegram InvoiceType = "telegram"
 	InvoiceTypeTribute  InvoiceType = "tribute"
-	// Platega (разные paymentMethod в одном шлюзе).
+	// Platega: одна кнопка, способ плательщик выбирает на странице Platega.
+	// plt_* — прежние счета по отдельным способам, остаются для истории и вебхуков.
+	InvoiceTypePlatega          InvoiceType = "platega"
 	InvoiceTypePlategaSBP       InvoiceType = "plt_sbp"
 	InvoiceTypePlategaCards     InvoiceType = "plt_cards"
 	InvoiceTypePlategaAcquiring InvoiceType = "plt_acq"
@@ -33,6 +35,7 @@ const (
 // PlategaInvoiceTypes перечисляет все invoice_type Platega (поллинг, статистика).
 func PlategaInvoiceTypes() []InvoiceType {
 	return []InvoiceType{
+		InvoiceTypePlatega,
 		InvoiceTypePlategaSBP,
 		InvoiceTypePlategaCards,
 		InvoiceTypePlategaAcquiring,
@@ -44,7 +47,7 @@ func PlategaInvoiceTypes() []InvoiceType {
 // InvoiceTypeIsPlatega — true для любого метода Platega.
 func InvoiceTypeIsPlatega(t InvoiceType) bool {
 	switch t {
-	case InvoiceTypePlategaSBP, InvoiceTypePlategaCards, InvoiceTypePlategaAcquiring,
+	case InvoiceTypePlatega, InvoiceTypePlategaSBP, InvoiceTypePlategaCards, InvoiceTypePlategaAcquiring,
 		InvoiceTypePlategaWorldwide, InvoiceTypePlategaCrypto:
 		return true
 	default:
@@ -435,6 +438,7 @@ func (pr *PurchaseRepository) FindSuccessfulPaidPurchaseByCustomer(ctx context.C
 			sq.Or{
 				sq.Eq{"invoice_type": InvoiceTypeCrypto},
 				sq.Eq{"invoice_type": InvoiceTypeYookasa},
+				sq.Eq{"invoice_type": InvoiceTypePlatega},
 				sq.Eq{"invoice_type": InvoiceTypePlategaSBP},
 				sq.Eq{"invoice_type": InvoiceTypePlategaCards},
 				sq.Eq{"invoice_type": InvoiceTypePlategaAcquiring},

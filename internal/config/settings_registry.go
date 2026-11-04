@@ -142,34 +142,10 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return boolStr(conf.isTelegramStarsEnabled) },
 		},
 		{
-			Key: "PLATEGA_SBP_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
+			Key: "PLATEGA_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
 			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
-				func(v bool) { conf.isPlategaSBPEnabled = v }),
-			Current: func() string { return boolStr(conf.isPlategaSBPEnabled) },
-		},
-		{
-			Key: "PLATEGA_CARDS_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
-			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
-				func(v bool) { conf.isPlategaCardsEnabled = v }),
-			Current: func() string { return boolStr(conf.isPlategaCardsEnabled) },
-		},
-		{
-			Key: "PLATEGA_ACQUIRING_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
-			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
-				func(v bool) { conf.isPlategaAcquiringEnabled = v }),
-			Current: func() string { return boolStr(conf.isPlategaAcquiringEnabled) },
-		},
-		{
-			Key: "PLATEGA_WORLDWIDE_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
-			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
-				func(v bool) { conf.isPlategaWorldwideEnabled = v }),
-			Current: func() string { return boolStr(conf.isPlategaWorldwideEnabled) },
-		},
-		{
-			Key: "PLATEGA_CRYPTO_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
-			Apply: applyPaymentToggle(PlategaHasCredentials, plategaCredentialsHint,
-				func(v bool) { conf.isPlategaCryptoEnabled = v }),
-			Current: func() string { return boolStr(conf.isPlategaCryptoEnabled) },
+				func(v bool) { conf.isPlategaEnabled = v }),
+			Current: func() string { return boolStr(conf.isPlategaEnabled) },
 		},
 		{
 			Key: "HELEKET_ENABLED", Group: "payments", Type: SettingBool, Instant: true,
@@ -181,6 +157,11 @@ func baseRuntimeSettings() []SettingField {
 			Key: "YOOKASA_PAYMENT_METHODS", Group: "payments", Type: SettingText,
 			Apply:   applyYookasaPaymentMethods(),
 			Current: yookasaPaymentMethodsCurrent(),
+		},
+		{
+			Key: "PLATEGA_PAYMENT_METHODS", Group: "payments", Type: SettingText,
+			Apply:   applyPlategaPaymentMethods(),
+			Current: plategaPaymentMethodsCurrent(),
 		},
 		{
 			Key: "CABINET_CHECKOUT_DEFAULT_METHOD", Group: "payments", Type: SettingText,

@@ -100,14 +100,10 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 | Переменная | Описание |
 |------------|----------|
-| `PLATEGA_ENABLED` | Вкл; при `true` обязательны merchant + secret и хотя бы один метод |
+| `PLATEGA_ENABLED` | Вкл; при `true` обязательны merchant + secret |
 | `PLATEGA_MERCHANT_ID` / `PLATEGA_SECRET` | Учётные данные |
 | `PLATEGA_WEBHOOK_URL` | Путь вебхука; пусто — поллинг |
-| `PLATEGA_SBP_ENABLED` | СБП |
-| `PLATEGA_CARDS_ENABLED` | Карты |
-| `PLATEGA_ACQUIRING_ENABLED` | Эквайринг |
-| `PLATEGA_WORLDWIDE_ENABLED` | Worldwide |
-| `PLATEGA_CRYPTO_ENABLED` | Crypto-метод Platega |
+| `PLATEGA_PAYMENT_METHODS` | Кнопки Platega через запятую: `all` (общая форма), `sbp`, `acquiring`, `worldwide`, `crypto`. Пусто — одна общая форма |
 
 ---
 

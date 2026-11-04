@@ -823,25 +823,12 @@ func (s *CheckoutService) ensureProviderEnabled(provider string) error {
 		if !config.IsTelegramStarsEnabled() {
 			return fmt.Errorf("%w: telegram stars disabled", ErrProviderDisabled)
 		}
-	case repository.CheckoutProviderPlategaSBP:
-		if !config.IsPlategaEnabled() || !config.IsPlategaSBPEnabled() {
-			return fmt.Errorf("%w: platega sbp disabled", ErrProviderDisabled)
-		}
-	case repository.CheckoutProviderPlategaCards:
-		if !config.IsPlategaEnabled() || !config.IsPlategaCardsEnabled() {
-			return fmt.Errorf("%w: platega cards disabled", ErrProviderDisabled)
-		}
-	case repository.CheckoutProviderPlategaAcquiring:
-		if !config.IsPlategaEnabled() || !config.IsPlategaAcquiringEnabled() {
-			return fmt.Errorf("%w: platega acquiring disabled", ErrProviderDisabled)
-		}
-	case repository.CheckoutProviderPlategaWorldwide:
-		if !config.IsPlategaEnabled() || !config.IsPlategaWorldwideEnabled() {
-			return fmt.Errorf("%w: platega worldwide disabled", ErrProviderDisabled)
-		}
-	case repository.CheckoutProviderPlategaCrypto:
-		if !config.IsPlategaEnabled() || !config.IsPlategaCryptoEnabled() {
-			return fmt.Errorf("%w: platega crypto disabled", ErrProviderDisabled)
+	case repository.CheckoutProviderPlatega, repository.CheckoutProviderPlategaSBP,
+		repository.CheckoutProviderPlategaAcquiring, repository.CheckoutProviderPlategaWorldwide,
+		repository.CheckoutProviderPlategaCrypto:
+		it, err := mapProviderToInvoiceType(provider)
+		if err != nil || !platega.MethodEnabled(it, config.PlategaMethodEnabled) {
+			return fmt.Errorf("%w: platega method disabled", ErrProviderDisabled)
 		}
 	case repository.CheckoutProviderHeleket:
 		if !config.IsHeleketEnabled() {
@@ -1005,7 +992,7 @@ func (s *CheckoutService) withProviderOverrides(
 		if returnURL != "" {
 			ctx = context.WithValue(ctx, cryptopay.CtxKeyPaidBtnURL, returnURL)
 		}
-	case repository.CheckoutProviderPlategaSBP, repository.CheckoutProviderPlategaCards,
+	case repository.CheckoutProviderPlatega, repository.CheckoutProviderPlategaSBP,
 		repository.CheckoutProviderPlategaAcquiring, repository.CheckoutProviderPlategaWorldwide,
 		repository.CheckoutProviderPlategaCrypto:
 		if returnURL != "" {
@@ -1071,10 +1058,10 @@ func mapProviderToInvoiceType(provider string) (database.InvoiceType, error) {
 		return database.InvoiceTypeCrypto, nil
 	case repository.CheckoutProviderTelegram:
 		return database.InvoiceTypeTelegram, nil
+	case repository.CheckoutProviderPlatega:
+		return database.InvoiceTypePlatega, nil
 	case repository.CheckoutProviderPlategaSBP:
 		return database.InvoiceTypePlategaSBP, nil
-	case repository.CheckoutProviderPlategaCards:
-		return database.InvoiceTypePlategaCards, nil
 	case repository.CheckoutProviderPlategaAcquiring:
 		return database.InvoiceTypePlategaAcquiring, nil
 	case repository.CheckoutProviderPlategaWorldwide:
@@ -1123,8 +1110,8 @@ func paymentURLFromPurchase(p *database.Purchase) string {
 		if p.CryptoInvoiceLink != nil {
 			return *p.CryptoInvoiceLink
 		}
-	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
-		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
+	case database.InvoiceTypePlatega, database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards,
+		database.InvoiceTypePlategaAcquiring, database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		if p.PlategaURL != nil {
 			return *p.PlategaURL
 		}

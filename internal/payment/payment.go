@@ -1183,6 +1183,8 @@ func buildRubReceiptDescription(months, extraHwid int, extras *TariffPurchaseExt
 // invoiceDescriptionPlategaSuffix — уточнение способа Platega без упоминания криптовалюты (в т.ч. в текстах для «Мой налог»).
 func invoiceDescriptionPlategaSuffix(t database.InvoiceType) string {
 	switch t {
+	case database.InvoiceTypePlatega:
+		return " — Platega"
 	case database.InvoiceTypePlategaSBP:
 		return " — Platega, СБП"
 	case database.InvoiceTypePlategaCards:
@@ -1204,7 +1206,7 @@ func (s PaymentService) CreatePurchase(ctx context.Context, amount float64, mont
 		return s.createCryptoInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
 	case database.InvoiceTypeYookasa:
 		return s.createYookasaInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras)
-	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+	case database.InvoiceTypePlatega, database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return s.createPlategaInvoice(ctx, amount, months, 0, customer, meta, tariffID, extras, invoiceType)
 	case database.InvoiceTypeHeleket:
@@ -1238,7 +1240,7 @@ func (s PaymentService) CreatePurchaseWithExtra(ctx context.Context, amount floa
 		return s.createCryptoInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
 	case database.InvoiceTypeYookasa:
 		return s.createYookasaInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras)
-	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+	case database.InvoiceTypePlatega, database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return s.createPlategaInvoice(ctx, amount, months, extraHwid, customer, meta, tariffID, extras, invoiceType)
 	case database.InvoiceTypeHeleket:
@@ -1267,7 +1269,7 @@ func (s PaymentService) CreateHwidPurchase(ctx context.Context, amount float64, 
 		return s.createCryptoInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
 	case database.InvoiceTypeYookasa:
 		return s.createYookasaInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil)
-	case database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
+	case database.InvoiceTypePlatega, database.InvoiceTypePlategaSBP, database.InvoiceTypePlategaCards, database.InvoiceTypePlategaAcquiring,
 		database.InvoiceTypePlategaWorldwide, database.InvoiceTypePlategaCrypto:
 		return s.createPlategaInvoice(ctx, amount, 0, extraHwid, customer, meta, nil, nil, invoiceType)
 	case database.InvoiceTypeHeleket:

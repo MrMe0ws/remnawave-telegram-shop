@@ -101,20 +101,20 @@
   "yookasa_yoo_money_button": {
     "text": "👛 YooMoney"
   },
-  "platega_sbp_button": {
-    "text": "💳 SBP"
+  "platega_button": {
+    "text": "💳 Platega"
   },
-  "platega_cards_button": {
-    "text": "💳 Card"
+  "platega_sbp_button": {
+    "text": "💳 SBP - Platega"
   },
   "platega_acquiring_button": {
-    "text": "💳 Card"
+    "text": "💳 Card - Platega"
   },
   "platega_worldwide_button": {
-    "text": "💳 Card"
+    "text": "💳 International card - Platega"
   },
   "platega_crypto_button": {
-    "text": "₿ Crypto"
+    "text": "₿ Crypto - Platega"
   },
   "heleket_button": {
     "text": "₿ Other crypto"

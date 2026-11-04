@@ -17,6 +17,7 @@ import (
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/payment"
+	"remnawave-tg-shop-bot/internal/platega"
 	"remnawave-tg-shop-bot/internal/remnawave"
 )
 
@@ -648,45 +649,42 @@ func parseInt64Safe(value string) int64 {
 
 // paymentCallbackQuery — данные callback для оплаты; для тарифов цена берётся из БД, amount не передаётся.
 func plategaInvoiceEnabled(it database.InvoiceType) bool {
+	return platega.MethodEnabled(it, config.PlategaMethodEnabled)
+}
+
+// plategaButtonKeys — ключи переводов кнопок Platega по id способа.
+var plategaButtonKeys = map[string]string{
+	"all":       "platega_button",
+	"sbp":       "platega_sbp_button",
+	"acquiring": "platega_acquiring_button",
+	"worldwide": "platega_worldwide_button",
+	"crypto":    "platega_crypto_button",
+}
+
+// plategaButtons — кнопки включённых способов Platega в порядке настройки.
+func (h Handler) plategaButtons(langCode string, callback func(database.InvoiceType) string) [][]models.InlineKeyboardButton {
 	if !config.IsPlategaEnabled() {
-		return false
+		return nil
 	}
-	switch it {
-	case database.InvoiceTypePlategaSBP:
-		return config.IsPlategaSBPEnabled()
-	case database.InvoiceTypePlategaCards:
-		return config.IsPlategaCardsEnabled()
-	case database.InvoiceTypePlategaAcquiring:
-		return config.IsPlategaAcquiringEnabled()
-	case database.InvoiceTypePlategaWorldwide:
-		return config.IsPlategaWorldwideEnabled()
-	case database.InvoiceTypePlategaCrypto:
-		return config.IsPlategaCryptoEnabled()
-	default:
-		return false
+	var rows [][]models.InlineKeyboardButton
+	for _, id := range config.PlategaPaymentMethods() {
+		it, ok := platega.InvoiceTypeForMethod(id)
+		if !ok {
+			continue
+		}
+		rows = append(rows, []models.InlineKeyboardButton{
+			h.translation.WithButton(langCode, plategaButtonKeys[id], models.InlineKeyboardButton{
+				CallbackData: callback(it),
+			}),
+		})
 	}
+	return rows
 }
 
 func (h Handler) appendPlategaPaymentRows(keyboard [][]models.InlineKeyboardButton, langCode, tidStr, month, amount string, extraCount int) [][]models.InlineKeyboardButton {
-	type row struct {
-		inv database.InvoiceType
-		key string
-	}
-	for _, r := range []row{
-		{database.InvoiceTypePlategaSBP, "platega_sbp_button"},
-		{database.InvoiceTypePlategaCards, "platega_cards_button"},
-		{database.InvoiceTypePlategaAcquiring, "platega_acquiring_button"},
-		{database.InvoiceTypePlategaWorldwide, "platega_worldwide_button"},
-		{database.InvoiceTypePlategaCrypto, "platega_crypto_button"},
-	} {
-		if plategaInvoiceEnabled(r.inv) {
-			keyboard = append(keyboard, []models.InlineKeyboardButton{
-				h.translation.WithButton(langCode, r.key, models.InlineKeyboardButton{
-					CallbackData: paymentCallbackQuery(tidStr, month, string(r.inv), amount, extraCount),
-				}),
-			})
-		}
-	}
+	keyboard = append(keyboard, h.plategaButtons(langCode, func(it database.InvoiceType) string {
+		return paymentCallbackQuery(tidStr, month, string(it), amount, extraCount)
+	})...)
 	if config.IsHeleketEnabled() {
 		keyboard = append(keyboard, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
@@ -698,25 +696,9 @@ func (h Handler) appendPlategaPaymentRows(keyboard [][]models.InlineKeyboardButt
 }
 
 func (h Handler) appendPlategaAddDevicePaymentRows(keyboard [][]models.InlineKeyboardButton, langCode string, target int) [][]models.InlineKeyboardButton {
-	type row struct {
-		inv database.InvoiceType
-		key string
-	}
-	for _, r := range []row{
-		{database.InvoiceTypePlategaSBP, "platega_sbp_button"},
-		{database.InvoiceTypePlategaCards, "platega_cards_button"},
-		{database.InvoiceTypePlategaAcquiring, "platega_acquiring_button"},
-		{database.InvoiceTypePlategaWorldwide, "platega_worldwide_button"},
-		{database.InvoiceTypePlategaCrypto, "platega_crypto_button"},
-	} {
-		if plategaInvoiceEnabled(r.inv) {
-			keyboard = append(keyboard, []models.InlineKeyboardButton{
-				h.translation.WithButton(langCode, r.key, models.InlineKeyboardButton{
-					CallbackData: fmt.Sprintf("%s?target=%d&invoiceType=%s", CallbackAddDevicePayment, target, r.inv),
-				}),
-			})
-		}
-	}
+	keyboard = append(keyboard, h.plategaButtons(langCode, func(it database.InvoiceType) string {
+		return fmt.Sprintf("%s?target=%d&invoiceType=%s", CallbackAddDevicePayment, target, it)
+	})...)
 	if config.IsHeleketEnabled() {
 		keyboard = append(keyboard, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "heleket_button", models.InlineKeyboardButton{
