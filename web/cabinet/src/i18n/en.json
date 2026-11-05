@@ -2188,6 +2188,8 @@
         "trafficPacksTip": "Extra traffic packs on sale: {{count}}",
         "viewList": "List",
         "viewGrid": "Tiles",
+        "fromPrice": "from",
+        "perMonthShort": "/mo",
         "noPrices": "No prices set",
         "settingsTitle": "Product settings",
         "settingsSubtitle": "Trial, devices, star rate and price display",

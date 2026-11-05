@@ -2245,6 +2245,8 @@
         "trafficPacksTip": "Продаётся докупка трафика, пакетов: {{count}}",
         "viewList": "Списком",
         "viewGrid": "Плиткой",
+        "fromPrice": "от",
+        "perMonthShort": "/мес",
         "noPrices": "Цены не заданы",
         "settingsTitle": "Настройки продукта",
         "settingsSubtitle": "Триал, устройства, курс звёзд и отображение цен",

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Save,
+  Trash2,
   Loader2,
   Pencil,
   Plus,
@@ -38,6 +39,7 @@ import { useAdminBotSettings } from '../hooks/useAdminBotSettings'
 import {
   useAdminSquads,
   useAdminTariffSquads,
+  useAdminTariffDelete,
   STRATEGIES,
   type AdminTariff,
   type CreateTariffInput,
@@ -350,6 +352,8 @@ interface Props {
 export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Props) {
   const { t } = useTranslation()
   const { data: squadsData } = useAdminSquads()
+  const del = useAdminTariffDelete()
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const { data: botSettings } = useAdminBotSettings()
   const [form, setForm] = useState<TariffFormData>(() => tariffToForm(tariff))
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
@@ -495,11 +499,23 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
         iconAccent="emerald"
         footer={
           <div className="flex items-center justify-end gap-2">
+            {/* Удаление необратимо, поэтому оно слева и приглушено — подальше от «Сохранить». */}
+            {isEdit && tariff && (
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-4" />
+                {t('admin.delete')}
+              </button>
+            )}
             {anyDirty && (
               <span className="mr-auto hidden text-xs text-muted-foreground sm:inline">
                 {t('admin.tariffs.unsavedIndicator')}
               </span>
             )}
+            <span className={isEdit && tariff && !anyDirty ? 'mr-auto' : 'hidden'} />
             {/* Отмена нейтральная: акцентная подсветка читалась как «вот
                 основное действие», хотя рядом стоит «Сохранить». */}
             <button
@@ -884,6 +900,28 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
           )}
         </div>
       </AdminModal>
+
+      {isEdit && tariff && (
+        <AdminConfirmModal
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={() => {
+            del.mutate(tariff.id, {
+              onSuccess: () => {
+                setDeleteOpen(false)
+                onClose()
+              },
+            })
+          }}
+          title={t('admin.tariffs.deleteTariff')}
+          message={t('admin.tariffs.confirmDelete', { name: tariff.name?.trim() || tariff.slug })}
+          confirmLabel={t('admin.delete')}
+          variant="destructive"
+          loading={del.isPending}
+          icon={Trash2}
+          iconAccent="rose"
+        />
+      )}
 
       <AdminConfirmModal
         open={confirmCloseOpen}

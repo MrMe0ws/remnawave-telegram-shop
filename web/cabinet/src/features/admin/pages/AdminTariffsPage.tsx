@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -58,6 +58,19 @@ function formatTrafficLimit(bytes: number, gbUnit: string): string {
 
 const VIEW_KEY = 'admin.tariffs.view'
 type TariffsView = 'grid' | 'list'
+
+/** ПК-раскладка (таблица) с md; на телефоне — плитка или список. */
+function useIsDesktop(): boolean {
+  const query = '(min-width: 768px)'
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const onChange = () => setMatches(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return matches
+}
 
 function readView(): TariffsView {
   try {
@@ -212,24 +225,161 @@ function GripHandle({
   )
 }
 
-/** Цены в плитке: столбиком, без звёзд — они считаются от рублей. */
-function TilePrices({ prices, locale }: { prices: AdminTariffPrice[]; locale: string }) {
-  const { t } = useTranslation()
+/** Цена за месяц при каждом периоде: на сколько дешевле месяц на длинном тарифе, чем на коротком. */
+function perMonth(price: AdminTariffPrice): number {
+  return Math.ceil(price.amount_rub / price.months)
+}
+
+/** Самая низкая цена за месяц среди периодов тарифа; null — цен нет. */
+function minPerMonth(prices: AdminTariffPrice[]): number | null {
   const shown = shownPrices(prices)
-  if (shown.length === 0) {
+  return shown.length ? Math.min(...shown.map(perMonth)) : null
+}
+
+/** Цена в плитке: одна, «от … ₽/мес». Остальные периоды видны в редакторе. */
+function TilePrice({ prices, locale }: { prices: AdminTariffPrice[]; locale: string }) {
+  const { t } = useTranslation()
+  const min = minPerMonth(prices)
+  if (min == null) {
     return <p className="mt-2 text-center text-[11px] text-muted-foreground">{t('admin.tariffs.noPrices')}</p>
   }
   return (
-    <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 px-0.5 tabular-nums">
-      {shown.map((price) => (
-        <Fragment key={price.months}>
-          <dt className="self-center whitespace-nowrap text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t('admin.users.monthsShort', { count: price.months })}
-          </dt>
-          <dd className="truncate text-right text-[13px] font-semibold">{formatRub(price.amount_rub, locale)}</dd>
-        </Fragment>
-      ))}
-    </dl>
+    <p className="mt-2 flex items-baseline gap-1 px-0.5 tabular-nums">
+      <span className="text-[11px] text-muted-foreground">{t('admin.tariffs.fromPrice')}</span>
+      <span className="whitespace-nowrap text-base font-bold leading-none">{formatRub(min, locale)}</span>
+      <span className="text-[11px] text-muted-foreground">{t('admin.tariffs.perMonthShort')}</span>
+    </p>
+  )
+}
+
+/**
+ * Карточка тарифа на ПК, «витрина»: крупное «от … ₽/мес», ниже лимиты и сетка периодов
+ * с ценой и скидкой. Нажатие на карточку открывает редактор; описание и удаление — там.
+ */
+function TariffShowcase({
+  tariff,
+  onEdit,
+  locale,
+  position,
+  dragging,
+  onHandleDown,
+  onHandleKey,
+}: {
+  tariff: AdminTariff
+  onEdit: () => void
+  locale: string
+  position: number
+  dragging: boolean
+  onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onHandleKey: (dir: -1 | 1) => void
+}) {
+  const { t } = useTranslation()
+  const update = useAdminTariffUpdate()
+  const squadCount = tariff.active_internal_squad_uuids
+    ? tariff.active_internal_squad_uuids.split(',').filter(Boolean).length
+    : 0
+  const title = tariff.name?.trim() || tariff.slug
+  const accent = tariffTierAccent(position)
+  const inactive = !tariff.is_active
+  const prices = shownPrices(tariff.prices)
+  const base = prices.find((p) => p.months === 1)
+  const bypass = tariff.bypass_limit_bytes ?? 0
+  const rowCls = 'flex items-baseline justify-between gap-3 border-b border-dashed border-border/40 pb-1.5 text-sm'
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      title={t('admin.edit')}
+      onClick={onEdit}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onEdit()
+        }
+      }}
+      className={cn(
+        'cabinet-elevated-card relative flex h-full w-full min-w-0 cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        inactive && 'bg-muted/30',
+        dragging && 'border-primary/60 shadow-2xl shadow-black/40',
+      )}
+    >
+      <span aria-hidden className={cn('absolute inset-y-0 left-0 w-1', accent.bar, inactive && 'opacity-30')} />
+      <div className="flex flex-1 flex-col p-4 pl-5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <GripHandle
+            dragging={dragging}
+            onHandleDown={onHandleDown}
+            onHandleKey={onHandleKey}
+            className={cn('-ml-2 h-8 w-6 hover:bg-muted', accent.iconColor, inactive && 'opacity-40')}
+            iconClassName="size-4"
+          />
+          <h3 className={cn('min-w-0 flex-1 truncate text-base font-bold', inactive && 'text-muted-foreground')}>
+            {title}
+          </h3>
+          <span className="flex shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <AdminToggleSwitch
+              checked={tariff.is_active}
+              onChange={(next) => update.mutate({ id: tariff.id, fields: { is_active: next } })}
+              busy={update.isPending}
+              aria-label={t('admin.tariffs.toggleActive')}
+            />
+          </span>
+        </div>
+        <p className="ml-6 truncate font-mono text-[11px] text-muted-foreground/70">
+          {tariff.slug} · #{tariff.sort_order}
+        </p>
+
+        <div className={cn('mt-auto flex flex-col', inactive && 'opacity-55')}>
+          {tariff.description?.trim() && (
+            <p className="mt-2 truncate text-xs text-muted-foreground">{tariff.description.split('\n')[0]}</p>
+          )}
+          <div className="mt-3 space-y-1.5 text-muted-foreground">
+            <p className={rowCls}>
+              {t('admin.tariffs.devices')}
+              <b className="font-semibold tabular-nums text-foreground">{tariff.device_limit}</b>
+            </p>
+            <p className={rowCls}>
+              {t('admin.tariffs.squadsShort')}
+              <b className="font-semibold tabular-nums text-foreground">{squadCount > 0 ? squadCount : '∞'}</b>
+            </p>
+            <p className={rowCls} title={trafficTitle(tariff, t)}>
+              {t('admin.tariffs.trafficShort')}
+              <b className="inline-flex items-center gap-1.5 font-semibold tabular-nums text-foreground">
+                <TrafficValue tariff={tariff} withUnit={false} />
+                {bypass > 0 && (
+                  <span className="text-xs font-semibold text-[hsl(var(--split-bypass))]">{bypassLabel().toLowerCase()}</span>
+                )}
+                {(tariff.traffic_packs ?? 0) > 0 && <span aria-hidden className="size-2 rounded-full bg-amber-500" />}
+              </b>
+            </p>
+          </div>
+
+          {prices.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-1.5">
+              {prices.map((price) => {
+                const pm = perMonth(price)
+                const saving =
+                  base && price.months > 1 && base.amount_rub > 0 ? Math.round((1 - pm / base.amount_rub) * 100) : 0
+                return (
+                  <div
+                    key={price.months}
+                    className="flex items-baseline justify-between gap-2 rounded-lg bg-muted/25 px-2.5 py-1.5 text-xs tabular-nums"
+                  >
+                    <span className="whitespace-nowrap text-muted-foreground">
+                      {t('admin.users.monthsShort', { count: price.months })}
+                    </span>
+                    <span className="text-right">
+                      <b className="block whitespace-nowrap text-sm font-semibold">{formatRub(price.amount_rub, locale)}</b>
+                      {saving > 0 && <span className="block text-[11px] leading-tight text-emerald-500">−{saving}%</span>}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   )
 }
 
@@ -326,7 +476,7 @@ function TariffTile({
               <TrafficValue tariff={tariff} withUnit={false} />
             </span>
           </div>
-          <TilePrices prices={tariff.prices} locale={locale} />
+          <TilePrice prices={tariff.prices} locale={locale} />
         </div>
       </div>
     </Card>
@@ -540,6 +690,7 @@ export default function AdminTariffsPage() {
   // Когда отпустили перетаскиваемую плитку: «клик» после броска не должен открывать редактор.
   const dragEndedAt = useRef(0)
   const [view, setView] = useState<TariffsView>(readView)
+  const isDesktop = useIsDesktop()
   const changeView = (next: TariffsView) => {
     setView(next)
     try {
@@ -769,7 +920,7 @@ export default function AdminTariffsPage() {
           accent="emerald"
           actions={
             <div className="flex items-center gap-2">
-              <div className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5">
+              <div className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5 md:hidden">
                 {(['list', 'grid'] as const).map((v) => {
                   const Icon = v === 'list' ? Rows2 : LayoutGrid
                   const label = t(v === 'list' ? 'admin.tariffs.viewList' : 'admin.tariffs.viewGrid')
@@ -819,7 +970,11 @@ export default function AdminTariffsPage() {
             ref={gridRef}
             className={cn(
               'relative grid items-stretch',
-              view === 'grid' ? 'grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-4' : 'gap-4 lg:grid-cols-2',
+              isDesktop
+                ? 'grid-cols-2 gap-4 xl:grid-cols-3'
+                : view === 'grid'
+                  ? 'grid-cols-2 gap-2 sm:gap-3'
+                  : 'gap-4',
               dragId != null && 'select-none',
             )}
           >
@@ -833,7 +988,7 @@ export default function AdminTariffsPage() {
                 className={cn('flex', dragId === tariff.id && 'relative z-20')}
               >
                 {(() => {
-                  const Item = view === 'grid' ? TariffTile : TariffCard
+                  const Item = isDesktop ? TariffShowcase : view === 'grid' ? TariffTile : TariffCard
                   return (
                     <Item
                       tariff={tariff}
@@ -852,7 +1007,6 @@ export default function AdminTariffsPage() {
               </div>
             ))}
           </div>
-          {list.length > 1 && <p className="text-xs text-muted-foreground">{t('admin.tariffs.reorderHint')}</p>}
           </>
         )}
 
