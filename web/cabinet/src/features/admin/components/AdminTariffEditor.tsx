@@ -45,6 +45,7 @@ import {
   type AdminTariff,
   type CreateTariffInput,
 } from '../hooks/useAdminTariffs'
+import { AdminSelect } from './AdminSelect'
 import {
   AdminTariffSquadsApplyPanel,
   AdminTariffSquadsSaveDialog,
@@ -643,17 +644,14 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
               </LockedHint>
               <div className="sm:col-span-2">
                 <TariffFieldLabel icon={RotateCcw}>{t('admin.tariffs.strategy')}</TariffFieldLabel>
-                <select
-                  className="admin-input w-full max-w-xs px-3 py-2"
+                <AdminSelect
+                  className="w-full max-w-xs"
                   value={form.traffic_limit_reset_strategy}
-                  onChange={(e) => set('traffic_limit_reset_strategy', e.target.value)}
-                >
-                  {STRATEGIES.map((s) => (
-                    <option key={s} value={s}>
-                      {t(STRATEGY_I18N_KEYS[s] ?? s, { defaultValue: s })}
-                    </option>
-                  ))}
-                </select>
+                  options={STRATEGIES.map((s) => ({ value: s as string, label: t(STRATEGY_I18N_KEYS[s] ?? s, { defaultValue: s }) }))}
+                  onChange={(next) => set('traffic_limit_reset_strategy', next ?? form.traffic_limit_reset_strategy)}
+                  placeholder={t('admin.tariffs.strategy')}
+                  ariaLabel={t('admin.tariffs.strategy')}
+                />
               </div>
               </div>
             </section>

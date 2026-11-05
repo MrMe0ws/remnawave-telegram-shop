@@ -9,6 +9,7 @@ import { Spinner as ButtonSpinner } from '@/components/ui/spinner'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
+import { AdminSelect } from '../components/AdminSelect'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
 import { faviconSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
 import { CountryFlag } from '../components/CountryFlag'
@@ -205,29 +206,27 @@ function NodesTab() {
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-sm font-medium">{t('admin.infra.pickProvider')}</label>
-              <select
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={form.provider_uuid}
-                onChange={(e) => setForm((f) => ({ ...f, provider_uuid: e.target.value }))}
-              >
-                <option value="">—</option>
-                {providersData?.providers?.map((p: any) => (
-                  <option key={p.uuid} value={p.uuid}>{p.name}</option>
-                ))}
-              </select>
+              <AdminSelect
+                value={form.provider_uuid || null}
+                options={(providersData?.providers ?? []).map((p: any) => ({ value: p.uuid as string, label: p.name as string }))}
+                onChange={(next) => setForm((f) => ({ ...f, provider_uuid: next ?? '' }))}
+                allowEmpty
+                emptyLabel="—"
+                placeholder="—"
+                ariaLabel={t('admin.infra.pickProvider')}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">{t('admin.infra.pickNode')}</label>
-              <select
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={form.node_uuid}
-                onChange={(e) => setForm((f) => ({ ...f, node_uuid: e.target.value }))}
-              >
-                <option value="">—</option>
-                {available.map((n: any) => (
-                  <option key={n.uuid} value={n.uuid}>{n.name}{n.countryCode ? ` (${n.countryCode})` : ''}</option>
-                ))}
-              </select>
+              <AdminSelect
+                value={form.node_uuid || null}
+                options={available.map((n: any) => ({ value: n.uuid as string, label: `${n.name}${n.countryCode ? ` (${n.countryCode})` : ''}` }))}
+                onChange={(next) => setForm((f) => ({ ...f, node_uuid: next ?? '' }))}
+                allowEmpty
+                emptyLabel="—"
+                placeholder="—"
+                ariaLabel={t('admin.infra.pickNode')}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">{t('admin.infra.nextBillingAt')}</label>
@@ -659,16 +658,15 @@ function HistoryTab() {
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-sm font-medium">{t('admin.infra.pickProvider')}</label>
-            <select
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              value={form.provider_uuid}
-              onChange={(e) => setForm((f) => ({ ...f, provider_uuid: e.target.value }))}
-            >
-              <option value="">—</option>
-              {providersData?.providers?.map((p: any) => (
-                <option key={p.uuid} value={p.uuid}>{p.name}</option>
-              ))}
-            </select>
+            <AdminSelect
+              value={form.provider_uuid || null}
+              options={(providersData?.providers ?? []).map((p: any) => ({ value: p.uuid as string, label: p.name as string }))}
+              onChange={(next) => setForm((f) => ({ ...f, provider_uuid: next ?? '' }))}
+              allowEmpty
+              emptyLabel="—"
+              placeholder="—"
+              ariaLabel={t('admin.infra.pickProvider')}
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">{t('admin.infra.amount')}</label>

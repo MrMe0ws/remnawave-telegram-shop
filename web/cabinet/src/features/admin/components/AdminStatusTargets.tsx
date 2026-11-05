@@ -20,6 +20,7 @@ import { AdminModal } from './AdminModal'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
 import { CountryFlag } from './CountryFlag'
 import { CountrySelect } from './CountrySelect'
+import { AdminSelect } from './AdminSelect'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
 
 export interface StatusTargetDraft {
@@ -632,15 +633,18 @@ function NodeSelect({
   onChange: (uuid: string) => void
 }) {
   return (
-    <select className={inputClass} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{emptyLabel}</option>
-      {value && !nodes.some((node) => node.uuid === value) && <option value={value}>{value}</option>}
-      {nodes.map((node) => (
-        <option key={node.uuid} value={node.uuid}>
-          {node.name}
-        </option>
-      ))}
-    </select>
+    <AdminSelect
+      value={value || null}
+      options={[
+        ...(value && !nodes.some((node) => node.uuid === value) ? [{ value, label: value }] : []),
+        ...nodes.map((node) => ({ value: node.uuid, label: node.name })),
+      ]}
+      onChange={(next) => onChange(next ?? '')}
+      allowEmpty
+      emptyLabel={emptyLabel}
+      placeholder={emptyLabel}
+      ariaLabel={emptyLabel}
+    />
   )
 }
 
