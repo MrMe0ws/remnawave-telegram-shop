@@ -13,7 +13,6 @@ import {
   Smartphone,
   HardDrive,
   RotateCcw,
-  ListOrdered,
   Sparkles,
   AlertTriangle,
   Eraser,
@@ -285,13 +284,12 @@ function tariffToForm(t?: AdminTariff | null): TariffFormData {
 }
 
 /**
- * tier_level всегда равен «Порядку».
+ * tier_level всегда равен порядку (sort_order).
  *
  * Отдельного поля «Уровень» в форме нет: это два почти всегда одинаковых числа.
- * Раньше при редактировании уровень сохранялся из исходного тарифа и не следовал
- * за изменением порядка — бейдж «Уровень N» и цвет карточки застревали на
- * значении, которое было при создании. TG-админка давно пишет оба поля разом
- * (см. tariff_admin.go, UpdateTariff с tier_level и sort_order), веб просто отстал.
+ * Порядок задаётся перетаскиванием карточек на странице тарифов (там же
+ * пересчитывается и уровень), а форма лишь не теряет текущее значение.
+ * TG-админка тоже пишет оба поля разом (tariff_admin.go, UpdateTariff).
  */
 function formToCreateInput(f: TariffFormData): CreateTariffInput {
   const slug = f.slug.trim() || slugifyTariffName(f.name)
@@ -561,16 +559,6 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                     {isEdit && <span className="ml-1">{t('admin.tariffs.slugImmutable')}</span>}
                   </p>
                 )}
-              </div>
-              <div>
-                <TariffFieldLabel icon={ListOrdered}>{t('admin.tariffs.sortOrder')}</TariffFieldLabel>
-                <input
-                  type="number"
-                  className="admin-input w-full max-w-xs px-3 py-2"
-                  value={form.sort_order}
-                  onChange={(e) => set('sort_order', Number(e.target.value))}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">{t('admin.tariffs.sortOrderHint')}</p>
               </div>
               <AdminCheckboxField
                 checked={form.is_active}

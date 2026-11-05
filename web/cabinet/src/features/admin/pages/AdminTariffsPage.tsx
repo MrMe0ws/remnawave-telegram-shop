@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
+  GripVertical,
   Zap,
   Plus,
   Pencil,
@@ -104,12 +106,18 @@ function TariffCard({
   onEdit,
   locale,
   position,
+  dragging,
+  onHandleDown,
+  onHandleKey,
 }: {
   tariff: AdminTariff
   onEdit: () => void
   locale: string
   /** Позиция в отсортированном списке — она задаёт цвет карточки. */
   position: number
+  dragging: boolean
+  onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onHandleKey: (dir: -1 | 1) => void
 }) {
   const { t } = useTranslation()
   const update = useAdminTariffUpdate()
@@ -127,8 +135,9 @@ function TariffCard({
   return (
     <Card
       className={cn(
-        'cabinet-elevated-card relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md',
+        'cabinet-elevated-card relative flex h-full w-full flex-col overflow-hidden transition-shadow hover:shadow-md',
         inactive && 'bg-muted/30',
+        dragging && 'border-primary/60 shadow-2xl shadow-black/40',
       )}
     >
       {/* Полоса уровня: идентичность тарифа, не статус (статус — бейдж справа). */}
@@ -141,6 +150,26 @@ function TariffCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-start gap-2.5">
+            <button
+              type="button"
+              aria-label={t('admin.tariffs.reorderHint')}
+              title={t('admin.tariffs.reorderHint')}
+              onPointerDown={onHandleDown}
+              onKeyDown={(e) => {
+                const dir =
+                  e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : 0
+                if (dir) {
+                  e.preventDefault()
+                  onHandleKey(dir)
+                }
+              }}
+              className={cn(
+                '-ml-2 flex h-9 w-6 shrink-0 touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                dragging ? 'cursor-grabbing' : 'cursor-grab',
+              )}
+            >
+              <GripVertical className="size-5" />
+            </button>
             <div
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-lg',
@@ -275,6 +304,158 @@ export default function AdminTariffsPage() {
   const update = useAdminTariffUpdate()
   const applySquadsMutation = useAdminTariffSquadsApply()
   const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
+  const queryClient = useQueryClient()
+
+  // Порядок карточек = порядок у пользователей. Пока тянем и пока порядок сохраняется,
+  // показываем локальную копию, а не ответ сервера.
+  const [order, setOrder] = useState<AdminTariff[] | null>(null)
+  const [dragId, setDragId] = useState<number | null>(null)
+  const list = order ?? tariffs ?? []
+  const listRef = useRef(list)
+  listRef.current = list
+  const gridRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef(new Map<number, HTMLDivElement>())
+  // Где карточка стояла в прошлый раз (offset не зависит от transform): по разнице играем анимацию переезда.
+  const prevPos = useRef(new Map<number, { top: number; left: number }>())
+  const pointer = useRef({ x: 0, y: 0 })
+  // Смещение точки захвата относительно левого верхнего угла карточки.
+  const grab = useRef({ x: 0, y: 0 })
+
+  /** sort_order и tier_level всегда равны позиции в списке (см. formToCreateInput в редакторе). */
+  const reindex = (items: AdminTariff[]) => items.map((item, i) => ({ ...item, sort_order: i, tier_level: i }))
+
+  function placeDragged() {
+    const el = dragId != null ? itemRefs.current.get(dragId) : undefined
+    const grid = gridRef.current
+    if (!el || !grid) return
+    const rect = grid.getBoundingClientRect()
+    const dx = pointer.current.x - grab.current.x - (rect.left + el.offsetLeft)
+    const dy = pointer.current.y - grab.current.y - (rect.top + el.offsetTop)
+    el.style.transition = 'none'
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(1.02)`
+  }
+
+  async function persist(next: AdminTariff[]) {
+    const normalized = reindex(next)
+    const changed = normalized.filter((item) => {
+      const old = tariffs?.find((x) => x.id === item.id)
+      return !old || old.sort_order !== item.sort_order || old.tier_level !== item.tier_level
+    })
+    if (changed.length === 0) {
+      setOrder(null)
+      return
+    }
+    setOrder(normalized)
+    try {
+      await Promise.all(
+        changed.map((item) =>
+          update.mutateAsync({ id: item.id, fields: { sort_order: item.sort_order, tier_level: item.tier_level } }),
+        ),
+      )
+      await queryClient.invalidateQueries({ queryKey: ['admin-tariffs'] })
+      showSuccess(t('admin.tariffs.orderSaved'))
+    } catch (err) {
+      showError(err)
+    } finally {
+      setOrder(null)
+    }
+  }
+
+  function moveByKey(id: number, dir: -1 | 1) {
+    const items = listRef.current
+    const from = items.findIndex((x) => x.id === id)
+    const to = from + dir
+    if (from < 0 || to < 0 || to >= items.length) return
+    const copy = [...items]
+    const [item] = copy.splice(from, 1)
+    copy.splice(to, 0, item)
+    void persist(copy)
+  }
+
+  function startDrag(e: React.PointerEvent<HTMLButtonElement>, id: number) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const el = itemRefs.current.get(id)
+    const box = el?.getBoundingClientRect()
+    pointer.current = { x: e.clientX, y: e.clientY }
+    grab.current = box ? { x: e.clientX - box.left, y: e.clientY - box.top } : { x: 0, y: 0 }
+    setOrder(reindex(listRef.current))
+    setDragId(id)
+  }
+
+  // Пока тянем, слушаем указатель на всём окне: React переставляет узлы, и захват на ручке мог бы потеряться.
+  useEffect(() => {
+    if (dragId == null) return
+    function onMove(e: PointerEvent) {
+      pointer.current = { x: e.clientX, y: e.clientY }
+      placeDragged()
+      const grid = gridRef.current
+      if (!grid) return
+      const rect = grid.getBoundingClientRect()
+      const px = e.clientX - rect.left
+      const py = e.clientY - rect.top
+      const items = listRef.current
+      const from = items.findIndex((x) => x.id === dragId)
+      const to = items.findIndex((x) => {
+        if (x.id === dragId) return false
+        const el = itemRefs.current.get(x.id)
+        return (
+          !!el &&
+          px >= el.offsetLeft &&
+          px <= el.offsetLeft + el.offsetWidth &&
+          py >= el.offsetTop &&
+          py <= el.offsetTop + el.offsetHeight
+        )
+      })
+      if (from < 0 || to < 0 || to === from) return
+      const copy = [...items]
+      const [item] = copy.splice(from, 1)
+      copy.splice(to, 0, item)
+      setOrder(reindex(copy))
+    }
+    function onUp() {
+      const el = dragId != null ? itemRefs.current.get(dragId) : undefined
+      if (el) {
+        // Карточка плавно садится на своё место.
+        el.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+        el.style.transform = ''
+      }
+      setDragId(null)
+      void persist(listRef.current)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    const prevCursor = document.body.style.cursor
+    document.body.style.cursor = 'grabbing'
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      document.body.style.cursor = prevCursor
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragId])
+
+  // Анимация переезда: после смены порядка соседи «отъезжают» от старого места к новому.
+  useLayoutEffect(() => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    itemRefs.current.forEach((el, id) => {
+      const top = el.offsetTop
+      const left = el.offsetLeft
+      const prev = prevPos.current.get(id)
+      if (!reduce && prev && (prev.top !== top || prev.left !== left) && id !== dragId) {
+        el.style.transition = 'none'
+        el.style.transform = `translate(${prev.left - left}px, ${prev.top - top}px)`
+        void el.getBoundingClientRect()
+        el.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+        el.style.transform = ''
+      }
+      prevPos.current.set(id, { top, left })
+    })
+    placeDragged()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, dragId])
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingTariff, setEditingTariff] = useState<AdminTariff | null>(null)
@@ -334,7 +515,9 @@ export default function AdminTariffsPage() {
         },
       )
     } else {
-      create.mutate(data as CreateTariffInput, {
+      // Новый тариф встаёт в конец списка; дальше его можно перетащить.
+      const next = list.reduce((max, item) => Math.max(max, item.sort_order + 1), 0)
+      create.mutate({ ...(data as CreateTariffInput), sort_order: next, tier_level: next }, {
         onSuccess: () => {
           showSuccess(savedMsg)
           closeEditor()
@@ -376,17 +559,34 @@ export default function AdminTariffsPage() {
             </button>
           </Card>
         ) : (
-          <div className="grid items-stretch gap-4 lg:grid-cols-2">
-            {tariffs.map((tariff, index) => (
-              <TariffCard
+          <>
+          <div
+            ref={gridRef}
+            className={cn('relative grid items-stretch gap-4 lg:grid-cols-2', dragId != null && 'select-none')}
+          >
+            {list.map((tariff, index) => (
+              <div
                 key={tariff.id}
-                tariff={tariff}
-                locale={locale}
-                position={index}
-                onEdit={() => openEdit(tariff)}
-              />
+                ref={(el) => {
+                  if (el) itemRefs.current.set(tariff.id, el)
+                  else itemRefs.current.delete(tariff.id)
+                }}
+                className={cn('flex', dragId === tariff.id && 'relative z-20')}
+              >
+                <TariffCard
+                  tariff={tariff}
+                  locale={locale}
+                  position={index}
+                  dragging={dragId === tariff.id}
+                  onHandleDown={(e) => startDrag(e, tariff.id)}
+                  onHandleKey={(dir) => moveByKey(tariff.id, dir)}
+                  onEdit={() => openEdit(tariff)}
+                />
+              </div>
             ))}
           </div>
+          {list.length > 1 && <p className="text-xs text-muted-foreground">{t('admin.tariffs.reorderHint')}</p>}
+          </>
         )}
 
         {/* Настройки продукта — прайс доп. устройств, триал, курс звёзд — рядом с прайсом тарифов. */}
