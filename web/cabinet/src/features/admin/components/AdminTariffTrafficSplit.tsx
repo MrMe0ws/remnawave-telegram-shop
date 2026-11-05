@@ -216,6 +216,8 @@ export function AdminTariffTrafficSplit({
     },
     onSuccess: (res) => {
       qc.setQueryData(['admin-tariff-traffic', tariffId], res)
+      // Лимит обхода и докупка видны и на карточке тарифа в списке.
+      qc.invalidateQueries({ queryKey: ['admin-tariffs'] })
     },
   })
 
@@ -293,7 +295,7 @@ export function AdminTariffTrafficSplit({
                   {perGb > 0 && (
                     <>
                       {ruNumber(perGb)} {t('admin.tariffs.trafficSplit.rubPerGb')}
-                      {saving > 0 && <span className="text-emerald-500"> · −{saving}%</span>}
+                      {saving > 0 && <span className="text-emerald-500"> −{saving}%</span>}
                     </>
                   )}
                 </p>

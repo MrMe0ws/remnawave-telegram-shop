@@ -115,6 +115,11 @@ type tariffDTO struct {
 	Description               *string          `json:"description"`
 	DescriptionDetail         *string          `json:"description_detail"`
 	Prices                    []tariffPriceDTO `json:"prices"`
+	// Только в списке: что показать в чипе трафика карточки тарифа.
+	// BypassLimitBytes — лимит обхода; 0 — обхода нет или раздельный трафик выключен.
+	BypassLimitBytes int64 `json:"bypass_limit_bytes,omitempty"`
+	// TrafficPacks — сколько пакетов докупки увидит клиент этого тарифа.
+	TrafficPacks int `json:"traffic_packs,omitempty"`
 }
 
 func tariffToDTO(t *database.Tariff, prices []database.TariffPrice) tariffDTO {
@@ -166,7 +171,9 @@ func (h *AdminTariffsHandler) List(w http.ResponseWriter, r *http.Request) {
 		if prices == nil {
 			prices = []database.TariffPrice{}
 		}
-		result = append(result, tariffToDTO(&tariffs[i], prices))
+		dto := tariffToDTO(&tariffs[i], prices)
+		dto.BypassLimitBytes, dto.TrafficPacks = h.trafficSummary(r.Context(), &tariffs[i])
+		result = append(result, dto)
 	}
 	writeJSON(w, http.StatusOK, result)
 }

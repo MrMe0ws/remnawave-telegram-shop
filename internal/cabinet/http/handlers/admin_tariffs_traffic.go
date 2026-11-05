@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -94,6 +95,38 @@ func (h *AdminTariffsHandler) trafficGet(w http.ResponseWriter, r *http.Request,
 		out.MainLimitGlobal = t.TrafficLimitBytes <= 0 && out.MainLimitBytes > 0
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// trafficSummary — лимит обхода и число пакетов докупки для карточки тарифа в списке.
+// Правила те же, что у клиента (me_traffic.go): обход — только при включённом раздельном
+// трафике, пакет вида без лимита не считается: докупать безлимит нечего.
+func (h *AdminTariffsHandler) trafficSummary(ctx context.Context, t *database.Tariff) (bypassBytes int64, packs int) {
+	if h.traffic == nil {
+		return 0, 0
+	}
+	if config.TrafficSplitEnabled() {
+		b, err := h.traffic.GetTariffBypass(ctx, t.ID)
+		if err != nil {
+			slog.Warn("admin tariffs list: bypass", "tariff_id", t.ID, "error", err)
+		} else {
+			bypassBytes = b.LimitBytes
+		}
+	}
+	if !config.TrafficPacksEnabled() {
+		return bypassBytes, 0
+	}
+	list, err := h.traffic.ListPacks(ctx, t.ID, "", true)
+	if err != nil {
+		slog.Warn("admin tariffs list: packs", "tariff_id", t.ID, "error", err)
+		return bypassBytes, 0
+	}
+	mainLimited := trafficquota.MainLimitForTariff(t) > 0
+	for _, p := range list {
+		if (p.Kind == database.TrafficKindMain && mainLimited) || (p.Kind == database.TrafficKindBypass && bypassBytes > 0) {
+			packs++
+		}
+	}
+	return bypassBytes, packs
 }
 
 func (h *AdminTariffsHandler) trafficPut(w http.ResponseWriter, r *http.Request, tariffID int64) {

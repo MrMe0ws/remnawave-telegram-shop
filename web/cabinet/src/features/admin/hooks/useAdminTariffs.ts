@@ -26,6 +26,10 @@ export interface AdminTariff {
   description?: string | null
   description_detail?: string | null
   prices: AdminTariffPrice[]
+  /** Только в списке: лимит обхода (0/нет — обхода нет или раздельный трафик выключен). */
+  bypass_limit_bytes?: number
+  /** Только в списке: сколько пакетов докупки увидит клиент тарифа. */
+  traffic_packs?: number
 }
 
 export interface CreateTariffInput {

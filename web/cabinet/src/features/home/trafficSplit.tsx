@@ -218,7 +218,7 @@ function TrafficBuySheet({
                 </span>
                 <span className="min-w-0 flex-1 text-[12.5px] text-muted-foreground">
                   {t('trafficSplit.perGb', { price: formatNumber(Math.round(pricePerGb(p) * 10) / 10) })}
-                  {saving > 0 && <b className="text-emerald-500"> · −{saving}%</b>}
+                  {saving > 0 && <b className="text-emerald-500"> −{saving}%</b>}
                 </span>
                 <span className="text-lg font-extrabold">
                   {formatNumber(p.amount_rub)} {t('checkout.rub')}

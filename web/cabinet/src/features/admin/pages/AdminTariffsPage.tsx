@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,8 +10,9 @@ import {
   Server,
   Smartphone,
   Gauge,
+  LayoutGrid,
+  Rows2,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
@@ -25,6 +26,8 @@ import { tariffTierAccent } from '../utils/tariffTierAccent'
 import { TariffDescription } from '@/components/TariffDescription'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { bypassLabel } from '@/lib/bypassLabel'
+import '@/lib/splitColor'
 import {
   useAdminTariffList,
   useAdminTariffCreate,
@@ -41,36 +44,101 @@ const GB = 1024 * 1024 * 1024
 /** Периоды прайса — те же, что в редакторе тарифа. */
 const PERIOD_MONTHS = [1, 3, 6, 12] as const
 
+/** Целые значения без «.0»: 200 ГБ, а не 200.0 ГБ. */
+function formatGb(bytes: number): string {
+  const gb = bytes / GB
+  return String(Number.isInteger(gb) ? gb : gb.toFixed(1))
+}
+
 /** Безлимит показываем знаком «∞» без единиц: «∞ ГБ» — бессмыслица. */
 function formatTrafficLimit(bytes: number, gbUnit: string): string {
   if (!bytes || bytes <= 0) return '∞'
-  const gb = bytes / GB
-  // Целые значения без «.0»: 200 ГБ, а не 200.0 ГБ.
-  return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} ${gbUnit}`
+  return `${formatGb(bytes)} ${gbUnit}`
+}
+
+const VIEW_KEY = 'admin.tariffs.view'
+type TariffsView = 'grid' | 'list'
+
+function readView(): TariffsView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
+  } catch {
+    return 'grid'
+  }
+}
+
+/** Значок трафика; жёлтая точка — у тарифа продаётся докупка. */
+function TrafficIcon({ packs, className }: { packs: number; className: string }) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      <Gauge className={className} />
+      {packs > 0 && (
+        <span aria-hidden className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-amber-500 ring-[1.5px] ring-card" />
+      )}
+    </span>
+  )
+}
+
+/**
+ * Лимит трафика: «∞ +30» — безлимит на обычных серверах плюс отдельный лимит обхода
+ * (обход бывает только при безлимитных обычных, поэтому «200 +30» не встречается).
+ */
+function TrafficValue({ tariff, withUnit }: { tariff: AdminTariff; withUnit: boolean }) {
+  const { t } = useTranslation()
+  const gbUnit = t('admin.users.subscription.gbUnit')
+  const bypass = tariff.bypass_limit_bytes ?? 0
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      {formatTrafficLimit(tariff.traffic_limit_bytes, gbUnit)}
+      {bypass > 0 && (
+        <span className="text-[hsl(var(--split-bypass))]">
+          +{formatGb(bypass)}
+          {withUnit && ` ${gbUnit}`}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/** Расшифровка чипа трафика для подсказки. */
+function trafficTitle(tariff: AdminTariff, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  const gbUnit = t('admin.users.subscription.gbUnit')
+  const main = tariff.traffic_limit_bytes > 0 ? `${formatGb(tariff.traffic_limit_bytes)} ${gbUnit}` : t('admin.tariffs.unlimited')
+  const bypass = tariff.bypass_limit_bytes ?? 0
+  const packs = tariff.traffic_packs ?? 0
+  if (bypass <= 0 && packs <= 0) return t('admin.tariffs.trafficShort')
+  const lines = [t('admin.tariffs.trafficMainTip', { value: main })]
+  if (bypass > 0) lines.push(t('admin.tariffs.trafficBypassTip', { label: bypassLabel(), value: `${formatGb(bypass)} ${gbUnit}` }))
+  if (packs > 0) lines.push(t('admin.tariffs.trafficPacksTip', { count: packs }))
+  return lines.join('\n')
 }
 
 function formatRub(amount: number, locale: string): string {
   return `${new Intl.NumberFormat(locale).format(amount)} ₽`
 }
 
-function LimitChip({ icon: Icon, value, label }: { icon: LucideIcon; value: string; label: string }) {
+function LimitChip({ icon, value, label }: { icon: ReactNode; value: ReactNode; label: string }) {
   return (
     <span
       title={label}
       className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/25 px-2.5 py-1.5"
     >
-      <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+      {icon}
       <span className="text-sm font-semibold leading-none tabular-nums">{value}</span>
     </span>
   )
+}
+
+function shownPrices(prices: AdminTariffPrice[]): AdminTariffPrice[] {
+  const byMonths = new Map(prices.map((p) => [p.months, p]))
+  return PERIOD_MONTHS.map((m) => byMonths.get(m)).filter((p): p is AdminTariffPrice => p != null)
 }
 
 /** Прайс тарифа: то, ради чего страницу открывают, — раньше его тут не было вовсе. */
 function TariffPrices({ prices, locale }: { prices: AdminTariffPrice[]; locale: string }) {
   const { t } = useTranslation()
 
-  const byMonths = new Map(prices.map((p) => [p.months, p]))
-  const shown = PERIOD_MONTHS.map((m) => byMonths.get(m)).filter((p): p is AdminTariffPrice => p != null)
+  const shown = shownPrices(prices)
 
   if (shown.length === 0) {
     return (
@@ -98,6 +166,170 @@ function TariffPrices({ prices, locale }: { prices: AdminTariffPrice[]; locale: 
         </div>
       ))}
     </div>
+  )
+}
+
+/** Ручка перетаскивания: тянуть указателем или стрелками с клавиатуры. */
+function GripHandle({
+  dragging,
+  onHandleDown,
+  onHandleKey,
+  className,
+  iconClassName,
+}: {
+  dragging: boolean
+  onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onHandleKey: (dir: -1 | 1) => void
+  className: string
+  iconClassName: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <button
+      type="button"
+      aria-label={t('admin.tariffs.reorderHint')}
+      title={t('admin.tariffs.reorderHint')}
+      onPointerDown={onHandleDown}
+      // В плитке вся карточка открывает редактор: ручка не должна его открывать.
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        const dir =
+          e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : 0
+        if (dir) {
+          e.preventDefault()
+          e.stopPropagation()
+          onHandleKey(dir)
+        }
+      }}
+      className={cn(
+        'flex shrink-0 touch-none items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        dragging ? 'cursor-grabbing' : 'cursor-grab',
+        className,
+      )}
+    >
+      <GripVertical className={iconClassName} />
+    </button>
+  )
+}
+
+/** Цены в плитке: столбиком, без звёзд — они считаются от рублей. */
+function TilePrices({ prices, locale }: { prices: AdminTariffPrice[]; locale: string }) {
+  const { t } = useTranslation()
+  const shown = shownPrices(prices)
+  if (shown.length === 0) {
+    return <p className="mt-2 text-center text-[11px] text-muted-foreground">{t('admin.tariffs.noPrices')}</p>
+  }
+  return (
+    <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 px-0.5 tabular-nums">
+      {shown.map((price) => (
+        <Fragment key={price.months}>
+          <dt className="self-center whitespace-nowrap text-[10px] uppercase tracking-wide text-muted-foreground">
+            {t('admin.users.monthsShort', { count: price.months })}
+          </dt>
+          <dd className="truncate text-right text-[13px] font-semibold">{formatRub(price.amount_rub, locale)}</dd>
+        </Fragment>
+      ))}
+    </dl>
+  )
+}
+
+/**
+ * Плитка тарифа: две в ряд на телефоне. Только название, вкл/выкл, лимиты и цены;
+ * описание и удаление — в редакторе, он открывается нажатием на плитку.
+ */
+function TariffTile({
+  tariff,
+  onEdit,
+  locale,
+  position,
+  dragging,
+  onHandleDown,
+  onHandleKey,
+}: {
+  tariff: AdminTariff
+  onEdit: () => void
+  locale: string
+  position: number
+  dragging: boolean
+  onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
+  onHandleKey: (dir: -1 | 1) => void
+}) {
+  const { t } = useTranslation()
+  const update = useAdminTariffUpdate()
+
+  const squadCount = tariff.active_internal_squad_uuids
+    ? tariff.active_internal_squad_uuids.split(',').filter(Boolean).length
+    : 0
+  const title = tariff.name?.trim() || tariff.slug
+  const accent = tariffTierAccent(position)
+  const inactive = !tariff.is_active
+
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      title={t('admin.edit')}
+      onClick={onEdit}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onEdit()
+        }
+      }}
+      className={cn(
+        'cabinet-elevated-card relative flex h-full w-full min-w-0 cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        inactive && 'bg-muted/30',
+        dragging && 'border-primary/60 shadow-2xl shadow-black/40',
+      )}
+    >
+      <span aria-hidden className={cn('absolute inset-y-0 left-0 w-[3px]', accent.bar, inactive && 'opacity-30')} />
+
+      <div className="flex flex-1 flex-col p-2 pl-3">
+        <div className="flex min-w-0 items-center gap-1">
+          <GripHandle
+            dragging={dragging}
+            onHandleDown={onHandleDown}
+            onHandleKey={onHandleKey}
+            className={cn('-ml-1.5 h-7 w-5 hover:bg-muted', accent.iconColor, inactive && 'opacity-40')}
+            iconClassName="size-4"
+          />
+          <h3 className={cn('min-w-0 flex-1 truncate text-sm font-semibold', inactive && 'text-muted-foreground')}>
+            {title}
+          </h3>
+          <span className="flex shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <AdminToggleSwitch
+              size="sm"
+              checked={tariff.is_active}
+              onChange={(next) => update.mutate({ id: tariff.id, fields: { is_active: next } })}
+              busy={update.isPending}
+              aria-label={t('admin.tariffs.toggleActive')}
+            />
+          </span>
+        </div>
+        <p className="ml-[18px] truncate font-mono text-[10px] text-muted-foreground/70">
+          {tariff.slug} · #{tariff.sort_order}
+        </p>
+
+        {/* mt-auto: лимиты и цены соседних плиток стоят на одной высоте. */}
+        <div className={cn('mt-auto pt-2', inactive && 'opacity-55')}>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-border/40 bg-muted/20 px-1.5 py-1 text-xs font-semibold tabular-nums">
+            <span className="inline-flex items-center gap-[3px] whitespace-nowrap" title={t('admin.tariffs.devices')}>
+              <Smartphone className="size-3 text-muted-foreground" />
+              {tariff.device_limit}
+            </span>
+            <span className="inline-flex items-center gap-[3px] whitespace-nowrap" title={t('admin.tariffs.squadsShort')}>
+              <Server className="size-3 text-muted-foreground" />
+              {squadCount > 0 ? squadCount : '∞'}
+            </span>
+            <span className="inline-flex items-center gap-[3px] whitespace-nowrap" title={trafficTitle(tariff, t)}>
+              <TrafficIcon packs={tariff.traffic_packs ?? 0} className="size-3 text-muted-foreground" />
+              <TrafficValue tariff={tariff} withUnit={false} />
+            </span>
+          </div>
+          <TilePrices prices={tariff.prices} locale={locale} />
+        </div>
+      </div>
+    </Card>
   )
 }
 
@@ -150,26 +382,13 @@ function TariffCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-start gap-2.5">
-            <button
-              type="button"
-              aria-label={t('admin.tariffs.reorderHint')}
-              title={t('admin.tariffs.reorderHint')}
-              onPointerDown={onHandleDown}
-              onKeyDown={(e) => {
-                const dir =
-                  e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : 0
-                if (dir) {
-                  e.preventDefault()
-                  onHandleKey(dir)
-                }
-              }}
-              className={cn(
-                '-ml-2 flex h-9 w-6 shrink-0 touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                dragging ? 'cursor-grabbing' : 'cursor-grab',
-              )}
-            >
-              <GripVertical className="size-5" />
-            </button>
+            <GripHandle
+              dragging={dragging}
+              onHandleDown={onHandleDown}
+              onHandleKey={onHandleKey}
+              className="-ml-2 h-9 w-6 text-muted-foreground hover:bg-muted hover:text-foreground"
+              iconClassName="size-5"
+            />
             <div
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-lg',
@@ -273,17 +492,17 @@ function TariffCard({
         <div className="mt-auto space-y-2.5 pt-4">
           <div className="flex flex-wrap gap-1.5">
             <LimitChip
-              icon={Smartphone}
+              icon={<Smartphone className="size-3.5 shrink-0 text-muted-foreground" />}
               value={String(tariff.device_limit)}
               label={t('admin.tariffs.devices')}
             />
             <LimitChip
-              icon={Gauge}
-              value={formatTrafficLimit(tariff.traffic_limit_bytes, t('admin.users.subscription.gbUnit'))}
-              label={t('admin.tariffs.trafficShort')}
+              icon={<TrafficIcon packs={tariff.traffic_packs ?? 0} className="size-3.5 text-muted-foreground" />}
+              value={<TrafficValue tariff={tariff} withUnit />}
+              label={trafficTitle(tariff, t)}
             />
             <LimitChip
-              icon={Server}
+              icon={<Server className="size-3.5 shrink-0 text-muted-foreground" />}
               value={squadCount > 0 ? String(squadCount) : t('admin.tariffs.unlimited')}
               label={t('admin.tariffs.squadsShort')}
             />
@@ -318,6 +537,17 @@ export default function AdminTariffsPage() {
   // Где карточка стояла в прошлый раз (offset не зависит от transform): по разнице играем анимацию переезда.
   const prevPos = useRef(new Map<number, { top: number; left: number }>())
   const pointer = useRef({ x: 0, y: 0 })
+  // Когда отпустили перетаскиваемую плитку: «клик» после броска не должен открывать редактор.
+  const dragEndedAt = useRef(0)
+  const [view, setView] = useState<TariffsView>(readView)
+  const changeView = (next: TariffsView) => {
+    setView(next)
+    try {
+      localStorage.setItem(VIEW_KEY, next)
+    } catch {
+      // Хранилище недоступно (приватный режим) — вид просто не запомнится.
+    }
+  }
   // Смещение точки захвата относительно левого верхнего угла карточки.
   const grab = useRef({ x: 0, y: 0 })
 
@@ -420,6 +650,7 @@ export default function AdminTariffsPage() {
         el.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)'
         el.style.transform = ''
       }
+      dragEndedAt.current = performance.now()
       setDragId(null)
       void persist(listRef.current)
     }
@@ -537,14 +768,38 @@ export default function AdminTariffsPage() {
           subtitle={t('admin.tariffs.subtitle')}
           accent="emerald"
           actions={
-            <button
-              type="button"
-              onClick={openCreate}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="size-4" />
-              {t('admin.tariffs.create')}
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5">
+                {(['list', 'grid'] as const).map((v) => {
+                  const Icon = v === 'list' ? Rows2 : LayoutGrid
+                  const label = t(v === 'list' ? 'admin.tariffs.viewList' : 'admin.tariffs.viewGrid')
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={view === v}
+                      aria-label={label}
+                      title={label}
+                      onClick={() => changeView(v)}
+                      className={cn(
+                        'flex size-8 items-center justify-center rounded-md transition-colors',
+                        view === v ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <Icon className="size-4" />
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="size-4" />
+                {t('admin.tariffs.create')}
+              </button>
+            </div>
           }
         />
 
@@ -562,7 +817,11 @@ export default function AdminTariffsPage() {
           <>
           <div
             ref={gridRef}
-            className={cn('relative grid items-stretch gap-4 lg:grid-cols-2', dragId != null && 'select-none')}
+            className={cn(
+              'relative grid items-stretch',
+              view === 'grid' ? 'grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-4' : 'gap-4 lg:grid-cols-2',
+              dragId != null && 'select-none',
+            )}
           >
             {list.map((tariff, index) => (
               <div
@@ -573,15 +832,23 @@ export default function AdminTariffsPage() {
                 }}
                 className={cn('flex', dragId === tariff.id && 'relative z-20')}
               >
-                <TariffCard
-                  tariff={tariff}
-                  locale={locale}
-                  position={index}
-                  dragging={dragId === tariff.id}
-                  onHandleDown={(e) => startDrag(e, tariff.id)}
-                  onHandleKey={(dir) => moveByKey(tariff.id, dir)}
-                  onEdit={() => openEdit(tariff)}
-                />
+                {(() => {
+                  const Item = view === 'grid' ? TariffTile : TariffCard
+                  return (
+                    <Item
+                      tariff={tariff}
+                      locale={locale}
+                      position={index}
+                      dragging={dragId === tariff.id}
+                      onHandleDown={(e) => startDrag(e, tariff.id)}
+                      onHandleKey={(dir) => moveByKey(tariff.id, dir)}
+                      onEdit={() => {
+                        if (performance.now() - dragEndedAt.current < 400) return
+                        openEdit(tariff)
+                      }}
+                    />
+                  )
+                })()}
               </div>
             ))}
           </div>
