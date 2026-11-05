@@ -177,8 +177,12 @@ func (h *AdminUsersHandler) TrafficSplitRevoke(w http.ResponseWriter, r *http.Re
 		return
 	}
 	idx := strings.LastIndex(r.URL.Path, "/extras/")
+	if idx < 0 {
+		http.Error(w, "invalid extra id", http.StatusBadRequest)
+		return
+	}
 	extraID, err := strconv.ParseInt(strings.Trim(r.URL.Path[idx+len("/extras/"):], "/"), 10, 64)
-	if idx < 0 || err != nil {
+	if err != nil {
 		http.Error(w, "invalid extra id", http.StatusBadRequest)
 		return
 	}

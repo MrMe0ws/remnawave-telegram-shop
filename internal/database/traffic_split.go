@@ -289,7 +289,7 @@ func (r *TrafficSplitRepository) SaveSnapshot(ctx context.Context, customerID in
 			squad_uuids = EXCLUDED.squad_uuids,
 			node_uuids = EXCLUDED.node_uuids,
 			squad_removed = CASE WHEN EXCLUDED.limit_bytes > 0 THEN customer_bypass_state.squad_removed ELSE FALSE END,
-				checked_at = NULL,
+			checked_at = NULL,
 			updated_at = NOW()`,
 		customerID, tariffID, b.LimitBytes, b.SquadUUIDs, b.NodeUUIDs, TrafficPeriodStart(now))
 	return err
