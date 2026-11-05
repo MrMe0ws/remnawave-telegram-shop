@@ -55,7 +55,21 @@ export default function TrafficCheckoutPage() {
   const checkoutMethod = useCheckoutMethod()
   const { provider: selectedProvider } = checkoutMethod
   const stars = selectedProvider === 'telegram'
-  const amount = pack ? (stars && pack.amount_stars != null ? pack.amount_stars : pack.amount_rub) : 0
+  // Цена с учётом скидок (лояльность, промокод) считается на сервере тем же кодом, что и счёт: иначе здесь
+  // была бы цена без скидки, а к оплате выставлялась бы со скидкой.
+  const previewProvider = selectedProvider ?? 'yookassa'
+  const { data: preview, isError: previewError } = useQuery({
+    queryKey: ['trafficPackPreview', packId, previewProvider],
+    queryFn: () => api.trafficPackPreview(packId, previewProvider),
+    enabled: valid && !Number.isNaN(packId),
+    staleTime: 0,
+    retry: 1,
+  })
+  // Если пересчёт не удался, показываем цену из каталога (как и сказано в подсказке): спишется фактическая сумма со скидкой.
+  const catalogPrice = pack ? (stars && pack.amount_stars != null ? pack.amount_stars : pack.amount_rub) : 0
+  const priceReady = Boolean(preview) || previewError
+  const amount = preview?.amount_rub ?? (previewError ? catalogPrice : 0)
+  const hasDiscount = preview != null && preview.base_amount_rub > preview.amount_rub
   const amountSuffix = stars ? t('checkout.stars') : t('checkout.rub')
   const kindName = pack?.kind === 'bypass' ? bypassLabel(split?.label) : t('trafficSplit.tabMain')
   // Для звёзд у пакета может не быть цены (курс не задан): рубли с пометкой «⭐» были бы враньём.
@@ -121,13 +135,30 @@ export default function TrafficCheckoutPage() {
                     label={t('checkout.period')}
                     value={t('trafficSplit.packTerm', { date: formatDayMonth(split.reset_at, lang) })}
                   />
+                  {previewError && <p className="text-xs text-muted-foreground">{t('checkout.previewError')}</p>}
+                  {preview && hasDiscount && (preview.total_discount_pct ?? 0) > 0 && (
+                    <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
+                      <SummaryRow
+                        label={t('checkout.discountLabel')}
+                        value={t('checkout.discountValueWithAmount', {
+                          pct: preview.total_discount_pct,
+                          amount: formatNumber(preview.base_amount_rub - preview.amount_rub),
+                          unit: amountSuffix,
+                        })}
+                      />
+                    </div>
+                  )}
                   <div className="border-t border-border pt-2 mt-2">
                     <SummaryRow
                       label={t('checkout.total')}
                       value={
-                        <span className="text-lg font-bold">
-                          {formatNumber(amount)} {amountSuffix}
-                        </span>
+                        priceReady ? (
+                          <span className="text-lg font-bold">
+                            {formatNumber(amount)} {amountSuffix}
+                          </span>
+                        ) : (
+                          <Skeleton className="h-6 w-20" />
+                        )
                       }
                     />
                   </div>
@@ -170,8 +201,8 @@ export default function TrafficCheckoutPage() {
 
         {valid && (
           <CheckoutPayButton
-            label={`${t('checkout.pay')} ${formatNumber(amount)} ${amountSuffix}`}
-            disabled={!selectedProvider || loading || starsMissing}
+            label={`${t('checkout.pay')}${priceReady ? ` ${formatNumber(amount)} ${amountSuffix}` : ''}`}
+            disabled={!selectedProvider || loading || starsMissing || !priceReady}
             loading={loading}
             onPay={handlePay}
           />

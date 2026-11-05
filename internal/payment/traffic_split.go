@@ -259,31 +259,44 @@ var ErrTrafficPackUnavailable = fmt.Errorf("traffic pack is not available")
 
 // CreateTrafficPackPurchase создаёт счёт на пакет трафика. Цена берётся из пакета тарифа клиента,
 // а не из запроса: клиент передаёт только id пакета.
-func (s PaymentService) CreateTrafficPackPurchase(ctx context.Context, packID int64, customer *database.Customer, invoiceType database.InvoiceType, meta func(base int) (amount float64, pm *PromoMeta)) (url string, purchaseId int64, err error) {
+// TrafficPackQuote возвращает пакет клиента и его цену (рубли или звёзды для Telegram) с теми же проверками,
+// что при создании счёта: пакет включён, принадлежит текущему тарифу, подписка активна, пакет применим.
+// Скидки сюда не входят: их считает вызывающий (кабинет, бот).
+func (s PaymentService) TrafficPackQuote(ctx context.Context, packID int64, customer *database.Customer, invoiceType database.InvoiceType) (*database.TrafficPack, int, error) {
 	if s.traffic == nil || !config.TrafficPacksEnabled() || customer == nil {
-		return "", 0, ErrTrafficPackUnavailable
+		return nil, 0, ErrTrafficPackUnavailable
 	}
 	pack, err := s.traffic.repo.GetPack(ctx, packID)
 	if err != nil {
-		return "", 0, err
+		return nil, 0, err
 	}
 	if pack == nil || !pack.IsActive || customer.CurrentTariffID == nil || *customer.CurrentTariffID != pack.TariffID {
-		return "", 0, ErrTrafficPackUnavailable
+		return nil, 0, ErrTrafficPackUnavailable
 	}
 	if customer.ExpireAt == nil || !customer.ExpireAt.After(time.Now()) {
-		return "", 0, ErrTrafficPackUnavailable
+		return nil, 0, ErrTrafficPackUnavailable
 	}
 	if pack.AmountRub <= 0 {
-		return "", 0, ErrTrafficPackUnavailable
+		return nil, 0, ErrTrafficPackUnavailable
 	}
 	if err := s.trafficPackApplicable(ctx, customer, pack.Kind); err != nil {
-		return "", 0, ErrTrafficPackUnavailable
+		return nil, 0, ErrTrafficPackUnavailable
 	}
 	base := pack.AmountRub
 	if invoiceType == database.InvoiceTypeTelegram {
 		if base = TrafficPackStars(pack.AmountRub, pack.AmountStars); base <= 0 {
-			return "", 0, ErrTrafficPackUnavailable
+			return nil, 0, ErrTrafficPackUnavailable
 		}
+	}
+	return pack, base, nil
+}
+
+// CreateTrafficPackPurchase создаёт счёт на пакет трафика. Цена берётся из пакета тарифа клиента,
+// а не из запроса: клиент передаёт только id пакета.
+func (s PaymentService) CreateTrafficPackPurchase(ctx context.Context, packID int64, customer *database.Customer, invoiceType database.InvoiceType, meta func(base int) (amount float64, pm *PromoMeta)) (url string, purchaseId int64, err error) {
+	pack, base, err := s.TrafficPackQuote(ctx, packID, customer, invoiceType)
+	if err != nil {
+		return "", 0, err
 	}
 	amount, pm := float64(base), (*PromoMeta)(nil)
 	if meta != nil {

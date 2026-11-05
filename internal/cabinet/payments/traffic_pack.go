@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
+	"remnawave-tg-shop-bot/internal/config"
+	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/loyalty"
 	"remnawave-tg-shop-bot/internal/payment"
 )
 
@@ -90,4 +93,62 @@ func (s *CheckoutService) CreateTrafficPack(ctx context.Context, accountID int64
 		slog.Error("payments: traffic pack attach purchase failed", "checkout_id", checkout.ID, "purchase_id", purchaseID, "error", err)
 	}
 	return &CreateResult{CheckoutID: checkout.ID, Provider: provider, Status: repository.CheckoutStatusPending, PaymentURL: paymentURL}, nil
+}
+
+// TrafficPackPreviewResult — цена пакета с учётом скидок: то, что клиент увидит на странице оплаты и заплатит.
+type TrafficPackPreviewResult struct {
+	PackID             int64  `json:"pack_id"`
+	Bytes              int64  `json:"bytes"`
+	Kind               string `json:"kind"`
+	AmountRub          int    `json:"amount_rub"`
+	BaseAmountRub      int    `json:"base_amount_rub"`
+	Currency           string `json:"currency"`
+	LoyaltyDiscountPct int    `json:"loyalty_discount_pct,omitempty"`
+	PromoDiscountPct   int    `json:"promo_discount_pct,omitempty"`
+	TotalDiscountPct   int    `json:"total_discount_pct,omitempty"`
+}
+
+// PreviewTrafficPack считает цену пакета с теми же скидками (лояльность, промокод), что и счёт: иначе на странице
+// оплаты была бы цена без скидки, а счёт выставлялся бы со скидкой. Для Telegram цена в звёздах.
+func (s *CheckoutService) PreviewTrafficPack(ctx context.Context, accountID, packID int64, provider string) (*TrafficPackPreviewResult, error) {
+	if packID <= 0 {
+		return nil, fmt.Errorf("%w: bad pack_id", ErrInvalidInput)
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if provider == "" {
+		provider = repository.CheckoutProviderYookassa
+	}
+	invoiceType, err := mapProviderToInvoiceType(provider)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureProviderEnabled(provider); err != nil {
+		return nil, err
+	}
+	link, err := s.bootstrap.EnsureForAccount(ctx, accountID, "")
+	if err != nil {
+		return nil, fmt.Errorf("payments: bootstrap customer: %w", err)
+	}
+	customer, err := s.customers.FindById(ctx, link.CustomerID)
+	if err != nil || customer == nil {
+		return nil, fmt.Errorf("payments: load customer: %w", err)
+	}
+	pack, base, err := s.payments.TrafficPackQuote(ctx, packID, customer, invoiceType)
+	if err != nil {
+		if errors.Is(err, payment.ErrTrafficPackUnavailable) {
+			return nil, fmt.Errorf("%w: traffic pack unavailable", ErrInvalidInput)
+		}
+		return nil, err
+	}
+	final, loyPct, proPct, _ := s.applyCheckoutDiscounts(ctx, customer, invoiceType, base)
+	out := &TrafficPackPreviewResult{
+		PackID: pack.ID, Bytes: pack.Bytes, Kind: pack.Kind,
+		AmountRub: final, BaseAmountRub: base, Currency: "RUB",
+		LoyaltyDiscountPct: loyPct, PromoDiscountPct: proPct,
+		TotalDiscountPct: loyalty.CombinedDiscountPercent(loyPct, proPct, config.LoyaltyMaxTotalDiscountPercent()),
+	}
+	if invoiceType == database.InvoiceTypeTelegram {
+		out.Currency = "STARS"
+	}
+	return out, nil
 }

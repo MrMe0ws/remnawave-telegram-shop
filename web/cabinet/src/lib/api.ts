@@ -632,6 +632,19 @@ export interface HwidExtraPreviewResponse {
   total_discount_pct?: number
 }
 
+/** Цена пакета трафика с учётом скидок (лояльность, промокод). */
+export interface TrafficPackPreviewResponse {
+  pack_id: number
+  bytes: number
+  kind: 'main' | 'bypass'
+  amount_rub: number
+  base_amount_rub: number
+  currency: string
+  loyalty_discount_pct?: number
+  promo_discount_pct?: number
+  total_discount_pct?: number
+}
+
 export interface DeviceInfo {
   hwid: string
   platform?: string
@@ -1474,6 +1487,13 @@ export const api = {
     request<TrafficUsageResponse>('GET', '/me/traffic-usage'),
 
   myTraffic: () => request<MyTrafficResponse>('GET', '/me/traffic'),
+
+  trafficPackPreview: (packId: number, provider?: string) => {
+    const q = new URLSearchParams()
+    q.set('pack_id', String(packId))
+    if (provider) q.set('provider', provider)
+    return request<TrafficPackPreviewResponse>('GET', `/payments/traffic/preview?${q.toString()}`)
+  },
 
   trafficPackCheckout: (packId: number, provider: string, idempotencyKey: string, yookassaMethod?: string) =>
     request<CheckoutResponse>(

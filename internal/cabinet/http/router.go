@@ -1303,6 +1303,16 @@ func registerAPIRoutes(
 				),
 			}),
 		)
+		api.Handle("/cabinet/api/payments/traffic/preview",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(pay.TrafficPreview),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+				),
+			}),
+		)
 		api.Handle("/cabinet/api/payments/hwid/preview",
 			methodRouter(map[string]http.Handler{
 				http.MethodGet: middleware.Chain(

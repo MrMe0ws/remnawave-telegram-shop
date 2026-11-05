@@ -178,6 +178,31 @@ type trafficCheckoutReq struct {
 	YookassaMethod string `json:"yookassa_method,omitempty"`
 }
 
+// TrafficPreview — GET /cabinet/api/payments/traffic/preview?pack_id=&provider=: цена пакета с учётом скидок.
+func (h *PaymentsHandler) TrafficPreview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := middleware.AuthClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	packID, err := strconv.ParseInt(strings.TrimSpace(r.URL.Query().Get("pack_id")), 10, 64)
+	if err != nil || packID <= 0 {
+		http.Error(w, "bad pack_id", http.StatusBadRequest)
+		return
+	}
+	result, err := h.svc.PreviewTrafficPack(r.Context(), claims.AccountID, packID, strings.TrimSpace(r.URL.Query().Get("provider")))
+	if err != nil {
+		writePaymentsErr(w, err, "traffic_preview")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, result)
+}
+
 // TrafficCheckout — POST /cabinet/api/payments/traffic/checkout.
 func (h *PaymentsHandler) TrafficCheckout(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.AuthClaims(r)
