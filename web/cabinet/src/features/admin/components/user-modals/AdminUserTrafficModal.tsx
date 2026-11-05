@@ -17,6 +17,7 @@ import {
   type AdminUserPanelResponse,
 } from '../../hooks/useAdminUsers'
 import { trafficStrategyLabel } from './strategyLabels'
+import { AdminUserTrafficSplit } from './AdminUserTrafficSplit'
 
 const GB = 1024 * 1024 * 1024
 
@@ -252,6 +253,8 @@ export function AdminUserTrafficModal({
               </span>
             </div>
           </div>
+
+          <AdminUserTrafficSplit userId={userId} />
 
           <div>
             <p className="mb-2 text-sm font-medium">{t('admin.users.subscription.strategy')}</p>

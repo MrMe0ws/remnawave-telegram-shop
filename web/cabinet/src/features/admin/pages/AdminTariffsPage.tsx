@@ -287,12 +287,14 @@ export default function AdminTariffsPage() {
 
   const openCreate = () => { setEditingTariff(null); setEditorOpen(true) }
   const openEdit = (tariff: AdminTariff) => { setEditingTariff(tariff); setEditorOpen(true) }
+  const [extraSaving, setExtraSaving] = useState(false)
   const closeEditor = () => { setEditorOpen(false); setEditingTariff(null) }
 
   const handleSave = (
     data: CreateTariffInput | Record<string, unknown>,
     isEdit: boolean,
     applySquads?: { add: string[]; remove: string[] } | null,
+    after?: () => Promise<unknown>,
   ) => {
     const savedMsg = t('admin.feedback.saved')
     if (isEdit && editingTariff) {
@@ -301,20 +303,32 @@ export default function AdminTariffsPage() {
         { id: tariffId, fields: data as Record<string, unknown> },
         {
           onSuccess: () => {
-            showSuccess(savedMsg)
-            closeEditor()
-            // Применяем только после успешного сохранения: иначе в панель уехал
-            // бы состав, которого в тарифе нет.
-            if (applySquads && (applySquads.add.length > 0 || applySquads.remove.length > 0)) {
-              applySquadsMutation.mutate(
-                { id: tariffId, add: applySquads.add, remove: applySquads.remove },
-                {
-                  onSuccess: (run) =>
-                    showSuccess(t('admin.tariffs.squadsApply.started', { count: run.total })),
-                  onError: showError,
-                },
-              )
+            const finish = () => {
+              showSuccess(savedMsg)
+              closeEditor()
+              // Применяем только после успешного сохранения: иначе в панель уехал
+              // бы состав, которого в тарифе нет.
+              if (applySquads && (applySquads.add.length > 0 || applySquads.remove.length > 0)) {
+                applySquadsMutation.mutate(
+                  { id: tariffId, add: applySquads.add, remove: applySquads.remove },
+                  {
+                    onSuccess: (run) =>
+                      showSuccess(t('admin.tariffs.squadsApply.started', { count: run.total })),
+                    onError: showError,
+                  },
+                )
+              }
             }
+            if (!after) {
+              finish()
+              return
+            }
+            // Вкладка «Трафик» сохраняется следом; её ошибку показывает сама вкладка, окно остаётся открытым.
+            setExtraSaving(true)
+            after()
+              .then(finish)
+              .catch(() => {})
+              .finally(() => setExtraSaving(false))
           },
           onError: showError,
         },
@@ -384,7 +398,7 @@ export default function AdminTariffsPage() {
         onClose={closeEditor}
         tariff={editingTariff}
         onSave={handleSave}
-        saving={create.isPending || update.isPending}
+        saving={create.isPending || update.isPending || extraSaving}
       />
     </AdminLayout>
   )

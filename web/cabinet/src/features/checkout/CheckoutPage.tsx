@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError, type TariffItem } from '@/lib/api'
 import { newIdempotencyKey } from '@/lib/utils'
 import { reservePaymentWindow } from '@/lib/payment-window'
+import { bypassLabel } from '@/lib/bypassLabel'
 import { formatNumber } from '@/lib/format'
 import { AdminToggleSwitch } from '@/features/admin/components/AdminToggleSwitch'
 import { CheckoutPayButton, PROVIDER_ORDER, SummaryRow, type Provider } from '@/features/checkout/checkoutShared'
@@ -211,6 +212,18 @@ export default function CheckoutPage() {
                     }
                   />
                 )}
+                {/* Трафик: безлимит или лимит; при отдельном лимите обхода — второй показатель. */}
+                <SummaryRow
+                  label={t('checkout.traffic')}
+                  value={[
+                    tariff.traffic_gb != null && tariff.traffic_gb > 0
+                      ? `${formatNumber(tariff.traffic_gb)} ${t('dashboard.gigabytes')}`
+                      : t('checkout.trafficUnlimited'),
+                    tariff.bypass_gb != null ? `${bypassLabel(tariff.bypass_label)} ${formatNumber(tariff.bypass_gb)} ${t('dashboard.gigabytes')}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                />
                 {shouldAskExtraRenew && (
                   <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
                     <div className="min-w-0 flex-1">

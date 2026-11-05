@@ -200,6 +200,8 @@ export function purchaseKindLabel(
       return t('payments.kindUpgrade')
     case 'extra_hwid':
       return extra > 0 ? t('payments.kindExtraHwidSlots', { n: extra }) : t('payments.kindExtraHwid')
+    case 'extra_traffic':
+      return t('payments.kindExtraTraffic')
     case 'subscription_with_hwid':
       return t('payments.kindSubscriptionWithHwid', { months: p.month, n: extra })
     default:

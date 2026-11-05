@@ -25,6 +25,8 @@ import { surface } from './Surface'
 import { AdminModal } from './AdminModal'
 import { AdminConfirmModal } from './AdminConfirmModal'
 import { TariffDescriptionEditor } from './TariffDescriptionEditor'
+import { AdminTariffTrafficSplit } from './AdminTariffTrafficSplit'
+import { LockedHint } from './LockedHint'
 import { slugifyTariffName } from '../utils/slugifyTariffName'
 import { AdminCheckbox, AdminCheckboxField } from './AdminCheckbox'
 import {
@@ -341,6 +343,8 @@ interface Props {
     isEdit: boolean,
     /** Дифф состава сквадов, который надо применить к действующим подписчикам. */
     applySquads?: { add: string[]; remove: string[] } | null,
+    /** Сохранение вкладки «Трафик»: вызывается после успешного сохранения тарифа (обходу нужен уже сохранённый безлимит). */
+    after?: () => Promise<unknown>,
   ) => void
   saving?: boolean
 }
@@ -381,6 +385,13 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
   }, [open, tariff?.id])
 
   const isDirty = JSON.stringify(form) !== initialSnapshot.current
+  // Несохранённые правки вкладки «Трафик» (она сохраняется своей кнопкой) тоже считаются: закрытие окна и смена вкладки их не теряют.
+  const [trafficDirty, setTrafficDirty] = useState(false)
+  // Включён отдельный лимит обхода: обычные серверы тогда безлимитны, и поле лимита закрыто.
+  const [bypassOn, setBypassOn] = useState(false)
+  const trafficSaveRef = useRef<(() => Promise<unknown>) | null>(null)
+  const [trafficValid, setTrafficValid] = useState(true)
+  const anyDirty = isDirty || trafficDirty
 
   const set = <K extends keyof TariffFormData>(k: K, v: TariffFormData[K]) =>
     setForm((p) => ({ ...p, [k]: v }))
@@ -434,7 +445,20 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
 
   const submit = (applySquads: { add: string[]; remove: string[] } | null) => {
     if (isEdit) {
-      onSave(formToUpdateFields(form), true, applySquads)
+      // Одна кнопка «Сохранить» на весь тариф: сначала поля тарифа, потом вкладка «Трафик». Порядок важен:
+      // отдельный лимит обхода сервер принимает только у тарифа, где безлимит уже сохранён.
+      const saveTraffic = trafficSaveRef.current
+      const after = saveTraffic
+        ? async () => {
+            try {
+              await saveTraffic()
+            } catch (e) {
+              setActiveTab('traffic')
+              throw e
+            }
+          }
+        : undefined
+      onSave(formToUpdateFields(form), true, applySquads, after)
     } else {
       onSave(formToCreateInput(form), false)
     }
@@ -452,7 +476,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
   }
 
   const handleRequestClose = () => {
-    if (isDirty) {
+    if (anyDirty) {
       setConfirmCloseOpen(true)
       return
     }
@@ -473,7 +497,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
         iconAccent="emerald"
         footer={
           <div className="flex items-center justify-end gap-2">
-            {isDirty && (
+            {anyDirty && (
               <span className="mr-auto hidden text-xs text-muted-foreground sm:inline">
                 {t('admin.tariffs.unsavedIndicator')}
               </span>
@@ -490,7 +514,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
             <button
               type="button"
               onClick={handleSave}
-              disabled={saving || hasErrors}
+              disabled={saving || hasErrors || !trafficValid}
               className={cn(
                 'inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50',
                 saving && '!opacity-100',
@@ -559,7 +583,18 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
           )}
 
           {activeTab === 'traffic' && (
-            <section className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
+            <section className="rounded-xl border border-border/70 bg-card/40">
+              <header className="flex items-center gap-2.5 border-b border-border/60 px-3.5 py-3">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <Gauge className="size-4" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold leading-tight">{t('admin.tariffs.trafficSplit.regularTitle')}</p>
+                  <p className="text-xs text-muted-foreground">{t('admin.tariffs.trafficSplit.regularSub')}</p>
+                </div>
+              </header>
+              <div className="grid gap-4 p-3.5 sm:grid-cols-2">
               <div>
                 <TariffFieldLabel icon={Smartphone}>{t('admin.tariffs.devices')}</TariffFieldLabel>
                 <input
@@ -576,13 +611,14 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   renderLabel={(v) => String(v)}
                 />
               </div>
-              <div>
+              <LockedHint locked={bypassOn} message={t('admin.tariffs.trafficSplit.lockedByBypass')}>
                 <TariffFieldLabel icon={HardDrive}>{t('admin.tariffs.traffic')}</TariffFieldLabel>
                 <input
                   type="number"
                   min={0}
                   step={0.1}
-                  className="admin-input w-full px-3 py-2"
+                  disabled={bypassOn}
+                  className="admin-input w-full px-3 py-2 disabled:opacity-60"
                   value={form.traffic_gb}
                   onChange={(e) => set('traffic_gb', Number(e.target.value))}
                 />
@@ -597,7 +633,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                     {t('admin.tariffs.trafficUnlimitedHint')}
                   </p>
                 )}
-              </div>
+              </LockedHint>
               <div className="sm:col-span-2">
                 <TariffFieldLabel icon={RotateCcw}>{t('admin.tariffs.strategy')}</TariffFieldLabel>
                 <select
@@ -612,7 +648,32 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   ))}
                 </select>
               </div>
+              </div>
             </section>
+            {!(isEdit && tariff) && (
+              <p className="rounded-lg border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                {t('admin.tariffs.trafficSplit.saveFirst')}
+              </p>
+            )}
+            </div>
+          )}
+          {/* Не размонтируется при смене вкладки: иначе несохранённые правки обхода и пакетов пропадали бы. */}
+          {isEdit && tariff && (
+            <div className={activeTab === 'traffic' ? 'mt-4' : 'hidden'}>
+              <AdminTariffTrafficSplit
+                tariffId={tariff.id}
+                tariffSquads={form.squad_uuids}
+                formLimitGb={form.traffic_gb}
+                onMakeUnlimited={() => set('traffic_gb', 0)}
+                onDirtyChange={setTrafficDirty}
+                saveRef={trafficSaveRef}
+                onValidChange={setTrafficValid}
+                onBypassChange={(on) => {
+                  setBypassOn(on)
+                  if (on) set('traffic_gb', 0)
+                }}
+              />
+            </div>
           )}
 
           {activeTab === 'servers' && hasSquads && squadsData && (
@@ -698,9 +759,9 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                     return (
                       <div
                         key={m}
-                        className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(6rem,1fr)_1fr_1fr] sm:items-start"
+                        className="grid grid-cols-2 gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(6rem,1fr)_1fr_1fr] sm:items-start sm:gap-3"
                       >
-                        <div className="flex items-center gap-2 sm:block">
+                        <div className="col-span-2 flex items-center gap-2 sm:col-span-1 sm:block">
                           <span className="text-sm font-medium">
                             {t('admin.users.monthsShort', { count: m })}
                           </span>

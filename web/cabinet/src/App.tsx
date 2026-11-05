@@ -54,6 +54,7 @@ const RedesignPreviewPage = lazy(() => import('@/features/dev/RedesignPreviewPag
 const TariffsPage = lazy(() => import('@/features/tariffs/TariffsPage'))
 const CheckoutPage = lazy(() => import('@/features/checkout/CheckoutPage'))
 const DeviceSlotsCheckoutPage = lazy(() => import('@/features/checkout/DeviceSlotsCheckoutPage'))
+const TrafficCheckoutPage = lazy(() => import('@/features/checkout/TrafficCheckoutPage'))
 const PaymentStatusPage = lazy(() => import('@/features/checkout/PaymentStatusPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
 const LinkEmailPage = lazy(() => import('@/features/settings/LinkEmailPage'))
@@ -237,6 +238,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requireVerified>
             <DeviceSlotsCheckoutPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/checkout/traffic"
+        element={
+          <ProtectedRoute requireVerified>
+            <TrafficCheckoutPage />
           </ProtectedRoute>
         }
       />

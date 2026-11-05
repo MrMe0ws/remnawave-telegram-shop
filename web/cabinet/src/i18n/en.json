@@ -379,7 +379,8 @@
         "partner": "Partners",
         "devices": "Devices",
         "loyalty": "Loyalty",
-        "torrent": "Restriction"
+        "torrent": "Restriction",
+        "traffic": "Traffic"
       },
       "showMore": "Show more",
       "showLess": "Show less"
@@ -526,7 +527,8 @@
       "kindExtraHwid": "Extra devices",
       "kindExtraHwidSlots": "Extra devices (+{{n}})",
       "kindSubscriptionWithHwid": "Subscription + extra devices ({{months}} mo., +{{n}})",
-      "methodPlatega": "Platega"
+      "methodPlatega": "Platega",
+      "kindExtraTraffic": "Traffic top-up"
     },
     "support": {
       "title": "Support",
@@ -1120,7 +1122,9 @@
       "extraHwidRenewToggleHint": "{{slots}} · +{{amount}} {{unit}}",
       "extraHwidRenewLabel": "Extra devices",
       "extraHwidRenewValue": "+{{n}}",
-      "plategaAll": "All methods"
+      "plategaAll": "All methods",
+      "traffic": "Traffic",
+      "trafficUnlimited": "Unlimited"
     },
     "paymentStatus": {
       "title": "Payment",
@@ -1903,7 +1907,27 @@
         "extendQuickYear": "+1 year",
         "extendPickDateShort": "Or pick a date",
         "changeTariff": "Change plan",
-        "referralsInvited": "Invited"
+        "referralsInvited": "Invited",
+        "trafficSplit": {
+          "title": "Split traffic: “{{label}}” and packs",
+          "bypassUsed": "“{{label}}” usage this month",
+          "squadRemoved": "Squad removed (limit reached)",
+          "squadActive": "Squad active",
+          "plan": "plan {{base}} GB + packs {{extra}} GB",
+          "checked": "checked",
+          "noBypass": "The client has no separate bypass limit: it is taken from the tariff on purchase or renewal of a tariff with bypass.",
+          "nodes": "Usage per node this month",
+          "extras": "Active packs",
+          "noExtras": "No packs",
+          "paid": "purchased",
+          "granted": "granted by admin",
+          "revoke": "Remove pack",
+          "revokeTitle": "Remove the traffic pack?",
+          "revokeBody": "The client's limit drops immediately. Money for a purchased pack is not refunded automatically.",
+          "grantTitle": "Grant a pack for free",
+          "grant": "Grant",
+          "grantHint": "Valid until the 1st of next month, like a purchased one. The bypass squad returns right away if the limit is no longer used up."
+        }
       },
       "payments": {
         "title": "Payments",
@@ -1942,7 +1966,8 @@
         "kind": {
           "subscription": "Subscription",
           "tariffUpgrade": "Tariff upgrade",
-          "extraHwid": "Extra devices"
+          "extraHwid": "Extra devices",
+          "extraTraffic": "Traffic top-up"
         }
       },
       "partners": {
@@ -2292,7 +2317,66 @@
         },
         "squadsUnknownDrop": "Drop them",
         "squadsUnknown_one": "{{count}} server from this tariff is missing in the panel — not shown in the list",
-        "squadsUnknown_other": "{{count}} servers from this tariff are missing in the panel — not shown in the list"
+        "squadsUnknown_other": "{{count}} servers from this tariff are missing in the panel — not shown in the list",
+        "trafficSplit": {
+          "title": "Separate traffic: “{{label}}” and top-up packs",
+          "futureOnly": "Saved with its own button and applies only to future purchases and renewals of this tariff. People already on the tariff keep what they got at their last payment.",
+          "masterOff": "The “Split traffic” master switch in bot settings is off — the bypass limit is not applied yet.",
+          "enable": "Separate “{{label}}” traffic limit",
+          "enableHint": "Its own limit for bypass servers; regular servers are still counted by the panel.",
+          "limit": "“{{label}}” limit per month",
+          "limitHint": "Counted by calendar months: resets on the 1st. When used up, the squad is removed until the 1st or until a top-up.",
+          "squads": "Squad",
+          "squadsHint": "This squad is removed from the client when the limit is used up and returns on the 1st or after a top-up. Pick from the tariff squads.",
+          "nodes": "“{{label}}” nodes",
+          "nodesError": "Could not load the node list from the panel.",
+          "trackingOn": "tracking on",
+          "trackingOff": "tracking off",
+          "trackingWarn": "Nodes ({{nodes}}) have “Traffic tracking” off in the panel (node → Accounting & billing): their traffic will not count, so usage is understated.",
+          "packs": "Top-up packs",
+          "priceRub": "Price, ₽",
+          "priceStars": "Stars",
+          "on": "On",
+          "addPack": "Add pack",
+          "packsHint": "Packs are valid until the 1st and are not renewed with the subscription. Make bigger packs cheaper per GB — they sell more. A kind without a limit needs no packs: clients will not see them.",
+          "save": "Save bypass and packs",
+          "saved": "Saved",
+          "saveError": "Could not save",
+          "loadError": "Could not load bypass settings",
+          "saveFirst": "The bypass limit and top-up packs can be set after the tariff is saved for the first time.",
+          "rubPerGb": "₽ per GB",
+          "regularTitle": "Regular servers",
+          "regularSub": "Tariff limit and devices",
+          "bypassTitle": "{{label}} — separate limit",
+          "bypassSub": "Its own limit for bypass servers; counted by the bot per node",
+          "limitPerMonth": "Monthly limit",
+          "limitHint2": "Calendar month, resets on the 1st",
+          "squadsHint2": "Removed when the limit is used up, returns on the 1st or after a top-up",
+          "nodesTitle": "Nodes — usage is counted from these",
+          "trackingWarn2": "Nodes ({{nodes}}) have “Traffic tracking” off in the panel: their traffic will not count.",
+          "packsSub": "Valid until the 1st; make bigger packs cheaper per GB",
+          "addPackShort": "pack",
+          "packsHint2": "Stars: empty — calculated from rubles by the rate automatically; a manual value is kept. A kind without a limit needs no packs: clients will not see them.",
+          "starsAutoHint": "Empty — Stars are calculated from rubles by the rate (the field shows the calculated value). A value you type is kept as is.",
+          "nodesPickSquad": "Pick a squad — its nodes will be shown here.",
+          "nodesEmpty": "The selected squad has no nodes in the panel.",
+          "footNote": "Bypass and pack settings are saved separately and apply only to future purchases and renewals.",
+          "lockedLimited": "A separate bypass limit is unavailable: this tariff has a regular-server limit ({{gb}} GB). The panel keeps one shared limit per client, so bypass can only be enabled with unlimited regular servers.",
+          "lockedGlobal": "The regular-server limit comes from the global TRAFFIC_LIMIT setting, not from the tariff. A separate bypass limit needs unlimited regular servers: remove the global limit in the bot settings.",
+          "makeUnlimited": "Make regular servers unlimited",
+          "needFields": "Set the limit, a squad and at least one node for bypass: the tariff cannot be saved until they are filled.",
+          "colSize": "Size",
+          "colRub": "Price",
+          "colStars": "Price in Stars",
+          "packActive": "On sale",
+          "lockedByBypass": "The regular-server limit is unavailable: a separate bypass limit is on, and regular servers are unlimited. Turn bypass off to set a regular-server limit.",
+          "saveTariffFirst": "The saved tariff still has a regular-server limit. Save the tariff with unlimited first (button at the bottom of the window), then save this tab.",
+          "packsUnlimited": "Regular servers are unlimited — nothing to top up. Packs appear when a regular-server limit is set or a separate bypass limit is enabled.",
+          "bypassPacksDropped": "The separate {{label}} limit is off: its packs will be deleted on save.",
+          "packSize": "Pack size, GB",
+          "packPriceRub": "Price, RUB",
+          "packPriceStars": "Price in Stars"
+        }
       },
       "loyalty": {
         "title": "Loyalty",
@@ -2654,7 +2738,8 @@
           "cabinet_connect": "Connection and Telegram",
           "tariffs": "Price display",
           "notifications": "Browser push",
-          "status": "Status page"
+          "status": "Status page",
+          "traffic": "Traffic: bypass and top-up"
         },
         "groupIntros": {
           "notifications": "This doesn't turn cabinet notifications on or off: they always appear under the bell for everyone. These toggles decide what is also sent as a system notification to the browser or phone of those who tapped \"Turn on\" in the notification feed. People who didn't subscribe get nothing."
@@ -3266,6 +3351,26 @@
           "PLATEGA_PAYMENT_METHODS": {
             "label": "Platega buttons",
             "hint": ""
+          },
+          "TRAFFIC_SPLIT_ENABLED": {
+            "label": "Split traffic (bypass) and top-up",
+            "hint": "Off — the worker does not run and the bypass limit is not applied. Turn on once a tariff has bypass nodes set."
+          },
+          "TRAFFIC_PACKS_ENABLED": {
+            "label": "Sell traffic top-ups",
+            "hint": "Off — “Buy” buttons are hidden."
+          },
+          "TRAFFIC_BYPASS_LABEL": {
+            "label": "Bypass name shown to clients",
+            "hint": "Used in the cabinet, bot and notifications. Payment providers dislike words like “bypass” — pick another name if needed."
+          },
+          "TRAFFIC_ALERT_PERCENT": {
+            "label": "Warning threshold, %",
+            "hint": "The second notification fires at 100%. Each is sent once a month."
+          },
+          "TRAFFIC_POLL_MINUTES": {
+            "label": "How often to check usage, min",
+            "hint": "Lower — a more exact limit, but more load on the panel."
           }
         },
         "plategaMethods": {
@@ -3714,6 +3819,46 @@
       "openExternal": "Open status",
       "title": "Server status",
       "description": "See which servers are up right now"
+    },
+    "trafficSplit": {
+      "bypassFallback": "Bypass",
+      "tabMain": "Regular",
+      "buy": "Buy traffic",
+      "buyTitle": "Buy traffic",
+      "buySubtitle": "until {{date}}",
+      "nowUsed": "Now: {{used}} of {{limit}} {{unit}}",
+      "nowBlocked": "“{{label}}” is off",
+      "popular": "Popular",
+      "perGb": "{{price}} ₽ per GB",
+      "buyCta": "Buy {{size}} · {{price}}",
+      "packNote": "Valid until {{date}}, then it expires — your plan limit returns.",
+      "stripBlocked": "“{{label}}” limit reached. “{{label}}” servers are off until {{date}}; regular servers still work.",
+      "chipBlocked": "Limit reached",
+      "exhausted": "Used up",
+      "almost": "Almost used up",
+      "blockedNote": "“{{label}}” servers are off until {{date}}",
+      "left": "{{left}} GB left · resets {{date}}",
+      "planPlusExtra": "Plan {{base}} GB + purchased",
+      "until": "until {{date}}",
+      "scenario": "Traffic pack",
+      "packLabel": "Pack",
+      "packTerm": "until {{date}}, then plan limit",
+      "backHome": "Back to home",
+      "mainTitle": "Regular servers",
+      "unlimitedTag": "Unlimited",
+      "forMonth": "in {{month}}",
+      "ofLimit": "of {{limit}} {{unit}}",
+      "buyMore": "Buy more",
+      "buyBypassDefault": "Buy bypass traffic",
+      "buyBypass": "Buy “{{label}}” traffic",
+      "bannerTitle": "“{{label}}” servers are off.",
+      "bannerBody": "Regular servers work. They return {{date}} or right after a top-up.",
+      "legendMain": "Regular",
+      "successHint": "Servers return in the app within 5 minutes — refresh your subscription.",
+      "successTitle": "+{{size}} · {{label}}",
+      "done": "Done",
+      "buyShort": "Buy",
+      "noStars": "This pack has no price in Stars — choose another payment method."
     }
   }
 }

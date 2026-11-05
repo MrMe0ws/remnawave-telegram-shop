@@ -92,6 +92,70 @@ export type TrafficUsageResponse = {
   /** Байты по дням. */
   points: number[]
   total_bytes: number
+  /** Часть расхода по дням, ушедшая на серверы обхода (та же длина, что `points`). Только при отдельном лимите обхода. */
+  bypass_points?: number[]
+}
+
+/** Раздельный трафик: сводка по обычным серверам и обходу, пакеты докупки. */
+export type TrafficKindInfo = {
+  /** Действующий лимит (тариф + докупленное); 0 — безлимит. */
+  limit_bytes: number
+  base_bytes: number
+  extra_bytes: number
+  used_bytes: number
+}
+
+export type TrafficPack = {
+  id: number
+  bytes: number
+  amount_rub: number
+  amount_stars?: number
+  kind: 'main' | 'bypass'
+}
+
+/** Настройки обхода и пакеты докупки тарифа (админка). */
+export type AdminTariffTraffic = {
+  bypass_limit_bytes: number
+  bypass_squad_uuids: string
+  bypass_node_uuids: string
+  packs: { kind: 'main' | 'bypass'; bytes: number; amount_rub: number; amount_stars?: number; is_active: boolean }[]
+  split_enabled: boolean
+  bypass_label: string
+  /** Действующий лимит обычных серверов тарифа в байтах (0 — безлимит). */
+  main_limit_bytes?: number
+  /** Лимит взят из общей настройки TRAFFIC_LIMIT, а не из тарифа. */
+  main_limit_global?: boolean
+}
+/** Раздельный трафик в карточке пользователя (админка). */
+export type AdminUserTrafficSplit = {
+  enabled: boolean
+  label: string
+  bypass?: {
+    limit_bytes: number
+    base_bytes: number
+    extra_bytes: number
+    used_bytes: number
+    squad_removed: boolean
+    period_start: string
+    checked_at?: string
+  }
+  main_extra_bytes: number
+  extras: { id: number; kind: 'main' | 'bypass'; bytes: number; valid_until: string; paid: boolean }[]
+  nodes: { name: string; bytes: number; bypass: boolean }[]
+}
+export type AdminTrafficNode = { uuid: string; name: string; country_code: string; connected: boolean; tracking_enabled: boolean }
+
+export type MyTrafficResponse = {
+  enabled: boolean
+  can_buy: boolean
+  /** Как называть серверы обхода (настраивает админ). */
+  label: string
+  reset_at: string
+  main: TrafficKindInfo
+  bypass?: TrafficKindInfo
+  bypass_blocked: boolean
+  extras: { kind: 'main' | 'bypass'; bytes: number; valid_until: string }[]
+  packs: TrafficPack[]
 }
 
 export class ApiError extends Error {
@@ -378,6 +442,9 @@ export interface TariffItem {
   months: number
   device_limit: number
   traffic_gb: number | null
+  /** Лимит обхода у тарифа, ГБ (раздельный трафик); нет — отдельного лимита нет. */
+  bypass_gb?: number | null
+  bypass_label?: string
   is_popular?: boolean
 }
 
@@ -406,6 +473,8 @@ interface TariffViewDTO {
   device_limit: number
   traffic_limit_bytes: number
   traffic_limit_reset_strategy?: string
+  bypass_traffic_limit_bytes?: number
+  bypass_label?: string
   prices: TariffPriceDTO[]
 }
 
@@ -440,6 +509,8 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
         t.name != null && String(t.name).trim() !== '' ? String(t.name) : slugStr
       const tid = typeof t.id === 'number' ? t.id : null
       const trafficGb = trafficBytesToGb(Number(t.traffic_limit_bytes) || 0)
+      const bypassBytes = Number((t as Partial<TariffViewDTO>).bypass_traffic_limit_bytes) || 0
+      const bypassGb = bypassBytes > 0 ? trafficBytesToGb(bypassBytes) : null
       const devLim = typeof t.device_limit === 'number' ? t.device_limit : 0
       const desc =
         t.description != null && String(t.description).trim() !== '' ? String(t.description).trim() : null
@@ -465,6 +536,8 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
           months,
           device_limit: devLim,
           traffic_gb: trafficGb,
+          bypass_gb: bypassGb,
+          bypass_label: typeof t.bypass_label === 'string' ? t.bypass_label : undefined,
         })
       }
       continue
@@ -707,6 +780,8 @@ export interface PaymentPreviewResponse {
 }
 
 export interface PaymentStatusResponse {
+  traffic_pack_kind?: string
+  traffic_pack_bytes?: number
   status: 'new' | 'pending' | 'paid' | 'failed' | 'expired'
   subscription_link: string | null
   /** paid: subscription | extra_hwid | tariff_upgrade — для текста успеха. */
@@ -1398,6 +1473,16 @@ export const api = {
   trafficUsage: () =>
     request<TrafficUsageResponse>('GET', '/me/traffic-usage'),
 
+  myTraffic: () => request<MyTrafficResponse>('GET', '/me/traffic'),
+
+  trafficPackCheckout: (packId: number, provider: string, idempotencyKey: string, yookassaMethod?: string) =>
+    request<CheckoutResponse>(
+      'POST',
+      '/payments/traffic/checkout',
+      { pack_id: packId, provider, ...(yookassaMethod ? { yookassa_method: yookassaMethod } : {}) },
+      { 'Idempotency-Key': idempotencyKey },
+    ),
+
   deleteDevice: (hwid: string) =>
     request<{ ok: boolean }>('POST', '/me/devices/delete', { hwid }),
 
@@ -1514,6 +1599,8 @@ export const api = {
   adminUsers: (params?: { scope?: string; page?: number; limit?: number; sort?: string; dir?: string }) => {
     const q = new URLSearchParams()
     q.set('scope', params?.scope ?? 'all')
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
     if (params?.page != null) q.set('page', String(params.page))
     if (params?.limit != null) q.set('limit', String(params.limit))
     const suffix = q.toString() ? `?${q.toString()}` : ''
@@ -1579,6 +1666,8 @@ export const api = {
     const q = new URLSearchParams()
     if (params?.status) q.set('status', params.status)
     if (params?.q) q.set('q', params.q)
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
     if (params?.page != null) q.set('page', String(params.page))
     if (params?.limit != null) q.set('limit', String(params.limit))
     const suffix = q.toString() ? `?${q.toString()}` : ''
@@ -1590,6 +1679,8 @@ export const api = {
     const q = new URLSearchParams()
     if (params?.status) q.set('status', params.status)
     if (params?.q) q.set('q', params.q)
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
     const suffix = q.toString() ? `?${q.toString()}` : ''
 
     const headers: Record<string, string> = {}
@@ -1599,8 +1690,6 @@ export const api = {
     if (token) headers['Authorization'] = `Bearer ${token}`
 
     const res = await fetch(`${BASE}/admin/payments/export${suffix}`, {
-    if (params?.sort) q.set('sort', params.sort)
-    if (params?.sort && params.dir) q.set('dir', params.dir)
       method: 'GET',
       headers,
       credentials: 'include',
@@ -1654,6 +1743,17 @@ export const api = {
   // Состав сквадов тарифа: сколько людей уже на тарифе и как идёт применение.
   adminTariffSquads: (id: number) =>
     request<AdminTariffSquadsPreviewDTO>('GET', `/admin/tariffs/${id}/squads`),
+  // Раздельный трафик: лимит обхода, ноды обхода, пакеты докупки.
+  adminUserTrafficSplit: (id: number) => request<AdminUserTrafficSplit>('GET', `/admin/users/${id}/traffic-split`),
+  adminUserTrafficGrant: (id: number, kind: 'main' | 'bypass', bytes: number) =>
+    request<AdminOkDTO>('POST', `/admin/users/${id}/traffic-split/grant`, { kind, bytes }),
+  adminUserTrafficRevoke: (id: number, extraId: number) =>
+    request<AdminOkDTO>('DELETE', `/admin/users/${id}/traffic-split/extras/${extraId}`),
+  adminTariffTraffic: (id: number) => request<AdminTariffTraffic>('GET', `/admin/tariffs/${id}/traffic`),
+  adminTariffTrafficSave: (id: number, body: AdminTariffTraffic) =>
+    request<AdminTariffTraffic>('PUT', `/admin/tariffs/${id}/traffic`, body),
+  adminTariffTrafficNodes: (id: number, squads: string[]) =>
+    request<AdminTrafficNode[]>('GET', `/admin/tariffs/${id}/traffic/nodes?squads=${encodeURIComponent(squads.join(','))}`),
   adminTariffSquadsApply: (id: number, body: { add: string[]; remove: string[] }) =>
     request<AdminTariffSquadsRunDTO>('POST', `/admin/tariffs/${id}/squads/apply`, body),
 
@@ -1666,8 +1766,6 @@ export const api = {
     if (params?.offset != null) q.set('offset', String(params.offset))
     const suffix = q.toString() ? `?${q.toString()}` : ''
     return request<{ items: AdminPartnerDTO[]; total: number }>('GET', `/admin/partners${suffix}`)
-    if (params?.sort) q.set('sort', params.sort)
-    if (params?.sort && params.dir) q.set('dir', params.dir)
   },
 
   adminPartnerPending: () => request<AdminPartnerPendingDTO>('GET', '/admin/partners/pending'),
@@ -1679,8 +1777,6 @@ export const api = {
     request<AdminPage<AdminPartnerCustomerDTO>>('GET', `/admin/partners/${id}/customers${pageQuery(params)}`),
 
   adminPartnerOperations: (id: number, params?: { limit?: number; offset?: number }) =>
-    if (params?.sort) q.set('sort', params.sort)
-    if (params?.sort && params.dir) q.set('dir', params.dir)
     request<AdminPage<AdminPartnerOperationDTO>>('GET', `/admin/partners/${id}/operations${pageQuery(params)}`),
 
   adminPartnerPayoutHistory: (id: number, params?: { limit?: number; offset?: number }) =>

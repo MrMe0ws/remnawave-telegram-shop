@@ -45,6 +45,7 @@ export const ADMIN_SETTINGS_GROUP_ORDER = [
   'tariffs',
   'trial',
   'hwid',
+  'traffic',
   'referral',
   'partner',
   'stars',
@@ -66,6 +67,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   trial: Gift,
   tariffs: BadgeRussianRuble,
   hwid: Smartphone,
+  traffic: Gauge,
   referral: Users,
   partner: Handshake,
   stars: Star,
@@ -93,6 +95,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   trial: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
   tariffs: { box: 'bg-lime-500/10 dark:bg-lime-500/20', icon: 'text-lime-600 dark:text-lime-400' },
   hwid: { box: 'bg-cyan-500/10 dark:bg-cyan-500/20', icon: 'text-cyan-500' },
+  traffic: { box: 'bg-violet-500/10 dark:bg-violet-500/20', icon: 'text-violet-500' },
   referral: { box: 'bg-violet-500/10 dark:bg-violet-500/20', icon: 'text-violet-500' },
   partner: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-600 dark:text-amber-400' },
   stars: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
@@ -126,7 +129,7 @@ export function adminSettingsGroupIconStyle(id: string): AdminSettingsGroupIconS
  * почём мы продаём», должно лежать рядом с прайсом тарифов, а не на другом
  * экране. Поэтому в ADMIN_SETTINGS_CATEGORIES этих групп нет.
  */
-export const ADMIN_PRODUCT_SETTINGS_GROUPS = ['tariffs', 'trial', 'hwid', 'stars'] as const
+export const ADMIN_PRODUCT_SETTINGS_GROUPS = ['tariffs', 'trial', 'hwid', 'traffic', 'stars'] as const
 
 /** Группа живёт на отдельной странице «Статус серверов», не в общих настройках и не на тарифах. */
 export const ADMIN_STATUS_SETTINGS_GROUP: AdminSettingsGroupId = 'status'

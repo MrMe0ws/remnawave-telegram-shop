@@ -1,0 +1,6 @@
+import{j as c}from"./query-Cg_hO092.js";import{j as s,r as i}from"./index-B-9uJmCQ.js";import{a as u,A as m}from"./arrow-up-mlEI7nU4.js";/**
+ * @license lucide-react v0.475.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const x=[["path",{d:"m21 16-4 4-4-4",key:"f6ql7i"}],["path",{d:"M17 20V4",key:"1ejh1v"}],["path",{d:"m3 8 4-4 4 4",key:"11wl7u"}],["path",{d:"M7 4v16",key:"1glfcx"}]],h=s("ArrowUpDown",x);function g(n,e,a){return!n||n.key!==e?{key:e,dir:a}:n.dir===a?{key:e,dir:a==="asc"?"desc":"asc"}:null}function j({sortKey:n,sort:e,onSort:a,children:o,className:d,disabled:t}){const r=!t&&(e==null?void 0:e.key)===n,p=r?(e==null?void 0:e.dir)==="asc"?u:m:h;return c.jsx("th",{className:i("px-3 py-2",d),"aria-sort":r?(e==null?void 0:e.dir)==="asc"?"ascending":"descending":void 0,children:t?o:c.jsxs("button",{type:"button",onClick:()=>a(n),className:i("-mx-1.5 inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 uppercase tracking-wider transition-colors hover:bg-accent/15 hover:text-foreground",r&&"text-foreground"),children:[o,c.jsx(p,{className:i("size-3.5 shrink-0",r?"text-primary":"text-muted-foreground/50"),"aria-hidden":!0})]})})}export{j as S,g as n};

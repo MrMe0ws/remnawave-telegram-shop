@@ -298,6 +298,17 @@
     @apply bg-border rounded-full;
   }
 
+  /* Числовые поля — без стрелок вверх/вниз (значение вводят руками). */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   /* Native date/time pickers follow light/dark theme (calendar icon in datetime-local). */
   .admin-input[type="datetime-local"],
   .admin-input[type="date"],
@@ -5226,4 +5237,16 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
 [data-nav-pending='text'].inline-flex::before,
 [data-nav-pending='text'].flex::before {
   margin-right: 0;
+}
+
+/*
+ * Знак «∞» на безлимитном кольце плитки «Трафик» (NestedStatRing). В светлой теме — цвет акцента как есть,
+ * в тёмной — осветлённый, иначе на приглушённом кольце он терялся бы. Цвет берётся от --primary,
+ * поэтому следует за декор-темами и акцентом.
+ */
+.nested-ring-infinity {
+  color: hsl(var(--primary));
+}
+.dark .nested-ring-infinity {
+  color: color-mix(in srgb, hsl(var(--primary)) 55%, white);
 }

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
 import { LoyaltyCompactCard } from '@/features/loyalty/LoyaltyProgramPage'
 import { DeviceManagerProvider, DevicesPanel, devicesSheetSubtitle } from '@/features/home/DeviceManager'
+import { BuyTrafficButton, TrafficBuyProvider } from '@/features/home/trafficSplit'
 import {
   DevicesWideCard,
   HomeAlert,
@@ -127,6 +128,7 @@ export default function DashboardPage() {
         </PageReveal>
       ) : hasSubscription ? (
         <DeviceManagerProvider data={data}>
+          <TrafficBuyProvider data={data}>
           {isMobile ? (
             <HomeMobile
               data={data}
@@ -168,9 +170,12 @@ export default function DashboardPage() {
             onClose={() => setTrafficOpen(false)}
             title={t('home.usageCardTitle')}
             subtitle={trafficSheetSubtitle(data, lang, t)}
+            centered
+            footer={data.split?.can_buy ? <BuyTrafficButton data={data} /> : undefined}
           >
             <TrafficDetails data={data} lang={lang} />
           </ResponsiveSheet>
+          </TrafficBuyProvider>
         </DeviceManagerProvider>
       ) : (
         <PageReveal className="space-y-4">
@@ -233,9 +238,21 @@ function HomeDesktop({
       </RevealItem>
       <RevealItem>
         {/* Вся карточка графика — вход в подробности трафика. */}
-        <button type="button" onClick={onTraffic} className="block w-full text-left">
-          <TrafficUsageChart data={data.usage} loading={data.usageQuery.isLoading} lang={lang} />
-        </button>
+        {/* Внутри столбики-кнопки, поэтому снаружи не <button>: кнопка в кнопке недопустима. */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onTraffic}
+          onKeyDown={(e) => {
+            if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              onTraffic()
+            }
+          }}
+          className="block w-full cursor-pointer text-left"
+        >
+          <TrafficUsageChart data={data.usage} loading={data.usageQuery.isLoading} lang={lang} bypassLabel={data.bypass?.label} />
+        </div>
       </RevealItem>
       <RevealItem className="space-y-[18px] empty:hidden">{footer}</RevealItem>
     </PageReveal>
