@@ -41,6 +41,7 @@ import {
   useAdminTariffSquads,
   useAdminTariffDelete,
   STRATEGIES,
+  normalizeResetStrategy,
   type AdminTariff,
   type CreateTariffInput,
 } from '../hooks/useAdminTariffs'
@@ -57,12 +58,11 @@ const DEVICE_PRESETS = [1, 2, 3, 5] as const
 const TRAFFIC_PRESETS = [0, 100, 200, 500, 1000] as const
 
 const STRATEGY_I18N_KEYS: Record<string, string> = {
-  no_reset: 'admin.tariffs.strategies.noReset',
+  NO_RESET: 'admin.tariffs.strategies.noReset',
   DAY: 'admin.tariffs.strategies.day',
   WEEK: 'admin.tariffs.strategies.week',
   MONTH: 'admin.tariffs.strategies.month',
   MONTH_ROLLING: 'admin.tariffs.strategies.monthRolling',
-  NO_RESET: 'admin.tariffs.strategies.noResetRw',
 }
 
 function parseSquadUUIDs(raw: string): string[] {
@@ -276,7 +276,7 @@ function tariffToForm(t?: AdminTariff | null): TariffFormData {
     is_active: t?.is_active ?? true,
     device_limit: t?.device_limit ?? 1,
     traffic_gb: t ? t.traffic_limit_bytes / GB : 0,
-    traffic_limit_reset_strategy: t?.traffic_limit_reset_strategy ?? 'no_reset',
+    traffic_limit_reset_strategy: t ? normalizeResetStrategy(t.traffic_limit_reset_strategy) : 'NO_RESET',
     squad_uuids: parseSquadUUIDs(t?.active_internal_squad_uuids ?? ''),
     description: t?.description ?? '',
     description_detail: t?.description_detail ?? '',

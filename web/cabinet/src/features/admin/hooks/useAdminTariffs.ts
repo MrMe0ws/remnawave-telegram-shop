@@ -132,5 +132,17 @@ export function useAdminSquads() {
   })
 }
 
-const STRATEGIES = ['no_reset', 'DAY', 'WEEK', 'MONTH', 'MONTH_ROLLING', 'NO_RESET'] as const
+const STRATEGIES = ['NO_RESET', 'DAY', 'WEEK', 'MONTH', 'MONTH_ROLLING'] as const
 export { STRATEGIES }
+
+/**
+ * Значение стратегии сброса из базы → пункт списка. В базе встречаются и строчные значения
+ * (`month`, `month_rolling`, `no_reset`, `never` — их ставит автосид из env и бот), а в списке
+ * только верхний регистр: без приведения браузер показывал бы первый пункт, а не реальное значение.
+ * Сервер делает то же самое (`normalizeStrategy`): неизвестное значение — MONTH.
+ */
+export function normalizeResetStrategy(value: string | null | undefined): (typeof STRATEGIES)[number] {
+  const v = (value ?? '').trim().toUpperCase()
+  if (v === 'NEVER') return 'NO_RESET'
+  return (STRATEGIES as readonly string[]).includes(v) ? (v as (typeof STRATEGIES)[number]) : 'MONTH'
+}
