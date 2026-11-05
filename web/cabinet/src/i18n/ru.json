@@ -2246,8 +2246,9 @@
         "fromPrice": "от",
         "perMonthShort": "/мес",
         "noPrices": "Цены не заданы",
-        "settingsTitle": "Настройки продукта",
-        "settingsSubtitle": "Триал, устройства, курс звёзд и отображение цен",
+        "tabList": "Тарифы",
+        "tabConditions": "Условия продажи",
+        "tabsAria": "Разделы страницы тарифов",
         "isActive": "Активен",
         "active": "Активен",
         "reorderHint": "Потяните за ручку, чтобы переставить тариф (или стрелки). Порядок здесь — порядок у пользователей",
@@ -2727,12 +2728,11 @@
         "categoryEmpty": "В этой категории нет настроек",
         "categoryNav": "Категории настроек",
         "categories": {
-          "design": "Оформление",
+          "design": "Кабинет",
           "product": "Продукт",
           "marketing": "Маркетинг",
-          "finance": "Финансы",
-          "operations": "Операции",
-          "access": "Доступ",
+          "finance": "Платежи",
+          "access": "Бот и доступ",
           "notifications": "Уведомления"
         },
         "subsections": {

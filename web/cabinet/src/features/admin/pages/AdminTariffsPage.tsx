@@ -142,6 +142,7 @@ function GripHandle({
       type="button"
       aria-label={t('admin.tariffs.reorderHint')}
       title={t('admin.tariffs.reorderHint')}
+      data-admin-no-edge-swipe
       onPointerDown={onHandleDown}
       // В плитке вся карточка открывает редактор: ручка не должна его открывать.
       onClick={(e) => e.stopPropagation()}
@@ -453,6 +454,46 @@ function TariffTile({
   )
 }
 
+type TariffsTab = 'list' | 'conditions'
+
+/** Вкладки страницы: список тарифов и условия продажи (триал, устройства, трафик, Stars). */
+function TariffsTabs({ value, onChange }: { value: TariffsTab; onChange: (v: TariffsTab) => void }) {
+  const { t } = useTranslation()
+  const items: { id: TariffsTab; label: string }[] = [
+    { id: 'list', label: t('admin.tariffs.tabList') },
+    { id: 'conditions', label: t('admin.tariffs.tabConditions') },
+  ]
+  return (
+    <div
+      role="tablist"
+      aria-label={t('admin.tariffs.tabsAria')}
+      className="flex w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 md:inline-flex md:w-auto"
+    >
+      {items.map((item) => {
+        const active = value === item.id
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            tabIndex={active ? 0 : -1}
+            onClick={() => onChange(item.id)}
+            className={cn(
+              'inline-flex min-h-9 flex-1 items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-xs font-medium transition-colors md:flex-none',
+              active
+                ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+                : 'text-foreground/80 hover:bg-accent hover:text-foreground',
+            )}
+          >
+            {item.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function AdminTariffsPage() {
   const { t, i18n } = useTranslation()
   const locale = i18n.language?.startsWith('en') ? 'en-US' : 'ru-RU'
@@ -478,6 +519,7 @@ export default function AdminTariffsPage() {
   // Когда отпустили перетаскиваемую плитку: «клик» после броска не должен открывать редактор.
   const dragEndedAt = useRef(0)
   const isDesktop = useIsDesktop()
+  const [tab, setTab] = useState<TariffsTab>('list')
   // Смещение точки захвата относительно левого верхнего угла карточки.
   const grab = useRef({ x: 0, y: 0 })
 
@@ -697,6 +739,7 @@ export default function AdminTariffsPage() {
           title={t('admin.tariffs.title')}
           subtitle={t('admin.tariffs.subtitle')}
           accent="emerald"
+          center={isDesktop ? <TariffsTabs value={tab} onChange={setTab} /> : undefined}
           actions={
             <div className="flex items-center gap-2">
               <button
@@ -711,7 +754,11 @@ export default function AdminTariffsPage() {
           }
         />
 
-        {isLoading ? (
+        {!isDesktop && <TariffsTabs value={tab} onChange={setTab} />}
+
+        {tab === 'conditions' ? (
+          <AdminProductSettingsPanel />
+        ) : isLoading ? (
           <div className="py-12 text-center text-muted-foreground">{t('admin.loading')}</div>
         ) : !tariffs || tariffs.length === 0 ? (
           <Card className="border-dashed p-12 text-center">
@@ -763,8 +810,6 @@ export default function AdminTariffsPage() {
           </>
         )}
 
-        {/* Настройки продукта — прайс доп. устройств, триал, курс звёзд — рядом с прайсом тарифов. */}
-        <AdminProductSettingsPanel />
       </div>
 
       <AdminTariffEditor

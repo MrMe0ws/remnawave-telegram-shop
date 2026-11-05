@@ -53,8 +53,8 @@ export const ADMIN_SETTINGS_GROUP_ORDER = [
   'payments',
   'payments_notify',
   'moynalog',
-  'access',
   'links',
+  'access',
   'tags',
   'lifecycle',
   'notifications',
@@ -140,7 +140,6 @@ export const ADMIN_SETTINGS_CATEGORY_ORDER = [
   'marketing',
   'finance',
   'notifications',
-  'operations',
   'access',
 ] as const
 
@@ -172,36 +171,28 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     iconStyle: { box: 'bg-violet-500/10 dark:bg-violet-500/20', icon: 'text-violet-500' },
   },
   {
-    // Всё, что происходит с деньгами после оплаты: кому сообщить и как
-    // отчитаться перед ФНС. Раньше уведомления жили в «Операциях» вместе со
-    // ссылками и тегами — темы несвязанные, разнесли.
+    // Приём денег и чеки по ним. Уведомления о платежах ушли во вкладку
+    // «Уведомления»: всё, что кому прилетает, лежит в одном месте.
     id: 'finance',
     titleKey: 'admin.settings.categories.finance',
     icon: Wallet,
-    groups: ['payments', 'payments_notify', 'moynalog'],
+    groups: ['payments', 'moynalog'],
     iconStyle: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
   },
   {
-    // Push в браузер из кабинета: какие виды уведомлений дублировать
-    // системным уведомлением. В ленту под колокольчиком попадает всё.
+    // Что прилетает вам в чат (платежи) и клиентам в браузер (push). В ленту
+    // под колокольчиком попадает всё, push дублирует выбранные виды.
     id: 'notifications',
     titleKey: 'admin.settings.categories.notifications',
     icon: BellRing,
-    groups: ['notifications'],
+    groups: ['payments_notify', 'notifications'],
     iconStyle: { box: 'bg-red-500/10 dark:bg-red-500/20', icon: 'text-red-500' },
-  },
-  {
-    id: 'operations',
-    titleKey: 'admin.settings.categories.operations',
-    icon: Link2,
-    groups: ['links', 'tags'],
-    iconStyle: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
   },
   {
     id: 'access',
     titleKey: 'admin.settings.categories.access',
     icon: Shield,
-    groups: ['access'],
+    groups: ['links', 'access', 'tags'],
     iconStyle: { box: 'bg-blue-500/10 dark:bg-blue-500/20', icon: 'text-blue-500' },
   },
 ]

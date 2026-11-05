@@ -336,7 +336,7 @@ export function AdminSettingsGroupEditor({
   const groupIntro = t(`admin.settings.groupIntros.${group.id}`, { defaultValue: '' })
 
   return (
-    <Card id={adminSettingsGroupAnchor(group.id)} className="cabinet-elevated-card scroll-mt-24 overflow-hidden">
+    <Card id={adminSettingsGroupAnchor(group.id)} className={cn('cabinet-elevated-card scroll-mt-24 overflow-hidden', expanded && 'lg:col-span-2')}>
       <button
         type="button"
         onClick={onToggleExpand}

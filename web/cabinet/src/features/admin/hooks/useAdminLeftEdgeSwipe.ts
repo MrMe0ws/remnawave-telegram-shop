@@ -18,6 +18,12 @@ const CANCEL_VERTICAL_PX = 14
 const DRAG_START_MIN_PX = 10
 /** Собственные тач-цели шторки: бургер и сама панель. Свайп их не перехватывает. */
 const NAV_OWN_TARGETS = '[data-admin-nav-panel],[data-admin-nav-toggle]'
+/**
+ * Элементы со своим горизонтальным жестом (например, ручка перетаскивания
+ * тарифа): касание, начатое на них, не считается стартом свайпа за меню.
+ * Проверяется в touchstart, поэтому не зависит от React-состояния «тянем».
+ */
+const NO_EDGE_SWIPE_TARGETS = '[data-admin-no-edge-swipe]'
 
 /**
  * Свайп вправо из левой зоны — плавно выдвигает мобильное админ-меню.
@@ -69,6 +75,7 @@ export function useAdminLeftEdgeSwipe(enabled: boolean) {
       // по ним обязано остаться обычным тапом.
       const target = e.target
       if (target instanceof Element && target.closest(NAV_OWN_TARGETS)) return
+      if (target instanceof Element && target.closest(NO_EDGE_SWIPE_TARGETS)) return
       const x = touch.clientX
       if (x < EDGE_START_MIN_PX || x > EDGE_START_MAX_PX) return
       trackingRef.current = {

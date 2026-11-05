@@ -2189,8 +2189,9 @@
         "fromPrice": "from",
         "perMonthShort": "/mo",
         "noPrices": "No prices set",
-        "settingsTitle": "Product settings",
-        "settingsSubtitle": "Trial, devices, star rate and price display",
+        "tabList": "Tariffs",
+        "tabConditions": "Sales terms",
+        "tabsAria": "Tariffs page sections",
         "isActive": "Active",
         "active": "Active",
         "reorderHint": "Drag the handle to reorder (or use arrow keys). This order is what users see",
@@ -2657,12 +2658,11 @@
         "categoryEmpty": "No settings in this category",
         "categoryNav": "Settings categories",
         "categories": {
-          "design": "Appearance",
+          "design": "Cabinet",
           "product": "Product",
           "marketing": "Marketing",
-          "finance": "Finance",
-          "operations": "Operations",
-          "access": "Access",
+          "finance": "Payments",
+          "access": "Bot and access",
           "notifications": "Notifications"
         },
         "subsections": {
