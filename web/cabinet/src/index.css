@@ -772,63 +772,22 @@
   }
 
   /*
-   * Кольцевой индикатор. Значение — в --cabinet-ring-value (0–100), цвет
-   * наследуется из --cabinet-ring-color, поэтому тон задаётся снаружи одной
-   * переменной и одинаково работает для дней, трафика и устройств.
+   * Кольцевой индикатор: рамка с числом по центру. Сама дуга — SVG внутри
+   * (components/RingArc.tsx): скруглённые концы и тень у кончика conic-gradient
+   * не умеет. Толщина здесь — только для безлимитного кольца ниже, она равна
+   * RING_THICKNESS_PX.
    */
   .cabinet-ring {
-    --cabinet-ring-value: 0;
-    --cabinet-ring-color: var(--primary);
     --cabinet-ring-thickness: 7px;
     position: relative;
     display: grid;
     place-items: center;
     aspect-ratio: 1;
     border-radius: 50%;
-    background: conic-gradient(
-      hsl(var(--cabinet-ring-color)) calc(var(--cabinet-ring-value) * 1%),
-      hsl(var(--muted)) 0
-    );
   }
 
-  /* Вырезаем середину — получается кольцо, а не круг. */
-  .cabinet-ring::before {
-    content: "";
-    position: absolute;
-    inset: var(--cabinet-ring-thickness);
-    border-radius: 50%;
-    background-color: hsl(var(--card));
-  }
-
-  .cabinet-ring > * {
+  .cabinet-ring > div {
     position: relative;
-  }
-
-  /*
-   * Заполнение кольца анимацией.
-   *
-   * conic-gradient сам по себе не интерполируется: без @property браузер
-   * считает --cabinet-ring-value обычной строкой и переключает её скачком.
-   * Регистрация типа делает переменную анимируемой, и дуга набегает.
-   *
-   * Отдельным модификатором, а не на всех кольцах сразу: у трафика и устройств
-   * значение приходит вместе со страницей, и там набегающая дуга читалась бы
-   * как загрузка данных, которой уже нет.
-   */
-  @property --cabinet-ring-value {
-    syntax: "<number>";
-    inherits: false;
-    initial-value: 0;
-  }
-
-  .cabinet-ring--animate {
-    transition: --cabinet-ring-value 1.1s var(--cabinet-ease);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cabinet-ring--animate {
-      transition: none;
-    }
   }
 
   /*
@@ -836,12 +795,7 @@
    * быть не может, но место в сетке показателей занять надо.
    */
   .cabinet-ring--unbounded {
-    background: none;
     border: var(--cabinet-ring-thickness) solid hsl(var(--muted));
-  }
-
-  .cabinet-ring--unbounded::before {
-    content: none;
   }
 
   /*
@@ -5249,4 +5203,15 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
 }
 .dark .nested-ring-infinity {
   color: color-mix(in srgb, hsl(var(--primary)) 55%, white);
+}
+
+/*
+ * Тень у кончика кольца (RingArc). На светлой дорожке полная тень читается грязным
+ * пятном, поэтому в светлой теме она вдвое слабее.
+ */
+.ring-tip-shadow {
+  fill-opacity: 0.35;
+}
+.dark .ring-tip-shadow {
+  fill-opacity: 0.75;
 }
