@@ -84,7 +84,8 @@ export function useHomeData() {
   const deviceLimit = Math.max(sub?.tariff?.device_limit ?? 0, Math.max(0, devices?.device_limit ?? 0))
   const allSlotsTaken = Boolean(devices?.enabled && deviceLimit > 0 && connected >= deviceLimit)
 
-  const dayTone: ToneLevel = isTrial && !isExpiredByDate ? 'calm' : daysTone(effectiveDays)
+  // Цвет срока — по самому сроку: при исчерпанном трафике дни ещё идут, и 120 дней не должны краснеть.
+  const dayTone: ToneLevel = isTrial && !isExpiredByDate ? 'calm' : daysTone(isExpiredByDate ? 0 : days)
   let state: HomeState = 'ok'
   if (isExpiredByDate) state = 'expired'
   else if (isExpiredByTraffic) state = 'traffic'
