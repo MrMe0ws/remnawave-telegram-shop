@@ -146,7 +146,7 @@ export function AdminPaymentDetailModal({ paymentId, onClose }: Props) {
                   <button
                     type="button"
                     onClick={() => handleOpenUser(data.customer_id)}
-                    className={surface('raised', 'mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-accent')}
+                    className={surface('raised', 'mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10')}
                   >
                     <UserRound className="size-4 shrink-0" />
                     {t('admin.payments.openUserCard')}

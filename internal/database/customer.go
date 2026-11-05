@@ -1136,12 +1136,47 @@ func (cr *CustomerRepository) CountByListScope(ctx context.Context, scope Custom
 	return n, err
 }
 
+// customerSortExprs — допустимые колонки сортировки админского списка (ключ приходит из запроса).
+// Значения подставляются в SQL как есть, поэтому только из этой карты. NULLS LAST ставится
+// на уровне ORDER BY: пустой @username / срок / тариф всегда внизу, в любом направлении.
+var customerSortExprs = map[string]string{
+	"id":          "customer.id",
+	"telegram_id": "customer.telegram_id",
+	"username":    "LOWER(customer.telegram_username)",
+	"expire_at":   "customer.expire_at",
+	"status":      "(CASE WHEN customer.expire_at IS NOT NULL AND customer.expire_at > NOW() THEN 0 ELSE 1 END)",
+	"tariff":      "LOWER((SELECT COALESCE(NULLIF(TRIM(t.name), ''), t.slug) FROM tariff t WHERE t.id = customer.current_tariff_id))",
+}
+
+// customerOrderBy строит ORDER BY для списка: выбранная колонка плюс id как стабильный tie-break,
+// чтобы строки с равным значением не прыгали между страницами. Неизвестный ключ — порядок вкладки.
+func customerOrderBy(scope CustomerListScope, sortKey string, desc bool) string {
+	expr, ok := customerSortExprs[sortKey]
+	if !ok {
+		return customerListOrder(scope)
+	}
+	dir := "ASC"
+	if desc {
+		dir = "DESC"
+	}
+	order := expr + " " + dir + " NULLS LAST"
+	if sortKey != "id" {
+		order += ", customer.id DESC"
+	}
+	return order
+}
+
 // ListPaged возвращает страницу клиентов для админских списков (Пользователи / неактивные / истекающие).
 func (cr *CustomerRepository) ListPaged(ctx context.Context, scope CustomerListScope, offset, limit int) ([]Customer, error) {
+	return cr.ListPagedSorted(ctx, scope, offset, limit, "", false)
+}
+
+// ListPagedSorted — ListPaged с сортировкой по колонке таблицы (sortKey из customerSortExprs).
+func (cr *CustomerRepository) ListPagedSorted(ctx context.Context, scope CustomerListScope, offset, limit int, sortKey string, desc bool) ([]Customer, error) {
 	buildSelect := sq.Select(customerSelectColumns).
 		From("customer").
 		PlaceholderFormat(sq.Dollar).
-		OrderBy(customerListOrder(scope)).
+		OrderBy(customerOrderBy(scope, sortKey, desc)).
 		Limit(uint64(limit)).
 		Offset(uint64(offset))
 	if w := customerListWhere(scope); w != nil {

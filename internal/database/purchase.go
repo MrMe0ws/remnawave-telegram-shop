@@ -666,6 +666,36 @@ type AdminPurchaseFilter struct {
 type AdminPurchaseRow struct {
 	Purchase
 	CustomerTelegramID       int64
+	// SortKey — колонка сортировки из adminPurchaseSortExprs; пусто или неизвестное — новые сверху.
+	SortKey  string
+	SortDesc bool
+}
+
+// adminPurchaseSortExprs — допустимые колонки сортировки списка платежей. Значения идут в SQL
+// как есть, поэтому ключ из запроса обязан пройти через эту карту.
+var adminPurchaseSortExprs = map[string]string{
+	"id":         "p.id",
+	"user":       "LOWER(c.telegram_username)",
+	"amount":     "p.amount",
+	"provider":   "p.invoice_type",
+	"status":     "p.status",
+	"created_at": "p.created_at",
+}
+
+func adminPurchaseOrderBy(filter AdminPurchaseFilter) string {
+	expr, ok := adminPurchaseSortExprs[filter.SortKey]
+	if !ok {
+		return "p.created_at DESC, p.id DESC"
+	}
+	dir := "ASC"
+	if filter.SortDesc {
+		dir = "DESC"
+	}
+	order := expr + " " + dir + " NULLS LAST"
+	if filter.SortKey != "id" {
+		order += ", p.id DESC"
+	}
+	return order
 	CustomerTelegramUsername *string
 	CustomerIsWebOnly        bool
 }
@@ -717,7 +747,7 @@ func (pr *PurchaseRepository) ListForAdmin(ctx context.Context, filter AdminPurc
 		From("purchase p").
 		Join("customer c ON c.id = p.customer_id").
 		Where(adminPurchaseWhereClause(filter)).
-		OrderBy("p.created_at DESC").
+		OrderBy(adminPurchaseOrderBy(filter)).
 		Limit(uint64(limit)).
 		Offset(uint64(offset)).
 		PlaceholderFormat(sq.Dollar).

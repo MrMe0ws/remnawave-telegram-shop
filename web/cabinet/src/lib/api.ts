@@ -1511,7 +1511,7 @@ export const api = {
   adminLoyaltyStats: () => request<AdminLoyaltyStatsDTO>('GET', '/admin/stats/loyalty'),
   adminPromoStats: () => request<AdminPromoStatsDTO>('GET', '/admin/stats/promos'),
 
-  adminUsers: (params?: { scope?: string; page?: number; limit?: number }) => {
+  adminUsers: (params?: { scope?: string; page?: number; limit?: number; sort?: string; dir?: string }) => {
     const q = new URLSearchParams()
     q.set('scope', params?.scope ?? 'all')
     if (params?.page != null) q.set('page', String(params.page))
@@ -1575,7 +1575,7 @@ export const api = {
 
   adminSquads: () => request<{ items: { uuid: string; name: string }[] }>('GET', '/admin/squads'),
 
-  adminPayments: (params?: { status?: string; q?: string; page?: number; limit?: number }) => {
+  adminPayments: (params?: { status?: string; q?: string; page?: number; limit?: number; sort?: string; dir?: string }) => {
     const q = new URLSearchParams()
     if (params?.status) q.set('status', params.status)
     if (params?.q) q.set('q', params.q)
@@ -1586,7 +1586,7 @@ export const api = {
   },
   adminPayment: (id: number) => request<AdminPaymentDetailDTO>('GET', `/admin/payments/${id}`),
   /** Скачивает CSV с учётом текущего фильтра и триггерит сохранение файла в браузере. */
-  adminPaymentsExportCsv: async (params?: { status?: string; q?: string }) => {
+  adminPaymentsExportCsv: async (params?: { status?: string; q?: string; sort?: string; dir?: string }) => {
     const q = new URLSearchParams()
     if (params?.status) q.set('status', params.status)
     if (params?.q) q.set('q', params.q)
@@ -1599,6 +1599,8 @@ export const api = {
     if (token) headers['Authorization'] = `Bearer ${token}`
 
     const res = await fetch(`${BASE}/admin/payments/export${suffix}`, {
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
       method: 'GET',
       headers,
       credentials: 'include',
@@ -1664,6 +1666,8 @@ export const api = {
     if (params?.offset != null) q.set('offset', String(params.offset))
     const suffix = q.toString() ? `?${q.toString()}` : ''
     return request<{ items: AdminPartnerDTO[]; total: number }>('GET', `/admin/partners${suffix}`)
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
   },
 
   adminPartnerPending: () => request<AdminPartnerPendingDTO>('GET', '/admin/partners/pending'),
@@ -1675,6 +1679,8 @@ export const api = {
     request<AdminPage<AdminPartnerCustomerDTO>>('GET', `/admin/partners/${id}/customers${pageQuery(params)}`),
 
   adminPartnerOperations: (id: number, params?: { limit?: number; offset?: number }) =>
+    if (params?.sort) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
     request<AdminPage<AdminPartnerOperationDTO>>('GET', `/admin/partners/${id}/operations${pageQuery(params)}`),
 
   adminPartnerPayoutHistory: (id: number, params?: { limit?: number; offset?: number }) =>

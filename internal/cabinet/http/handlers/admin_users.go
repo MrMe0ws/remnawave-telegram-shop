@@ -276,7 +276,8 @@ type adminUsersListResp struct {
 	Limit int                `json:"limit"`
 }
 
-// List — GET /cabinet/api/admin/users?scope=all|active|inactive|expiring|trial&page=1&limit=20.
+// List — GET /cabinet/api/admin/users?scope=all|active|inactive|expiring|trial&sort=&dir=&page=1&limit=20.
+// sort: id|telegram_id|username|expire_at|status|tariff (иное — порядок вкладки), dir: asc|desc.
 func (h *AdminUsersHandler) List(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -321,7 +322,9 @@ func (h *AdminUsersHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offset := (page - 1) * limit
-	items, err := h.customers.ListPaged(ctx, scope, offset, limit)
+	sortKey := strings.TrimSpace(q.Get("sort"))
+	sortDesc := strings.EqualFold(strings.TrimSpace(q.Get("dir")), "desc")
+	items, err := h.customers.ListPagedSorted(ctx, scope, offset, limit, sortKey, sortDesc)
 	if err != nil {
 		slog.Error("admin users: list failed", "error", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
