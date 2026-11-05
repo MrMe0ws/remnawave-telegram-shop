@@ -7,10 +7,15 @@ import { cn } from '@/lib/utils'
 import { StateChip, stateRowTint } from '@/features/status/StateChip'
 import type { StatusMapNode, StatusProbe, StatusProbeHit } from './StatusMap'
 
+/**
+ * Цвет столбика: один столбик — один замер. Доля — это успешные проверки замера из всех
+ * (10 зондов из России и 1 из мира). Зелёный — все прошли, оранжевый — часть не прошла,
+ * но больше половины ответило, красный — ответила половина или меньше.
+ */
 function historyLevel(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return ''
-  if (value >= 0.95) return 'up'
-  if (value > 0) return 'partial'
+  if (value >= 1) return 'up'
+  if (value > 0.5) return 'partial'
   return 'down'
 }
 

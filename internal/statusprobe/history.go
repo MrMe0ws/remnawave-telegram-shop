@@ -7,23 +7,29 @@ import (
 	"time"
 )
 
-const historyKey = "status_probe_history"
+// historyKey — журнал замеров в таблице ключ-значение. Ключ новый: прежний журнал считал
+// сутки одной записью, а теперь запись — один замер; старые данные не переносим.
+const historyKey = "status_probe_runs"
 const latestKey = "status_probe_latest"
-const historyDays = 30
 
-// DayRecord — итог одного дня по узлу. Хранится только счётчик успехов, без адресов.
-type DayRecord struct {
-	WorldOK     int `json:"wOk"`
-	WorldTotal  int `json:"wN"`
-	RussiaOK    int `json:"rOk"`
-	RussiaTotal int `json:"rN"`
+// historyRuns — сколько последних замеров показывает полоска: один столбик — один замер.
+const historyRuns = 30
+
+// RunRecord — итог одного замера строки: сколько зондов ответило из мира и из России.
+// Хранится только счётчик успехов, без адресов.
+type RunRecord struct {
+	At          time.Time `json:"at"`
+	WorldOK     int       `json:"wOk"`
+	WorldTotal  int       `json:"wN"`
+	RussiaOK    int       `json:"rOk"`
+	RussiaTotal int       `json:"rN"`
 }
 
 // HistoryStore читает и пишет журнал замеров. Реализация на bot_runtime_settings
 // не требует новой таблицы.
 type HistoryStore interface {
-	Load(ctx context.Context) (map[string]map[string]DayRecord, error)
-	Save(ctx context.Context, days map[string]map[string]DayRecord) error
+	Load(ctx context.Context) (map[string][]RunRecord, error)
+	Save(ctx context.Context, runs map[string][]RunRecord) error
 }
 
 type kvStore interface {
@@ -40,9 +46,9 @@ func NewKVHistory(repo kvStore) *KVHistory {
 	return &KVHistory{repo: repo}
 }
 
-func (h *KVHistory) Load(ctx context.Context) (map[string]map[string]DayRecord, error) {
+func (h *KVHistory) Load(ctx context.Context) (map[string][]RunRecord, error) {
 	if h == nil || h.repo == nil {
-		return map[string]map[string]DayRecord{}, nil
+		return map[string][]RunRecord{}, nil
 	}
 	all, err := h.repo.GetAll(ctx)
 	if err != nil {
@@ -50,14 +56,14 @@ func (h *KVHistory) Load(ctx context.Context) (map[string]map[string]DayRecord, 
 	}
 	raw := all[historyKey]
 	if raw == "" {
-		return map[string]map[string]DayRecord{}, nil
+		return map[string][]RunRecord{}, nil
 	}
-	var parsed map[string]map[string]DayRecord
+	var parsed map[string][]RunRecord
 	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
 		return nil, err
 	}
 	if parsed == nil {
-		parsed = map[string]map[string]DayRecord{}
+		parsed = map[string][]RunRecord{}
 	}
 	return parsed, nil
 }
@@ -128,11 +134,11 @@ func (h *KVHistory) SaveLatest(ctx context.Context, samples map[string]Sample) e
 	return h.repo.UpsertBatch(ctx, map[string]string{latestKey: string(raw)}, nil)
 }
 
-func (h *KVHistory) Save(ctx context.Context, days map[string]map[string]DayRecord) error {
+func (h *KVHistory) Save(ctx context.Context, runs map[string][]RunRecord) error {
 	if h == nil || h.repo == nil {
 		return nil
 	}
-	raw, err := json.Marshal(days)
+	raw, err := json.Marshal(runs)
 	if err != nil {
 		return err
 	}
@@ -160,51 +166,42 @@ func ProbeKey(id, country, name, address string) string {
 	return NodeKey(country, name) + "\n" + strings.ToLower(host)
 }
 
-// RecordDay дописывает сегодняшний замер и выкидывает дни старше окна.
-func RecordDay(history map[string]map[string]DayRecord, key string, sample Sample, now time.Time) {
+// RecordRun дописывает итог замера и оставляет последние historyRuns записей.
+func RecordRun(history map[string][]RunRecord, key string, sample Sample, now time.Time) {
 	if history == nil {
 		return
 	}
 	if sample.WorldTotal == 0 && sample.RussiaTotal == 0 {
 		return
 	}
-	day := now.UTC().Format("2006-01-02")
-	perNode := history[key]
-	if perNode == nil {
-		perNode = map[string]DayRecord{}
+	runs := append(history[key], RunRecord{
+		At:          now.UTC(),
+		WorldOK:     sample.WorldOK,
+		WorldTotal:  sample.WorldTotal,
+		RussiaOK:    sample.RussiaOK,
+		RussiaTotal: sample.RussiaTotal,
+	})
+	if len(runs) > historyRuns {
+		runs = append([]RunRecord(nil), runs[len(runs)-historyRuns:]...)
 	}
-	prev := perNode[day]
-	perNode[day] = DayRecord{
-		WorldOK:     prev.WorldOK + sample.WorldOK,
-		WorldTotal:  prev.WorldTotal + sample.WorldTotal,
-		RussiaOK:    prev.RussiaOK + sample.RussiaOK,
-		RussiaTotal: prev.RussiaTotal + sample.RussiaTotal,
-	}
-	cutoff := now.UTC().AddDate(0, 0, -(historyDays - 1)).Format("2006-01-02")
-	for d := range perNode {
-		if d < cutoff {
-			delete(perNode, d)
-		}
-	}
-	history[key] = perNode
+	history[key] = runs
 }
 
-// Window возвращает 30 долей успешности от старых к новым. nil — замера в этот день не было.
-func Window(perNode map[string]DayRecord, now time.Time) []*float64 {
-	out := make([]*float64, historyDays)
-	if perNode == nil {
-		return out
+// Window возвращает historyRuns долей успешных проверок, от старых к новым: один замер — одна доля.
+// Если замеров пока меньше, свободные места слева пустые (nil).
+func Window(runs []RunRecord) []*float64 {
+	out := make([]*float64, historyRuns)
+	if len(runs) > historyRuns {
+		runs = runs[len(runs)-historyRuns:]
 	}
-	start := now.UTC().AddDate(0, 0, -(historyDays - 1))
-	for i := 0; i < historyDays; i++ {
-		day := start.AddDate(0, 0, i).Format("2006-01-02")
-		rec, ok := perNode[day]
+	offset := historyRuns - len(runs)
+	for i, rec := range runs {
 		total := rec.WorldTotal + rec.RussiaTotal
-		if !ok || total == 0 {
+		if total == 0 {
 			continue
 		}
 		v := float64(rec.WorldOK+rec.RussiaOK) / float64(total)
-		out[i] = &v
+		out[offset+i] = &v
 	}
 	return out
 }

@@ -38,7 +38,7 @@ type Runner struct {
 
 	mu                sync.Mutex
 	samples           map[string]Sample
-	history           map[string]map[string]DayRecord
+	history           map[string][]RunRecord
 	lastRun           time.Time
 	cooldownUntil     time.Time
 	listCooldownUntil time.Time
@@ -52,7 +52,7 @@ func NewRunner(store HistoryStore) *Runner {
 		store:   store,
 		client:  &http.Client{Timeout: 30 * time.Second},
 		samples: map[string]Sample{},
-		history: map[string]map[string]DayRecord{},
+		history: map[string][]RunRecord{},
 	}
 }
 
@@ -75,7 +75,7 @@ func (r *Runner) Snapshot(key string) (Sample, []*float64, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	sample, ok := r.samples[key]
-	return sample, Window(r.history[key], time.Now()), ok
+	return sample, Window(r.history[key]), ok
 }
 
 // ErrBusy — замер уже идёт, второй запуск ничего не добавит.
@@ -636,7 +636,7 @@ func (r *Runner) storeSample(key string, sample Sample) {
 		sample.FailStreak = 0
 	}
 	r.samples[key] = sample
-	RecordDay(r.history, key, sample, time.Now())
+	RecordRun(r.history, key, sample, time.Now())
 	r.mu.Unlock()
 }
 
@@ -745,14 +745,10 @@ func (r *Runner) EnsureLoaded(ctx context.Context) {
 	}
 }
 
-func cloneHistory(src map[string]map[string]DayRecord) map[string]map[string]DayRecord {
-	out := make(map[string]map[string]DayRecord, len(src))
-	for key, days := range src {
-		cp := make(map[string]DayRecord, len(days))
-		for day, rec := range days {
-			cp[day] = rec
-		}
-		out[key] = cp
+func cloneHistory(src map[string][]RunRecord) map[string][]RunRecord {
+	out := make(map[string][]RunRecord, len(src))
+	for key, runs := range src {
+		out[key] = append([]RunRecord(nil), runs...)
 	}
 	return out
 }
