@@ -69,55 +69,18 @@ func (h Handler) BuyCallbackHandler(ctx context.Context, b *bot.Bot, update *mod
 		}
 	}
 
-	var priceButtons []models.InlineKeyboardButton
-	price1Rub := config.Price1()
-
-	if price1Rub > 0 {
-		a := price1Rub
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_1", a, 1, price1Rub, models.InlineKeyboardButton{
-			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 1, a),
-		}))
+	// Активных тарифов нет (или не прочитались): покупать нечего. Раньше здесь показывались кнопки
+	// с ценами из env (режим classic), теперь режим продаж один — тарифы.
+	text := h.translation.GetText(langCode, "buy_no_tariffs")
+	if text == "buy_no_tariffs" {
+		text = "Покупка сейчас недоступна. Загляните позже."
 	}
-
-	if config.Price3() > 0 {
-		a := config.Price3()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_3", a, 3, price1Rub, models.InlineKeyboardButton{
-			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 3, a),
-		}))
-	}
-
-	if config.Price6() > 0 {
-		a := config.Price6()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_6", a, 6, price1Rub, models.InlineKeyboardButton{
-			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 6, a),
-		}))
-	}
-
-	if config.Price12() > 0 {
-		a := config.Price12()
-		priceButtons = append(priceButtons, h.monthPriceButton(langCode, "month_12", a, 12, price1Rub, models.InlineKeyboardButton{
-			CallbackData: fmt.Sprintf("%s?month=%d&amount=%d", CallbackSell, 12, a),
-		}))
-	}
-
-	keyboard := [][]models.InlineKeyboardButton{}
-
-	if len(priceButtons) == 4 {
-		keyboard = append(keyboard, priceButtons[:2])
-		keyboard = append(keyboard, priceButtons[2:])
-	} else if len(priceButtons) > 0 {
-		keyboard = append(keyboard, priceButtons)
-	}
-
-	keyboard = append(keyboard, []models.InlineKeyboardButton{
-		h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
-	})
-
-	infoKey := h.resolvePricingInfoKey(ctx, customer, 0)
-	err = SendOrEditAfterInlineCallback(ctx, b, update, h.pricingInfoTextWithDiscount(ctx, langCode, customer, infoKey), models.ParseModeHTML, models.InlineKeyboardMarkup{
-		InlineKeyboard: keyboard,
+	err = SendOrEditAfterInlineCallback(ctx, b, update, text, models.ParseModeHTML, models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{{
+			h.translation.WithButton(langCode, "back_button", models.InlineKeyboardButton{CallbackData: CallbackStart}),
+		}},
 	}, nil)
-	logEditError("Error sending buy message", err)
+	logEditError("Error sending buy message (no tariffs)", err)
 }
 
 // renderTariffMonthChoice показывает кнопки периодов для одного тарифа (цены из БД).
