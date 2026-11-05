@@ -253,8 +253,8 @@ function TilePrice({ prices, locale }: { prices: AdminTariffPrice[]; locale: str
 }
 
 /**
- * Карточка тарифа на ПК, «витрина»: крупное «от … ₽/мес», ниже лимиты и сетка периодов
- * с ценой и скидкой. Нажатие на карточку открывает редактор; описание и удаление — там.
+ * Карточка тарифа на ПК: цветная шапка, описание, лимиты чипами и лента периодов с
+ * ценой за месяц и скидкой. Нажатие на карточку открывает редактор; удаление — там.
  */
 function TariffShowcase({
   tariff,
@@ -284,7 +284,7 @@ function TariffShowcase({
   const prices = shownPrices(tariff.prices)
   const base = prices.find((p) => p.months === 1)
   const bypass = tariff.bypass_limit_bytes ?? 0
-  const rowCls = 'flex items-baseline justify-between gap-3 border-b border-dashed border-border/40 pb-1.5 text-sm'
+  const chip = 'inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/25 px-2.5 py-1 text-sm font-semibold tabular-nums'
   return (
     <Card
       role="button"
@@ -303,81 +303,90 @@ function TariffShowcase({
         dragging && 'border-primary/60 shadow-2xl shadow-black/40',
       )}
     >
-      <span aria-hidden className={cn('absolute inset-y-0 left-0 w-1', accent.bar, inactive && 'opacity-30')} />
-      <div className="flex flex-1 flex-col p-4 pl-5">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <GripHandle
-            dragging={dragging}
-            onHandleDown={onHandleDown}
-            onHandleKey={onHandleKey}
-            className={cn('-ml-2 h-8 w-6 hover:bg-muted', accent.iconColor, inactive && 'opacity-40')}
-            iconClassName="size-4"
+      <div className="relative flex items-center gap-2 border-b border-border/40 px-4 py-3">
+        {/* Цвет уровня тарифа: плавно уходит вправо, чтобы не спорить с тумблером. */}
+        <span
+          aria-hidden
+          className={cn('absolute inset-0 opacity-20', accent.bar, inactive && 'opacity-10')}
+          style={{ maskImage: 'linear-gradient(to right, black, transparent 75%)', WebkitMaskImage: 'linear-gradient(to right, black, transparent 75%)' }}
+        />
+        <GripHandle
+          dragging={dragging}
+          onHandleDown={onHandleDown}
+          onHandleKey={onHandleKey}
+          className={cn('relative -ml-1.5 h-8 w-6 hover:bg-muted', accent.iconColor, inactive && 'opacity-40')}
+          iconClassName="size-4"
+        />
+        <div className="relative min-w-0 flex-1">
+          <h3 className={cn('truncate text-base font-bold', inactive && 'text-muted-foreground')}>{title}</h3>
+          <p className="truncate font-mono text-[11px] text-muted-foreground/70">
+            {tariff.slug} · #{tariff.sort_order}
+          </p>
+        </div>
+        <span
+          className="relative flex shrink-0"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <AdminToggleSwitch
+            checked={tariff.is_active}
+            onChange={(next) => update.mutate({ id: tariff.id, fields: { is_active: next } })}
+            busy={update.isPending}
+            aria-label={t('admin.tariffs.toggleActive')}
           />
-          <h3 className={cn('min-w-0 flex-1 truncate text-base font-bold', inactive && 'text-muted-foreground')}>
-            {title}
-          </h3>
-          <span className="flex shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-            <AdminToggleSwitch
-              checked={tariff.is_active}
-              onChange={(next) => update.mutate({ id: tariff.id, fields: { is_active: next } })}
-              busy={update.isPending}
-              aria-label={t('admin.tariffs.toggleActive')}
-            />
+        </span>
+      </div>
+
+      <div className={cn('flex flex-1 flex-col px-4 pb-4 pt-3', inactive && 'opacity-55')}>
+        {tariff.description?.trim() && (
+          <p className="mb-3 line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
+            {tariff.description.trim()}
+          </p>
+        )}
+        <div className="mt-auto flex flex-wrap items-center gap-2">
+          <span className={chip} title={t('admin.tariffs.devices')}>
+            <Smartphone className="size-3.5 text-muted-foreground" />
+            {tariff.device_limit}
           </span>
+          <span className={chip} title={t('admin.tariffs.squadsShort')}>
+            <Server className="size-3.5 text-muted-foreground" />
+            {squadCount > 0 ? squadCount : '∞'}
+          </span>
+          <span className={chip} title={trafficTitle(tariff, t)}>
+            <TrafficIcon packs={tariff.traffic_packs ?? 0} className="size-3.5 text-muted-foreground" />
+            <TrafficValue tariff={tariff} withUnit={false} />
+          </span>
+          {bypass > 0 && <span className="sr-only">{bypassLabel()}</span>}
         </div>
-        <p className="ml-6 truncate font-mono text-[11px] text-muted-foreground/70">
-          {tariff.slug} · #{tariff.sort_order}
-        </p>
 
-        <div className={cn('mt-auto flex flex-col', inactive && 'opacity-55')}>
-          {tariff.description?.trim() && (
-            <p className="mt-2 truncate text-xs text-muted-foreground">{tariff.description.split('\n')[0]}</p>
-          )}
-          <div className="mt-3 space-y-1.5 text-muted-foreground">
-            <p className={rowCls}>
-              {t('admin.tariffs.devices')}
-              <b className="font-semibold tabular-nums text-foreground">{tariff.device_limit}</b>
-            </p>
-            <p className={rowCls}>
-              {t('admin.tariffs.squadsShort')}
-              <b className="font-semibold tabular-nums text-foreground">{squadCount > 0 ? squadCount : '∞'}</b>
-            </p>
-            <p className={rowCls} title={trafficTitle(tariff, t)}>
-              {t('admin.tariffs.trafficShort')}
-              <b className="inline-flex items-center gap-1.5 font-semibold tabular-nums text-foreground">
-                <TrafficValue tariff={tariff} withUnit={false} />
-                {bypass > 0 && (
-                  <span className="text-xs font-semibold text-[hsl(var(--split-bypass))]">{bypassLabel().toLowerCase()}</span>
-                )}
-                {(tariff.traffic_packs ?? 0) > 0 && <span aria-hidden className="size-2 rounded-full bg-amber-500" />}
-              </b>
-            </p>
+        {prices.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t('admin.tariffs.noPrices')}</p>
+        ) : (
+          <div className="mt-3 grid grid-cols-4 overflow-hidden rounded-xl border border-border/40">
+            {prices.map((price, k) => {
+              const pm = perMonth(price)
+              const saving =
+                base && price.months > 1 && base.amount_rub > 0 ? Math.round((1 - pm / base.amount_rub) * 100) : 0
+              return (
+                <div key={price.months} className={cn('min-w-0 px-2.5 py-2 tabular-nums', k > 0 && 'border-l border-border/40')}>
+                  <p className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
+                    {t('admin.users.monthsShort', { count: price.months })}
+                  </p>
+                  <p className="truncate text-[15px] font-bold">{formatRub(price.amount_rub, locale)}</p>
+                  <p className="min-h-[15px] truncate text-[11px] text-muted-foreground">
+                    {price.months > 1 && (
+                      <>
+                        {formatRub(pm, locale)}
+                        {t('admin.tariffs.perMonthShort')}
+                        {saving > 0 && <span className="ml-1 text-emerald-500">−{saving}%</span>}
+                      </>
+                    )}
+                  </p>
+                </div>
+              )
+            })}
           </div>
-
-          {prices.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 gap-1.5">
-              {prices.map((price) => {
-                const pm = perMonth(price)
-                const saving =
-                  base && price.months > 1 && base.amount_rub > 0 ? Math.round((1 - pm / base.amount_rub) * 100) : 0
-                return (
-                  <div
-                    key={price.months}
-                    className="flex items-baseline justify-between gap-2 rounded-lg bg-muted/25 px-2.5 py-1.5 text-xs tabular-nums"
-                  >
-                    <span className="whitespace-nowrap text-muted-foreground">
-                      {t('admin.users.monthsShort', { count: price.months })}
-                    </span>
-                    <span className="text-right">
-                      <b className="block whitespace-nowrap text-sm font-semibold">{formatRub(price.amount_rub, locale)}</b>
-                      {saving > 0 && <span className="block text-[11px] leading-tight text-emerald-500">−{saving}%</span>}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </Card>
   )
@@ -971,7 +980,7 @@ export default function AdminTariffsPage() {
             className={cn(
               'relative grid items-stretch',
               isDesktop
-                ? 'grid-cols-2 gap-4 xl:grid-cols-3'
+                ? 'grid-cols-2 gap-4'
                 : view === 'grid'
                   ? 'grid-cols-2 gap-2 sm:gap-3'
                   : 'gap-4',
