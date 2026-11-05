@@ -149,7 +149,14 @@ func TestPendingDiscount_ReservedByOpenInvoices(t *testing.T) {
 	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 50 {
 		t.Fatalf("second invoice while first is open: pct=%d err=%v, want 50", pct, err)
 	}
-	openInvoice(database.InvoiceTypeYookasa)
+	// Скидку получают счета, пока открыто меньше MinOpenInvoicesWithPromo: пятый счёт ещё со скидкой,
+	// шестой уже без неё.
+	for open := 2; open < promo.MinOpenInvoicesWithPromo; open++ {
+		openInvoice(database.InvoiceTypeYookasa)
+		if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 50 {
+			t.Fatalf("invoice #%d (open before it: %d, limit %d): pct=%d err=%v, want 50", open+1, open, promo.MinOpenInvoicesWithPromo, pct, err)
+		}
+	}
 	openInvoice(database.InvoiceTypeYookasa)
 	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 0 {
 		t.Fatalf("invoice over the limit of %d: pct=%d err=%v, want 0", promo.MinOpenInvoicesWithPromo, pct, err)
@@ -159,13 +166,17 @@ func TestPendingDiscount_ReservedByOpenInvoices(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE purchase SET status = 'cancel' WHERE promo_code_id = $1`, promoID); err != nil {
 		t.Fatal(err)
 	}
-	openInvoice(database.InvoiceTypeTelegram)
-	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 50 {
-		t.Fatalf("stale stars invoice must release discount: pct=%d err=%v, want 50", pct, err)
+	// Брошенные счета Stars не истекают сами: когда их набралось на весь лимит, они освобождаются
+	// (отменяются), и скидка снова достаётся новому счёту.
+	for i := 0; i < promo.MinOpenInvoicesWithPromo; i++ {
+		openInvoice(database.InvoiceTypeTelegram)
 	}
-	var stars string
-	if err := pool.QueryRow(ctx, `SELECT status FROM purchase WHERE promo_code_id = $1 AND invoice_type = 'telegram'`, promoID).Scan(&stars); err != nil || stars != "cancel" {
-		t.Fatalf("stale stars invoice status = %q, err = %v; want cancel", stars, err)
+	if pct, _, err := svc.PendingDiscountForPayment(ctx, cust.ID); err != nil || pct != 50 {
+		t.Fatalf("stale stars invoices must release discount: pct=%d err=%v, want 50", pct, err)
+	}
+	var cancelled int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM purchase WHERE promo_code_id = $1 AND invoice_type = 'telegram' AND status = 'cancel'`, promoID).Scan(&cancelled); err != nil || cancelled != promo.MinOpenInvoicesWithPromo {
+		t.Fatalf("cancelled stale stars invoices = %d, err = %v; want %d", cancelled, err, promo.MinOpenInvoicesWithPromo)
 	}
 
 	// Счёт кассы, который так и остался new (Platega месячной давности), скидку
