@@ -10,8 +10,6 @@ import {
   Server,
   Smartphone,
   Gauge,
-  LayoutGrid,
-  Rows2,
 } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
@@ -23,7 +21,7 @@ import { AdminToggleSwitch } from '../components/AdminToggleSwitch'
 import { AdminProductSettingsPanel } from '../components/AdminProductSettingsPanel'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import { tariffTierAccent } from '../utils/tariffTierAccent'
-import { TariffDescription } from '@/components/TariffDescription'
+import { TariffDescription, preprocessTelegramMarkup } from '@/components/TariffDescription'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { bypassLabel } from '@/lib/bypassLabel'
@@ -56,10 +54,7 @@ function formatTrafficLimit(bytes: number, gbUnit: string): string {
   return `${formatGb(bytes)} ${gbUnit}`
 }
 
-const VIEW_KEY = 'admin.tariffs.view'
-type TariffsView = 'grid' | 'list'
-
-/** ПК-раскладка (таблица) с md; на телефоне — плитка или список. */
+/** ПК-раскладка (карточки с шапкой) с md; на телефоне — плитки. */
 function useIsDesktop(): boolean {
   const query = '(min-width: 768px)'
   const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
@@ -70,14 +65,6 @@ function useIsDesktop(): boolean {
     return () => mq.removeEventListener('change', onChange)
   }, [])
   return matches
-}
-
-function readView(): TariffsView {
-  try {
-    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
-  } catch {
-    return 'grid'
-  }
 }
 
 /** Значок трафика; жёлтая точка — у тарифа продаётся докупка. */
@@ -130,56 +117,9 @@ function formatRub(amount: number, locale: string): string {
   return `${new Intl.NumberFormat(locale).format(amount)} ₽`
 }
 
-function LimitChip({ icon, value, label }: { icon: ReactNode; value: ReactNode; label: string }) {
-  return (
-    <span
-      title={label}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/25 px-2.5 py-1.5"
-    >
-      {icon}
-      <span className="text-sm font-semibold leading-none tabular-nums">{value}</span>
-    </span>
-  )
-}
-
 function shownPrices(prices: AdminTariffPrice[]): AdminTariffPrice[] {
   const byMonths = new Map(prices.map((p) => [p.months, p]))
   return PERIOD_MONTHS.map((m) => byMonths.get(m)).filter((p): p is AdminTariffPrice => p != null)
-}
-
-/** Прайс тарифа: то, ради чего страницу открывают, — раньше его тут не было вовсе. */
-function TariffPrices({ prices, locale }: { prices: AdminTariffPrice[]; locale: string }) {
-  const { t } = useTranslation()
-
-  const shown = shownPrices(prices)
-
-  if (shown.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-border/60 px-3 py-2.5 text-center text-xs text-muted-foreground">
-        {t('admin.tariffs.noPrices')}
-      </p>
-    )
-  }
-
-  return (
-    <div className="flex gap-1.5 rounded-xl border border-border/40 bg-muted/15 p-1.5">
-      {shown.map((price) => (
-        <div key={price.months} className="min-w-0 flex-1 rounded-lg px-1.5 py-1.5 text-center">
-          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t('admin.users.monthsShort', { count: price.months })}
-          </p>
-          <p className="mt-0.5 truncate text-sm font-semibold tabular-nums">
-            {formatRub(price.amount_rub, locale)}
-          </p>
-          {price.amount_stars != null && price.amount_stars > 0 && (
-            <p className="mt-0.5 truncate text-[10px] tabular-nums text-muted-foreground">
-              ★ {price.amount_stars}
-            </p>
-          )}
-        </div>
-      ))}
-    </div>
-  )
 }
 
 /** Ручка перетаскивания: тянуть указателем или стрелками с клавиатуры. */
@@ -223,6 +163,18 @@ function GripHandle({
       <GripVertical className={iconClassName} />
     </button>
   )
+}
+
+/** Первая строка описания без разметки Telegram — для плитки, где места на одну строку. */
+function descriptionLine(text: string | null | undefined): string {
+  if (!text) return ''
+  // preprocessTelegramMarkup превращает переводы строк в <br>: вернём их, затем уберём теги.
+  const plain = preprocessTelegramMarkup(text).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '')
+  const line = plain
+    .split('\n')
+    .map((l) => l.replace(/^[\s•\-–*]+/, '').trim())
+    .find(Boolean)
+  return line ?? ''
 }
 
 /** Цена за месяц при каждом периоде: на сколько дешевле месяц на длинном тарифе, чем на коротком. */
@@ -303,11 +255,12 @@ function TariffShowcase({
         dragging && 'border-primary/60 shadow-2xl shadow-black/40',
       )}
     >
-      <div className="relative flex items-center gap-2 border-b border-border/40 px-4 py-3">
+      <span aria-hidden className={cn('absolute inset-y-0 left-0 z-10 w-1', accent.bar, inactive && 'opacity-30')} />
+      <div className="relative flex items-center gap-2 border-b border-border/40 py-3 pl-5 pr-4">
         {/* Цвет уровня тарифа: плавно уходит вправо, чтобы не спорить с тумблером. */}
         <span
           aria-hidden
-          className={cn('absolute inset-0 opacity-20', accent.bar, inactive && 'opacity-10')}
+          className={cn('absolute inset-0 opacity-30', accent.bar, inactive && 'opacity-10')}
           style={{ maskImage: 'linear-gradient(to right, black, transparent 75%)', WebkitMaskImage: 'linear-gradient(to right, black, transparent 75%)' }}
         />
         <GripHandle
@@ -337,11 +290,14 @@ function TariffShowcase({
         </span>
       </div>
 
-      <div className={cn('flex flex-1 flex-col px-4 pb-4 pt-3', inactive && 'opacity-55')}>
+      <div className={cn('flex flex-1 flex-col pb-4 pl-5 pr-4 pt-3', inactive && 'opacity-55')}>
         {tariff.description?.trim() && (
-          <p className="mb-3 line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
-            {tariff.description.trim()}
-          </p>
+          <div
+            className="mb-3 max-h-[4.6rem] overflow-hidden"
+            style={{ maskImage: 'linear-gradient(to bottom, black 70%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent)' }}
+          >
+            <TariffDescription text={tariff.description} className="text-sm leading-snug text-muted-foreground" />
+          </div>
         )}
         <div className="mt-auto flex flex-wrap items-center gap-2">
           <span className={chip} title={t('admin.tariffs.devices')}>
@@ -468,6 +424,11 @@ function TariffTile({
         <p className="ml-[18px] truncate font-mono text-[10px] text-muted-foreground/70">
           {tariff.slug} · #{tariff.sort_order}
         </p>
+        {descriptionLine(tariff.description) && (
+          <p className={cn('mt-1.5 truncate text-[11px] text-muted-foreground', inactive && 'opacity-55')}>
+            {descriptionLine(tariff.description)}
+          </p>
+        )}
 
         {/* mt-auto: лимиты и цены соседних плиток стоят на одной высоте. */}
         <div className={cn('mt-auto pt-2', inactive && 'opacity-55')}>
@@ -486,188 +447,6 @@ function TariffTile({
             </span>
           </div>
           <TilePrice prices={tariff.prices} locale={locale} />
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function TariffCard({
-  tariff,
-  onEdit,
-  locale,
-  position,
-  dragging,
-  onHandleDown,
-  onHandleKey,
-}: {
-  tariff: AdminTariff
-  onEdit: () => void
-  locale: string
-  /** Позиция в отсортированном списке — она задаёт цвет карточки. */
-  position: number
-  dragging: boolean
-  onHandleDown: (e: React.PointerEvent<HTMLButtonElement>) => void
-  onHandleKey: (dir: -1 | 1) => void
-}) {
-  const { t } = useTranslation()
-  const update = useAdminTariffUpdate()
-  const del = useAdminTariffDelete()
-  const [deleteOpen, setDeleteOpen] = useState(false)
-
-  const squadCount = tariff.active_internal_squad_uuids
-    ? tariff.active_internal_squad_uuids.split(',').filter(Boolean).length
-    : 0
-
-  const title = tariff.name?.trim() || tariff.slug
-  const accent = tariffTierAccent(position)
-  const inactive = !tariff.is_active
-
-  return (
-    <Card
-      className={cn(
-        'cabinet-elevated-card relative flex h-full w-full flex-col overflow-hidden transition-shadow hover:shadow-md',
-        inactive && 'bg-muted/30',
-        dragging && 'border-primary/60 shadow-2xl shadow-black/40',
-      )}
-    >
-      {/* Полоса уровня: идентичность тарифа, не статус (статус — бейдж справа). */}
-      <span
-        aria-hidden
-        className={cn('absolute inset-y-0 left-0 w-1', accent.bar, inactive && 'opacity-30')}
-      />
-
-      <div className="flex flex-1 flex-col p-5 pl-6">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-start gap-2.5">
-            <GripHandle
-              dragging={dragging}
-              onHandleDown={onHandleDown}
-              onHandleKey={onHandleKey}
-              className="-ml-2 h-9 w-6 text-muted-foreground hover:bg-muted hover:text-foreground"
-              iconClassName="size-5"
-            />
-            <div
-              className={cn(
-                'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                accent.iconBox,
-                inactive && 'opacity-60',
-              )}
-            >
-              <Zap className={cn('size-4', accent.iconColor)} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3
-                className={cn(
-                  'break-words text-base font-semibold leading-snug',
-                  inactive && 'text-muted-foreground',
-                )}
-              >
-                {title}
-              </h3>
-              {/* slug и порядок витрины — рабочие идентификаторы, раньше их было не видно. */}
-              <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground/70">
-                {tariff.slug} · #{tariff.sort_order}
-              </p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <span
-                  className={cn(
-                    'rounded-full px-2 py-0.5 text-[11px] font-medium leading-none',
-                    tariff.is_active
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-muted text-muted-foreground',
-                  )}
-                >
-                  {tariff.is_active ? t('admin.tariffs.active') : t('admin.promos.inactive')}
-                </span>
-                {tariff.tier_level != null && (
-                  <span
-                    className={cn(
-                      'rounded-full px-2 py-0.5 text-[11px] font-medium leading-none',
-                      accent.badge,
-                    )}
-                  >
-                    {t('admin.tariffs.tierLevel')} {tariff.tier_level}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1 self-start">
-            <AdminToggleSwitch
-              checked={tariff.is_active}
-              onChange={(next) => update.mutate({ id: tariff.id, fields: { is_active: next } })}
-              busy={update.isPending}
-              aria-label={t('admin.tariffs.toggleActive')}
-            />
-            <button
-              type="button"
-              onClick={onEdit}
-              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-              title={t('admin.edit')}
-            >
-              <Pencil className="size-4" />
-            </button>
-            {/* Удаление приглушено до наведения: необратимое действие не должно весить столько же, сколько «изменить». */}
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              className="rounded-lg p-2 text-muted-foreground/50 transition-colors hover:bg-destructive/10 hover:text-destructive"
-              title={t('admin.delete')}
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        </div>
-
-        <AdminConfirmModal
-          open={deleteOpen}
-          onClose={() => setDeleteOpen(false)}
-          onConfirm={() => {
-            del.mutate(tariff.id, { onSuccess: () => setDeleteOpen(false) })
-          }}
-          title={t('admin.tariffs.deleteTariff')}
-          message={t('admin.tariffs.confirmDelete', { name: title })}
-          confirmLabel={t('admin.delete')}
-          variant="destructive"
-          loading={del.isPending}
-          icon={Trash2}
-          iconAccent="rose"
-        />
-
-        {tariff.description?.trim() && (
-          <div className="mt-4 rounded-xl border border-border/40 bg-muted/10 px-3 py-2.5">
-            <TariffDescription text={tariff.description} className="text-sm text-muted-foreground" />
-          </div>
-        )}
-
-        {/*
-         * mt-auto прижимает лимиты и цены к низу карточки: описания у тарифов
-         * разной длины, и без этого данные вставали на разной высоте в соседних
-         * колонках — именно отсюда бралась асимметрия сетки.
-         */}
-        <div className="mt-auto space-y-2.5 pt-4">
-          <div className="flex flex-wrap gap-1.5">
-            <LimitChip
-              icon={<Smartphone className="size-3.5 shrink-0 text-muted-foreground" />}
-              value={String(tariff.device_limit)}
-              label={t('admin.tariffs.devices')}
-            />
-            <LimitChip
-              icon={<TrafficIcon packs={tariff.traffic_packs ?? 0} className="size-3.5 text-muted-foreground" />}
-              value={<TrafficValue tariff={tariff} withUnit />}
-              label={trafficTitle(tariff, t)}
-            />
-            <LimitChip
-              icon={<Server className="size-3.5 shrink-0 text-muted-foreground" />}
-              value={squadCount > 0 ? String(squadCount) : t('admin.tariffs.unlimited')}
-              label={t('admin.tariffs.squadsShort')}
-            />
-          </div>
-
-          <TariffPrices prices={tariff.prices} locale={locale} />
         </div>
       </div>
     </Card>
@@ -698,16 +477,7 @@ export default function AdminTariffsPage() {
   const pointer = useRef({ x: 0, y: 0 })
   // Когда отпустили перетаскиваемую плитку: «клик» после броска не должен открывать редактор.
   const dragEndedAt = useRef(0)
-  const [view, setView] = useState<TariffsView>(readView)
   const isDesktop = useIsDesktop()
-  const changeView = (next: TariffsView) => {
-    setView(next)
-    try {
-      localStorage.setItem(VIEW_KEY, next)
-    } catch {
-      // Хранилище недоступно (приватный режим) — вид просто не запомнится.
-    }
-  }
   // Смещение точки захвата относительно левого верхнего угла карточки.
   const grab = useRef({ x: 0, y: 0 })
 
@@ -929,28 +699,6 @@ export default function AdminTariffsPage() {
           accent="emerald"
           actions={
             <div className="flex items-center gap-2">
-              <div className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5 md:hidden">
-                {(['list', 'grid'] as const).map((v) => {
-                  const Icon = v === 'list' ? Rows2 : LayoutGrid
-                  const label = t(v === 'list' ? 'admin.tariffs.viewList' : 'admin.tariffs.viewGrid')
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      aria-pressed={view === v}
-                      aria-label={label}
-                      title={label}
-                      onClick={() => changeView(v)}
-                      className={cn(
-                        'flex size-8 items-center justify-center rounded-md transition-colors',
-                        view === v ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </button>
-                  )
-                })}
-              </div>
               <button
                 type="button"
                 onClick={openCreate}
@@ -979,11 +727,7 @@ export default function AdminTariffsPage() {
             ref={gridRef}
             className={cn(
               'relative grid items-stretch',
-              isDesktop
-                ? 'grid-cols-2 gap-4'
-                : view === 'grid'
-                  ? 'grid-cols-2 gap-2 sm:gap-3'
-                  : 'gap-4',
+              isDesktop ? 'grid-cols-2 gap-4' : 'grid-cols-2 gap-2 sm:gap-3',
               dragId != null && 'select-none',
             )}
           >
@@ -997,7 +741,7 @@ export default function AdminTariffsPage() {
                 className={cn('flex', dragId === tariff.id && 'relative z-20')}
               >
                 {(() => {
-                  const Item = isDesktop ? TariffShowcase : view === 'grid' ? TariffTile : TariffCard
+                  const Item = isDesktop ? TariffShowcase : TariffTile
                   return (
                     <Item
                       tariff={tariff}

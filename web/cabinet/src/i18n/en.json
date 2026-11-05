@@ -2186,8 +2186,6 @@
         "trafficMainTip": "Regular servers: {{value}}",
         "trafficBypassTip": "{{label}}: {{value}} per month",
         "trafficPacksTip": "Extra traffic packs on sale: {{count}}",
-        "viewList": "List",
-        "viewGrid": "Tiles",
         "fromPrice": "from",
         "perMonthShort": "/mo",
         "noPrices": "No prices set",
