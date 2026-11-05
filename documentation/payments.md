@@ -9,7 +9,6 @@
 | [CryptoPay](https://help.crypt.bot/crypto-pay-api) | `CRYPTO_PAY_ENABLED` | Крипто через Crypto Bot |
 | [Heleket](https://heleket.com) | `HELEKET_ENABLED` | Крипто; в интерфейсе называется «Другая крипта» |
 | Telegram Stars | `TELEGRAM_STARS_ENABLED` | Оплата звёздами в Telegram |
-| Tribute | `TRIBUTE_*` | **Deprecated** — не развивать, лучше не подключать к новым установкам |
 
 Переменные — в [env.md](./env.md) (разделы оплат). Ключи и реквизиты задаются только в `.env`; включать и выключать уже настроенные способы можно без рестарта — в web-админке «Настройки бота» → «Способы оплаты».
 
@@ -48,7 +47,6 @@ YOOKASA_PAYMENT_METHODS=sbp,bank_card,all
 | **Путь задан** | Платёжка может слать уведомление на `https://ваш-домен` + путь (через reverse proxy) |
 
 **CryptoPay** в этом форке подтверждается поллингом.  
-**Tribute** — отдельные `TRIBUTE_*` (см. [env.md](./env.md)); операционно не рекомендуется.
 
 ## Прокси для ЮKassa
 

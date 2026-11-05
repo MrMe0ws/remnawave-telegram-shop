@@ -15,7 +15,6 @@
 | `TELEGRAM_TOKEN` | Токен бота от [@BotFather](https://t.me/BotFather) |
 | `DATABASE_URL` / `POSTGRES_*` | PostgreSQL |
 | `REMNAWAVE_URL`, `REMNAWAVE_TOKEN` | Связь с панелью Remnawave |
-| `PRICE_1` … `PRICE_12` | Цены (обязательны даже при `SALES_MODE=tariffs`) |
 | `HEALTH_CHECK_PORT` | Порт HTTP (healthcheck / кабинет / вебхуки) |
 | `ADMIN_TELEGRAM_ID` | Ваш Telegram ID — кнопка «Админ» |
 
@@ -27,9 +26,6 @@
 
 | Переменная | Описание |
 |------------|----------|
-| `SALES_MODE` | `classic` (цены из env) или `tariffs` (каталог в БД). Подробно — [sales-modes.md](./sales-modes.md) |
-| `PRICE_1` … `PRICE_12` | Цена за 1 / 3 / 6 / 12 месяцев (₽) |
-| `STARS_PRICE_1` … `STARS_PRICE_12` | Цена в Telegram Stars по периодам |
 | `SHOW_LONG_TERM_SAVINGS_PERCENT` | На кнопках 3/6/12 мес показывать экономию «…₽ (-N%)». По умолчанию `false` |
 | `RUB_PER_STAR` | Условный курс ₽ за 1 Star; в `tariffs` — расчёт Stars и XP лояльности |
 | `DAYS_IN_MONTH` | Дней в месяце для расчётов срока |
@@ -132,18 +128,6 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 ---
 
-## Tribute (deprecated)
-
-Не рекомендуется для новых установок. Если задан `TRIBUTE_WEBHOOK_URL` — остальные обязательны.
-
-| Переменная | Описание |
-|------------|----------|
-| `TRIBUTE_WEBHOOK_URL` | Путь webhook, например `/example` |
-| `TRIBUTE_API_KEY` | API-ключ из приложения Tribute |
-| `TRIBUTE_PAYMENT_URL` | URL оплаты (ссылка подписки Telegram) |
-
----
-
 ## Уведомления о платежах (в группу)
 
 | Переменная | Описание |
@@ -175,7 +159,6 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 | Переменная | Описание |
 |------------|----------|
-| `TRAFFIC_LIMIT` | Лимит ГБ (0 — без лимита / по панели) |
 | `TRAFFIC_LIMIT_RESET_STRATEGY` | `day` / `week` / `month` / `month_rolling` / `never` |
 | `TRIAL_DAYS` | Дни триала; `0` = выкл |
 | `TRIAL_TRAFFIC_LIMIT` | Лимит ГБ для триала |

@@ -38,7 +38,7 @@ type config struct {
 	moynalogRetryMaxAgeHours                                                     int
 	telegramProxyURL                                                             string
 	yookasaProxyURL                                                              string
-	trafficLimit, trialTrafficLimit                                              int
+	trialTrafficLimit                                              int
 	feedbackURL                                                                  string
 	channelURL                                                                   string
 	serverStatusURL                                                              string
@@ -84,7 +84,6 @@ type config struct {
 	miniApp                                                                      string
 	enableAutoPayment                                                            bool
 	healthCheckPort                                                              int
-	tributeWebhookUrl, tributeAPIKey, tributePaymentUrl                          string
 	isWebAppLinkEnabled                                                          bool
 	daysInMonth                                                                  int
 	externalSquadUUID                                                            uuid.UUID
@@ -98,7 +97,6 @@ type config struct {
 	trialRemnawaveTag                                                            string
 	remnawaveHeaders                                                             map[string]string
 	trafficLimitResetStrategy                                                    string
-	salesMode                                                                    string
 	showLongTermSavingsPercent                                                   bool    // подписи кнопок периодов: (-N%) к 3/6/12 мес относительно цены 1 мес
 	rubPerStar                                                                   float64 // рублей за 1 Star; 0 = не задано (подсказка Stars в админке отключена)
 	loyaltyEnabled                                                               bool
@@ -169,15 +167,16 @@ func GetRemnawaveWebhookSecret() string {
 func DefaultLanguage() string {
 	return conf.defaultLanguage
 }
+// Tribute устарел и отключён: TRIBUTE_* из env не читаются, вебхук не поднимается, кнопка не показывается.
 func GetTributeWebHookUrl() string {
-	return conf.tributeWebhookUrl
+	return ""
 }
 func GetTributeAPIKey() string {
-	return conf.tributeAPIKey
+	return ""
 }
 
 func GetTributePaymentUrl() string {
-	return conf.tributePaymentUrl
+	return ""
 }
 
 // GetYookasaWebHookURL — только путь вебхука YooKassa (например "/yookassa-hook"), без схемы и домена:
@@ -459,9 +458,9 @@ func TrafficLimitResetStrategy() string {
 	return conf.trafficLimitResetStrategy
 }
 
-// SalesMode: "classic" (цены из env) или "tariffs" (цены из БД).
+// SalesMode — всегда "tariffs" (цены и лимиты из БД). Режим classic устарел; SALES_MODE из env не читается.
 func SalesMode() string {
-	return conf.salesMode
+	return "tariffs"
 }
 
 // ShowLongTermSavingsPercent — добавлять к кнопкам 3/6/12 мес экономию в % относительно покупки по месячной цене (PRICE_1 или цена 1 мес тарифа).
@@ -576,6 +575,14 @@ func ExternalSquadUUID() uuid.UUID {
 // Price — цена периода в рублях (classic). Для периода, которого нет в продаже,
 // — 0: раньше любой месяц вне 1/3/6/12 стоил как один, и подделанная кнопка
 // бота продавала month=120 по цене месяца.
+// Стартовые цены (₽ за 1/3/6/12 мес) для автосида тарифа standard.
+const (
+	defaultPrice1  = 150
+	defaultPrice3  = 400
+	defaultPrice6  = 750
+	defaultPrice12 = 1400
+)
+
 func Price(month int) int {
 	switch month {
 	case 1:
@@ -642,8 +649,10 @@ func YookasaShopId() string {
 func YookasaSecretKey() string {
 	return conf.yookasaSecretKey
 }
+// TrafficLimit — запасной лимит обычного трафика, когда у тарифа свой лимит не задан. Всегда 0 (безлимит):
+// лимит задаётся на тарифе, а прежняя переменная TRAFFIC_LIMIT больше не читается.
 func TrafficLimit() int {
-	return conf.trafficLimit * bytesInGigabyte
+	return 0
 }
 
 // placeholderCredentials — значения-заглушки из .env.sample. Тот, кто скопировал
@@ -1107,19 +1116,12 @@ func InitConfig() {
 
 	conf.enableAutoPayment = envBool("ENABLE_AUTO_PAYMENT")
 
-	conf.price1 = mustEnvInt("PRICE_1")
-	conf.price3 = mustEnvInt("PRICE_3")
-	conf.price6 = mustEnvInt("PRICE_6")
-	conf.price12 = mustEnvInt("PRICE_12")
+	// Цены задаются в тарифах. PRICE_*/STARS_PRICE_* из env не читаются: это только стартовые цены для автосида
+	// тарифа standard (и запасной ориентир, если у тарифа цена не задана).
+	conf.price1, conf.price3, conf.price6, conf.price12 = defaultPrice1, defaultPrice3, defaultPrice6, defaultPrice12
 
 	conf.isTelegramStarsEnabled = envBool("TELEGRAM_STARS_ENABLED")
-	if conf.isTelegramStarsEnabled {
-		conf.starsPrice1 = envIntDefault("STARS_PRICE_1", conf.price1)
-		conf.starsPrice3 = envIntDefault("STARS_PRICE_3", conf.price3)
-		conf.starsPrice6 = envIntDefault("STARS_PRICE_6", conf.price6)
-		conf.starsPrice12 = envIntDefault("STARS_PRICE_12", conf.price12)
-
-	}
+	conf.starsPrice1, conf.starsPrice3, conf.starsPrice6, conf.starsPrice12 = conf.price1, conf.price3, conf.price6, conf.price12
 	conf.requirePaidPurchaseForStars = envBool("REQUIRE_PAID_PURCHASE_FOR_STARS")
 
 	conf.remnawaveUrl = mustEnv("REMNAWAVE_URL")
@@ -1199,7 +1201,6 @@ func InitConfig() {
 		conf.isHeleketEnabled = true
 	}
 
-	conf.trafficLimit = mustEnvInt("TRAFFIC_LIMIT")
 	conf.referralDays = mustEnvInt("REFERRAL_DAYS")
 	conf.referralMode = func() string {
 		v := strings.ToLower(envStringDefault("REFERRAL_MODE", "default"))
@@ -1341,12 +1342,6 @@ func InitConfig() {
 		slog.Info("No trial external squad UUID specified, will use regular EXTERNAL_SQUAD_UUID")
 	}
 
-	conf.tributeWebhookUrl = os.Getenv("TRIBUTE_WEBHOOK_URL")
-	if conf.tributeWebhookUrl != "" {
-		conf.tributeAPIKey = mustEnv("TRIBUTE_API_KEY")
-		conf.tributePaymentUrl = mustEnv("TRIBUTE_PAYMENT_URL")
-	}
-
 	conf.remnawaveWebhookPath = strings.TrimSpace(os.Getenv("REMNAWAVE_WEBHOOK_PATH"))
 	conf.remnawaveWebhookSecret = strings.TrimSpace(os.Getenv("REMNAWAVE_WEBHOOK_SECRET"))
 	if conf.remnawaveWebhookPath != "" && !strings.HasPrefix(conf.remnawaveWebhookPath, "/") {
@@ -1454,11 +1449,6 @@ func InitConfig() {
 
 	conf.telegramProxyURL = envStringDefault("TELEGRAM_PROXY_URL", "")
 	conf.yookasaProxyURL = envStringDefault("YOOKASA_PROXY_URL", "")
-
-	conf.salesMode = strings.ToLower(envStringDefault("SALES_MODE", "classic"))
-	if conf.salesMode != "classic" && conf.salesMode != "tariffs" {
-		panic("SALES_MODE must be 'classic' or 'tariffs'")
-	}
 
 	conf.showLongTermSavingsPercent = envBoolDefault("SHOW_LONG_TERM_SAVINGS_PERCENT", false)
 
