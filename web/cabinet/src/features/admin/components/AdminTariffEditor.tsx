@@ -576,13 +576,16 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   </p>
                 )}
               </div>
-              <AdminCheckboxField
-                checked={form.is_active}
-                onChange={(v) => set('is_active', v)}
-                label={t('admin.tariffs.active')}
-                description={t('admin.tariffs.activeHint')}
-                className="border border-border/60 p-3"
-              />
+              {/* У существующего тарифа включают и выключают тумблером на карточке; галочка нужна только при создании. */}
+              {!isEdit && (
+                <AdminCheckboxField
+                  checked={form.is_active}
+                  onChange={(v) => set('is_active', v)}
+                  label={t('admin.tariffs.active')}
+                  description={t('admin.tariffs.activeHint')}
+                  className="border border-border/60 p-3"
+                />
+              )}
             </section>
           )}
 
