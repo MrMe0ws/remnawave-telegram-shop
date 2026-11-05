@@ -76,6 +76,7 @@ const (
 	PurchaseKindSubscription  PurchaseKind = "subscription"
 	PurchaseKindTariffUpgrade PurchaseKind = "tariff_upgrade"
 	PurchaseKindExtraHwid     PurchaseKind = "extra_hwid"
+	PurchaseKindExtraTraffic  PurchaseKind = "extra_traffic"
 )
 
 type Purchase struct {
@@ -103,6 +104,10 @@ type Purchase struct {
 	TariffID               *int64         `db:"tariff_id"`
 	PurchaseKind           PurchaseKind   `db:"purchase_kind"`
 	IsEarlyDowngrade       bool           `db:"is_early_downgrade"`
+	// Пакет докупки трафика (purchase_kind = extra_traffic): какой пакет, какой вид и сколько байт.
+	TrafficPackID    *int64  `db:"traffic_pack_id"`
+	TrafficPackKind  *string `db:"traffic_pack_kind"`
+	TrafficPackBytes int64   `db:"traffic_pack_bytes"`
 }
 
 type PurchaseRepository struct {
@@ -130,6 +135,7 @@ var purchaseColumns = []string{
 	"tariff_id", "purchase_kind", "is_early_downgrade",
 	"platega_id", "platega_url",
 	"heleket_id", "heleket_url",
+	"traffic_pack_id", "traffic_pack_kind", "traffic_pack_bytes",
 }
 
 // purchaseScanArgs returns pointers for scanning a full purchase row (column order must match purchaseColumns).
@@ -143,6 +149,7 @@ func purchaseScanArgs(p *Purchase) []interface{} {
 		&p.TariffID, &p.PurchaseKind, &p.IsEarlyDowngrade,
 		&p.PlategaID, &p.PlategaURL,
 		&p.HeleketID, &p.HeleketURL,
+		&p.TrafficPackID, &p.TrafficPackKind, &p.TrafficPackBytes,
 	}
 }
 
@@ -151,8 +158,8 @@ func (cr *PurchaseRepository) Create(ctx context.Context, purchase *Purchase) (i
 		purchase.PurchaseKind = PurchaseKindSubscription
 	}
 	buildInsert := sq.Insert("purchase").
-		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "platega_id", "platega_url", "heleket_id", "heleket_url", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade").
-		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.PlategaID, purchase.PlategaURL, purchase.HeleketID, purchase.HeleketURL, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade).
+		Columns("amount", "customer_id", "month", "currency", "expire_at", "status", "invoice_type", "crypto_invoice_id", "crypto_invoice_url", "yookasa_url", "yookasa_id", "platega_id", "platega_url", "heleket_id", "heleket_url", "extra_hwid", "promo_code_id", "discount_percent_applied", "tariff_id", "purchase_kind", "is_early_downgrade", "traffic_pack_id", "traffic_pack_kind", "traffic_pack_bytes").
+		Values(purchase.Amount, purchase.CustomerID, purchase.Month, purchase.Currency, purchase.ExpireAt, purchase.Status, purchase.InvoiceType, purchase.CryptoInvoiceID, purchase.CryptoInvoiceLink, purchase.YookasaURL, purchase.YookasaID, purchase.PlategaID, purchase.PlategaURL, purchase.HeleketID, purchase.HeleketURL, purchase.ExtraHwid, purchase.PromoCodeID, purchase.DiscountPercentApplied, purchase.TariffID, purchase.PurchaseKind, purchase.IsEarlyDowngrade, purchase.TrafficPackID, purchase.TrafficPackKind, purchase.TrafficPackBytes).
 		Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar)
 
@@ -659,13 +666,6 @@ func (pr *PurchaseRepository) HasPaidSubscription(ctx context.Context, customerI
 type AdminPurchaseFilter struct {
 	Status PurchaseStatus // "" = любой статус
 	Search string         // ID платежа / ID клиента / telegram_id / @username (подстрока)
-}
-
-// AdminPurchaseRow — Purchase + краткие данные клиента одним JOIN-запросом
-// (без N+1) для списка и карточки платежа в админке.
-type AdminPurchaseRow struct {
-	Purchase
-	CustomerTelegramID       int64
 	// SortKey — колонка сортировки из adminPurchaseSortExprs; пусто или неизвестное — новые сверху.
 	SortKey  string
 	SortDesc bool
@@ -696,6 +696,13 @@ func adminPurchaseOrderBy(filter AdminPurchaseFilter) string {
 		order += ", p.id DESC"
 	}
 	return order
+}
+
+// AdminPurchaseRow — Purchase + краткие данные клиента одним JOIN-запросом
+// (без N+1) для списка и карточки платежа в админке.
+type AdminPurchaseRow struct {
+	Purchase
+	CustomerTelegramID       int64
 	CustomerTelegramUsername *string
 	CustomerIsWebOnly        bool
 }
@@ -709,6 +716,7 @@ const adminPurchaseSelectCols = `p.id, p.amount, p.customer_id, p.created_at, p.
 	p.tariff_id, p.purchase_kind, p.is_early_downgrade,
 	p.platega_id, p.platega_url,
 	p.heleket_id, p.heleket_url,
+	p.traffic_pack_id, p.traffic_pack_kind, p.traffic_pack_bytes,
 	c.telegram_id, c.telegram_username, c.is_web_only`
 
 func scanAdminPurchaseRow(row pgx.Row) (*AdminPurchaseRow, error) {

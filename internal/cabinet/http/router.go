@@ -53,6 +53,7 @@ import (
 	"remnawave-tg-shop-bot/internal/statusprobe"
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/tariffsquads"
+	"remnawave-tg-shop-bot/internal/trafficquota"
 	"remnawave-tg-shop-bot/internal/translation"
 )
 
@@ -102,6 +103,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// ветку по config.SalesMode().
 	tariffRepo := database.NewTariffRepository(pool)
 	catalogSvc := cabsvc.NewCatalog(tariffRepo)
+	catalogSvc.SetTrafficRepo(database.NewTrafficSplitRepository(pool))
 
 	// LoyaltyTier — опционально: нужно только /me/subscription, чтобы отдать
 	// display_name текущего уровня. Ошибки в этой таблице не должны ломать API.
@@ -239,8 +241,10 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	tgProfiles := tgprofile.New(tgBot)
 	avatarSecret := []byte(cabcfg.JWTSecret())
 
+	meTrafficRepo := database.NewTrafficSplitRepository(pool)
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
 		paymentService, purchaseRepo, rw, customerRepo, database.NewDeviceNameRepository(pool), adminChecker, tgProfiles, avatarSecret, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
+	meHandler.SetTrafficRepo(meTrafficRepo)
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 	// Приглашения «подключить ещё устройство»: токен подписывается тем же
@@ -378,6 +382,8 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminStatsHandler := handlers.NewAdminStats(statsRepo, loyaltyRepo, customerRepo, promoRepo, partnerRepo)
 	adminOverviewHandler := handlers.NewAdminOverview(statsRepo, partnerRepo, rw)
 	adminUsersHandler := handlers.NewAdminUsers(customerRepo, purchaseRepo, referralRepo, tariffRepo, loyaltyRepo, rw, avatarSecret)
+	adminTrafficRepo := database.NewTrafficSplitRepository(pool)
+	adminUsersHandler.SetTrafficSplit(adminTrafficRepo, trafficquota.New(adminTrafficRepo, customerRepo, tariffRepo, rw, nil))
 	// CheckoutRepo — только на чтение (ключ идемпотентности/провайдер в модалке платежа);
 	// не зависит от того, собран ли checkoutSvc (PaymentService может быть nil).
 	adminPaymentsCheckoutRepo := repository.NewCheckoutRepo(pool)
@@ -388,6 +394,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	// массовое применение просто отвечает 503.
 	tariffSquadsSvc := tariffsquads.New(customerRepo, tariffRepo, rw)
 	adminTariffsHandler := handlers.NewAdminTariffs(tariffRepo, tariffSquadsSvc)
+	adminTariffsHandler.SetTrafficRepo(database.NewTrafficSplitRepository(pool), rw)
 	adminLoyaltyHandler := handlers.NewAdminLoyalty(loyaltyRepo, customerRepo, purchaseRepo)
 	adminPartnersHandler := handlers.NewAdminPartners(partnerRepo, customerRepo, config.BotURL(), partnerNotifier)
 	adminBroadcastHandler := handlers.NewAdminBroadcast(customerRepo, tariffRepo, database.NewBroadcastRepository(pool), broadcastSender, tgBot)
@@ -872,6 +879,16 @@ func registerAPIRoutes(
 			),
 		}),
 	)
+	api.Handle("/cabinet/api/me/traffic",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(me.GetTraffic),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.RateLimit(subscriptionAcctLim, accountKey("traffic")),
+			),
+		}),
+	)
 	api.Handle("/cabinet/api/me/traffic-usage",
 		methodRouter(map[string]http.Handler{
 			http.MethodGet: middleware.Chain(
@@ -1295,6 +1312,15 @@ func registerAPIRoutes(
 					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 				),
 			}),
+		)
+		api.Handle("/cabinet/api/payments/traffic/checkout",
+			onlyPOST(middleware.Chain(
+				http.HandlerFunc(pay.TrafficCheckout),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireVerifiedEmail(),
+				middleware.CSRF(),
+				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
+			)),
 		)
 		api.Handle("/cabinet/api/payments/hwid/checkout",
 			onlyPOST(middleware.Chain(

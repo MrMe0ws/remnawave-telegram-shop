@@ -191,6 +191,9 @@ type StatusResult struct {
 	// purchaseKindLabel(), что и в истории оплат.
 	Month     int `json:"month,omitempty"`
 	ExtraHwid int `json:"extra_hwid,omitempty"`
+	// TrafficPackKind и TrafficPackBytes — что куплено, если это пакет трафика.
+	TrafficPackKind  string `json:"traffic_pack_kind,omitempty"`
+	TrafficPackBytes int64  `json:"traffic_pack_bytes,omitempty"`
 }
 
 // PreviewResult — ответ GET /payments/preview: сумма с учётом upgrade/downgrade (как у бота).
@@ -524,6 +527,10 @@ func (s *CheckoutService) GetStatus(ctx context.Context, accountID, checkoutID i
 	result.InvoiceType = string(purchase.InvoiceType)
 	result.Month = purchase.Month
 	result.ExtraHwid = purchase.ExtraHwid
+	if purchase.TrafficPackKind != nil {
+		result.TrafficPackKind = *purchase.TrafficPackKind
+		result.TrafficPackBytes = purchase.TrafficPackBytes
+	}
 	if purchase.PaidAt != nil {
 		result.PaidAt = purchase.PaidAt
 	} else {

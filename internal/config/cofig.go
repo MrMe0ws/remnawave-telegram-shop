@@ -76,6 +76,11 @@ type config struct {
 	trialHwidLimit                                                               int
 	paidHwidLimit                                                                int
 	hwidExtraDevicesEnabled                                                      bool
+	trafficSplitEnabled bool
+	trafficPacksEnabled bool
+	trafficBypassLabel string
+	trafficAlertPercent int
+	trafficPollMinutes int
 	miniApp                                                                      string
 	enableAutoPayment                                                            bool
 	healthCheckPort                                                              int
@@ -338,6 +343,37 @@ func PartnerNotifyChatID() int64 {
 // PartnerNotifyMessageThreadID — тема форума внутри чата; 0 — основной чат.
 func PartnerNotifyMessageThreadID() int {
 	return conf.partnerNotifyThreadID
+}
+
+// TrafficSplitEnabled — общий выключатель раздельного трафика (лимит обхода и воркер).
+func TrafficSplitEnabled() bool { return conf.trafficSplitEnabled }
+
+// TrafficPacksEnabled — продаётся ли докупка трафика пакетами.
+func TrafficPacksEnabled() bool { return conf.trafficPacksEnabled }
+
+// TrafficBypassLabel — как серверы обхода называются у клиента (админ может сменить:
+// платёжным системам не нравятся открытые слова вроде «обход» и «белые списки»).
+func TrafficBypassLabel() string {
+	if conf.trafficBypassLabel == "" {
+		return "Обход"
+	}
+	return conf.trafficBypassLabel
+}
+
+// TrafficAlertPercent — порог предупреждения о приближении к лимиту (второе уведомление — при 100%).
+func TrafficAlertPercent() int {
+	if conf.trafficAlertPercent < 1 || conf.trafficAlertPercent > 99 {
+		return 80
+	}
+	return conf.trafficAlertPercent
+}
+
+// TrafficPollMinutes — как часто воркер проверяет расход обхода.
+func TrafficPollMinutes() int {
+	if conf.trafficPollMinutes < 1 {
+		return 5
+	}
+	return conf.trafficPollMinutes
 }
 
 func HwidAddPrice() int {
@@ -1205,6 +1241,11 @@ func InitConfig() {
 	conf.trialHwidLimit = envIntDefault("TRIAL_HWID_LIMIT", 1)
 	conf.paidHwidLimit = envIntDefault("PAID_HWID_LIMIT", 0)
 	conf.hwidExtraDevicesEnabled = envBoolDefault("HWID_EXTRA_DEVICES_ENABLED", true)
+	conf.trafficSplitEnabled = envBoolDefault("TRAFFIC_SPLIT_ENABLED", false)
+	conf.trafficPacksEnabled = envBoolDefault("TRAFFIC_PACKS_ENABLED", true)
+	conf.trafficBypassLabel = strings.TrimSpace(envStringDefault("TRAFFIC_BYPASS_LABEL", "Обход"))
+	conf.trafficAlertPercent = envIntDefault("TRAFFIC_ALERT_PERCENT", 80)
+	conf.trafficPollMinutes = envIntDefault("TRAFFIC_POLL_MINUTES", 5)
 
 	conf.serverStatusURL = os.Getenv("SERVER_STATUS_URL")
 	conf.supportURL = os.Getenv("SUPPORT_URL")

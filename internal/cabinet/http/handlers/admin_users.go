@@ -17,6 +17,7 @@ import (
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/internal/remnawave"
+	"remnawave-tg-shop-bot/internal/trafficquota"
 	"remnawave-tg-shop-bot/utils"
 )
 
@@ -31,6 +32,9 @@ type AdminUsersHandler struct {
 	// avatarSecret — секрет кабинета, которым подписываются ссылки на
 	// аватарку. Пустой — карточка обойдётся инициалами.
 	avatarSecret []byte
+	// traffic и quota — раздельный трафик (см. admin_users_traffic.go); nil — раздел недоступен.
+	traffic *database.TrafficSplitRepository
+	quota   *trafficquota.Service
 }
 
 // adminAvatarTTL — срок жизни ссылки на аватарку в админской карточке.
@@ -1123,6 +1127,12 @@ func (h *AdminUsersHandler) HandleByID(w http.ResponseWriter, r *http.Request) {
 		h.Panel(w, r)
 	case strings.HasSuffix(path, "/squads"):
 		h.SetSquads(w, r)
+	case strings.Contains(path, "/traffic-split/extras/"):
+		h.TrafficSplitRevoke(w, r)
+	case strings.HasSuffix(path, "/traffic-split/grant"):
+		h.TrafficSplitGrant(w, r)
+	case strings.HasSuffix(path, "/traffic-split"):
+		h.TrafficSplit(w, r)
 	case strings.HasSuffix(path, "/traffic"):
 		h.SetTraffic(w, r)
 	case strings.HasSuffix(path, "/strategy"):

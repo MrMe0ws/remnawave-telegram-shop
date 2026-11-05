@@ -34,6 +34,7 @@ import (
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/tgclient"
 	"remnawave-tg-shop-bot/internal/translation"
+	"remnawave-tg-shop-bot/internal/trafficquota"
 	"remnawave-tg-shop-bot/internal/tribute"
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"strconv"
@@ -224,6 +225,11 @@ func main() {
 	// Инициализация сервиса платежей, который объединяет все платежные системы
 	paymentService := payment.NewPaymentService(tm, purchaseRepository, tariffRepository, remnawaveClient, customerRepository, b, cryptoPayClient, yookasaClient, plategaClient, heleketClient, referralRepository, referralLedgerRepository, partnerRepository, cache, receiptQueue, promoService, loyaltyTierRepository)
 
+	// Раздельный трафик: лимит обхода, пакеты докупки, предупреждения (воркер раз в минуту решает, пора ли).
+	trafficRepository := database.NewTrafficSplitRepository(pool)
+	trafficService := trafficquota.New(trafficRepository, customerRepository, tariffRepository, remnawaveClient, trafficquota.NewTelegramNotifier(b, tm))
+	paymentService.SetTrafficSplit(trafficRepository, trafficService)
+
 	// Один Reconciler на вебхук и на поллинг: решение «зачесть / отменить /
 	// позвать админа» принимается в одном месте.
 	heleketReconciler := heleket.NewReconciler(heleketClient, purchaseRepository, paymentService, paymentService, paymentService)
@@ -246,6 +252,10 @@ func main() {
 	subscriptionNotificationCronScheduler := subscriptionChecker(subService, infraBillingNotifyService)
 	subscriptionNotificationCronScheduler.Start()
 	schedulers = append(schedulers, subscriptionNotificationCronScheduler)
+
+	trafficCronScheduler := trafficQuotaChecker(trafficService)
+	trafficCronScheduler.Start()
+	schedulers = append(schedulers, trafficCronScheduler)
 
 	// Lifecycle notifications cron (отдельно от daily 16:00)
 	var lifecycleCronScheduler *cron.Cron
@@ -1062,6 +1072,20 @@ func subscriptionChecker(subService *notification.SubscriptionService, infraNoti
 	})
 
 	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+// trafficQuotaChecker — раз в минуту будит воркер раздельного трафика; тот сам решает, пора ли
+// проходить по клиентам (TRAFFIC_POLL_MINUTES), а при выключенном TRAFFIC_SPLIT_ENABLED занимается только пакетами обычного трафика (истечение, возврат сквадов).
+func trafficQuotaChecker(svc *trafficquota.Service) *cron.Cron {
+	c := newCron()
+	if _, err := c.AddFunc("@every 1m", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		svc.RunDue(ctx)
+	}); err != nil {
 		panic(err)
 	}
 	return c

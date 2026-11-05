@@ -295,6 +295,35 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return conf.trialRemnawaveTag },
 		},
 
+		// --- traffic (раздельный трафик и докупка) ---
+		{
+			Key: "TRAFFIC_SPLIT_ENABLED", Group: "traffic", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.trafficSplitEnabled = v }),
+			Current: func() string { return boolStr(conf.trafficSplitEnabled) },
+		},
+		{
+			Key: "TRAFFIC_PACKS_ENABLED", Group: "traffic", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.trafficPacksEnabled = v }),
+			Current: func() string { return boolStr(conf.trafficPacksEnabled) },
+		},
+		{
+			Key: "TRAFFIC_BYPASS_LABEL", Group: "traffic", Type: SettingText, Instant: true,
+			Apply:   applyStringField(func(v string) { conf.trafficBypassLabel = v }),
+			Current: func() string { return conf.trafficBypassLabel },
+		},
+		{
+			Key: "TRAFFIC_ALERT_PERCENT", Group: "traffic", Type: SettingInt, Instant: true,
+			MinInt: intPtr(1), MaxInt: intPtr(99),
+			Apply:   applyIntField(func(v int) error { conf.trafficAlertPercent = v; return nil }),
+			Current: func() string { return strconv.Itoa(conf.trafficAlertPercent) },
+		},
+		{
+			Key: "TRAFFIC_POLL_MINUTES", Group: "traffic", Type: SettingInt,
+			MinInt: intPtr(1), MaxInt: intPtr(60),
+			Apply:   applyIntField(func(v int) error { conf.trafficPollMinutes = v; return nil }),
+			Current: func() string { return strconv.Itoa(conf.trafficPollMinutes) },
+		},
+
 		// --- hwid ---
 		{
 			Key: "HWID_EXTRA_DEVICES_ENABLED", Group: "hwid", Type: SettingBool, Instant: true,

@@ -40,6 +40,7 @@ type MeHandler struct {
 	rw           *remnawave.Client
 	adminChecker *adminauth.Checker
 	tgProfiles   *tgprofile.Service
+	traffic      *database.TrafficSplitRepository
 	// avatarSecret — секрет кабинета: им подписываются ссылки на аватарку.
 	avatarSecret        []byte
 	cookieDomain        string
@@ -1343,4 +1344,16 @@ func maskIdentityHintEmail(email string) string {
 		return local[:1] + "***" + domain
 	}
 	return local[:1] + "***" + local[len(local)-1:] + domain
+}
+
+// SetTrafficRepo подключает раздельный трафик (сводка /me/traffic и слой обхода в графике).
+func (h *MeHandler) SetTrafficRepo(r *database.TrafficSplitRepository) { h.traffic = r }
+
+// GetTraffic — GET /cabinet/api/me/traffic: расход, лимиты и пакеты докупки.
+func (h *MeHandler) GetTraffic(w http.ResponseWriter, r *http.Request) {
+	if h.traffic == nil {
+		writeJSON(w, http.StatusOK, trafficOverviewResp{Label: config.TrafficBypassLabel(), Extras: []trafficExtraDTO{}, Packs: []trafficPackDTO{}})
+		return
+	}
+	NewTraffic(h.bootstrap, h.customers, h.traffic, h.rw).Get(w, r)
 }

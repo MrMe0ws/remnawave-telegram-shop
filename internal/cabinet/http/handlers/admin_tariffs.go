@@ -11,6 +11,7 @@ import (
 
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/tariffsquads"
 )
 
@@ -44,6 +45,9 @@ type AdminTariffsHandler struct {
 	// nil, если панель Remnawave не сконфигурирована: тарифы при этом
 	// продолжают редактироваться, недоступно только массовое применение.
 	squads *tariffsquads.Service
+	// traffic и rw — раздельный трафик (см. admin_tariffs_traffic.go); nil — раздел недоступен.
+	traffic *database.TrafficSplitRepository
+	rw      *remnawave.Client
 }
 
 func NewAdminTariffs(tariffs *database.TariffRepository, squads *tariffsquads.Service) *AdminTariffsHandler {
@@ -305,6 +309,16 @@ func (h *AdminTariffsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		fields[k] = val
 	}
 
+	// Отдельный лимит обхода возможен только при безлимитных обычных серверах (панель держит один общий лимит).
+	if v, ok := fields["traffic_limit_bytes"]; ok && h.traffic != nil {
+		if n, isNum := v.(float64); isNum && n > 0 {
+			if b, berr := h.traffic.GetTariffBypass(r.Context(), id); berr == nil && b.Enabled() {
+				http.Error(w, "у тарифа включён отдельный лимит обхода: обычные серверы должны быть безлимитными. Сначала отключите обход во вкладке «Трафик»", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
 	if v, ok := fields["active_internal_squad_uuids"]; ok {
 		raw, isStr := v.(string)
 		if !isStr {
@@ -419,6 +433,10 @@ func (h *AdminTariffsHandler) HandleByID(w http.ResponseWriter, r *http.Request)
 		h.SquadsPreview(w, r, id)
 	case "squads/apply":
 		h.SquadsApply(w, r, id)
+	case "traffic":
+		h.Traffic(w, r, id)
+	case "traffic/nodes":
+		h.TrafficNodes(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
