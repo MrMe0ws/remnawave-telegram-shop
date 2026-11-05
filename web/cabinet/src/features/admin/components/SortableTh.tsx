@@ -32,6 +32,7 @@ export function SortableTh({
   children,
   className,
   disabled,
+  filter,
 }: {
   sortKey: string
   sort: SortState | null
@@ -40,6 +41,8 @@ export function SortableTh({
   className?: string
   /** Сортировка недоступна (например, результаты поиска) — заголовок остаётся обычным. */
   disabled?: boolean
+  /** Фильтр колонки (стрелка со списком) — рядом с кнопкой сортировки. */
+  filter?: ReactNode
 }) {
   const active = !disabled && sort?.key === sortKey
   const Icon = !active ? ArrowUpDown : sort?.dir === 'asc' ? ArrowUp : ArrowDown
@@ -52,6 +55,7 @@ export function SortableTh({
       {disabled ? (
         children
       ) : (
+        <span className="inline-flex items-center gap-1">
         <button
           type="button"
           onClick={() => onSort(sortKey)}
@@ -63,6 +67,8 @@ export function SortableTh({
           {children}
           <Icon className={cn('size-3.5 shrink-0', active ? 'text-primary' : 'text-muted-foreground/50')} aria-hidden />
         </button>
+        {filter}
+        </span>
       )}
     </th>
   )

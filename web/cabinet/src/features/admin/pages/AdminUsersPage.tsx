@@ -17,6 +17,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
+import { HeaderFilter } from '../components/HeaderFilter'
 import { SortableTh, nextSort, type SortDir, type SortState } from '../components/SortableTh'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -321,7 +322,7 @@ export default function AdminUsersPage() {
 
         {/* Scope tabs */}
         {!isSearching && (
-          <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
+          <div className="-mx-1 overflow-x-auto md:hidden overscroll-x-contain px-1 pb-0.5">
             <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
               {SCOPES.map((s) => (
                 <button
@@ -384,7 +385,20 @@ export default function AdminUsersPage() {
                       <SortableTh sortKey="expire_at" sort={sort} onSort={onSort} disabled={isSearching} className="hidden sm:table-cell">
                         <HeadCell icon={CalendarClock} label={t('admin.users.expireAt')} />
                       </SortableTh>
-                      <SortableTh sortKey="status" sort={sort} onSort={onSort} disabled={isSearching}>
+                      <SortableTh
+                        sortKey="status"
+                        sort={sort}
+                        onSort={onSort}
+                        disabled={isSearching}
+                        filter={
+                          <HeaderFilter
+                            value={scope}
+                            options={SCOPES.map((s) => ({ value: s, label: t(SCOPE_LABEL_KEYS[s]) }))}
+                            onChange={(s) => applyListState({ scope: s, page: 1 })}
+                            ariaLabel={t('admin.users.status')}
+                          />
+                        }
+                      >
                         <HeadCell icon={CircleDot} label={t('admin.users.status')} />
                       </SortableTh>
                       <SortableTh sortKey="tariff" sort={sort} onSort={onSort} disabled={isSearching} className="hidden md:table-cell">

@@ -5,6 +5,7 @@ import { CreditCard, Download, Search, ChevronRight } from 'lucide-react'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminTablePagination } from '../components/AdminTablePagination'
+import { HeaderFilter } from '../components/HeaderFilter'
 import { SortableTh, nextSort, type SortDir, type SortState } from '../components/SortableTh'
 import { AdminPaymentDetailModal } from '../components/AdminPaymentDetailModal'
 import { Card } from '@/components/ui/card'
@@ -206,7 +207,7 @@ export default function AdminPaymentsPage() {
           />
         </div>
 
-        <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
+        <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5 md:hidden">
           <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
             {STATUSES.map((s) => (
               <button
@@ -255,7 +256,21 @@ export default function AdminPaymentsPage() {
                       <SortableTh sortKey="amount" sort={sort} onSort={onSort}>{t('admin.payments.amount')}</SortableTh>
                       <SortableTh sortKey="provider" sort={sort} onSort={onSort} className="hidden sm:table-cell">{t('admin.payments.provider')}</SortableTh>
                       <th className="hidden px-3 py-2 md:table-cell">{t('admin.payments.description')}</th>
-                      <SortableTh sortKey="status" sort={sort} onSort={onSort}>{t('admin.payments.statusLabel')}</SortableTh>
+                      <SortableTh
+                        sortKey="status"
+                        sort={sort}
+                        onSort={onSort}
+                        filter={
+                          <HeaderFilter
+                            value={scope}
+                            options={STATUSES.map((s) => ({ value: s, label: t(STATUS_LABEL_KEYS[s]) }))}
+                            onChange={(s) => { setScope(s); setPage(1) }}
+                            ariaLabel={t('admin.payments.statusLabel')}
+                          />
+                        }
+                      >
+                        {t('admin.payments.statusLabel')}
+                      </SortableTh>
                       <SortableTh sortKey="created_at" sort={sort} onSort={onSort} className="hidden lg:table-cell">{t('admin.payments.createdAt')}</SortableTh>
                     </tr>
                   </thead>
