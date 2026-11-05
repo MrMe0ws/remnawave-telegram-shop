@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 
 function historyLevel(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return ''
-  if (value >= 0.99) return 'up'
+  if (value >= 0.95) return 'up'
   if (value > 0) return 'partial'
   return 'down'
 }
