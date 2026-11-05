@@ -153,6 +153,9 @@ func amountPeriodLine(p *database.Purchase) string {
 		cur = "RUB"
 	}
 	amt := p.Amount
+	if p.PurchaseKind == database.PurchaseKindExtraTraffic {
+		return trafficPackAmountLine(p, cur)
+	}
 	if p.InvoiceType == database.InvoiceTypeTelegram {
 		if cur == "" {
 			cur = "XTR"
@@ -481,3 +484,21 @@ func (s *PaymentService) tryNotifyPurchaseCancel(ctx context.Context, p *databas
 	}
 	s.sendPaymentsGroupHTML(ctx, msg, markup)
 }
+
+// trafficPackAmountLine — сумма и пометка «докупка трафика» с размером пакета.
+func trafficPackAmountLine(p *database.Purchase, cur string) string {
+	size := "—"
+	if p.TrafficPackBytes > 0 {
+		size = fmt.Sprintf("%.1f ГБ", float64(p.TrafficPackBytes)/(1<<30))
+		size = strings.Replace(strings.Replace(size, ".0 ", " ", 1), ".", ",", 1)
+	}
+	kind := "обычный"
+	if p.TrafficPackKind != nil && *p.TrafficPackKind == database.TrafficKindBypass {
+		kind = config.TrafficBypassLabel()
+	}
+	if p.InvoiceType == database.InvoiceTypeTelegram {
+		return fmt.Sprintf("💳 %.0f ⭐ · %s · докупка трафика %s (%s)", p.Amount, cur, size, kind)
+	}
+	return fmt.Sprintf("💳 %.2f %s · докупка трафика %s (%s)", p.Amount, cur, size, kind)
+}
+
