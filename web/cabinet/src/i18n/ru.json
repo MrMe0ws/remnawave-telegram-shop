@@ -2591,6 +2591,7 @@
         "compose": "Сообщение",
         "placeholder": "Введите текст рассылки...",
         "attachMedia": "Прикрепить фото или видео",
+        "pasteHint": "или вставьте картинку из буфера — Ctrl+V",
         "uploadingMedia": "Загрузка…",
         "photoAttached": "Фото будет отправлено в Telegram",
         "videoAttached": "Видео будет отправлено в Telegram",

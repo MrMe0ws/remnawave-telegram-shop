@@ -2523,6 +2523,7 @@
         "compose": "Message",
         "placeholder": "Enter broadcast message...",
         "attachMedia": "Attach photo or video",
+        "pasteHint": "or paste an image from the clipboard — Ctrl+V",
         "uploadingMedia": "Uploading…",
         "photoAttached": "Photo will be sent via Telegram",
         "videoAttached": "Video will be sent via Telegram",
