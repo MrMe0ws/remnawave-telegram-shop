@@ -10,7 +10,6 @@ import {
   CloudUpload,
   Cpu,
   Globe,
-  HardDrive,
   Plug,
   RotateCw,
   Sparkle,
@@ -63,6 +62,25 @@ const STATE_STYLE: Record<AdminNodeState, StateStyle> = {
   },
 }
 
+/** Иконка памяти как в панели и макете: тонкая плашка с двумя точками. В lucide похожей нет. */
+function MemoryIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-3 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="2" y="9" width="20" height="8" rx="2" />
+      <path d="M6 13h.01M10 13h.01" />
+    </svg>
+  )
+}
+
 const DASH = <span className="opacity-60">—</span>
 
 function StateBadge({ state }: { state: AdminNodeState }) {
@@ -71,7 +89,7 @@ function StateBadge({ state }: { state: AdminNodeState }) {
   const Icon = s.icon
   return (
     <span
-      className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border', s.badge)}
+      className={cn('flex size-8 shrink-0 items-center justify-center rounded-[9px] border', s.badge)}
       title={t(`admin.nodes.state.${state}`)}
     >
       <Icon className="size-4" aria-hidden />
@@ -85,7 +103,7 @@ function UsersPill({ count }: { count: number }) {
     <span
       title={t('admin.nodes.usersTitle')}
       className={cn(
-        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border bg-background/40 px-2.5 font-mono text-[13px] font-bold tabular-nums',
+        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[9px] border bg-background/40 px-2.5 font-mono text-[13px] font-bold tabular-nums',
         count > 0 ? 'border-emerald-500/60 text-emerald-300' : 'border-muted-foreground/40 text-foreground',
       )}
     >
@@ -99,7 +117,7 @@ function ProviderBadge({ node }: { node: AdminNodeDTO }) {
   if (!node.provider) return null
   const icon = faviconSrcFromUrl(node.provider.favicon_link)
   return (
-    <span className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-md bg-secondary px-2 text-[11px] font-extrabold uppercase tracking-wide">
+    <span className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-[7px] bg-secondary px-2 text-[11px] font-extrabold uppercase tracking-wide">
       {icon && (
         <img
           src={icon}
@@ -146,7 +164,7 @@ function LoadLine({ node, showLoad }: { node: AdminNodeDTO; showLoad: boolean })
   return (
     <div className="flex items-center gap-2.5 whitespace-nowrap font-mono text-[11.5px] text-muted-foreground">
       <span className="flex items-center gap-1.5" title={t('admin.nodes.memoryTitle')}>
-        <HardDrive className="size-3 shrink-0" aria-hidden />
+        <MemoryIcon />
         <Bar pct={live && mem != null ? mem : 0} className="w-14" />
         {live && mem != null ? `${Math.round(mem)}%` : DASH}
       </span>
@@ -274,7 +292,7 @@ function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout
     return (
       <div
         className={cn(
-          'grid grid-cols-[minmax(0,1fr)_158px_164px_160px] items-center gap-4 rounded-2xl border py-2.5 pl-3 pr-4',
+          'grid grid-cols-[minmax(0,1fr)_158px_164px_160px] items-center gap-4 rounded-[14px] border py-2.5 pl-3 pr-4',
           style.wrap,
         )}
         style={SOLID_BG}
@@ -299,7 +317,7 @@ function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout
   }
 
   return (
-    <div className={cn('flex flex-col gap-2.5 rounded-2xl border px-3 py-3', style.wrap)} style={SOLID_BG}>
+    <div className={cn('flex flex-col gap-2.5 rounded-[14px] border px-3 py-3', style.wrap)} style={SOLID_BG}>
       <Title node={node} />
       <div className="flex items-center justify-between gap-2.5">
         <ProviderBadge node={node} />

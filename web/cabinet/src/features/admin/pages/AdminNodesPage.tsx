@@ -167,7 +167,7 @@ export default function AdminNodesPage() {
           type="button"
           onClick={closeSearch}
           aria-label={t('admin.nodes.searchClose')}
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="flex size-8 shrink-0 items-center justify-center rounded-[9px] text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <X className="size-4" aria-hidden />
         </button>
@@ -353,7 +353,7 @@ function MenuItem({
       aria-checked={active}
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors',
+        'flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm font-medium transition-colors',
         active ? 'bg-primary/10 text-primary' : 'text-foreground/90 hover:bg-secondary',
       )}
     >
