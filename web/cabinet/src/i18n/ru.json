@@ -444,6 +444,7 @@
       "devicesUnlimited": "Безлимит устройств",
       "traffic": "{{n}} ГБ",
       "trafficUnlimited": "Безлимит трафика",
+      "trafficUnlimitedPlusBypass": "Безлимит + {{n}} ГБ {{label}}",
       "saving": "Экономия {{pct}}%",
       "moAbbr": "мес.",
       "choosePeriodHint": "Выберите срок оплаты",

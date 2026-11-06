@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Cloud, Smartphone, Zap, type LucideIcon } from 'lucide-react'
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
@@ -13,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type SubscriptionResponse, type TariffItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { bypassLabel } from '@/lib/bypassLabel'
 import { useAuthStore } from '@/store/auth'
 import { formatDecimals, formatNumber } from '@/lib/format'
 import {
@@ -471,9 +473,7 @@ function TariffPlanCard({
               ) : null}
               <ul className="space-y-1.5 text-sm shrink-0">
                 <FeatureLine icon={Cloud}>
-                  {head.traffic_gb
-                    ? t('tariffs.traffic', { n: head.traffic_gb })
-                    : t('tariffs.trafficUnlimited')}
+                  {trafficLineText(head, t)}
                 </FeatureLine>
                 <FeatureLine icon={Smartphone}>
                   {head.device_limit > 0
@@ -501,9 +501,7 @@ function TariffPlanCard({
 
             <ul className="space-y-1.5 text-sm flex-1">
               <FeatureLine icon={Cloud}>
-                {head.traffic_gb
-                  ? t('tariffs.traffic', { n: head.traffic_gb })
-                  : t('tariffs.trafficUnlimited')}
+                {trafficLineText(head, t)}
               </FeatureLine>
               <FeatureLine icon={Smartphone}>
                 {head.device_limit > 0
@@ -682,9 +680,7 @@ function ClassicIntro({
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Cloud size={14} className="text-primary shrink-0" />
-          {head.traffic_gb
-            ? t('tariffs.traffic', { n: head.traffic_gb })
-            : t('tariffs.trafficUnlimited')}
+          {trafficLineText(head, t)}
         </span>
         <span className="flex items-center gap-1.5">
           <Smartphone size={14} className="text-primary shrink-0" />
@@ -851,6 +847,20 @@ function FeatureLine({
       {children}
     </li>
   )
+}
+
+/**
+ * Трафик на карточке тарифа. При отдельном лимите обхода «Безлимит трафика» — неправда:
+ * безлимитны только обычные серверы, а на обходе свой месячный лимит. Название обхода —
+ * как его задал админ (TRAFFIC_BYPASS_LABEL), без склонения.
+ */
+function trafficLineText(head: TariffItem, t: TFunction): string {
+  if (head.traffic_gb) return t('tariffs.traffic', { n: head.traffic_gb })
+  if (head.bypass_gb == null) return t('tariffs.trafficUnlimited')
+  return t('tariffs.trafficUnlimitedPlusBypass', {
+    n: formatNumber(head.bypass_gb),
+    label: bypassLabel(head.bypass_label),
+  })
 }
 
 function pluralizeMonths(n: number): string {

@@ -1034,6 +1034,7 @@
       "devicesUnlimited": "Unlimited devices",
       "traffic": "{{n}} GB",
       "trafficUnlimited": "Unlimited traffic",
+      "trafficUnlimitedPlusBypass": "Unlimited + {{n}} GB {{label}}",
       "saving": "Save {{pct}}%",
       "moAbbr": "mo.",
       "choosePeriodHint": "Choose billing period",
