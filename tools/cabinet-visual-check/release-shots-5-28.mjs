@@ -140,10 +140,21 @@ async function scrollToBlock(page, locator, offset = 120) {
 const RAW = process.env.RAW === '1'
 const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean)
 const want = (n) => ONLY.length === 0 || ONLY.includes(String(n))
-const shot = (page, name) => page.screenshot({ path: path.join(outDir, name.replace('.png', '.jpg')), type: 'jpeg', quality: 86 })
+// Имя вида '1/05-…': подпапка — номер альбома, альбом N уходит ответом на N-е сообщение поста.
+const shot = (page, name) => {
+  const file = path.join(outDir, name.replace('.png', '.jpg'))
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  return page.screenshot({ path: file, type: 'jpeg', quality: 86 })
+}
 const fxDir = path.dirname(fixturesFile)
 const loadFx = (name) => JSON.parse(fs.readFileSync(path.join(fxDir, name), 'utf8'))
 const scene = (name, extra = {}) => ({ ...base, ...loadFx(name), ...extra })
+// Тарифы админки: «Премиум» отмечен популярным.
+function adminTariffs() {
+  const fx = scene('release-next-tariffs.json')
+  for (const t of fx['/admin/tariffs']) t.is_popular = t.slug === 'premium'
+  return fx
+}
 const M = RAW ? async () => {} : mark
 const C = RAW ? async () => {} : caption
 // В фикстуре обход по дням даёт 2,4 ГБ, а счётчик — 12 ГБ: подгоняем график под счётчик,
@@ -165,7 +176,7 @@ if (want(1)) {
   const { ctx, page, errors } = await open(1440, 900, fx, '/dashboard')
   await page.mouse.move(2, 880)
   await M(page.getByText(/12\/30/).first().locator('xpath=ancestor::*[self::button or self::a or @role="button"][1]'), 'Безлимит + отдельный лимит обхода', 'top')
-  await shot(page, '01-home-split.png')
+  await shot(page, '1/01-home-split.png')
   console.log('1', errors)
   await ctx.close()
 }
@@ -178,7 +189,7 @@ if (want(2)) {
   await page.waitForTimeout(1300)
   await page.mouse.move(380, 470)
   await C(page, 'Расход по дням: обычные и обход', 480)
-  await shot(page, '02-traffic-sheet.png')
+  await shot(page, '1/02-traffic-sheet.png')
   console.log('2', errors)
   await ctx.close()
 }
@@ -190,13 +201,13 @@ if (want(3)) {
   await page.waitForTimeout(1000)
   await page.mouse.move(2, 880)
   await C(page, 'Докупка пакета до конца месяца', 120)
-  await shot(page, '03-traffic-pack.png')
+  await shot(page, '1/03-traffic-pack.png')
   console.log('3', errors)
   await ctx.close()
 }
 if (want(4)) {
   // 4. Редактор тарифа, вкладка «Трафик»: обход, сквад, ноды, пакеты.
-  const fx = scene('release-next-tariffs.json')
+  const fx = adminTariffs()
   const { ctx, page, errors } = await open(1440, 1100, fx, '/admin/tariffs')
   await page.locator('[role="button"]').filter({ hasText: 'Стандарт' }).first().click()
   await page.waitForTimeout(700)
@@ -204,7 +215,7 @@ if (want(4)) {
   await page.waitForTimeout(1000)
   await page.mouse.move(2, 1080)
   await M(page.getByText('Обход — отдельный лимит', { exact: true }).locator('xpath=ancestor::*[.//*[starts-with(normalize-space(text()), "Ноды — по ним")]][1]'), 'Лимит обхода, сквад и ноды', 'left')
-  await shot(page, '04-admin-tariff-traffic.png')
+  await shot(page, '1/04-admin-tariff-traffic.png')
   console.log('4', errors)
   await ctx.close()
 }
@@ -214,7 +225,7 @@ if (want(5)) {
   const { ctx, page, errors } = await open(1440, 1000, fx, '/admin/nodes')
   await page.mouse.move(2, 980)
   await C(page, 'Кто на какой ноде — не заходя в панель', 84)
-  await shot(page, '05-admin-nodes.png')
+  await shot(page, '1/08-admin-nodes.png')
   console.log('5', errors)
   await ctx.close()
 }
@@ -231,7 +242,7 @@ if (want(6)) {
   const { ctx, page, errors } = await open(1440, 1340, fx, `/checkout?tariff=${slug}&months=1`)
   await page.mouse.move(2, 1320)
   await M(page.getByText('Все способы', { exact: true }).first().locator('xpath=ancestor::button[1]'), 'Platega: кнопка на каждый способ', 'left')
-  await shot(page, '06-checkout-platega.png')
+  await shot(page, '1/09-checkout-platega.png')
   console.log('6', errors)
   await ctx.close()
 }
@@ -253,19 +264,19 @@ if (want(7)) {
   await page.mouse.move(2, 1280)
   await scrollToBlock(page, page.getByText(/^Platega: кнопки$/i), 150)
   await M(page.getByText(/^Platega: кнопки$/i).first(), 'Кнопки Platega: порядок и включение', 'inline-right')
-  await shot(page, '07-admin-settings.png')
+  await shot(page, '2/02-admin-settings.png')
   console.log('7', errors)
   await ctx.close()
 }
 if (want(8)) {
   // 8. Тарифы в админке на ПК: витрина.
-  const fx = scene('release-next-tariffs.json')
+  const fx = adminTariffs()
   const { ctx, page, errors } = await open(1440, 900, fx, '/admin/tariffs')
   await page.mouse.move(2, 880)
   await page.waitForTimeout(400)
   await M(page.locator('[role="button"]').filter({ hasText: 'Стандарт' }).first().locator('span', { hasText: '+30' }).first(), '', 'bottom')
-  await C(page, 'Витрина тарифов: лимит обхода и докупка на карточке', 84)
-  await shot(page, '08-admin-tariffs.png')
+  await C(page, 'Витрина тарифов: обход, докупка, «Популярный»', 84)
+  await shot(page, '2/01-admin-tariffs.png')
   console.log('8', errors)
   await ctx.close()
 }
@@ -289,7 +300,7 @@ if (want(9)) {
   await page.waitForTimeout(600)
   await M(page.locator('thead').first(), '', 'top')
   await C(page, 'Сортировка по столбцам и фильтр статуса', 84)
-  await shot(page, '09-admin-users.png')
+  await shot(page, '2/03-admin-users.png')
   console.log('9', errors)
   await ctx.close()
 }
@@ -302,8 +313,64 @@ if (want(10)) {
   await page.waitForTimeout(1200)
   await M(page.getByText('Последние 30 замеров', { exact: true }).first(), '', 'top')
   await C(page, 'Столбик — один замер, а не целый день', 120)
-  await shot(page, '10-status-bars.png')
+  await shot(page, '2/04-status-bars.png')
   console.log('10', errors)
+  await ctx.close()
+}
+if (want(11)) {
+  // 11. Тарифы у клиента на ПК: популярный — единственная цветная карточка, у обхода свой лимит.
+  const fx = scene('tariffs.json')
+  const GB = 1024 ** 3
+  const prices = (a) => [1, 3, 6, 12].map((months, i) => ({ months, amount_rub: a[i] }))
+  fx['/tariffs'] = { ...fx['/tariffs'], tariffs: [
+    { id: 1, slug: 'base', name: 'Базовый', description: '2 устройства\nЛимит 200 ГБ в месяц', device_limit: 2, traffic_limit_bytes: 200 * GB, prices: prices([150, 400, 750, 1320]) },
+    { id: 2, slug: 'standard', name: 'Стандарт', description: '3 устройства\nБезлимит на обычных серверах', device_limit: 3, traffic_limit_bytes: 0, bypass_traffic_limit_bytes: 30 * GB, bypass_label: 'обход', prices: prices([200, 510, 960, 1800]) },
+    { id: 3, slug: 'premium', name: 'Премиум', is_popular: true, description: '5 устройств\nВсе серверы, обход можно докупить', device_limit: 5, traffic_limit_bytes: 0, bypass_traffic_limit_bytes: 50 * GB, bypass_label: 'обход', prices: prices([300, 810, 1500, 2700]) },
+  ] }
+  const { ctx, page, errors } = await open(1440, 1000, fx, '/tariffs')
+  await page.mouse.move(2, 980)
+  await page.waitForTimeout(500)
+  await M(page.locator('.tariff-popular-badge >> visible=true').first(), 'Популярный тариф — отмечает админ', 'left')
+  await M(page.getByText(/Безлимит \+ 30/).locator('visible=true').first(), 'Лимит обхода прямо на карточке', 'left')
+  await shot(page, '1/05-tariffs-client.png')
+  console.log('11', errors)
+  globalThis.__clientTariffs = fx
+  await ctx.close()
+}
+if (want(12)) {
+  // 12. Те же тарифы на телефоне: с подпиской первым текущий, за ним популярный.
+  const fx = globalThis.__clientTariffs
+  const { ctx, page, errors } = await open(390, 844, fx, '/tariffs')
+  await page.mouse.move(2, 840)
+  await page.waitForTimeout(500)
+  await shot(page, '1/06-tariffs-phone.png')
+  console.log('12', errors)
+  await ctx.close()
+}
+if (want(13)) {
+  // 13. Редактор тарифа, «Основное»: тумблер «Популярный тариф» и предупреждение о переносе отметки.
+  const fx = adminTariffs()
+  const { ctx, page, errors } = await open(1440, 1100, fx, '/admin/tariffs')
+  await page.locator('[role="button"]').filter({ hasText: 'Стандарт' }).first().click()
+  await page.waitForTimeout(700)
+  const row = page.getByText('Популярный тариф', { exact: true }).first()
+  await row.scrollIntoViewIfNeeded()
+  await row.locator('xpath=ancestor::*[.//*[@role="switch"] or .//input[@type="checkbox"]][1]').locator('[role="switch"], input[type="checkbox"]').first().click().catch((e) => console.log('toggle', String(e).slice(0, 90)))
+  await page.waitForTimeout(500)
+  await page.mouse.move(2, 1080)
+  await M(row.locator('xpath=ancestor::*[.//*[contains(text(), "перейдёт")]][1]'), 'Один популярный тариф на витрине', 'left')
+  await shot(page, '1/07-admin-popular.png')
+  console.log('13', errors)
+  await ctx.close()
+}
+if (want(14)) {
+  // 14. Рассылка: картинку можно вставить из буфера.
+  const fx = scene('admin-broadcast.json')
+  const { ctx, page, errors } = await open(1440, 1000, fx, '/admin/broadcast')
+  await page.mouse.move(2, 980)
+  await M(page.getByText(/Ctrl\+V/).first(), 'Скриншот — прямо из буфера', 'top')
+  await shot(page, '2/05-admin-broadcast.png')
+  console.log('14', errors)
   await ctx.close()
 }
 await b.close()
