@@ -208,6 +208,38 @@ func (h *AdminUsersHandler) applyTrafficChange(r *http.Request, customerID int64
 	}
 }
 
+// snapshotBypassAfterTariff — назначение тарифа админом та же выдача, что и оплата: настройки обхода
+// нового тарифа действуют сразу, а не со следующей покупки. Без этого клиент, купивший до появления
+// функции, оставался без снимка, и воркер его не видел. Ошибки не фатальны: тариф уже назначен.
+func (h *AdminUsersHandler) snapshotBypassAfterTariff(r *http.Request, cust *database.Customer, tariffID int64, rwUser *remnawave.User) {
+	if h.traffic == nil || cust == nil {
+		return
+	}
+	ctx := r.Context()
+	// Воркер ищет клиента по id профиля в панели — запоминаем его сразу, как при оплате.
+	if rwUser != nil && rwUser.ID > 0 {
+		if err := h.customers.SetRemnawaveIdentity(ctx, cust.ID, rwUser.ID, rwUser.ShortUUID); err != nil {
+			slog.Warn("admin users: remember panel identity", "customer_id", cust.ID, "error", err.Error())
+		}
+	}
+	b, err := h.traffic.GetTariffBypass(ctx, tariffID)
+	if err != nil {
+		slog.Warn("admin users: read tariff bypass", "tariff_id", tariffID, "error", err.Error())
+		return
+	}
+	if err := h.traffic.SaveSnapshot(ctx, cust.ID, &tariffID, b, time.Now()); err != nil {
+		slog.Warn("admin users: save bypass snapshot", "customer_id", cust.ID, "error", err.Error())
+		return
+	}
+	if h.quota == nil || !config.TrafficSplitEnabled() || !b.Enabled() {
+		return
+	}
+	// Расход за месяц мог уже превысить лимит нового тарифа — проверяем сразу, не дожидаясь воркера.
+	if err := h.quota.ReevaluateBypass(ctx, cust.ID); err != nil && !errors.Is(err, remnawave.ErrUserNotFound) {
+		slog.Warn("admin users: reevaluate bypass after tariff", "customer_id", cust.ID, "error", err.Error())
+	}
+}
+
 func (h *AdminUsersHandler) trafficCustomer(w http.ResponseWriter, r *http.Request) (*database.Customer, bool) {
 	if h.traffic == nil {
 		http.Error(w, "traffic split is not configured", http.StatusServiceUnavailable)

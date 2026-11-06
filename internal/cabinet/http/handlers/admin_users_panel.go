@@ -461,6 +461,7 @@ func (h *AdminUsersHandler) SetTariff(w http.ResponseWriter, r *http.Request) {
 	if err := h.adminRelimitExtraAfterTariff(ctx, cust, tariff); err != nil {
 		slog.Warn("admin users: set tariff extra relimit", "error", err.Error())
 	}
+	h.snapshotBypassAfterTariff(r, cust, tariff.ID, out)
 
 	slog.Info("admin: set tariff", "customer_id", id, "tariff_id", body.TariffID, "admin_account_id", adminAccountID(r))
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
