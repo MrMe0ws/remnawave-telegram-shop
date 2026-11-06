@@ -9,6 +9,7 @@
           0.21,
           0.15
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 1796250,
         "tx_bytes_per_sec": 1808750,
         "traffic_limit_bytes": 0,
@@ -35,6 +36,7 @@
           0.21,
           0.15
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 625000,
         "tx_bytes_per_sec": 750000,
         "traffic_limit_bytes": 0,
@@ -55,12 +57,13 @@
       },
       {
         "state": "online",
-        "memory_used_pct": 56,
+        "memory_used_pct": 95,
         "load_avg": [
-          0.13,
-          0.21,
-          0.15
+          2.41,
+          1.95,
+          1.2
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 156250,
         "tx_bytes_per_sec": 2196250,
         "traffic_limit_bytes": 0,
@@ -82,10 +85,11 @@
         "state": "online",
         "memory_used_pct": 88,
         "load_avg": [
-          0.13,
-          0.21,
-          0.15
+          1.62,
+          1.31,
+          0.9
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 3516250,
         "tx_bytes_per_sec": 7766250,
         "traffic_limit_bytes": 0,
@@ -111,6 +115,7 @@
           0.21,
           0.15
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 5870,
         "tx_bytes_per_sec": 3702.5,
         "traffic_limit_bytes": 429496729600,
@@ -136,6 +141,7 @@
           0.21,
           0.15
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 625000,
         "tx_bytes_per_sec": 750000,
         "traffic_limit_bytes": 0,
@@ -161,6 +167,7 @@
           0.21,
           0.15
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 625000,
         "tx_bytes_per_sec": 750000,
         "traffic_limit_bytes": 0,
@@ -186,6 +193,7 @@
           0.21,
           0.15
         ],
+        "cpus": 2,
         "rx_bytes_per_sec": 625000,
         "tx_bytes_per_sec": 750000,
         "traffic_limit_bytes": 0,

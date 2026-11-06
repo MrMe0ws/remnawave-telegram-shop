@@ -43,6 +43,7 @@ type adminNodeDTO struct {
 	// Живые метрики. null — панель их не прислала (нода не в сети).
 	MemoryUsedPct *float64  `json:"memory_used_pct"`
 	LoadAvg       []float64 `json:"load_avg"`
+	CPUs          int       `json:"cpus"`
 	RxBytesPerSec *float64  `json:"rx_bytes_per_sec"`
 	TxBytesPerSec *float64  `json:"tx_bytes_per_sec"`
 
@@ -70,6 +71,7 @@ func nodeToDTO(n remnawave.NodeOverview) adminNodeDTO {
 		PluginName:        n.PluginName,
 		MemoryUsedPct:     n.MemoryUsedPct,
 		LoadAvg:           n.LoadAvg,
+		CPUs:              n.CPUs,
 		RxBytesPerSec:     n.RxBytesPerSec,
 		TxBytesPerSec:     n.TxBytesPerSec,
 		TrafficUsedBytes:  n.TrafficUsedBytes,

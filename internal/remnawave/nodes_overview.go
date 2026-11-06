@@ -36,6 +36,8 @@ type NodeOverview struct {
 	MemoryUsedPct *float64
 	// LoadAvg — load average за 1/5/15 минут.
 	LoadAvg []float64
+	// CPUs — число ядер ноды: load average осмыслен только относительно него (0 — неизвестно).
+	CPUs int
 	// RxBytesPerSec / TxBytesPerSec — текущая скорость интерфейса ноды в байтах в секунду.
 	// Rx — в ноду (скачивание), Tx — из ноды к клиентам (отдача).
 	RxBytesPerSec *float64
@@ -83,6 +85,7 @@ type nodeOverviewWire struct {
 	System *struct {
 		Info struct {
 			MemoryTotal float64 `json:"memoryTotal"`
+			CPUs        int     `json:"cpus"`
 		} `json:"info"`
 		Stats struct {
 			MemoryFree float64   `json:"memoryFree"`
@@ -165,6 +168,7 @@ func overviewFromWire(n nodeOverviewWire, plugins map[string]string) NodeOvervie
 			out.MemoryUsedPct = &pct
 		}
 		out.LoadAvg = st.LoadAvg
+		out.CPUs = n.System.Info.CPUs
 		if st.Interface != nil {
 			rx, tx := st.Interface.RxBytesPerSec, st.Interface.TxBytesPerSec
 			out.RxBytesPerSec, out.TxBytesPerSec = &rx, &tx

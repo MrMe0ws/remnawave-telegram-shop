@@ -13,7 +13,7 @@ const nodeOnlineJSON = `{
  "activePluginUuid":"AAAAAAAA-0000-0000-0000-000000000001",
  "provider":{"name":"1cent.host","faviconLink":"https://1cent.host/favicon.ico"},
  "versions":{"xray":"26.7.28","node":"3.0.0"},
- "system":{"info":{"memoryTotal":1000},"stats":{"memoryFree":570,"memoryUsed":430,"uptime":10,"loadAvg":[0.13,0.21,0.15],
+ "system":{"info":{"memoryTotal":1000,"cpus":2},"stats":{"memoryFree":570,"memoryUsed":430,"uptime":10,"loadAvg":[0.13,0.21,0.15],
   "interface":{"interface":"eth0","rxBytesPerSec":1000,"txBytesPerSec":2000,"rxTotal":1,"txTotal":2}}}}`
 
 // Нода, которую панель не опросила: system, versions, provider — null.
@@ -49,6 +49,9 @@ func TestOverviewFromWire_online(t *testing.T) {
 	}
 	if got.RxBytesPerSec == nil || *got.RxBytesPerSec != 1000 || *got.TxBytesPerSec != 2000 {
 		t.Fatalf("speeds: %v %v", got.RxBytesPerSec, got.TxBytesPerSec)
+	}
+	if got.CPUs != 2 {
+		t.Fatalf("cpus = %d", got.CPUs)
 	}
 	if got.TrafficResetDay != 25 || got.XrayUptimeSec != 345600 {
 		t.Fatalf("traffic/uptime: %+v", got)

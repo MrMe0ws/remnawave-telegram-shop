@@ -147,7 +147,7 @@ function Address({ value, className }: { value: string; className?: string }) {
 }
 
 function Bar({ pct, className, tone = 'ok' }: { pct: number; className?: string; tone?: 'ok' | 'warn' | 'bad' }) {
-  const color = tone === 'bad' ? 'bg-red-500' : tone === 'warn' ? 'bg-amber-500' : 'bg-emerald-500'
+  const color = tone === 'bad' ? 'bg-red-500' : tone === 'warn' ? 'bg-orange-500' : 'bg-emerald-500'
   return (
     <div className={cn('h-1 overflow-hidden rounded-full bg-border/80', className)}>
       <div className={cn('h-full rounded-full', color)} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
@@ -155,23 +155,53 @@ function Bar({ pct, className, tone = 'ok' }: { pct: number; className?: string;
   )
 }
 
+/** Память: выше 70% — оранжевая, выше 90% — красная (пороги как в панели). */
+function memoryTone(pct: number): 'ok' | 'warn' | 'bad' {
+  if (pct > 90) return 'bad'
+  if (pct > 70) return 'warn'
+  return 'ok'
+}
+
+/**
+ * Цвет одного числа load average. Нагрузка осмысленна только относительно числа ядер:
+ * 1.5 на одном ядре — перегруз, на восьми — пустяк. Выше 70% ядер — оранжевый, больше ядер — красный,
+ * как в панели. Число ядер неизвестно — не красим.
+ */
+function loadClass(value: number, cpus: number): string {
+  if (cpus <= 0) return ''
+  const ratio = value / cpus
+  if (ratio > 1) return 'text-red-400'
+  if (ratio > 0.7) return 'text-orange-400'
+  return ''
+}
+
 /** Строка нагрузки: память, load average, скорость вниз и вверх. */
 function LoadLine({ node, showLoad }: { node: AdminNodeDTO; showLoad: boolean }) {
   const { t } = useTranslation()
   const live = node.state === 'online'
   const mem = node.memory_used_pct
-  const load = node.load_avg?.length ? node.load_avg.map((v) => v.toFixed(2)).join(' ') : null
+  const load = node.load_avg?.length ? node.load_avg : null
   return (
     <div className="flex items-center gap-2.5 whitespace-nowrap font-mono text-[11.5px] text-muted-foreground">
       <span className="flex items-center gap-1.5" title={t('admin.nodes.memoryTitle')}>
         <MemoryIcon />
-        <Bar pct={live && mem != null ? mem : 0} className="w-14" />
+        <Bar pct={live && mem != null ? mem : 0} tone={live && mem != null ? memoryTone(mem) : 'ok'} className="w-14" />
         {live && mem != null ? `${Math.round(mem)}%` : DASH}
       </span>
       {showLoad && (
-        <span className="flex items-center gap-1 opacity-80" title={t('admin.nodes.loadTitle')}>
+        <span className="flex items-center gap-1" title={t('admin.nodes.loadTitle')}>
           <Cpu className="size-3 shrink-0" aria-hidden />
-          {live && load ? load : DASH}
+          {live && load ? (
+            <span className="flex gap-[0.5ch]">
+              {load.map((v, i) => (
+                <span key={i} className={loadClass(v, node.cpus)}>
+                  {v.toFixed(2)}
+                </span>
+              ))}
+            </span>
+          ) : (
+            DASH
+          )}
         </span>
       )}
       <span className="flex items-center gap-1" title={t('admin.nodes.rxTitle')}>

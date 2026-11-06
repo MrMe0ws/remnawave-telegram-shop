@@ -999,6 +999,8 @@ export interface AdminNodeDTO {
   /** null — панель не прислала метрики (нода не в сети). */
   memory_used_pct: number | null
   load_avg: number[] | null
+  /** Число ядер ноды; 0 — неизвестно. Load average сравнивается с ним. */
+  cpus: number
   rx_bytes_per_sec: number | null
   tx_bytes_per_sec: number | null
   traffic_used_bytes: number
