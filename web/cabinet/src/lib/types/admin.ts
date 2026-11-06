@@ -983,3 +983,34 @@ export interface AdminPartnerTermsInput {
   links_limit?: number | null
   comment?: string
 }
+
+export type AdminNodeState = 'online' | 'offline' | 'connecting' | 'disabled'
+
+export interface AdminNodeDTO {
+  uuid: string
+  name: string
+  country_code: string
+  address: string
+  state: AdminNodeState
+  users_online: number
+  provider?: { name: string; favicon_link?: string }
+  /** Есть только у нод с назначенным плагином. */
+  plugin_name?: string
+  /** null — панель не прислала метрики (нода не в сети). */
+  memory_used_pct: number | null
+  load_avg: number[] | null
+  rx_bytes_per_sec: number | null
+  tx_bytes_per_sec: number | null
+  traffic_used_bytes: number
+  /** 0 — без лимита. */
+  traffic_limit_bytes: number
+  /** 0 — у ноды не включено отслеживание трафика. */
+  traffic_reset_day: number
+  xray_uptime_sec: number
+  xray_version?: string
+  node_version?: string
+}
+
+export interface AdminNodesDTO {
+  nodes: AdminNodeDTO[]
+}

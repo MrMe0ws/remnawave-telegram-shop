@@ -404,6 +404,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	}
 	notificationsHandler := handlers.NewNotifications(linkRepo, notifySvc)
 	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
+	adminNodesHandler := handlers.NewAdminNodes(rw)
 	adminSettingsHandler := handlers.NewAdminSettings(runtimeSettingsRepo)
 	adminSquadsHandler := handlers.NewAdminSquads(rw)
 	var adminSyncHandler *handlers.AdminSyncHandler
@@ -412,7 +413,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	}
 
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, partnerHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
-		adminChecker, adminBootstrapHandler, adminStatsHandler, adminOverviewHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
+		adminChecker, adminBootstrapHandler, adminStatsHandler, adminOverviewHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminNodesHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 		oauthIPLim, telegramIPLim, linkAcctLim)
 	registerNotificationRoutes(api, notificationsHandler, jwtIssuer)
@@ -565,6 +566,7 @@ func registerAPIRoutes(
 	adminPartners *handlers.AdminPartnersHandler,
 	adminBroadcast *handlers.AdminBroadcastHandler,
 	adminInfra *handlers.AdminInfraHandler,
+	adminNodes *handlers.AdminNodesHandler,
 	adminSettings *handlers.AdminSettingsHandler,
 	adminSquads *handlers.AdminSquadsHandler,
 	adminSync *handlers.AdminSyncHandler,
@@ -1718,6 +1720,17 @@ func registerAPIRoutes(
 			middleware.CSRF(),
 			middleware.RateLimit(adminAcctLim, accountKey("admin_broadcast_upload")),
 		)),
+	)
+
+	// Admin Nodes (страница «Ноды»)
+	api.Handle("/cabinet/api/admin/nodes",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.List),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_nodes")),
+		),
 	)
 
 	// Admin Infra

@@ -10,6 +10,7 @@ import {
   Gem,
   Handshake,
   Megaphone,
+  Network,
   Server,
   Activity,
   RefreshCw,
@@ -113,6 +114,7 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
       items: [
         { to: '/admin', icon: LayoutDashboard, labelKey: 'admin.nav.dashboard' },
         { to: '/admin/stats', icon: BarChart3, labelKey: 'admin.nav.stats' },
+        { to: '/admin/nodes', icon: Network, labelKey: 'admin.nav.nodes' },
       ],
     },
     {

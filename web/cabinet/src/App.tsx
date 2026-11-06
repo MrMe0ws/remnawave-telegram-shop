@@ -81,6 +81,7 @@ const AdminTariffsPage = lazy(() => import('@/features/admin/pages/AdminTariffsP
 const AdminLoyaltyPage = lazy(() => import('@/features/admin/pages/AdminLoyaltyPage'))
 const AdminPartnersPage = lazy(() => import('@/features/admin/pages/AdminPartnersPage'))
 const AdminBroadcastPage = lazy(() => import('@/features/admin/pages/AdminBroadcastPage'))
+const AdminNodesPage = lazy(() => import('@/features/admin/pages/AdminNodesPage'))
 const AdminInfraPage = lazy(() => import('@/features/admin/pages/AdminInfraPage'))
 const AdminStatusPage = lazy(() => import('@/features/admin/pages/AdminStatusPage'))
 const AdminSyncPage = lazy(() => import('@/features/admin/pages/AdminSyncPage'))
@@ -480,6 +481,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AdminRoute>
               <AdminStatusPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/nodes"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminNodesPage />
             </AdminRoute>
           </ProtectedRoute>
         }

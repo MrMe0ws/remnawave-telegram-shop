@@ -1324,6 +1324,7 @@
         "loyalty": "Лояльность",
         "broadcast": "Рассылка",
         "partners": "Партнёры",
+        "nodes": "Ноды",
         "infra": "Инфраструктура",
         "sync": "Синхронизация",
         "settings": "Настройки бота",
@@ -2666,6 +2667,67 @@
         "recipientsCabinetWebOnly_few": "из них {{count}} без Telegram",
         "recipientsCabinetWebOnly_many": "из них {{count}} без Telegram",
         "recipientsCabinetWebOnly_other": "из них {{count}} без Telegram"
+      },
+      "nodes": {
+        "title": "Ноды",
+        "summary": {
+          "users": "Пользователей онлайн",
+          "usersShort": "Людей онлайн",
+          "nodes": "Нод в сети",
+          "of": "из {{total}}",
+          "down": "Скорость скачивания",
+          "downShort": "Скачивание",
+          "up": "Скорость отдачи",
+          "upShort": "Отдача"
+        },
+        "search": "Поиск",
+        "searchPlaceholder": "Имя, страна, провайдер, IP",
+        "searchClose": "Закрыть поиск",
+        "refresh": "Обновить",
+        "retry": "Повторить",
+        "sortLabel": "Сортировка:",
+        "sortTitle": "Сортировка",
+        "showTitle": "Показывать",
+        "sort": {
+          "users_desc": "Больше людей",
+          "users_asc": "Меньше людей",
+          "name": "По имени",
+          "memory": "По памяти",
+          "traffic": "По трафику",
+          "uptime": "По uptime"
+        },
+        "filter": {
+          "all": "Все",
+          "online": "В сети",
+          "offline": "Не отвечают",
+          "connecting": "Подключаются",
+          "disabled": "Отключены"
+        },
+        "state": {
+          "online": "В сети",
+          "offline": "Не отвечает",
+          "connecting": "Подключается",
+          "disabled": "Отключена"
+        },
+        "stateText": {
+          "offline": "offline",
+          "connecting": "подключается…",
+          "disabled": "отключена"
+        },
+        "usersTitle": "Людей на ноде сейчас",
+        "memoryTitle": "Занято памяти",
+        "loadTitle": "Load average за 1 / 5 / 15 минут",
+        "rxTitle": "Входящая скорость ноды",
+        "txTitle": "Исходящая скорость ноды",
+        "trafficOf": "из {{limit}}",
+        "resetTitle": "Трафик ноды сбрасывается {{day}}-го числа",
+        "uptimeTitle": "Uptime Xray",
+        "pluginTitle": "Плагин ноды",
+        "xrayTitle": "Версия Xray",
+        "nodeTitle": "Версия ноды Remnawave",
+        "empty": "В панели пока нет ни одной ноды",
+        "noMatch": "Ничего не найдено",
+        "error": "Не удалось получить ноды из панели Remnawave"
       },
       "infra": {
         "title": "Инфраструктура",

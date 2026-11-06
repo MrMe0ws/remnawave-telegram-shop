@@ -1286,6 +1286,7 @@
         "loyalty": "Loyalty",
         "broadcast": "Broadcast",
         "partners": "Partners",
+        "nodes": "Nodes",
         "infra": "Infrastructure",
         "sync": "Sync",
         "settings": "Bot settings",
@@ -2596,6 +2597,67 @@
         "confirmImportant": "Important: pinned and shown on the home page for every recipient.",
         "recipientsCabinetWebOnly_one": "{{count}} of them without Telegram",
         "recipientsCabinetWebOnly_other": "{{count}} of them without Telegram"
+      },
+      "nodes": {
+        "title": "Nodes",
+        "summary": {
+          "users": "Users online",
+          "usersShort": "Users online",
+          "nodes": "Nodes online",
+          "of": "of {{total}}",
+          "down": "Download speed",
+          "downShort": "Download",
+          "up": "Upload speed",
+          "upShort": "Upload"
+        },
+        "search": "Search",
+        "searchPlaceholder": "Name, country, provider, IP",
+        "searchClose": "Close search",
+        "refresh": "Refresh",
+        "retry": "Retry",
+        "sortLabel": "Sort:",
+        "sortTitle": "Sort by",
+        "showTitle": "Show",
+        "sort": {
+          "users_desc": "Most users",
+          "users_asc": "Fewest users",
+          "name": "By name",
+          "memory": "By memory",
+          "traffic": "By traffic",
+          "uptime": "By uptime"
+        },
+        "filter": {
+          "all": "All",
+          "online": "Online",
+          "offline": "Not responding",
+          "connecting": "Connecting",
+          "disabled": "Disabled"
+        },
+        "state": {
+          "online": "Online",
+          "offline": "Not responding",
+          "connecting": "Connecting",
+          "disabled": "Disabled"
+        },
+        "stateText": {
+          "offline": "offline",
+          "connecting": "connecting…",
+          "disabled": "disabled"
+        },
+        "usersTitle": "Users on this node right now",
+        "memoryTitle": "Memory in use",
+        "loadTitle": "Load average over 1 / 5 / 15 minutes",
+        "rxTitle": "Node inbound speed",
+        "txTitle": "Node outbound speed",
+        "trafficOf": "of {{limit}}",
+        "resetTitle": "Node traffic resets on day {{day}} of the month",
+        "uptimeTitle": "Xray uptime",
+        "pluginTitle": "Node plugin",
+        "xrayTitle": "Xray version",
+        "nodeTitle": "Remnawave node version",
+        "empty": "The panel has no nodes yet",
+        "noMatch": "Nothing found",
+        "error": "Could not load nodes from the Remnawave panel"
       },
       "infra": {
         "title": "Infrastructure",

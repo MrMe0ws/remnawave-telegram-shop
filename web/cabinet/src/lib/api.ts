@@ -52,6 +52,7 @@ import type {
   AdminUserPanelDTO,
   AdminUsersListDTO,
   AdminDeviceDTO,
+  AdminNodesDTO,
   AdminInfraNodesDTO,
   AdminInfraProvidersDTO,
   AdminInfraHistoryDTO,
@@ -1922,6 +1923,7 @@ export const api = {
   adminBroadcastHistoryItem: (id: number) =>
     request<AdminBroadcastHistoryItemDTO>('GET', `/admin/broadcast/history/${id}`),
 
+  adminNodes: () => request<AdminNodesDTO>('GET', '/admin/nodes'),
   adminInfraNodes: () => request<AdminInfraNodesDTO>('GET', '/admin/infra/nodes'),
   adminInfraCreateNode: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
     request<AdminInfraNodesDTO>('POST', '/admin/infra/nodes', body),
