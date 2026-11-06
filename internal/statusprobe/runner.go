@@ -78,6 +78,16 @@ func (r *Runner) Snapshot(key string) (Sample, []*float64, bool) {
 	return sample, Window(r.history[key]), ok
 }
 
+// HistoryWindow — окно истории для полоски; bypass включает правила сервера обхода.
+func (r *Runner) HistoryWindow(key string, bypass bool) []*float64 {
+	if r == nil {
+		return nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return WindowFor(r.history[key], bypass)
+}
+
 // ErrBusy — замер уже идёт, второй запуск ничего не добавит.
 var ErrBusy = errors.New("probe already running")
 

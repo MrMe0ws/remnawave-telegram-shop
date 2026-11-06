@@ -9,7 +9,7 @@ func TestWindowIsOneBarPerRun(t *testing.T) {
 	history := map[string][]RunRecord{}
 	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
 	RecordRun(history, "pl", Sample{WorldOK: 1, WorldTotal: 1, RussiaOK: 10, RussiaTotal: 10}, now)
-	RecordRun(history, "pl", Sample{WorldOK: 1, WorldTotal: 1, RussiaOK: 9, RussiaTotal: 10}, now.Add(time.Hour))
+	RecordRun(history, "pl", Sample{WorldOK: 1, WorldTotal: 1, RussiaOK: 8, RussiaTotal: 10}, now.Add(time.Hour))
 
 	window := Window(history["pl"])
 	if len(window) != historyRuns {
@@ -19,7 +19,7 @@ func TestWindowIsOneBarPerRun(t *testing.T) {
 		t.Fatalf("first run %+v", window[historyRuns-2])
 	}
 	last := window[historyRuns-1]
-	if last == nil || *last != 10.0/11.0 {
+	if last == nil || *last != 9.0/11.0 {
 		t.Fatalf("second run %+v", last)
 	}
 	if window[0] != nil {
@@ -54,5 +54,34 @@ func TestRecordRunSkipsEmptySample(t *testing.T) {
 	RecordRun(history, "pl", Sample{}, time.Now())
 	if len(history) != 0 {
 		t.Fatalf("empty sample recorded: %+v", history)
+	}
+}
+
+func TestWindowForgivesSingleFailedProbe(t *testing.T) {
+	runs := []RunRecord{
+		{WorldOK: 1, WorldTotal: 1, RussiaOK: 9, RussiaTotal: 10},
+		{WorldOK: 0, WorldTotal: 1, RussiaOK: 10, RussiaTotal: 10},
+		{WorldOK: 1, WorldTotal: 1, RussiaOK: 8, RussiaTotal: 10},
+		{WorldOK: 0, WorldTotal: 1, RussiaOK: 0, RussiaTotal: 1},
+	}
+	w := Window(runs)[historyRuns-len(runs):]
+	if *w[0] != 1 || *w[1] != 1 {
+		t.Fatalf("one failed probe must stay green: %v %v", *w[0], *w[1])
+	}
+	if *w[2] >= 1 {
+		t.Fatalf("two failed probes must not be green: %v", *w[2])
+	}
+	if *w[3] != 0 {
+		t.Fatalf("all failed must be zero: %v", *w[3])
+	}
+}
+
+func TestWindowForBypassIgnoresWorld(t *testing.T) {
+	runs := []RunRecord{{WorldOK: 0, WorldTotal: 3, RussiaOK: 10, RussiaTotal: 10}}
+	if v := *WindowFor(runs, true)[historyRuns-1]; v != 1 {
+		t.Fatalf("bypass reachable from Russia must be green, got %v", v)
+	}
+	if v := *WindowFor(runs, false)[historyRuns-1]; v == 1 {
+		t.Fatalf("regular node keeps world probes, got %v", v)
 	}
 }

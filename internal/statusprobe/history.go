@@ -171,16 +171,22 @@ func RecordRun(history map[string][]RunRecord, key string, sample Sample, now ti
 	if history == nil {
 		return
 	}
-	if sample.WorldTotal == 0 && sample.RussiaTotal == 0 {
+	if sample.WorldTotal == 0 && sample.RussiaTotal == 0 && sample.WhitelistTotal == 0 {
 		return
 	}
-	runs := append(history[key], RunRecord{
+	rec := RunRecord{
 		At:          now.UTC(),
 		WorldOK:     sample.WorldOK,
 		WorldTotal:  sample.WorldTotal,
 		RussiaOK:    sample.RussiaOK,
 		RussiaTotal: sample.RussiaTotal,
-	})
+	}
+	// У сервера обхода «Россия» — это операторы с белыми списками: их и пишем в замер,
+	// иначе полоска считалась бы по миру, куда такой адрес закрыт.
+	if sample.WhitelistTotal > 0 {
+		rec.RussiaOK, rec.RussiaTotal = sample.WhitelistOK, sample.WhitelistTotal
+	}
+	runs := append(history[key], rec)
 	if len(runs) > historyRuns {
 		runs = append([]RunRecord(nil), runs[len(runs)-historyRuns:]...)
 	}
@@ -190,17 +196,31 @@ func RecordRun(history map[string][]RunRecord, key string, sample Sample, now ti
 // Window возвращает historyRuns долей успешных проверок, от старых к новым: один замер — одна доля.
 // Если замеров пока меньше, свободные места слева пустые (nil).
 func Window(runs []RunRecord) []*float64 {
+	return WindowFor(runs, false)
+}
+
+// WindowFor — то же, что Window, но по правилам полоски:
+//   - один не ответивший зонд замер не портит: столбик остаётся зелёным, пока кто-то отвечает;
+//   - у сервера обхода мир не считается: его адрес снаружи часто закрыт, а из России работает,
+//     поэтому берутся только зонды из России (если их в замере нет — как есть).
+func WindowFor(runs []RunRecord, bypass bool) []*float64 {
 	out := make([]*float64, historyRuns)
 	if len(runs) > historyRuns {
 		runs = runs[len(runs)-historyRuns:]
 	}
 	offset := historyRuns - len(runs)
 	for i, rec := range runs {
-		total := rec.WorldTotal + rec.RussiaTotal
+		ok, total := rec.WorldOK+rec.RussiaOK, rec.WorldTotal+rec.RussiaTotal
+		if bypass && rec.RussiaTotal > 0 {
+			ok, total = rec.RussiaOK, rec.RussiaTotal
+		}
 		if total == 0 {
 			continue
 		}
-		v := float64(rec.WorldOK+rec.RussiaOK) / float64(total)
+		v := float64(ok) / float64(total)
+		if ok > 0 && total-ok == 1 {
+			v = 1
+		}
 		out[offset+i] = &v
 	}
 	return out

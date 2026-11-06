@@ -183,10 +183,13 @@ function perMonth(price: AdminTariffPrice): number {
   return Math.ceil(price.amount_rub / price.months)
 }
 
-/** Самая низкая цена за месяц среди периодов тарифа; null — цен нет. */
+/**
+ * Цена «от» в плитке — цена самого короткого периода, без скидки за длинные. Период с нулевой
+ * ценой — это «не продаём», его пропускаем. null — цен нет.
+ */
 function minPerMonth(prices: AdminTariffPrice[]): number | null {
-  const shown = shownPrices(prices)
-  return shown.length ? Math.min(...shown.map(perMonth)) : null
+  const first = shownPrices(prices).find((p) => p.amount_rub > 0)
+  return first ? perMonth(first) : null
 }
 
 /** Цена в плитке: одна, «от … ₽/мес». Остальные периоды видны в редакторе. */

@@ -177,7 +177,8 @@ func (h *PublicStatus) build(ctx context.Context) publicStatusBody {
 		var measured *statusprobe.Sample
 		// Строка без внешних зондов замеров не показывает: старый снимок остался бы навсегда.
 		if h.probes != nil && external {
-			sample, history, ok := h.probes.Snapshot(key)
+			sample, _, ok := h.probes.Snapshot(key)
+			history := h.probes.HistoryWindow(key, n.Whitelist)
 			if ok && (sample.WorldTotal > 0 || sample.RussiaTotal > 0 || sample.WhitelistTotal > 0 || len(sample.Probes) > 0) {
 				if usableForState(sample) {
 					measured = &sample
