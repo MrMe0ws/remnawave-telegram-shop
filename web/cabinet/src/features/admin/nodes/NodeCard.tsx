@@ -26,6 +26,13 @@ import { formatBitrate, formatBytes, formatUptime } from './format'
 
 export type NodeLayout = 'row' | 'card'
 
+/**
+ * Сплошная подложка карточки. Класс bg-card тут не годится: cn (tailwind-merge) выкидывает его рядом
+ * с bg-gradient-to-r, и карточка остаётся прозрачной — сквозь неё видно фон страницы. Градиент состояния
+ * ложится поверх этого цвета.
+ */
+const SOLID_BG = { backgroundColor: 'hsl(var(--card))' } as const
+
 interface StateStyle {
   wrap: string
   icon: LucideIcon
@@ -270,6 +277,7 @@ function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout
           'grid grid-cols-[minmax(0,1fr)_158px_164px_160px] items-center gap-4 rounded-2xl border py-2.5 pl-3 pr-4',
           style.wrap,
         )}
+        style={SOLID_BG}
       >
         <div className="min-w-0 space-y-2">
           <Title node={node} />
@@ -291,7 +299,7 @@ function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout
   }
 
   return (
-    <div className={cn('flex flex-col gap-2.5 rounded-2xl border px-3 py-3', style.wrap)}>
+    <div className={cn('flex flex-col gap-2.5 rounded-2xl border px-3 py-3', style.wrap)} style={SOLID_BG}>
       <Title node={node} />
       <div className="flex items-center justify-between gap-2.5">
         <ProviderBadge node={node} />
