@@ -653,15 +653,22 @@ func (s *Service) alert(ctx context.Context, c database.Customer, kind string, p
 	default:
 		return
 	}
-	if !s.takeAlertBudget() {
-		return // не отмечаем: уйдёт на одном из следующих проходов
-	}
 	fresh, err := s.repo.TryRecordAlert(ctx, c.ID, kind, period, level)
 	if err != nil {
 		slog.Error("trafficquota: record alert", "customer_id", c.ID, "error", err)
 		return
 	}
 	if !fresh {
+		return
+	}
+	// Бюджет тратится только на новое предупреждение. Раньше его списывали до проверки «уже отправляли»,
+	// и клиенты, давно получившие своё предупреждение, каждый проход съедали все 60 мест: при их числе
+	// больше бюджета новые предупреждения не уходили никогда (порядок обхода стабилен).
+	if !s.takeAlertBudget() {
+		// Не в этот проход: снимаем отметку, предупреждение уйдёт на одном из следующих.
+		if ferr := s.repo.ForgetAlert(ctx, c.ID, kind, period, level); ferr != nil {
+			slog.Error("trafficquota: forget alert", "customer_id", c.ID, "error", ferr)
+		}
 		return
 	}
 	if level == 100 {
