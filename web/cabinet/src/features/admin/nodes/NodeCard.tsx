@@ -103,11 +103,11 @@ function UsersPill({ count }: { count: number }) {
     <span
       title={t('admin.nodes.usersTitle')}
       className={cn(
-        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[9px] border bg-background/40 px-2.5 font-mono text-[13px] font-bold tabular-nums',
-        count > 0 ? 'border-emerald-500/60 text-emerald-300' : 'border-muted-foreground/40 text-foreground',
+        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[9px] border bg-transparent px-2.5 font-mono text-[13px] font-bold tabular-nums',
+        count > 0 ? 'border-emerald-500/60 text-emerald-300' : 'border-foreground/80 text-foreground',
       )}
     >
-      <Users className={cn('size-3.5', count > 0 ? '' : 'text-muted-foreground')} aria-hidden />
+      <Users className="size-3.5" aria-hidden />
       {count}
     </span>
   )
