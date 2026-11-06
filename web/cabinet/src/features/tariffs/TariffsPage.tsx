@@ -515,7 +515,8 @@ function TariffPlanCard({
               <TariffDescription text={head.description} className="text-[0.875rem] text-muted-foreground leading-relaxed" />
             ) : null}
 
-            <ul className="space-y-1.5 text-sm flex-1">
+            {/* mt-auto прижимает лимиты к кнопке: в соседних карточках ряда они на одной высоте. */}
+            <ul className="mt-auto space-y-1.5 text-sm">
               <FeatureLine icon={Cloud}>
                 {trafficLineText(head, t)}
               </FeatureLine>

@@ -1,1 +1,0 @@
-import{j as o}from"./query-DLQRsRo3.js";import{u as e,B as r,r as i,aR as g}from"./index-1cPtpfV2.js";function m({className:t}){const{i18n:a}=e(),n=a.language==="ru",s=()=>{g(n?"en":"ru")};return o.jsx(r,{variant:"ghost",size:"sm",onClick:s,className:i("font-mono text-xs",t),"aria-label":"Switch language",children:n?"EN":"RU"})}export{m as L};
