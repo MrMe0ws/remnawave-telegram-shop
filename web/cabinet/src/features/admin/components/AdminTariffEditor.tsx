@@ -17,6 +17,7 @@ import {
   Sparkles,
   AlertTriangle,
   Eraser,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -29,6 +30,7 @@ import { AdminTariffTrafficSplit } from './AdminTariffTrafficSplit'
 import { LockedHint } from './LockedHint'
 import { slugifyTariffName } from '../utils/slugifyTariffName'
 import { AdminCheckbox, AdminCheckboxField } from './AdminCheckbox'
+import { AdminToggleSwitch } from './AdminToggleSwitch'
 import {
   adminSectionIconBoxClass,
   adminSectionIconAccentClassNames,
@@ -40,6 +42,7 @@ import {
   useAdminSquads,
   useAdminTariffSquads,
   useAdminTariffDelete,
+  useAdminTariffList,
   STRATEGIES,
   normalizeResetStrategy,
   type AdminTariff,
@@ -207,11 +210,59 @@ function TariffEditorTabNav({
   )
 }
 
+/**
+ * Строка «Популярный тариф» на вкладке «Основное». Популярный тариф один: если
+ * отметка уже стоит у другого, предупреждаем, что она переедет сюда.
+ */
+function PopularTariffRow({
+  checked,
+  onChange,
+  otherPopular,
+  inactive,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  otherPopular?: AdminTariff
+  inactive: boolean
+}) {
+  const { t } = useTranslation()
+  return (
+    <div>
+      <label
+        className={cn(
+          'flex cursor-pointer items-center gap-3 rounded-[12px] border p-3 transition-colors',
+          checked ? 'border-emerald-500/45 bg-emerald-500/[0.06]' : 'border-border/60',
+        )}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+          <Star className="size-4" fill="currentColor" strokeWidth={0} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">{t('admin.tariffs.popularLabel')}</span>
+          <span className="block text-xs text-muted-foreground">{t('admin.tariffs.popularHint')}</span>
+        </span>
+        <AdminToggleSwitch checked={checked} onChange={onChange} aria-label={t('admin.tariffs.popularLabel')} />
+      </label>
+      {otherPopular && (
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="mt-px size-3.5 shrink-0" aria-hidden />
+          {t('admin.tariffs.popularMoves', { name: otherPopular.name?.trim() || otherPopular.slug })}
+        </p>
+      )}
+      {checked && inactive && (
+        <p className="mt-2 text-xs text-muted-foreground">{t('admin.tariffs.popularInactive')}</p>
+      )}
+    </div>
+  )
+}
+
 export interface TariffFormData {
   slug: string
   name: string
   sort_order: number
   is_active: boolean
+  /** Нашивка «Популярный» у клиентов; при сохранении снимается с прежнего популярного. */
+  is_popular: boolean
   device_limit: number
   traffic_gb: number
   traffic_limit_reset_strategy: string
@@ -275,6 +326,7 @@ function tariffToForm(t?: AdminTariff | null): TariffFormData {
     name: t?.name ?? '',
     sort_order: t?.sort_order ?? 0,
     is_active: t?.is_active ?? true,
+    is_popular: t?.is_popular ?? false,
     device_limit: t?.device_limit ?? 1,
     traffic_gb: t ? t.traffic_limit_bytes / GB : 0,
     traffic_limit_reset_strategy: t ? normalizeResetStrategy(t.traffic_limit_reset_strategy) : 'NO_RESET',
@@ -301,6 +353,7 @@ function formToCreateInput(f: TariffFormData): CreateTariffInput {
     name: f.name.trim() || null,
     sort_order: f.sort_order,
     is_active: f.is_active,
+    is_popular: f.is_popular,
     device_limit: f.device_limit,
     traffic_limit_bytes: Math.round(f.traffic_gb * GB),
     traffic_limit_reset_strategy: f.traffic_limit_reset_strategy,
@@ -319,6 +372,7 @@ function formToUpdateFields(f: TariffFormData): Record<string, unknown> {
     name: input.name,
     sort_order: input.sort_order,
     is_active: input.is_active,
+    is_popular: input.is_popular,
     device_limit: input.device_limit,
     traffic_limit_bytes: input.traffic_limit_bytes,
     traffic_limit_reset_strategy: input.traffic_limit_reset_strategy,
@@ -356,6 +410,7 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
   const del = useAdminTariffDelete()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const { data: botSettings } = useAdminBotSettings()
+  const { data: allTariffs } = useAdminTariffList()
   const [form, setForm] = useState<TariffFormData>(() => tariffToForm(tariff))
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
   const isEdit = tariff != null
@@ -587,6 +642,16 @@ export function AdminTariffEditor({ open, onClose, tariff, onSave, saving }: Pro
                   className="border border-border/60 p-3"
                 />
               )}
+              <PopularTariffRow
+                checked={form.is_popular}
+                onChange={(v) => set('is_popular', v)}
+                otherPopular={
+                  form.is_popular && !tariff?.is_popular
+                    ? allTariffs?.find((x) => x.is_popular && x.id !== tariff?.id)
+                    : undefined
+                }
+                inactive={!form.is_active}
+              />
             </section>
           )}
 

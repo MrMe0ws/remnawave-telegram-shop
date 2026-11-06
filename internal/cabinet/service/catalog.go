@@ -75,9 +75,11 @@ type TariffView struct {
 	TrafficLimitBytes         int64   `json:"traffic_limit_bytes"`
 	TrafficLimitResetStrategy string  `json:"traffic_limit_reset_strategy"`
 	// BypassTrafficLimitBytes — отдельный лимит обхода у тарифа (0 — нет); BypassLabel — как его называть.
-	BypassTrafficLimitBytes int64   `json:"bypass_traffic_limit_bytes,omitempty"`
-	BypassLabel             string  `json:"bypass_label,omitempty"`
-	Prices                  []Price `json:"prices"`
+	BypassTrafficLimitBytes int64  `json:"bypass_traffic_limit_bytes,omitempty"`
+	BypassLabel             string `json:"bypass_label,omitempty"`
+	// IsPopular — админ отметил тариф как «Популярный» (нашивка на карточке).
+	IsPopular bool    `json:"is_popular,omitempty"`
+	Prices    []Price `json:"prices"`
 }
 
 // Response — корневой объект `GET /cabinet/api/tariffs`.
@@ -152,6 +154,7 @@ func buildTariffsModeView(t database.Tariff, prices []database.TariffPrice) Tari
 		DeviceLimit:               t.DeviceLimit,
 		TrafficLimitBytes:         t.TrafficLimitBytes,
 		TrafficLimitResetStrategy: t.TrafficLimitResetStrategy,
+		IsPopular:                 t.IsPopular,
 		Prices:                    make([]Price, 0, len(prices)),
 	}
 	for _, p := range prices {

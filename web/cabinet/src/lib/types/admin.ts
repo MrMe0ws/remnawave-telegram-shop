@@ -506,6 +506,7 @@ export interface AdminTariffDTO {
   tier_level?: number | null
   description?: string | null
   description_detail?: string | null
+  is_popular?: boolean
   prices: AdminTariffPriceDTO[]
 }
 

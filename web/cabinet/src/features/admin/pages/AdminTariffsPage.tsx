@@ -10,6 +10,7 @@ import {
   Server,
   Smartphone,
   Gauge,
+  Star,
 } from 'lucide-react'
 
 import { AdminLayout } from '../layout/AdminLayout'
@@ -275,7 +276,10 @@ function TariffShowcase({
           iconClassName="size-4"
         />
         <div className="relative min-w-0 flex-1">
-          <h3 className={cn('truncate text-base font-bold', inactive && 'text-muted-foreground')}>{title}</h3>
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className={cn('truncate text-base font-bold', inactive && 'text-muted-foreground')}>{title}</h3>
+            {tariff.is_popular && <PopularChip />}
+          </div>
           <p className="truncate font-mono text-[11px] text-muted-foreground/70">
             {tariff.slug} · #{tariff.sort_order}
           </p>
@@ -352,6 +356,19 @@ function TariffShowcase({
   )
 }
 
+/** Метка популярного тарифа в списке: видно, какой тариф сейчас продвигается у клиентов. */
+function PopularChip() {
+  const { t } = useTranslation()
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/[0.14] px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400"
+    >
+      <Star className="size-3" fill="currentColor" strokeWidth={0} aria-hidden />
+      {t('admin.tariffs.popularChip')}
+    </span>
+  )
+}
+
 /**
  * Плитка тарифа: две в ряд на телефоне. Только название, вкл/выкл, лимиты и цены;
  * описание и удаление — в редакторе, он открывается нажатием на плитку.
@@ -412,9 +429,23 @@ function TariffTile({
             className={cn('-ml-1.5 h-7 w-5 hover:bg-muted', accent.iconColor, inactive && 'opacity-40')}
             iconClassName="size-4"
           />
-          <h3 className={cn('min-w-0 flex-1 truncate text-sm font-semibold', inactive && 'text-muted-foreground')}>
-            {title}
-          </h3>
+          <span className="flex min-w-0 flex-1 items-center gap-1">
+            <h3 className={cn('min-w-0 truncate text-sm font-semibold', inactive && 'text-muted-foreground')}>
+              {title}
+            </h3>
+            {/* На плитке места мало: популярный отмечен одной звёздочкой, высота плитки не меняется. */}
+            {tariff.is_popular && (
+              <Star
+                className="size-3.5 shrink-0 text-emerald-500"
+                fill="currentColor"
+                strokeWidth={0}
+                role="img"
+                aria-label={t('admin.tariffs.popularChip')}
+              >
+                <title>{t('admin.tariffs.popularChip')}</title>
+              </Star>
+            )}
+          </span>
           <span className="flex shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
             <AdminToggleSwitch
               size="sm"

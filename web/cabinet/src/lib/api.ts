@@ -476,6 +476,7 @@ interface TariffViewDTO {
   traffic_limit_reset_strategy?: string
   bypass_traffic_limit_bytes?: number
   bypass_label?: string
+  is_popular?: boolean
   prices: TariffPriceDTO[]
 }
 
@@ -539,6 +540,7 @@ export function normalizeTariffsResponse(raw: TariffsRawResponse): TariffsRespon
           traffic_gb: trafficGb,
           bypass_gb: bypassGb,
           bypass_label: typeof t.bypass_label === 'string' ? t.bypass_label : undefined,
+          is_popular: t.is_popular === true,
         })
       }
       continue

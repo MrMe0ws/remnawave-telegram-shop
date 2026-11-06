@@ -548,6 +548,84 @@
   }
 
   /*
+   * Популярный тариф (админ отметил в «Тарифах»): единственная цветная карточка
+   * на витрине — рамка и свечение в цвет темы (--primary).
+   *
+   * Здесь, в слое components, а не утилитами на месте вызова: обводку и тень
+   * карточки держат правила выше с !important, а !important из более раннего
+   * слоя побеждает и утилиты, и CSS вне слоёв. Наведение не снимает рамку,
+   * как у обычной карточки, а только поднимает карточку и усиливает свечение;
+   * кольцо-градиент ::before выключено — поверх сплошной рамки оно дало бы
+   * двойной контур.
+   */
+  .cabinet-card.tariff-card-popular {
+    border-color: hsl(var(--primary)) !important;
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary)),
+      0 16px 36px -18px hsl(var(--primary) / 0.45),
+      0 4px 6px -1px rgb(0 0 0 / 0.08) !important;
+  }
+
+  .dark .cabinet-card.tariff-card-popular {
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary)),
+      0 18px 48px -18px hsl(var(--primary) / 0.5),
+      0 12px 30px rgba(3, 10, 24, 0.35) !important;
+  }
+
+  .cabinet-card.tariff-card-popular:hover,
+  .cabinet-card.tariff-card-popular:focus-visible,
+  .cabinet-shell .cabinet-card.tariff-card-popular:hover,
+  .cabinet-shell .cabinet-card.tariff-card-popular:focus-within {
+    border-color: hsl(var(--primary)) !important;
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary)),
+      0 20px 44px -16px hsl(var(--primary) / 0.55),
+      0 4px 6px -1px rgb(0 0 0 / 0.08) !important;
+  }
+
+  .dark .cabinet-card.tariff-card-popular:hover,
+  .dark .cabinet-card.tariff-card-popular:focus-visible,
+  .dark .cabinet-shell .cabinet-card.tariff-card-popular:hover,
+  .dark .cabinet-shell .cabinet-card.tariff-card-popular:focus-within {
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary)),
+      0 22px 56px -16px hsl(var(--primary) / 0.62),
+      0 12px 30px rgba(3, 10, 24, 0.4) !important;
+  }
+
+  .cabinet-shell .cabinet-card.tariff-card-popular::before {
+    display: none;
+  }
+
+  /*
+   * В мобильной карусели свечение короче: лента прокручивается по горизонтали,
+   * overflow режет и вертикаль, и длинная тень обрывалась ровной полосой под карточкой.
+   */
+  .cabinet-card.tariff-card-popular.tariff-card-popular--tight,
+  .cabinet-shell .cabinet-card.tariff-card-popular.tariff-card-popular--tight:hover,
+  .cabinet-shell .cabinet-card.tariff-card-popular.tariff-card-popular--tight:focus-within {
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary)),
+      0 8px 18px -12px hsl(var(--primary) / 0.5) !important;
+  }
+
+  .dark .cabinet-card.tariff-card-popular.tariff-card-popular--tight,
+  .dark .cabinet-shell .cabinet-card.tariff-card-popular.tariff-card-popular--tight:hover,
+  .dark .cabinet-shell .cabinet-card.tariff-card-popular.tariff-card-popular--tight:focus-within {
+    box-shadow:
+      inset 0 0 0 1px hsl(var(--primary)),
+      0 8px 20px -10px hsl(var(--primary) / 0.55) !important;
+  }
+
+  /* Нашивка «Популярный» — цвет главной кнопки темы (у nebula ниже — её градиент). */
+  .tariff-popular-badge {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 6px 16px -6px hsl(var(--primary) / 0.75);
+  }
+
+  /*
    * То же кольцо, но по явной пометке — для админ-статистики.
    *
    * Слой выше ограничен .cabinet-shell намеренно: включать пластику всей
@@ -4648,6 +4726,17 @@ html[data-cabinet-decor="nebula"] .cabinet-btn-primary::after {
 html[data-cabinet-decor="nebula"] .cabinet-btn-primary:hover::after,
 html[data-cabinet-decor="nebula"] .cabinet-btn-primary:focus-visible::after {
   transform: translateX(120%);
+}
+
+/* Нашивка «Популярный» на карточке тарифа — тем же градиентом, что и кнопки. */
+html[data-cabinet-decor="nebula"] .tariff-popular-badge {
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--nb-cyan)) 0%,
+    hsl(210 90% 52%) 55%,
+    hsl(var(--nb-violet)) 100%
+  );
+  box-shadow: 0 6px 16px -6px hsl(var(--nb-violet) / 0.7);
 }
 
 html[data-cabinet-decor="nebula"] .cabinet-btn-primary:hover {

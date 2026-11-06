@@ -6,7 +6,6 @@ import { ArrowRight } from 'lucide-react'
 import { api, type TariffItem, type TariffsResponse } from '@/lib/api'
 import { formatDecimals, formatInteger } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { LANDING_POPULAR_PLAN_PATTERNS } from '../landingContent'
 import { logLandingMockHint, readLandingTariffsMock } from '../landingTariffsMock'
 import type { LandingBrand } from '../useLandingBrand'
 import { Reveal, useCardSpotlight } from './LandingMotion'
@@ -82,8 +81,7 @@ function buildPeriodCards(
 
 /**
  * tariffs-режим: карточки — тарифы, крупная цена за месяц.
- * Бэкенд флага «популярный» не отдаёт (в Go его нет), поэтому определяем
- * по названию/слагу — список шаблонов лежит в landingContent.ts.
+ * Нашивка «Популярный» — у тарифа, отмеченного в админке (is_popular).
  */
 function buildPlanCards(tariffs: TariffItem[]): TariffCardData[] {
   const bySlug = new Map<string, TariffItem[]>()
@@ -97,14 +95,13 @@ function buildPlanCards(tariffs: TariffItem[]): TariffCardData[] {
     list.sort((a, b) => a.months - b.months)
     const head = list[0]
     const monthly = head.monthly_base_rub || head.price_rub
-    const haystack = `${slug} ${head.name}`.toLowerCase()
     return {
       key: slug,
       name: head.name,
       priceRub: monthly,
       perMonthRub: monthly,
       savingsPct: 0,
-      featured: LANDING_POPULAR_PLAN_PATTERNS.some((p) => haystack.includes(p)),
+      featured: head.is_popular === true,
     }
   })
 }

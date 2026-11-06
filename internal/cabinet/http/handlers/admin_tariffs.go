@@ -114,6 +114,7 @@ type tariffDTO struct {
 	TierLevel                 *int             `json:"tier_level"`
 	Description               *string          `json:"description"`
 	DescriptionDetail         *string          `json:"description_detail"`
+	IsPopular                 bool             `json:"is_popular"`
 	Prices                    []tariffPriceDTO `json:"prices"`
 	// Только в списке: что показать в чипе трафика карточки тарифа.
 	// BypassLimitBytes — лимит обхода; 0 — обхода нет или раздельный трафик выключен.
@@ -143,7 +144,8 @@ func tariffToDTO(t *database.Tariff, prices []database.TariffPrice) tariffDTO {
 		ActiveInternalSquadUUIDs:  t.ActiveInternalSquadUUIDs,
 		ExternalSquadUUID:         extUUID, RemnawaveTag: t.RemnawaveTag,
 		TierLevel: t.TierLevel, Description: t.Description, DescriptionDetail: t.DescriptionDetail,
-		Prices: priceDTOs,
+		IsPopular: t.IsPopular,
+		Prices:    priceDTOs,
 	}
 }
 
@@ -191,6 +193,7 @@ type createTariffReq struct {
 	TierLevel                 *int    `json:"tier_level"`
 	Description               *string `json:"description"`
 	DescriptionDetail         *string `json:"description_detail"`
+	IsPopular                 bool    `json:"is_popular"`
 	Rub                       [4]int  `json:"rub"`
 	Stars                     [4]*int `json:"stars"`
 }
@@ -227,6 +230,7 @@ func (h *AdminTariffsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		TierLevel:                 req.TierLevel,
 		Description:               req.Description,
 		DescriptionDetail:         req.DescriptionDetail,
+		IsPopular:                 req.IsPopular,
 	}
 	if tag := config.RemnawaveTag(); tag != "" {
 		t.RemnawaveTag = &tag
@@ -301,6 +305,7 @@ func (h *AdminTariffsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		"device_limit": true, "traffic_limit_bytes": true,
 		"traffic_limit_reset_strategy": true, "active_internal_squad_uuids": true,
 		"tier_level": true, "description": true, "description_detail": true,
+		"is_popular": true,
 	}
 
 	fields := make(map[string]interface{})

@@ -25,6 +25,8 @@ export interface AdminTariff {
   tier_level?: number | null
   description?: string | null
   description_detail?: string | null
+  /** Нашивка «Популярный» у клиентов; такой тариф не больше одного. */
+  is_popular?: boolean
   prices: AdminTariffPrice[]
   /** Только в списке: лимит обхода (0/нет — обхода нет или раздельный трафик выключен). */
   bypass_limit_bytes?: number
@@ -45,6 +47,7 @@ export interface CreateTariffInput {
   tier_level?: number | null
   description?: string | null
   description_detail?: string | null
+  is_popular?: boolean
   rub: [number, number, number, number]
   stars: [number | null, number | null, number | null, number | null]
 }
