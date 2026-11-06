@@ -307,12 +307,14 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return boolStr(conf.trafficPacksEnabled) },
 		},
 		{
-			Key: "TRAFFIC_BYPASS_LABEL", Group: "traffic", Type: SettingText, Instant: true,
+			// Не Instant: в админке Instant — автосохранение переключателя, а текстовое
+			// поле с ним не уходило по «Сохранить секцию» и откатывалось к старому значению.
+			Key: "TRAFFIC_BYPASS_LABEL", Group: "traffic", Type: SettingText,
 			Apply:   applyStringField(func(v string) { conf.trafficBypassLabel = v }),
 			Current: func() string { return conf.trafficBypassLabel },
 		},
 		{
-			Key: "TRAFFIC_ALERT_PERCENT", Group: "traffic", Type: SettingInt, Instant: true,
+			Key: "TRAFFIC_ALERT_PERCENT", Group: "traffic", Type: SettingInt,
 			MinInt: intPtr(1), MaxInt: intPtr(99),
 			Apply:   applyIntField(func(v int) error { conf.trafficAlertPercent = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.trafficAlertPercent) },

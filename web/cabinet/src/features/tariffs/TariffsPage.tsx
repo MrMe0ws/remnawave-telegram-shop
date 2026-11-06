@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type SubscriptionResponse, type TariffItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { bypassLabel } from '@/lib/bypassLabel'
+import { bypassLabelInline } from '@/lib/bypassLabel'
 import { useAuthStore } from '@/store/auth'
 import { formatDecimals, formatNumber } from '@/lib/format'
 import {
@@ -852,14 +852,14 @@ function FeatureLine({
 /**
  * Трафик на карточке тарифа. При отдельном лимите обхода «Безлимит трафика» — неправда:
  * безлимитны только обычные серверы, а на обходе свой месячный лимит. Название обхода —
- * как его задал админ (TRAFFIC_BYPASS_LABEL), без склонения.
+ * как его задал админ (TRAFFIC_BYPASS_LABEL), без склонения и со строчной: оно внутри фразы.
  */
 function trafficLineText(head: TariffItem, t: TFunction): string {
   if (head.traffic_gb) return t('tariffs.traffic', { n: head.traffic_gb })
   if (head.bypass_gb == null) return t('tariffs.trafficUnlimited')
   return t('tariffs.trafficUnlimitedPlusBypass', {
     n: formatNumber(head.bypass_gb),
-    label: bypassLabel(head.bypass_label),
+    label: bypassLabelInline(head.bypass_label),
   })
 }
 

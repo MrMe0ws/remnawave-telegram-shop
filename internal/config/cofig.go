@@ -352,9 +352,11 @@ func TrafficPacksEnabled() bool { return conf.trafficPacksEnabled }
 
 // TrafficBypassLabel — как серверы обхода называются у клиента (админ может сменить:
 // платёжным системам не нравятся открытые слова вроде «обход» и «белые списки»).
+// По умолчанию со строчной: в боте и уведомлениях название стоит внутри фразы,
+// а заголовки кабинета сами поднимают первую букву (web/cabinet/src/lib/bypassLabel.ts).
 func TrafficBypassLabel() string {
 	if conf.trafficBypassLabel == "" {
-		return "Обход"
+		return "обход"
 	}
 	return conf.trafficBypassLabel
 }
@@ -1244,7 +1246,7 @@ func InitConfig() {
 	conf.hwidExtraDevicesEnabled = envBoolDefault("HWID_EXTRA_DEVICES_ENABLED", true)
 	conf.trafficSplitEnabled = envBoolDefault("TRAFFIC_SPLIT_ENABLED", false)
 	conf.trafficPacksEnabled = envBoolDefault("TRAFFIC_PACKS_ENABLED", true)
-	conf.trafficBypassLabel = strings.TrimSpace(envStringDefault("TRAFFIC_BYPASS_LABEL", "Обход"))
+	conf.trafficBypassLabel = strings.TrimSpace(envStringDefault("TRAFFIC_BYPASS_LABEL", "обход"))
 	conf.trafficAlertPercent = envIntDefault("TRAFFIC_ALERT_PERCENT", 80)
 	conf.trafficPollMinutes = envIntDefault("TRAFFIC_POLL_MINUTES", 5)
 

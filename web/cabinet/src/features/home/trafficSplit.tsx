@@ -6,7 +6,7 @@ import { AlertTriangle, Gauge, Infinity as InfinityIcon, Plus, Route } from 'luc
 import '@/lib/splitColor'
 import { ResponsiveSheet } from '@/components/ResponsiveSheet'
 import { Button } from '@/components/ui/button'
-import { bypassLabel } from '@/lib/bypassLabel'
+import { bypassLabel, isDefaultBypassLabel } from '@/lib/bypassLabel'
 import { formatUtcDayMonth as formatDayMonth, utcPeriodMonthName } from '@/lib/splitDates'
 import type { MyTrafficResponse, TrafficPack } from '@/lib/api'
 import { formatNumber } from '@/lib/format'
@@ -255,7 +255,7 @@ export function BuyTrafficButton({ data }: { data: HomeData }) {
   if (accent && !split.packs.some((p) => p.kind === 'main')) {
     // Лимит только у обхода — кнопка называет его; если докупать можно и обычный трафик, остаётся «Докупить трафик».
     if (split.bypass && split.bypass.extra_bytes > 0) text = t('trafficSplit.buyMore')
-    else text = label === 'Обход' ? t('trafficSplit.buyBypassDefault') : t('trafficSplit.buyBypass', { label })
+    else text = isDefaultBypassLabel(split.label) ? t('trafficSplit.buyBypassDefault') : t('trafficSplit.buyBypass', { label })
   }
   return (
     <Button

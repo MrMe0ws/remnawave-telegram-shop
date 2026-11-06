@@ -681,7 +681,9 @@ export function UsageChart({
         {vCats.map((c, i) => {
           const day = Number(c.slice(8, 10)) || 0
           // В плотном месяце подписываем 1-е, каждое пятое число и выбранный день: иначе цифры слипаются.
-          const shown = !dense || day === 1 || day % 5 === 0 || i === sel
+          // Соседей выбранного дня прячем — «14» вплотную к «15» налезали друг на друга.
+          const nearSel = dense && sel != null && Math.abs(i - sel) === 1
+          const shown = i === sel || ((!dense || day === 1 || day % 5 === 0) && !nearSel)
           return (
             <span
               key={c}

@@ -18,12 +18,12 @@
         "xray_version": "26.7.28",
         "node_version": "3.0.0",
         "uuid": "n1",
-        "name": "Швеция2",
+        "name": "Швеция",
         "country_code": "SE",
-        "address": "179.254.109.151",
+        "address": "203.0.113.11",
         "users_online": 24,
         "provider": {
-          "name": "1cent.host"
+          "name": "nordhost"
         },
         "plugin_name": "TBlocker",
         "traffic_used_bytes": 700713176924.16
@@ -47,10 +47,10 @@
         "uuid": "n2",
         "name": "Германия",
         "country_code": "DE",
-        "address": "109.122.198.77",
+        "address": "203.0.113.24",
         "users_online": 15,
         "provider": {
-          "name": "waicore"
+          "name": "alpha vps"
         },
         "plugin_name": "TBlocker",
         "traffic_used_bytes": 844519419412.48
@@ -74,10 +74,10 @@
         "uuid": "n3",
         "name": "Германия 2 премиум",
         "country_code": "DE",
-        "address": "144.31.84.141",
+        "address": "203.0.113.37",
         "users_online": 15,
         "provider": {
-          "name": "senko"
+          "name": "cloudline"
         },
         "traffic_used_bytes": 541047767695.36
       },
@@ -98,12 +98,12 @@
         "xray_version": "26.7.28",
         "node_version": "3.0.0",
         "uuid": "n4",
-        "name": "Senko_Rastyan",
+        "name": "Германия 3",
         "country_code": "DE",
-        "address": "31.77.160.151",
+        "address": "203.0.113.52",
         "users_online": 12,
         "provider": {
-          "name": "senko"
+          "name": "cloudline"
         },
         "traffic_used_bytes": 386922866278.4
       },
@@ -124,12 +124,12 @@
         "xray_version": "26.7.28",
         "node_version": "3.0.0",
         "uuid": "n5",
-        "name": "Wcloud Обход",
+        "name": "Германия · обход",
         "country_code": "DE",
-        "address": "pvk68vkt.4vov6kbvi.ru",
+        "address": "bypass-de-node01.cdn-edge.example.com",
         "users_online": 6,
         "provider": {
-          "name": "wcloud"
+          "name": "eurovds"
         },
         "traffic_used_bytes": 109586090557.44
       },
@@ -152,10 +152,10 @@
         "uuid": "n6",
         "name": "Эстония",
         "country_code": "EE",
-        "address": "138.124.100.62",
+        "address": "198.51.100.14",
         "users_online": 3,
         "provider": {
-          "name": "intezio"
+          "name": "balticnet"
         },
         "traffic_used_bytes": 45258217881.6
       },
@@ -178,10 +178,10 @@
         "uuid": "n7",
         "name": "Польша",
         "country_code": "PL",
-        "address": "179.253.179.100",
+        "address": "198.51.100.27",
         "users_online": 4,
         "provider": {
-          "name": "xytor.cloud"
+          "name": "vistula"
         },
         "traffic_used_bytes": 121053653237.76
       },
@@ -204,10 +204,10 @@
         "uuid": "n8",
         "name": "Гонконг",
         "country_code": "HK",
-        "address": "139.28.168.82",
+        "address": "198.51.100.63",
         "users_online": 0,
         "provider": {
-          "name": "likevps"
+          "name": "harbour"
         },
         "traffic_used_bytes": 182829711.36
       },
@@ -215,11 +215,11 @@
         "uuid": "n9",
         "name": "Россия",
         "country_code": "RU",
-        "address": "62.217.183.48",
+        "address": "192.0.2.18",
         "state": "offline",
         "users_online": 0,
         "provider": {
-          "name": "beget"
+          "name": "volga host"
         },
         "plugin_name": "TBlocker",
         "memory_used_pct": null,
@@ -235,11 +235,11 @@
         "uuid": "n10",
         "name": "Нидерланды",
         "country_code": "NL",
-        "address": "91.205.12.40",
+        "address": "192.0.2.40",
         "state": "connecting",
         "users_online": 0,
         "provider": {
-          "name": "hostkey"
+          "name": "dutchcloud"
         },
         "memory_used_pct": null,
         "load_avg": null,
@@ -252,13 +252,13 @@
       },
       {
         "uuid": "n11",
-        "name": "Германия 3 · бывший MTProxy",
+        "name": "Германия 4 · резерв",
         "country_code": "DE",
-        "address": "2.26.172.180",
+        "address": "192.0.2.77",
         "state": "disabled",
         "users_online": 0,
         "provider": {
-          "name": "freakhosting"
+          "name": "alpha vps"
         },
         "memory_used_pct": null,
         "load_avg": null,
