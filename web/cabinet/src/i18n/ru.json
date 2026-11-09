@@ -622,7 +622,21 @@
       "unreadAria": "Непрочитанных: {{count}}",
       "today": "Сегодня",
       "yesterday": "Вчера",
-      "ticketClosed": "Обращение закрыто. Новое сообщение создаст новый тикет"
+      "ticketClosed": "Обращение закрыто. Новое сообщение создаст новый тикет",
+      "attach": "Прикрепить изображение",
+      "removeAttachment": "Убрать",
+      "attachCounter": "{{count}} из {{max}}",
+      "fileTooLarge": "Файл больше {{mb}} МБ — выберите поменьше",
+      "unsupportedType": "Можно прикрепить только изображения: JPEG, PNG, WebP, HEIC и другие",
+      "tooManyFiles": "Не больше {{max}} файлов в одном сообщении",
+      "dropHere": "Отпустите, чтобы прикрепить",
+      "dropHint": "JPEG, PNG, WebP, HEIC · до {{max}} файлов по {{mb}} МБ",
+      "pasteHint": "Скриншот можно вставить через Ctrl+V",
+      "sending": "Отправляется…",
+      "openImage": "Открыть изображение",
+      "imageUnavailable": "Не удалось загрузить",
+      "download": "Скачать",
+      "photo": "Фото"
     },
     "profile": {
       "title": "Профиль",

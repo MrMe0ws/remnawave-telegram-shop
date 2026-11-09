@@ -208,6 +208,10 @@ export interface AuthBootstrapResponse {
   partner_max_percent?: number
   /** true при SUPPORT_BOT_API=true — чат поддержки в кабинете вместо внешней ссылки. */
   support_chat_enabled?: boolean
+  /** Скрепка в чате поддержки (включена вместе с чатом) и её лимиты. */
+  support_attachments_enabled?: boolean
+  support_attachments_max_files?: number
+  support_attachments_max_mb?: number
   /** false — только тёмная тема, переключатель в шапке скрыт (CABINET_LIGHT_THEME_ENABLED). */
   light_theme_enabled?: boolean
   /** true — при подключении Happ отдавать зашифрованный deep link (happ://crypt5/…) вместо happ://add/ (CABINET_DEEPLINK_HAPP_ENCRYPT). */
@@ -991,13 +995,26 @@ export interface PartnerPayoutDTO {
   processed_at?: string
 }
 
+/** Изображение в сообщении чата поддержки; байты — supportAttachmentBlob(id). */
+export interface SupportAttachmentDTO {
+  id: number
+  mime: string
+  width?: number
+  height?: number
+  size?: number
+  /** Есть у картинок, ушедших файлом (HEIC, TIFF, GIF…). */
+  name?: string
+}
+
 export interface SupportMessageDTO {
   id: number
   direction: 'in' | 'out'
+  /** Пустой у сообщения из одних картинок. */
   text: string
   author_label?: string
   delivery_status?: 'pending' | 'sent' | 'failed'
   created_at: string
+  attachments?: SupportAttachmentDTO[]
 }
 
 export interface SupportSummaryResponse {
@@ -1198,6 +1215,32 @@ async function request<T>(
   if (res.status === 204) return undefined as T
 
   return res.json() as Promise<T>
+}
+
+/**
+ * Запрос с произвольным телом (FormData) или ответом (Blob) — то, что не умеет
+ * JSON-шный request. Авторизация, CSRF и одно обновление токена — как у него.
+ */
+async function rawRequest(method: string, path: string, body?: BodyInit, retrying = false): Promise<Response> {
+  const headers: Record<string, string> = {}
+  const csrf = readCsrfCookie()
+  if (csrf) headers['X-CSRF-Token'] = csrf
+  const token = _authRef?.getAccessToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(BASE + path, { method, headers, body, credentials: 'include' })
+
+  if (res.status === 401 && !retrying) {
+    const newToken = await doRefresh()
+    if (newToken) return rawRequest(method, path, body, true)
+    _authRef?.logout()
+    throw new ApiError(401, 'Session expired')
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new ApiError(res.status, text)
+  }
+  return res
 }
 
 /** Собирает ?limit=&offset= для листингов с пагинацией. */
@@ -1454,8 +1497,21 @@ export const api = {
 
   supportConversation: () => request<SupportConversationResponse>('GET', '/support/conversation'),
 
-  supportSendMessage: (text: string) =>
-    request<SupportMessageDTO>('POST', '/support/messages', { text }),
+  /** Сообщение в поддержку; с файлами — multipart (поле text + части files). */
+  supportSendMessage: async (text: string, files: File[] = []): Promise<SupportMessageDTO> => {
+    if (files.length === 0) return request<SupportMessageDTO>('POST', '/support/messages', { text })
+    const form = new FormData()
+    form.append('text', text)
+    for (const f of files) form.append('files', f, f.name)
+    const res = await rawRequest('POST', '/support/messages', form)
+    return res.json() as Promise<SupportMessageDTO>
+  },
+
+  /** Картинка из чата: <img> не шлёт Authorization, поэтому — fetch и Blob. */
+  supportAttachmentBlob: async (id: number): Promise<Blob> => {
+    const res = await rawRequest('GET', `/support/attachments/${id}`)
+    return res.blob()
+  },
 
   supportMarkRead: () => request<{ ok: boolean }>('POST', '/support/read'),
 

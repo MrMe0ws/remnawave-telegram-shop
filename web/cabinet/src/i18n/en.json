@@ -462,7 +462,21 @@
       "unreadAria": "Unread: {{count}}",
       "today": "Today",
       "yesterday": "Yesterday",
-      "ticketClosed": "This ticket is closed. A new message will open a new ticket."
+      "ticketClosed": "This ticket is closed. A new message will open a new ticket.",
+      "attach": "Attach an image",
+      "removeAttachment": "Remove",
+      "attachCounter": "{{count}} of {{max}}",
+      "fileTooLarge": "The file is over {{mb}} MB — pick a smaller one",
+      "unsupportedType": "Only images can be attached: JPEG, PNG, WebP, HEIC and more",
+      "tooManyFiles": "Up to {{max}} files per message",
+      "dropHere": "Drop to attach",
+      "dropHint": "JPEG, PNG, WebP, HEIC · up to {{max}} files, {{mb}} MB each",
+      "pasteHint": "Paste a screenshot with Ctrl+V",
+      "sending": "Sending…",
+      "openImage": "Open image",
+      "imageUnavailable": "Couldn't load",
+      "download": "Download",
+      "photo": "Photo"
     },
     "profile": {
       "title": "Profile",
