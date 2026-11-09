@@ -255,10 +255,9 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 
 | Переменная | Описание |
 |------------|----------|
-| `SUPPORT_BOT_API` | Встроенный чат через bridge к telegram-support-bot (`false` по умолчанию) |
+| `SUPPORT_BOT_API` | Встроенный чат через bridge к telegram-support-bot (`false` по умолчанию). Чат принимает изображения: обязательны support-bot с поддержкой вложений и `client_max_body_size 26m` в nginx на `/cabinet/api/support/messages` |
 | `SUPPORT_BOT_API_URL` | Базовый URL API support-bot (обязателен при `true`) |
 | `SUPPORT_BRIDGE_SECRET` | Общий секрет shop ↔ support-bot |
-| `SUPPORT_CHAT_ATTACHMENTS` | Изображения в чате поддержки кабинета (`false` по умолчанию; только при `SUPPORT_BOT_API=true`). Нужен support-bot с вложениями и `client_max_body_size 26m` в nginx на `/cabinet/api/support/messages` |
 | `SUPPORT_LOGO_FILE` | Аватар поддержки в чате (опционально) |
 
 Гайд: [`cabinet/SETUP-GUIDE-RU.md`](./cabinet/SETUP-GUIDE-RU.md) (раздел про support bridge).

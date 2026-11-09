@@ -195,8 +195,11 @@ server {
         proxy_set_header X-Forwarded-Port  $server_port;
     }
 
-    # Изображения в чате поддержки (SUPPORT_CHAT_ATTACHMENTS): до 5 файлов по 10 МБ, 25 МБ вместе.
+    # Чат поддержки: сообщения с картинками — до 5 файлов по 10 МБ, 25 МБ вместе.
     location = /cabinet/api/support/messages {
+        # Точный location забирает запрос у location / вместе с его limit_req —
+        # лимит частоты повторяем здесь, иначе на этом пути его не будет.
+        limit_req zone=cabinet_api_ip burst=10 nodelay;
         client_max_body_size 26m;
         # Скриншоты с мобильного интернета в серверные 15s не укладываются.
         client_body_timeout 120s;
@@ -735,6 +738,7 @@ Telegram DM в support-боте — без изменений (source=telegram)
 - Работающий web-кабинет (`CABINET_ENABLED=true`).
 - Отдельно развёрнутый **telegram-support-bot** (форум-супергруппа, `/setprivacy` → Disable — см. README support-bot).
 - Миграция shop: **`000036_cabinet_support`** (`cabinet_support_ticket`, `cabinet_support_message`); для изображений — **`000064_cabinet_support_attachments`** (`cabinet_support_attachment`).
+- **Обязательно для изображений в чате:** support-bot с поддержкой вложений (старый не примет файлы) и `location = /cabinet/api/support/messages` с `client_max_body_size 26m` в nginx (см. пример конфига выше): без него скриншоты больше 2 МБ отбиваются nginx с `413`. Без этих двух условий не обновляйтесь.
 
 ### Переменные shop (`.env`)
 
@@ -743,7 +747,6 @@ Telegram DM в support-боте — без изменений (source=telegram)
 | `SUPPORT_BOT_API` | `true` — включить встроенный чат |
 | `SUPPORT_BOT_API_URL` | Базовый URL HTTP API support-bot, напр. `http://support-bot:8080` |
 | `SUPPORT_BRIDGE_SECRET` | Общий секрет (Bearer); тот же, что в `.env` support-bot |
-| `SUPPORT_CHAT_ATTACHMENTS` | `true` — скрепка и вставка скриншотов в чате (по умолчанию `false`). Нужны support-bot с вложениями и location `/cabinet/api/support/messages` в nginx (см. выше) |
 
 При `SUPPORT_BOT_API=true` без `SUPPORT_BOT_API_URL` или `SUPPORT_BRIDGE_SECRET` процесс shop не стартует.
 
@@ -787,7 +790,7 @@ HTTP_PORT=8080
 
 - `GET /cabinet/api/support/summary` — open-тикет, счётчик непрочитанных
 - `GET /cabinet/api/support/conversation` — сообщения open-тикета; у сообщения с картинками — `attachments: [{id, mime, width?, height?, size?, name?}]`
-- `POST /cabinet/api/support/messages` — `{"text":"..."}` или `multipart/form-data`: поле `text` (может быть пустым) и до 5 частей `files` (JPEG, PNG, WebP, BMP, GIF, HEIC/HEIF, AVIF, TIFF; до 10 МБ каждая, 25 МБ вместе). Ошибки: `400 too many files`, `413 file too large`, `415 unsupported media type`, `404` при выключенном `SUPPORT_CHAT_ATTACHMENTS`
+- `POST /cabinet/api/support/messages` — `{"text":"..."}` или `multipart/form-data`: поле `text` (может быть пустым) и до 5 частей `files` (JPEG, PNG, WebP, BMP, GIF, HEIC/HEIF, AVIF, TIFF; до 10 МБ каждая, 25 МБ вместе). Ошибки: `400 too many files`, `413 file too large`, `415 unsupported media type`
 - `GET /cabinet/api/support/attachments/{id}` — картинка из чата этого аккаунта (чужая — `404`); `Cache-Control: private, max-age=86400, immutable`. Файлы хранит Telegram, shop скачивает их у support-bot (`GET /internal/cabinet/file/{id}?account_id=`)
 - `POST /cabinet/api/support/read` — отметить входящие прочитанными
 
@@ -799,7 +802,7 @@ Idempotency: исходящие сообщения пользователя со
 
 ### Ограничения MVP
 
-- От пользователя кабинета — **текст и изображения** (при `SUPPORT_CHAT_ATTACHMENTS=true`).
+- От пользователя кабинета — **текст и изображения**.
 - От саппорта в кабинет — **текст и изображения**; видео, голосовые и стикеры не доставляются.
 - **Один open-тикет** на `account_id`.
 - После **`/close`** в топике история в модале **не показывается**; новое сообщение открывает **новый** тикет.

@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"remnawave-tg-shop-bot/internal/cabinet/auth/jwt"
@@ -77,13 +78,14 @@ func TestReadSupportMultipartLimits(t *testing.T) {
 	}
 }
 
-func TestSupportSendMultipartDisabledByDefault(t *testing.T) {
+func TestSupportSendMultipartRejectsTooManyFiles(t *testing.T) {
 	h := NewSupport(cabsvc.NewSupport(nil, nil, nil, nil, nil, nil, nil, nil))
-	r := supportMultipartRequest(t, testPart{field: "files", filename: "a.png", data: []byte("\x89PNG\r\n\x1a\n")})
+	one := testPart{field: "files", filename: "a.png", data: []byte("\x89PNG\r\n\x1a\n")}
+	r := supportMultipartRequest(t, one, one, one, one, one, one)
 	r = r.WithContext(middleware.SetClaims(r.Context(), &jwt.Claims{AccountID: 1}))
 	w := httptest.NewRecorder()
 	h.SendMessage(w, r)
-	if w.Code != http.StatusNotFound {
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "too many files") {
 		t.Fatalf("status %d: %s", w.Code, w.Body.String())
 	}
 }

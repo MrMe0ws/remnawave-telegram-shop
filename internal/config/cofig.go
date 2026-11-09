@@ -46,7 +46,6 @@ type config struct {
 	supportBotAPIEnabled                                                         bool
 	supportBotAPIURL                                                             string
 	supportBridgeSecret                                                          string
-	supportChatAttachments                                                       bool
 	tosURL                                                                       string
 	videoGuideURL                                                                string
 	serverSelectionURL                                                           string
@@ -517,13 +516,6 @@ func SupportBotAPIURL() string {
 
 func SupportBridgeSecret() string {
 	return conf.supportBridgeSecret
-}
-
-// SupportChatAttachmentsEnabled — изображения в чате поддержки кабинета
-// (SUPPORT_CHAT_ATTACHMENTS). Только вместе с самим чатом: без SUPPORT_BOT_API
-// вложениям некуда уходить.
-func SupportChatAttachmentsEnabled() bool {
-	return conf.supportBotAPIEnabled && conf.supportChatAttachments
 }
 
 func TosURL() string {
@@ -1263,7 +1255,6 @@ func InitConfig() {
 	conf.supportBotAPIEnabled = envBoolDefault("SUPPORT_BOT_API", false)
 	conf.supportBotAPIURL = strings.TrimSpace(os.Getenv("SUPPORT_BOT_API_URL"))
 	conf.supportBridgeSecret = strings.TrimSpace(os.Getenv("SUPPORT_BRIDGE_SECRET"))
-	conf.supportChatAttachments = envBoolDefault("SUPPORT_CHAT_ATTACHMENTS", false)
 	if conf.supportBotAPIEnabled {
 		if conf.supportBotAPIURL == "" {
 			panic("SUPPORT_BOT_API=true requires SUPPORT_BOT_API_URL")

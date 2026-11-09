@@ -90,10 +90,6 @@ func (h *SupportHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	var in supportSendReq
 	var files []cabsvc.SupportUpload
 	if mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); mediaType == "multipart/form-data" {
-		if !botcfg.SupportChatAttachmentsEnabled() {
-			http.Error(w, "support attachments disabled", http.StatusNotFound)
-			return
-		}
 		var err error
 		in.Text, files, err = readSupportMultipart(w, r)
 		if err != nil {

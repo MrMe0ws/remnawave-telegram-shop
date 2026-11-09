@@ -156,8 +156,8 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"partner_nav_visible":  botcfg.PartnerProgramEnabled(),
 		"partner_max_percent":  maxPartnerPercent(),
 		"support_chat_enabled": botcfg.SupportBotAPIEnabled(),
-		// Скрепка в чате поддержки и её лимиты (SUPPORT_CHAT_ATTACHMENTS).
-		"support_attachments_enabled":   botcfg.SupportChatAttachmentsEnabled(),
+		// Скрепка в чате поддержки и её лимиты: картинки идут вместе с чатом.
+		"support_attachments_enabled":   botcfg.SupportBotAPIEnabled(),
 		"support_attachments_max_files": cabsvc.SupportMaxFiles,
 		"support_attachments_max_mb":    cabsvc.SupportMaxFileBytes >> 20,
 		"turnstile_enabled":    cabcfg.TurnstileEnabled(),
