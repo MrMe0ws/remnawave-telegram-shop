@@ -1235,6 +1235,17 @@ func registerAPIRoutes(
 				middleware.RateLimit(supportAcctLim, accountKey("support_send")),
 			)),
 		)
+		// GET /support/attachments/{id} — картинка из чата; браузер кэширует её надолго,
+		// так что лимит чтений чата с запасом покрывает и ленту с десятком вложений.
+		api.Handle("/cabinet/api/support/attachments/{id}",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(support.Attachment),
+					middleware.RequireAuth(jwtIssuer),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("support_attachment")),
+				),
+			}),
+		)
 		api.Handle("/cabinet/api/support/read",
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(support.MarkRead),

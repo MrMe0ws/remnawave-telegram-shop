@@ -20,6 +20,7 @@ import (
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	cabmetrics "remnawave-tg-shop-bot/internal/cabinet/metrics"
+	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
 	botcfg "remnawave-tg-shop-bot/internal/config"
 )
 
@@ -155,6 +156,10 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"partner_nav_visible":  botcfg.PartnerProgramEnabled(),
 		"partner_max_percent":  maxPartnerPercent(),
 		"support_chat_enabled": botcfg.SupportBotAPIEnabled(),
+		// Скрепка в чате поддержки и её лимиты (SUPPORT_CHAT_ATTACHMENTS).
+		"support_attachments_enabled":   botcfg.SupportChatAttachmentsEnabled(),
+		"support_attachments_max_files": cabsvc.SupportMaxFiles,
+		"support_attachments_max_mb":    cabsvc.SupportMaxFileBytes >> 20,
 		"turnstile_enabled":    cabcfg.TurnstileEnabled(),
 		"pwa_enabled":          cabcfg.PWAEnabled(),
 		"pwa_app_name":         cabcfg.PWAAppName(),

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/supportbot"
 	"remnawave-tg-shop-bot/internal/cabinetnotify"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/translation"
 )
 
 var (
@@ -71,12 +73,23 @@ func NewSupport(
 }
 
 type SupportMessageDTO struct {
-	ID             int64  `json:"id"`
-	Direction      string `json:"direction"`
-	Text           string `json:"text"`
-	AuthorLabel    string `json:"author_label,omitempty"`
-	DeliveryStatus string `json:"delivery_status,omitempty"`
-	CreatedAt      string `json:"created_at"`
+	ID             int64                  `json:"id"`
+	Direction      string                 `json:"direction"`
+	Text           string                 `json:"text"`
+	AuthorLabel    string                 `json:"author_label,omitempty"`
+	DeliveryStatus string                 `json:"delivery_status,omitempty"`
+	CreatedAt      string                 `json:"created_at"`
+	Attachments    []SupportAttachmentDTO `json:"attachments,omitempty"`
+}
+
+// SupportAttachmentDTO — изображение в сообщении; ID — для GET /support/attachments/{id}.
+type SupportAttachmentDTO struct {
+	ID     int64   `json:"id"`
+	Mime   string  `json:"mime"`
+	Width  *int    `json:"width,omitempty"`
+	Height *int    `json:"height,omitempty"`
+	Size   *int    `json:"size,omitempty"`
+	Name   *string `json:"name,omitempty"`
 }
 
 type SupportConversation struct {
@@ -146,8 +159,16 @@ func (s *Support) Conversation(ctx context.Context, accountID int64) (*SupportCo
 	if err != nil {
 		return nil, err
 	}
+	ids := make([]int64, 0, len(msgs))
 	for _, m := range msgs {
-		out.Messages = append(out.Messages, messageDTO(m))
+		ids = append(ids, m.ID)
+	}
+	atts, err := s.repo.ListAttachmentsByMessages(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range msgs {
+		out.Messages = append(out.Messages, messageDTO(m, atts[m.ID]))
 	}
 	// «Печатает…» имеет смысл, только пока последнее слово за клиентом: запоздавшее
 	// событие typing не должно висеть под уже пришедшим ответом.
@@ -181,13 +202,23 @@ func (s *Support) isTyping(ticketID int64, now time.Time) bool {
 	return ok && until.After(now)
 }
 
-func messageDTO(m repository.SupportMessage) SupportMessageDTO {
+func messageDTO(m repository.SupportMessage, atts []repository.SupportAttachment) SupportMessageDTO {
 	dto := SupportMessageDTO{
 		ID:          m.ID,
 		Direction:   m.Direction,
 		Text:        m.Text,
 		AuthorLabel: m.AuthorLabel,
 		CreatedAt:   m.CreatedAt.UTC().Format(time.RFC3339),
+	}
+	for _, a := range atts {
+		dto.Attachments = append(dto.Attachments, SupportAttachmentDTO{
+			ID:     a.ID,
+			Mime:   a.Mime,
+			Width:  a.Width,
+			Height: a.Height,
+			Size:   a.SizeBytes,
+			Name:   a.Name,
+		})
 	}
 	if m.Direction == repository.SupportMsgIn {
 		dto.DeliveryStatus = m.DeliveryStatus
@@ -205,9 +236,10 @@ func (s *Support) MarkRead(ctx context.Context, accountID int64) error {
 	return s.repo.MarkOutMessagesRead(ctx, accountID, time.Now().UTC())
 }
 
-func normalizeSupportText(text string) (string, error) {
+// normalizeSupportText — текст сообщения; пустой можно только с вложениями (allowEmpty).
+func normalizeSupportText(text string, allowEmpty bool) (string, error) {
 	t := strings.TrimSpace(text)
-	if t == "" {
+	if t == "" && !allowEmpty {
 		return "", ErrSupportInvalidMsg
 	}
 	if len([]rune(t)) > 4000 {
@@ -216,11 +248,15 @@ func normalizeSupportText(text string) (string, error) {
 	return t, nil
 }
 
-func (s *Support) SendMessage(ctx context.Context, accountID int64, text string) (*SupportMessageDTO, error) {
+// SendMessage — сообщение клиента в поддержку: текст и до SupportMaxFiles изображений.
+func (s *Support) SendMessage(ctx context.Context, accountID int64, text string, files []SupportUpload) (*SupportMessageDTO, error) {
 	if s.repo == nil || s.bot == nil {
 		return nil, ErrSupportDisabled
 	}
-	msgText, err := normalizeSupportText(text)
+	if err := validateSupportUploads(files); err != nil {
+		return nil, err
+	}
+	msgText, err := normalizeSupportText(text, len(files) > 0)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +313,11 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string)
 	}
 
 	if alreadyExists && saved != nil && saved.DeliveryStatus == repository.SupportDeliverySent {
-		dto := messageDTO(*saved)
+		atts, err := s.repo.ListAttachmentsByMessages(ctx, []int64{saved.ID})
+		if err != nil {
+			return nil, err
+		}
+		dto := messageDTO(*saved, atts[saved.ID])
 		return &dto, nil
 	}
 
@@ -286,7 +326,7 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string)
 	if uc.TelegramID != nil {
 		tgID = uc.TelegramID
 	}
-	resp, err := s.bot.PostCabinetMessage(ctx, supportbot.PostMessageRequest{
+	req := supportbot.PostMessageRequest{
 		AccountID:           accountID,
 		ShopTicketID:        createdTicketID,
 		ClientMessageID:     clientMsgID,
@@ -297,7 +337,17 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string)
 		Email:               uc.Email,
 		SubscriptionSummary: uc.SubscriptionSummary,
 		Text:                msgText,
-	})
+	}
+	var resp *supportbot.PostMessageResponse
+	if len(files) > 0 {
+		uploads := make([]supportbot.UploadFile, 0, len(files))
+		for _, f := range files {
+			uploads = append(uploads, supportbot.UploadFile{Name: f.Name, Data: f.Data})
+		}
+		resp, err = s.bot.PostCabinetMessageWithFiles(ctx, req, uploads)
+	} else {
+		resp, err = s.bot.PostCabinetMessage(ctx, req)
+	}
 	if err != nil {
 		if saved != nil {
 			_ = s.repo.WithTx(ctx, func(tx pgx.Tx) error {
@@ -305,8 +355,10 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string)
 			})
 			saved.DeliveryStatus = repository.SupportDeliveryFailed
 		}
-		return nil, fmt.Errorf("%w: %v", ErrSupportBridge, err)
+		return nil, bridgeSendErr(err)
 	}
+
+	var savedAtts []repository.SupportAttachment
 
 	err = s.repo.WithTx(ctx, func(tx pgx.Tx) error {
 		if err := s.repo.LockAccount(ctx, tx, accountID); err != nil {
@@ -317,6 +369,12 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string)
 				return err
 			}
 			saved.DeliveryStatus = repository.SupportDeliverySent
+			if items := attachmentsFromBot(resp.Attachments); len(items) > 0 {
+				var err error
+				if savedAtts, err = s.repo.InsertAttachmentsTx(ctx, tx, saved.ID, items); err != nil {
+					return err
+				}
+			}
 		}
 		if resp.SupportBotTicketID > 0 {
 			return s.repo.UpdateSupportBotTicketIDTx(ctx, tx, createdTicketID, resp.SupportBotTicketID)
@@ -327,18 +385,90 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string)
 		return nil, err
 	}
 
-	dto := messageDTO(*saved)
+	dto := messageDTO(*saved, savedAtts)
 	return &dto, nil
 }
 
+// bridgeSendErr — ошибка support-bot для клиента: отказ по файлам — понятной
+// причиной (бот проверяет их так же, как мы, но мог обновиться раньше), остальное — ErrSupportBridge.
+func bridgeSendErr(err error) error {
+	var se *supportbot.StatusError
+	if errors.As(err, &se) {
+		switch {
+		case se.Status == http.StatusRequestEntityTooLarge:
+			return ErrSupportFileTooLarge
+		case se.Status == http.StatusUnsupportedMediaType:
+			return ErrSupportUnsupportedMedia
+		case se.Status == http.StatusBadRequest && strings.Contains(se.Body, "too_many_files"):
+			return ErrSupportTooManyFiles
+		}
+	}
+	return fmt.Errorf("%w: %v", ErrSupportBridge, err)
+}
+
+// supportImageMimes — что кабинет показывает как вложение; остальное от бота не сохраняем
+// и с его Content-Type не отдаём (защита от text/html под видом картинки).
+var supportImageMimes = map[string]bool{
+	"image/jpeg": true, "image/png": true, "image/webp": true, "image/bmp": true,
+	"image/gif": true, "image/heic": true, "image/heif": true, "image/avif": true, "image/tiff": true,
+}
+
+// attachmentsFromBot — описание вложений из ответа или webhook support-bot.
+func attachmentsFromBot(in []supportbot.AttachmentInfo) []repository.SupportAttachment {
+	out := make([]repository.SupportAttachment, 0, len(in))
+	for _, a := range in {
+		mime := strings.ToLower(strings.TrimSpace(a.Mime))
+		if a.ID <= 0 || !supportImageMimes[mime] {
+			continue
+		}
+		var name *string
+		if a.Name != nil {
+			if n := []rune(strings.TrimSpace(*a.Name)); len(n) > 0 {
+				v := string(n[:min(len(n), 255)])
+				name = &v
+			}
+		}
+		out = append(out, repository.SupportAttachment{
+			SupportBotAttachmentID: a.ID,
+			Mime:                   mime,
+			SizeBytes:              a.Size,
+			Width:                  a.Width,
+			Height:                 a.Height,
+			Name:                   name,
+		})
+	}
+	return out
+}
+
+// Attachment — байты и MIME изображения для кабинета. Чужое и несуществующее —
+// repository.ErrSupportNotFound.
+func (s *Support) Attachment(ctx context.Context, accountID, attachmentID int64) ([]byte, string, error) {
+	if s.repo == nil || s.bot == nil {
+		return nil, "", ErrSupportDisabled
+	}
+	a, err := s.repo.GetAttachmentForAccount(ctx, attachmentID, accountID)
+	if err != nil {
+		return nil, "", err
+	}
+	data, _, err := s.bot.FetchAttachment(ctx, a.SupportBotAttachmentID, accountID)
+	if errors.Is(err, supportbot.ErrNotFound) {
+		return nil, "", repository.ErrSupportNotFound
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %v", ErrSupportBridge, err)
+	}
+	return data, a.Mime, nil
+}
+
 type SupportWebhookPayload struct {
-	Event               string `json:"event"`
-	AccountID           int64  `json:"account_id"`
-	ShopTicketID        int64  `json:"shop_ticket_id"`
-	SupportBotTicketID  int64  `json:"support_bot_ticket_id"`
-	SupportBotMessageID int64  `json:"support_bot_message_id"`
-	Text                string `json:"text"`
-	AuthorLabel         string `json:"author_label"`
+	Event               string                      `json:"event"`
+	AccountID           int64                       `json:"account_id"`
+	ShopTicketID        int64                       `json:"shop_ticket_id"`
+	SupportBotTicketID  int64                       `json:"support_bot_ticket_id"`
+	SupportBotMessageID int64                       `json:"support_bot_message_id"`
+	Text                string                      `json:"text"`
+	AuthorLabel         string                      `json:"author_label"`
+	Attachments         []supportbot.AttachmentInfo `json:"attachments,omitempty"`
 }
 
 func (s *Support) HandleWebhook(ctx context.Context, p SupportWebhookPayload) error {
@@ -358,7 +488,8 @@ func (s *Support) HandleWebhook(ctx context.Context, p SupportWebhookPayload) er
 }
 
 func (s *Support) webhookMessage(ctx context.Context, p SupportWebhookPayload) error {
-	text, err := normalizeSupportText(p.Text)
+	items := attachmentsFromBot(p.Attachments)
+	text, err := normalizeSupportText(p.Text, len(items) > 0)
 	if err != nil {
 		return err
 	}
@@ -397,6 +528,11 @@ func (s *Support) webhookMessage(ctx context.Context, p SupportWebhookPayload) e
 		if !inserted {
 			return nil
 		}
+		if savedMsg != nil && len(items) > 0 {
+			if _, err := s.repo.InsertAttachmentsTx(ctx, tx, savedMsg.ID, items); err != nil {
+				return err
+			}
+		}
 		notifyAccountID = ticket.AccountID
 		if savedMsg != nil {
 			notifyMsgID = savedMsg.ID
@@ -411,14 +547,14 @@ func (s *Support) webhookMessage(ctx context.Context, p SupportWebhookPayload) e
 		return err
 	}
 	if notifyAccountID > 0 {
-		s.notifyCabinetReply(ctx, notifyAccountID, notifyMsgID, text)
+		s.notifyCabinetReply(ctx, notifyAccountID, notifyMsgID, text, len(items) > 0)
 	}
 	return nil
 }
 
 // notifyCabinetReply — ответ оператора в ленту кабинета и push: чат поддержки
 // открыт не всегда, а ответ ждут.
-func (s *Support) notifyCabinetReply(ctx context.Context, accountID, msgID int64, text string) {
+func (s *Support) notifyCabinetReply(ctx context.Context, accountID, msgID int64, text string, hasImages bool) {
 	if s.links == nil || s.customers == nil {
 		return
 	}
@@ -431,6 +567,9 @@ func (s *Support) notifyCabinetReply(ctx context.Context, accountID, msgID int64
 		lang = c.Language
 	}
 	preview := []rune(strings.TrimSpace(text))
+	if len(preview) == 0 && hasImages {
+		preview = []rune(translation.GetInstance().GetText(lang, "cabinet_notify_support_photo"))
+	}
 	if len(preview) > 300 {
 		preview = append(preview[:299], '…')
 	}

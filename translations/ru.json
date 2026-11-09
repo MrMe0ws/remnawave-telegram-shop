@@ -481,6 +481,7 @@
   "cabinet_notify_referral_title": "Бонус за друга",
   "cabinet_notify_referral_body": "Друг оплатил подписку — вам +%d дн.",
   "cabinet_notify_support_title": "Ответ поддержки",
+  "cabinet_notify_support_photo": "📷 Фото",
   "cabinet_notify_partner_title": "Партнёрская программа",
   "cabinet_notify_devices_title": "Места для устройств",
   "cabinet_notify_devices_body": "Мест для устройств стало больше: было %d, стало %d.",
