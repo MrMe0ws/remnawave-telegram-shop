@@ -951,7 +951,14 @@ html[data-cabinet-decor="new_year_2"] .landing-cta--primary {
   display: none;
 }
 
-/* --- страница статуса серверов (/status) --- */
+/* --- страница статуса серверов (/status) ---
+ * Корень страницы без класса dark (см. StatusPage.tsx), поэтому фон, карточки и
+ * --primary приходят с <html> вместе с декор-темой. Карта тоже собрана из
+ * токенов, а не из хексов: на винной теме синяя карта выглядела чужой.
+ */
+.landing-root {
+  --lp-map-sea: color-mix(in oklab, hsl(var(--background)) 82%, hsl(var(--card)));
+}
 .landing-status-dot {
   width: 0.55rem;
   height: 0.55rem;
@@ -981,7 +988,7 @@ html[data-cabinet-decor="new_year_2"] .landing-cta--primary {
   position: relative;
   overflow: hidden;
   border-radius: 1.5rem;
-  background: #0c1428;
+  background: var(--lp-map-sea);
   border: 1px solid rgb(255 255 255 / 0.06);
 }
 .landing-status-map__stage {
@@ -1028,21 +1035,24 @@ html[data-cabinet-decor="new_year_2"] .landing-cta--primary {
     height: 0.7rem;
   }
 }
+.landing-status-map__sea {
+  fill: var(--lp-map-sea);
+}
 .landing-status-map__land {
-  fill: #1a2748;
-  stroke: #2a3d68;
+  fill: hsl(var(--card));
+  stroke: hsl(var(--border));
   stroke-width: 0.6;
 }
 .landing-status-map__line {
   fill: none;
-  stroke: rgb(167 139 250 / 0.85);
+  stroke: hsl(var(--lp-violet) / 0.85);
   stroke-width: 1.4;
   stroke-dasharray: 5 6;
   vector-effect: non-scaling-stroke;
 }
 .landing-status-map__leaders path {
   fill: none;
-  stroke: #6e84a8;
+  stroke: hsl(var(--muted-foreground) / 0.8);
   stroke-width: 0.7;
   stroke-linecap: butt;
   stroke-linejoin: miter;

@@ -39,7 +39,10 @@ export default function StatusPage() {
   const holiday = useHolidayTheme()
 
   // Страница всегда тёмная, как и лендинг: тема кабинета на время показа
-  // переключается в dark и восстанавливается при уходе.
+  // переключается в dark и восстанавливается при уходе. Класс dark ставится
+  // только на <html>: повтор на корне страницы заново объявил бы базовые
+  // токены .dark и перекрыл бы декор-тему из админки (акцент и поверхности
+  // остались бы синими).
   useLayoutEffect(() => {
     const root = document.documentElement
     const hadDark = root.classList.contains('dark')
@@ -83,7 +86,7 @@ export default function StatusPage() {
     (available ? t('landing.status.leadProbes') : t('landing.status.whatBody'))
 
   return (
-    <div className="dark landing-root" data-holiday={holiday ?? undefined}>
+    <div className="landing-root" data-holiday={holiday ?? undefined}>
       <div className="landing-backdrop" aria-hidden>
         {holiday ? (
           <HolidayAtmosphere theme={holiday} />
