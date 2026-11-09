@@ -631,7 +631,6 @@
       "tooManyFiles": "Не больше {{max}} файлов в одном сообщении",
       "dropHere": "Отпустите, чтобы прикрепить",
       "dropHint": "JPEG, PNG, WebP, HEIC · до {{max}} файлов по {{mb}} МБ",
-      "pasteHint": "Скриншот можно вставить через Ctrl+V",
       "sending": "Отправляется…",
       "openImage": "Открыть изображение",
       "imageUnavailable": "Не удалось загрузить",

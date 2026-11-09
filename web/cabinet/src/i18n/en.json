@@ -471,7 +471,6 @@
       "tooManyFiles": "Up to {{max}} files per message",
       "dropHere": "Drop to attach",
       "dropHint": "JPEG, PNG, WebP, HEIC · up to {{max}} files, {{mb}} MB each",
-      "pasteHint": "Paste a screenshot with Ctrl+V",
       "sending": "Sending…",
       "openImage": "Open image",
       "imageUnavailable": "Couldn't load",

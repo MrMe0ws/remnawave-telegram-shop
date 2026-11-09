@@ -531,9 +531,6 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
               </Button>
             </div>
           </div>
-          {attachEnabled && drafts.length === 0 && !text ? (
-            <p className="hidden px-1 pt-1.5 text-[11px] text-muted-foreground md:block">{t('supportChat.pasteHint')}</p>
-          ) : null}
         </div>
         {viewing ? <SupportImageViewer attachment={viewing} onClose={() => setViewing(null)} /> : null}
       </div>
