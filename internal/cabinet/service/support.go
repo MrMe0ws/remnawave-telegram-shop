@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/supportbot"
 	"remnawave-tg-shop-bot/internal/cabinetnotify"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/internal/remnawave"
 	"remnawave-tg-shop-bot/internal/translation"
 )
 
@@ -112,6 +114,8 @@ type userContext struct {
 	TelegramID          *int64
 	TelegramLabel       string
 	SubscriptionSummary string
+	CustomerID          *int64
+	RemnawaveUserID     *int64
 }
 
 func (s *Support) Summary(ctx context.Context, accountID int64) (*SupportSummary, error) {
@@ -333,6 +337,8 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string,
 		IsNewTicket:         bridgeIsNew,
 		DisplayName:         uc.DisplayName,
 		TelegramID:          tgID,
+		CustomerID:          uc.CustomerID,
+		RemnawaveUserID:     uc.RemnawaveUserID,
 		TelegramLabel:       uc.TelegramLabel,
 		Email:               uc.Email,
 		SubscriptionSummary: uc.SubscriptionSummary,
@@ -688,11 +694,15 @@ func (s *Support) buildUserContext(ctx context.Context, accountID int64) (*userC
 	}
 
 	subSummary := "нет данных"
+	var customerID, rwUserID *int64
 	if s.bootstrap != nil && s.customers != nil {
 		link, linkErr := s.bootstrap.EnsureForAccount(ctx, accountID, acc.Language)
 		if linkErr == nil && link != nil {
 			cust, custErr := s.customers.FindById(ctx, link.CustomerID)
 			if custErr == nil && cust != nil {
+				id := cust.ID
+				customerID = &id
+				rwUserID = s.remnawaveUserIDFor(ctx, cust)
 				if cust.TelegramUsername != nil {
 					un := strings.TrimSpace(*cust.TelegramUsername)
 					if un != "" {
@@ -718,7 +728,45 @@ func (s *Support) buildUserContext(ctx context.Context, accountID int64) (*userC
 		TelegramID:          telegramID,
 		TelegramLabel:       tgLabel,
 		SubscriptionSummary: subSummary,
+		CustomerID:          customerID,
+		RemnawaveUserID:     rwUserID,
 	}, nil
+}
+
+// supportPanelLookupTimeout — сколько ждём панель при поиске профиля для саппорт-бота.
+// Профиль нужен только оператору в /profile, и задерживать из-за него сообщение
+// клиента нельзя: не нашли за это время — отправляем без id.
+const supportPanelLookupTimeout = 3 * time.Second
+
+// remnawaveUserIDFor — id профиля клиента в панели для /profile в саппорт-боте.
+//
+// Без него бот не найдёт профиль web-only клиента: telegramId у такого профиля
+// пустой, а логин "<customer_id>_<email>" боту неизвестен. Обычно id уже сохранён
+// у клиента; если нет — ищем тем же резолвом, что и кабинет, и он его запомнит.
+func (s *Support) remnawaveUserIDFor(ctx context.Context, c *database.Customer) *int64 {
+	if c.RemnawaveUserID != nil && *c.RemnawaveUserID > 0 {
+		return c.RemnawaveUserID
+	}
+	// Без подписки профиля в панели нет — не гоняем поиск на каждом сообщении.
+	hasSub := c.ExpireAt != nil || (c.SubscriptionLink != nil && strings.TrimSpace(*c.SubscriptionLink) != "")
+	if !hasSub || s.sub == nil || s.sub.rw == nil {
+		return nil
+	}
+	lookupCtx, cancel := context.WithTimeout(ctx, supportPanelLookupTimeout)
+	defer cancel()
+	user, err := ResolveRemnawaveCustomerUser(lookupCtx, s.sub.rw, s.customers, c)
+	if err != nil {
+		if !errors.Is(err, remnawave.ErrUserNotFound) && !errors.Is(err, remnawave.ErrNotFound) {
+			slog.Warn("support: remnawave profile lookup failed (non-fatal)",
+				"customer_id", c.ID, "error", err)
+		}
+		return nil
+	}
+	if user == nil || user.ID <= 0 {
+		return nil
+	}
+	id := user.ID
+	return &id
 }
 
 func formatSubscriptionSummary(c *database.Customer) string {

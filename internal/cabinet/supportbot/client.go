@@ -67,6 +67,11 @@ type PostMessageRequest struct {
 	Email               string `json:"email"`
 	SubscriptionSummary string `json:"subscription_summary"`
 	Text                string `json:"text"`
+
+	// CustomerID и RemnawaveUserID — для /profile в саппорт-боте. У web-only
+	// клиента в панели нет telegramId, и найти его профиль бот может только по id.
+	CustomerID      *int64 `json:"customer_id,omitempty"`
+	RemnawaveUserID *int64 `json:"remnawave_user_id,omitempty"`
 }
 
 // AttachmentInfo — изображение в support-bot: ответ на сообщение с файлами и поле
