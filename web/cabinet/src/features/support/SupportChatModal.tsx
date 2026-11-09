@@ -470,7 +470,8 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
                 </span>
               </div>
             ) : null}
-            <div className="flex items-end gap-2">
+            {/* Поле фиксированной высоты (две строки, без растягивания) — кнопки по центру ряда. */}
+            <div className="flex items-center gap-2">
               {attachEnabled ? (
                 <>
                   <Button
