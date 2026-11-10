@@ -122,6 +122,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		UseTLS:   cabcfg.SMTPTLS(),
 		DryRun:   !cabcfg.SMTPEnabled(),
 	})
+	mailerSender.OnHealthChange(notification.MailHealthAlert(tgBot, translation.GetInstance(), cabcfg.SMTPHost(), cabcfg.SMTPPort()))
 	mailer := mail.NewMailer(mailerSender)
 
 	// JWT issuer. Issuer = хост кабинета — так access-токен нельзя использовать
