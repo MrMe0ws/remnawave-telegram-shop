@@ -574,7 +574,13 @@ func (s *Support) notifyCabinetReply(ctx context.Context, accountID, msgID int64
 	}
 	preview := []rune(strings.TrimSpace(text))
 	if len(preview) == 0 && hasImages {
-		preview = []rune(translation.GetInstance().GetText(lang, "cabinet_notify_support_photo"))
+		label := translation.GetInstance().GetText(lang, "cabinet_notify_support_photo")
+		// Переводы бота лежат на диске у владельца: без нового ключа GetText
+		// вернёт само имя ключа, и оно попадёт в ленту.
+		if label == "cabinet_notify_support_photo" {
+			label = "📷"
+		}
+		preview = []rune(label)
 	}
 	if len(preview) > 300 {
 		preview = append(preview[:299], '…')
