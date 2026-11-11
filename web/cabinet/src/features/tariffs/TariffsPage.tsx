@@ -615,6 +615,8 @@ function TariffPeriodStep({
                 ? 'border-primary bg-primary/10 shadow-[0_10px_26px_-12px_hsl(var(--cabinet-accent)/0.5)] dark:bg-primary/15'
                 : 'border-border bg-card dark:bg-[hsl(var(--card))]',
             )}
+            // Внутри колонка, а правый верхний угол занят плашкой скидки.
+            overlaySpinnerClassName="absolute bottom-3 right-3"
             onClick={() => {
               if (p.months !== selectedMonths) hapticSelection()
               setSelectedMonths(p.months)
