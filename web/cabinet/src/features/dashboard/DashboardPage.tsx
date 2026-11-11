@@ -27,6 +27,7 @@ import {
 } from '@/features/home/HomeParts'
 import { hasSubscriptionData, useHomeData, type HomeData } from '@/features/home/useHomeData'
 import { api, ApiError, SUBSCRIPTION_STALE_MS } from '@/lib/api'
+import { hapticSuccess } from '@/lib/haptic'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useTranslationWithLang } from '@/hooks/useTranslationWithLang'
@@ -98,6 +99,7 @@ export default function DashboardPage() {
         qc.refetchQueries({ queryKey: ['subscription'] }),
         qc.refetchQueries({ queryKey: ['trial-info'] }),
       ])
+      hapticSuccess()
       // Сразу на страницу подключения: пробный берут ради одного — попробовать VPN.
       navigate('/connections')
     },

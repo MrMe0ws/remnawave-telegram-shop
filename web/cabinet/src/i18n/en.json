@@ -176,6 +176,9 @@
       "settingsLanguage": "Language",
       "mb": "MB",
       "settingsTheme": "Theme",
+      "settingsHaptics": "Vibration",
+      "settingsHapticsOn": "On",
+      "settingsHapticsOff": "Off",
       "qaServers": "Server status"
     },
     "dashboard": {

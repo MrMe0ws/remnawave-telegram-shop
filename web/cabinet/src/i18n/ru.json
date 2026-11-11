@@ -182,6 +182,9 @@
       "settingsLanguage": "Язык",
       "mb": "МБ",
       "settingsTheme": "Тема",
+      "settingsHaptics": "Вибрация",
+      "settingsHapticsOn": "Включена",
+      "settingsHapticsOff": "Выключена",
       "qaServers": "Статус серверов"
     },
     "dashboard": {

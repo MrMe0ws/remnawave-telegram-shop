@@ -5,6 +5,7 @@ import { Check } from 'lucide-react'
 import { ProviderMethodButton } from '@/components/ProviderMethodButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { hapticSelection } from '@/lib/haptic'
 import { cn } from '@/lib/utils'
 import {
   checkoutMethodMeta,
@@ -38,6 +39,10 @@ export function PaymentMethodPicker({
   onSelect: (id: CheckoutMethodId) => void
 }) {
   const { t } = useTranslation()
+  const select = (id: CheckoutMethodId) => {
+    if (id !== method) hapticSelection()
+    onSelect(id)
+  }
 
   let body
   if (loading) {
@@ -55,13 +60,13 @@ export function PaymentMethodPicker({
         methods={methods}
         method={method}
         lastId={initialId}
-        onSelect={onSelect}
+        onSelect={select}
       />
     )
   } else if (initialSource === 'default' && initialId && methods.length > 1) {
-    body = <RecommendedPicker methods={methods} method={method} recommendedId={initialId} onSelect={onSelect} />
+    body = <RecommendedPicker methods={methods} method={method} recommendedId={initialId} onSelect={select} />
   } else {
-    body = <MethodList methods={methods} method={method} onSelect={onSelect} />
+    body = <MethodList methods={methods} method={method} onSelect={select} />
   }
 
   return (

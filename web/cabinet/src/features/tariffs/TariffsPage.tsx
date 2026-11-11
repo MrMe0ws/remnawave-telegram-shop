@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type SubscriptionResponse, type TariffItem } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { hapticSelection } from '@/lib/haptic'
 import { bypassLabelInline } from '@/lib/bypassLabel'
 import { useAuthStore } from '@/store/auth'
 import { formatDecimals, formatNumber } from '@/lib/format'
@@ -382,7 +383,10 @@ function TariffsMobileCarousel({
                   ? 'w-2 bg-primary/50 hover:bg-primary/70'
                   : 'w-2 bg-muted-foreground/35 hover:bg-muted-foreground/55',
             )}
-            onClick={() => scrollToIndex(i)}
+            onClick={() => {
+              if (i !== active) hapticSelection()
+              scrollToIndex(i)
+            }}
           />
         ))}
       </nav>
@@ -612,6 +616,7 @@ function TariffPeriodStep({
                 : 'border-border bg-card dark:bg-[hsl(var(--card))]',
             )}
             onClick={() => {
+              if (p.months !== selectedMonths) hapticSelection()
               setSelectedMonths(p.months)
               onSelect(p)
             }}

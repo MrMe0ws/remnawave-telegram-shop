@@ -18,6 +18,7 @@ import { formatDayMonth } from '@/features/subscription/DeviceSlots'
 import { formatUtcDayMonth } from '@/lib/splitDates'
 import type { SubscriptionResponse, TrafficUsageResponse } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
+import { hapticSelection } from '@/lib/haptic'
 import type { ToneLevel } from '@/lib/subscriptionTone'
 import { useDeviceManager } from './DeviceManager'
 import {
@@ -649,7 +650,10 @@ export function UsageChart({
               <button
                 key={i}
                 type="button"
-                onClick={() => setSel(i)}
+                onClick={() => {
+                  if (i !== sel) hapticSelection()
+                  setSel(i)
+                }}
                 onMouseEnter={() => setSel(i)}
                 aria-pressed={i === sel}
                 aria-label={`${shortDate(vCats[i], lang)}: ${formatBytes(p, t)}`}

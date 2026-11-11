@@ -15,6 +15,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, type PaymentStatusResponse } from '@/lib/api'
+import { hapticError, hapticSuccess } from '@/lib/haptic'
 import { BypassCard, packSizeLabel } from '@/features/home/trafficSplit'
 import { bypassLabel } from '@/lib/bypassLabel'
 import { splitDateTimeShort } from '@/lib/utils'
@@ -43,6 +44,12 @@ export default function PaymentStatusPage() {
   })
 
   const status = data?.status
+
+  // Итог оплаты — вибрацией: успех мягким двойным толчком, отказ — сильным.
+  useEffect(() => {
+    if (status === 'paid') hapticSuccess()
+    else if (status === 'failed' || status === 'expired') hapticError()
+  }, [status])
 
   return (
     <AppLayout>

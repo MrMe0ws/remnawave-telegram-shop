@@ -11,6 +11,7 @@ import { PageTitleWithBack } from '@/components/PageTitleWithBack'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { api, ApiError, type TariffItem } from '@/lib/api'
+import { hapticSelection, useErrorHaptic } from '@/lib/haptic'
 import { newIdempotencyKey } from '@/lib/utils'
 import { reservePaymentWindow } from '@/lib/payment-window'
 import { bypassLabel } from '@/lib/bypassLabel'
@@ -31,6 +32,7 @@ export default function CheckoutPage() {
   const [renewExtraHwid, setRenewExtraHwid] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  useErrorHaptic(error)
 
   // Fetch tariffs to get the selected tariff details.
   const { data: tariffsData, isLoading: tariffsLoading } = useQuery({
@@ -240,7 +242,10 @@ export default function CheckoutPage() {
                     </div>
                     <AdminToggleSwitch
                       checked={Boolean(renewExtraHwid)}
-                      onChange={setRenewExtraHwid}
+                      onChange={(v) => {
+                        hapticSelection()
+                        setRenewExtraHwid(v)
+                      }}
                       aria-label={t('checkout.extraHwidRenewToggle')}
                     />
                   </div>

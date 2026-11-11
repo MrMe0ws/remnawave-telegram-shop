@@ -9,6 +9,7 @@ import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import { useSheetDragDismiss } from '@/hooks/useSheetDragDismiss'
 import { cn } from '@/lib/utils'
 import { ApiError, type SupportAttachmentDTO, type SupportMessageDTO } from '@/lib/api'
+import { useErrorHaptic } from '@/lib/haptic'
 import { useSupportChat } from '@/features/support/useSupportChat'
 import { SupportAvatar } from '@/features/support/SupportAvatar'
 import { SupportAttachments, SupportImageViewer } from '@/features/support/SupportAttachments'
@@ -297,6 +298,7 @@ export function SupportChatModal({ open, enabled, onClose }: SupportChatModalPro
 
   const errorText =
     attachError ?? (sendMutation.isError ? sendErrorText(sendMutation.error, t, maxFiles, maxMb) : null)
+  useErrorHaptic(errorText)
 
   if (!open || !enabled) return null
   if (typeof document === 'undefined') return null

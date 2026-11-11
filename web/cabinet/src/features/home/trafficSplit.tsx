@@ -11,6 +11,7 @@ import { formatUtcDayMonth as formatDayMonth, utcPeriodMonthName } from '@/lib/s
 import type { MyTrafficResponse, TrafficPack } from '@/lib/api'
 import { formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { hapticSelection } from '@/lib/haptic'
 import { trafficTone } from '@/lib/subscriptionTone'
 import { formatGbValue, type HomeData } from './useHomeData'
 
@@ -164,7 +165,10 @@ function TrafficBuySheet({
                 type="button"
                 role="tab"
                 aria-selected={k === kind}
-                onClick={() => setKind(k)}
+                onClick={() => {
+                  if (k !== kind) hapticSelection()
+                  setKind(k)
+                }}
                 className={cn(
                   'flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors',
                   k === kind ? 'bg-secondary text-foreground shadow-sm' : 'text-muted-foreground',
@@ -196,7 +200,10 @@ function TrafficBuySheet({
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setSelected(p.id)}
+                onClick={() => {
+                  if (!on) hapticSelection()
+                  setSelected(p.id)
+                }}
                 aria-pressed={on}
                 className={cn(
                   'relative flex w-full items-center gap-3.5 rounded-[18px] border px-4 py-3.5 text-left transition-colors',

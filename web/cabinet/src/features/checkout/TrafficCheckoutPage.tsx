@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, ApiError, SUBSCRIPTION_STALE_MS } from '@/lib/api'
+import { useErrorHaptic } from '@/lib/haptic'
 import { formatNumber } from '@/lib/format'
 import { newIdempotencyKey } from '@/lib/utils'
 import { reservePaymentWindow } from '@/lib/payment-window'
@@ -38,6 +39,7 @@ export default function TrafficCheckoutPage() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  useErrorHaptic(error)
 
   const { data: split, isLoading } = useQuery({
     queryKey: ['my-traffic'],
