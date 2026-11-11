@@ -57,6 +57,11 @@ export interface ButtonProps
    * перекладывает их содержимое в ряд.
    */
   overlaySpinnerClassName?: string
+  /**
+   * Спиннер встаёт прямо в раскладку кнопки на место первой иконки, без обёртки-строки.
+   * Для кнопок-колонок «значок над подписью» (вход через соцсети).
+   */
+  spinnerInFlow?: boolean
 }
 
 function isPromiseLike(v: unknown): v is PromiseLike<unknown> {
@@ -70,7 +75,7 @@ function isPromiseLike(v: unknown): v is PromiseLike<unknown> {
 const spinner = <Spinner />
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading = false, overlaySpinnerClassName, children, disabled, onClick, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading = false, overlaySpinnerClassName, spinnerInFlow = false, children, disabled, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
     const innerRef = React.useRef<HTMLButtonElement | null>(null)
     const setRefs = React.useCallback(
@@ -120,6 +125,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             {children}
             <Spinner className={overlaySpinnerClassName} />
           </>
+        ) : busy && spinnerInFlow ? (
+          // contents: спиннер и дети — прямые участники флекса кнопки; иконку прячет `.cabinet-btn-spinner + svg`.
+          <span className="contents">
+            {spinner}
+            {children}
+          </span>
         ) : busy ? (
           <span className="inline-flex w-full min-w-0 items-center justify-center gap-2">
             {spinner}
