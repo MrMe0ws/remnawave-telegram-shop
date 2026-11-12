@@ -88,12 +88,12 @@ type publicStatusNode struct {
 }
 
 type publicStatusBody struct {
-	Available        bool               `json:"available"`
-	UpdatedAt        string             `json:"updated_at,omitempty"`
-	Online           int                `json:"online"`
-	Total            int                `json:"total"`
-	ShowMap          bool               `json:"show_map"`
-	ProbesEnabled    bool               `json:"probes_enabled"`
+	Available     bool   `json:"available"`
+	UpdatedAt     string `json:"updated_at,omitempty"`
+	Online        int    `json:"online"`
+	Total         int    `json:"total"`
+	ShowMap       bool   `json:"show_map"`
+	ProbesEnabled bool   `json:"probes_enabled"`
 	// BypassProbes — операторы с белыми списками проверяются (задан ключ Latency Lab).
 	BypassProbes     bool               `json:"bypass_probes"`
 	ProbeWorld       int                `json:"probe_world"`

@@ -7,11 +7,11 @@ import (
 
 // ReleaseNotes is the parsed content of RELEASE_NOTES.md.
 type ReleaseNotes struct {
-	Version      string
-	GitHubBody   string
-	TelegramRaw  string // source block under "## Вариант для Telegram"
-	ReleaseURL   string
-	TGSections   []TGSection
+	Version     string
+	GitHubBody  string
+	TelegramRaw string // source block under "## Вариант для Telegram"
+	ReleaseURL  string
+	TGSections  []TGSection
 	// TGParts — те же секции, разбитые на отдельные сообщения строкой
 	// telegramPartBreak. Без разбивки — одна часть со всеми секциями.
 	TGParts [][]TGSection

@@ -15,22 +15,22 @@ import (
 
 // Tariff строка тарифа (SALES_MODE=tariffs).
 type Tariff struct {
-	ID                         int64      `db:"id"`
-	Slug                       string     `db:"slug"`
-	Name                       *string    `db:"name"`
-	SortOrder                  int        `db:"sort_order"`
-	IsActive                   bool       `db:"is_active"`
-	DeviceLimit                int        `db:"device_limit"`
-	TrafficLimitBytes          int64      `db:"traffic_limit_bytes"`
-	TrafficLimitResetStrategy  string     `db:"traffic_limit_reset_strategy"`
-	ActiveInternalSquadUUIDs   string     `db:"active_internal_squad_uuids"`
-	ExternalSquadUUID          *uuid.UUID `db:"external_squad_uuid"`
-	RemnawaveTag               *string    `db:"remnawave_tag"`
-	TierLevel                  *int       `db:"tier_level"`
-	Description                *string    `db:"description"`
-	DescriptionDetail          *string    `db:"description_detail"`
+	ID                        int64      `db:"id"`
+	Slug                      string     `db:"slug"`
+	Name                      *string    `db:"name"`
+	SortOrder                 int        `db:"sort_order"`
+	IsActive                  bool       `db:"is_active"`
+	DeviceLimit               int        `db:"device_limit"`
+	TrafficLimitBytes         int64      `db:"traffic_limit_bytes"`
+	TrafficLimitResetStrategy string     `db:"traffic_limit_reset_strategy"`
+	ActiveInternalSquadUUIDs  string     `db:"active_internal_squad_uuids"`
+	ExternalSquadUUID         *uuid.UUID `db:"external_squad_uuid"`
+	RemnawaveTag              *string    `db:"remnawave_tag"`
+	TierLevel                 *int       `db:"tier_level"`
+	Description               *string    `db:"description"`
+	DescriptionDetail         *string    `db:"description_detail"`
 	// IsPopular — нашивка «Популярный» на карточке у клиентов; в базе не больше одного такого тарифа.
-	IsPopular                  bool       `db:"is_popular"`
+	IsPopular bool `db:"is_popular"`
 }
 
 // TariffPrice цена тарифа за период (месяцы).

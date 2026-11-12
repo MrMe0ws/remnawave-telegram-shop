@@ -25,25 +25,25 @@ const (
 )
 
 type SupportTicket struct {
-	ID                  int64
-	AccountID           int64
-	SupportBotTicketID  *int64
-	Status              string
-	CreatedAt           time.Time
-	ClosedAt            *time.Time
+	ID                 int64
+	AccountID          int64
+	SupportBotTicketID *int64
+	Status             string
+	CreatedAt          time.Time
+	ClosedAt           *time.Time
 }
 
 type SupportMessage struct {
-	ID                   int64
-	TicketID             int64
-	Direction            string
-	Text                 string
-	AuthorLabel          string
-	SupportBotMessageID  *int64
-	ClientMessageID      *string // UUID idempotency key для исходящих сообщений
-	DeliveryStatus       string
-	CreatedAt            time.Time
-	ReadAt               *time.Time
+	ID                  int64
+	TicketID            int64
+	Direction           string
+	Text                string
+	AuthorLabel         string
+	SupportBotMessageID *int64
+	ClientMessageID     *string // UUID idempotency key для исходящих сообщений
+	DeliveryStatus      string
+	CreatedAt           time.Time
+	ReadAt              *time.Time
 }
 
 type SupportRepo struct {

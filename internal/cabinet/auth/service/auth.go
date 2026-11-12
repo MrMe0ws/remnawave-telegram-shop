@@ -61,15 +61,15 @@ type Config struct {
 
 // Service — фасад аутентификации.
 type Service struct {
-	cfg       Config
-	accounts  *repository.AccountRepo
-	ids       *repository.IdentityRepo
-	sess      *repository.SessionRepo
-	evs       *repository.EmailVerificationRepo
-	prs       *repository.PasswordResetRepo
-	jwt       *jwt.Issuer
-	mailer    *mail.Mailer
-	bootstrap *bootstrap.CustomerBootstrap
+	cfg             Config
+	accounts        *repository.AccountRepo
+	ids             *repository.IdentityRepo
+	sess            *repository.SessionRepo
+	evs             *repository.EmailVerificationRepo
+	prs             *repository.PasswordResetRepo
+	jwt             *jwt.Issuer
+	mailer          *mail.Mailer
+	bootstrap       *bootstrap.CustomerBootstrap
 	emailMergeCodes *repository.EmailMergeVerificationRepo
 
 	// Опциональные поля OAuth/Telegram. Устанавливаются через SetGoogle /
@@ -132,14 +132,14 @@ func New(
 		cfg.RefreshCookiePath = "/cabinet/api/auth"
 	}
 	return &Service{
-		cfg:       cfg,
-		accounts:  accounts,
-		ids:       ids,
-		sess:      sess,
-		evs:       evs,
-		prs:       prs,
-		jwt:       jwtIssuer,
-		mailer:    mailer,
+		cfg:             cfg,
+		accounts:        accounts,
+		ids:             ids,
+		sess:            sess,
+		evs:             evs,
+		prs:             prs,
+		jwt:             jwtIssuer,
+		mailer:          mailer,
 		bootstrap:       boot,
 		emailMergeCodes: emailMergeCodes,
 	}
@@ -257,13 +257,12 @@ var (
 	// ErrEmailNotVerified — попытка войти/обновить до подтверждения email.
 	// Используется точечно (например, в RequireVerifiedEmail middleware).
 	ErrEmailNotVerified = errors.New("auth: email not verified")
-
 )
 
 // Исход привязки email (POST /me/email/link).
 const (
-	LinkEmailOutcomeVerifySent     = "verify_sent"
-	LinkEmailOutcomeMergeRequired = "merge_required"
+	LinkEmailOutcomeVerifySent                = "verify_sent"
+	LinkEmailOutcomeMergeRequired             = "merge_required"
 	LinkEmailOutcomeMergeVerificationRequired = "merge_verification_required"
 )
 

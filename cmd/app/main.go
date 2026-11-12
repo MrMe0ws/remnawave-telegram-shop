@@ -33,8 +33,8 @@ import (
 	"remnawave-tg-shop-bot/internal/remnawavewebhook"
 	"remnawave-tg-shop-bot/internal/sync"
 	"remnawave-tg-shop-bot/internal/tgclient"
-	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/trafficquota"
+	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/internal/tribute"
 	"remnawave-tg-shop-bot/internal/yookasa"
 	"strconv"
@@ -128,7 +128,7 @@ func main() {
 	cache := cache.NewCache(30 * time.Minute)
 
 	// Создание репозиториев для работы с данными в БД
-	customerRepository := database.NewCustomerRepository(pool)                  // Работа с пользователями
+	customerRepository := database.NewCustomerRepository(pool) // Работа с пользователями
 	// Уведомления в кабинете: лента под колокольчиком и push. Общий сервис
 	// заводится до всех, кто пишет людям, — оплаты, кронов, рассылок.
 	cabinetNotify := cabinetnotify.New(pool, tm)

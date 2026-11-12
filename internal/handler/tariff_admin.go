@@ -187,7 +187,7 @@ func (h Handler) ensureStandardTariff(ctx context.Context) error {
 		SortOrder:                 1,
 		IsActive:                  true,
 		DeviceLimit:               dev,
-		TrafficLimitBytes:       tb,
+		TrafficLimitBytes:         tb,
 		TrafficLimitResetStrategy: config.TrafficLimitResetStrategy(),
 		ActiveInternalSquadUUIDs:  squadStr,
 		ExternalSquadUUID:         extPtr,

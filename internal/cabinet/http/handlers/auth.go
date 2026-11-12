@@ -160,11 +160,11 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		"support_attachments_enabled":   botcfg.SupportBotAPIEnabled(),
 		"support_attachments_max_files": cabsvc.SupportMaxFiles,
 		"support_attachments_max_mb":    cabsvc.SupportMaxFileBytes >> 20,
-		"turnstile_enabled":    cabcfg.TurnstileEnabled(),
-		"pwa_enabled":          cabcfg.PWAEnabled(),
-		"pwa_app_name":         cabcfg.PWAAppName(),
-		"pwa_short_name":       cabcfg.PWAShortName(),
-		"light_theme_enabled":  cabcfg.LightThemeEnabled(),
+		"turnstile_enabled":             cabcfg.TurnstileEnabled(),
+		"pwa_enabled":                   cabcfg.PWAEnabled(),
+		"pwa_app_name":                  cabcfg.PWAAppName(),
+		"pwa_short_name":                cabcfg.PWAShortName(),
+		"light_theme_enabled":           cabcfg.LightThemeEnabled(),
 		// Уже с учётом авто-расписания (CABINET_DECOR_AUTO_ENABLED): в праздничном
 		// окне отдаём тему окна, вне окон — выбранную админом вручную.
 		"decor_theme": cabcfg.EffectiveDecorTheme(),

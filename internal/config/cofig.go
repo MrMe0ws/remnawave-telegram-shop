@@ -38,7 +38,7 @@ type config struct {
 	moynalogRetryMaxAgeHours                                                     int
 	telegramProxyURL                                                             string
 	yookasaProxyURL                                                              string
-	trialTrafficLimit                                              int
+	trialTrafficLimit                                                            int
 	feedbackURL                                                                  string
 	channelURL                                                                   string
 	serverStatusURL                                                              string
@@ -76,11 +76,11 @@ type config struct {
 	trialHwidLimit                                                               int
 	paidHwidLimit                                                                int
 	hwidExtraDevicesEnabled                                                      bool
-	trafficSplitEnabled bool
-	trafficPacksEnabled bool
-	trafficBypassLabel string
-	trafficAlertPercent int
-	trafficPollMinutes int
+	trafficSplitEnabled                                                          bool
+	trafficPacksEnabled                                                          bool
+	trafficBypassLabel                                                           string
+	trafficAlertPercent                                                          int
+	trafficPollMinutes                                                           int
 	miniApp                                                                      string
 	enableAutoPayment                                                            bool
 	healthCheckPort                                                              int
@@ -167,6 +167,7 @@ func GetRemnawaveWebhookSecret() string {
 func DefaultLanguage() string {
 	return conf.defaultLanguage
 }
+
 // Tribute устарел и отключён: TRIBUTE_* из env не читаются, вебхук не поднимается, кнопка не показывается.
 func GetTributeWebHookUrl() string {
 	return ""
@@ -651,6 +652,7 @@ func YookasaShopId() string {
 func YookasaSecretKey() string {
 	return conf.yookasaSecretKey
 }
+
 // TrafficLimit — запасной лимит обычного трафика, когда у тарифа свой лимит не задан. Всегда 0 (безлимит):
 // лимит задаётся на тарифе, а прежняя переменная TRAFFIC_LIMIT больше не читается.
 func TrafficLimit() int {

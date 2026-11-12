@@ -109,7 +109,7 @@ type PaymentService struct {
 	receiptQueue          *receipt.Service
 	promoService          *promo.Service
 	loyaltyTierRepository *database.LoyaltyTierRepository
-	traffic                *trafficSplit
+	traffic               *trafficSplit
 }
 
 // PromoMeta attaches an activated percent discount to a new purchase row (optional).

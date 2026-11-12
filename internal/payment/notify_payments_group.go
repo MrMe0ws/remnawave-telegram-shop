@@ -501,4 +501,3 @@ func trafficPackAmountLine(p *database.Purchase, cur string) string {
 	}
 	return fmt.Sprintf("💳 %.2f %s · докупка трафика %s (%s)", p.Amount, cur, size, kind)
 }
-
