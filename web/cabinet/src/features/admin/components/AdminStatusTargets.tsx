@@ -40,6 +40,7 @@ export interface StatusTargetDraft {
   node_uuid: string
   exit_node_uuid: string
   no_external: boolean
+  tcp_port: number
 }
 
 /** Самое свежее время замера по всем серверам, мс. Нет замеров — null. */
@@ -76,6 +77,7 @@ function emptyTarget(): StatusTargetDraft {
     node_uuid: '',
     exit_node_uuid: '',
     no_external: false,
+    tcp_port: 0,
   }
 }
 
@@ -91,6 +93,7 @@ function fromDTO(item: Partial<AdminStatusTargetDTO> & { id: string }): StatusTa
     node_uuid: item.node_uuid ?? '',
     exit_node_uuid: item.exit_node_uuid ?? '',
     no_external: Boolean(item.no_external),
+    tcp_port: item.tcp_port ?? 0,
   }
 }
 
@@ -742,18 +745,32 @@ function EditServerModal({
           </div>
         </div>
 
-        <Field
-          label={bypass ? t('admin.statusPage.fAddressBypass') : t('admin.statusPage.fAddress')}
-          hint={bypass ? t('admin.statusPage.fAddressBypassHint') : t('admin.statusPage.fAddressHint')}
-        >
-          <input
-            className={inputClass}
-            value={row.address}
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => onPatch({ address: e.target.value })}
-          />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
+          <Field
+            label={bypass ? t('admin.statusPage.fAddressBypass') : t('admin.statusPage.fAddress')}
+            hint={bypass ? t('admin.statusPage.fAddressBypassHint') : t('admin.statusPage.fAddressHint')}
+          >
+            <input
+              className={inputClass}
+              value={row.address}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => onPatch({ address: e.target.value })}
+            />
+          </Field>
+          <Field label={t('admin.statusPage.fPort')} hint={t('admin.statusPage.fPortHint')}>
+            <input
+              className={inputClass}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={65535}
+              placeholder="443"
+              value={row.tcp_port || ''}
+              onChange={(e) => onPatch({ tcp_port: Number(e.target.value) || 0 })}
+            />
+          </Field>
+        </div>
         {bypass && addressIsNode && (
           <p className="-mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
             {t('admin.statusPage.addressIsNode')}

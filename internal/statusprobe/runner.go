@@ -28,6 +28,8 @@ type Target struct {
 	Disabled     bool
 	// NoExternal — адрес не уходит во внешние зонды, строка не меряется.
 	NoExternal bool
+	// TCPPort — порт TCP-пинга Globalping.
+	TCPPort int
 }
 
 // Runner держит последний замер и журнал. Страница статуса не ждёт зонды:
@@ -259,6 +261,7 @@ func stripWhitelist(sample Sample) Sample {
 	sample.WhitelistPingMs = nil
 	sample.WhitelistAt = time.Time{}
 	sample.WhitelistDone = false
+	sample.WhitelistLowStreak = 0
 	return sample
 }
 
@@ -561,7 +564,7 @@ func (r *Runner) pingPass(ctx context.Context, targets []Target) {
 			break
 		}
 		world, russia := probeCounts(target)
-		sample, err := pingTarget(ctx, r.client, host, world, russia, target.RepeatCities)
+		sample, err := pingTarget(ctx, r.client, host, TCPPortOrDefault(target.TCPPort), world, russia, target.RepeatCities)
 		if err != nil {
 			var limited *RateLimitError
 			if errors.As(err, &limited) {
@@ -640,10 +643,16 @@ func (r *Runner) storeSample(key string, sample Sample) {
 	sample.WhitelistPingMs = prev.WhitelistPingMs
 	sample.WhitelistAt = prev.WhitelistAt
 	sample.WhitelistDone = prev.WhitelistDone
+	sample.WhitelistLowStreak = prev.WhitelistLowStreak
 	if sample.AllFailed() {
 		sample.FailStreak = prev.FailStreak + 1
 	} else {
 		sample.FailStreak = 0
+	}
+	if sample.RussiaLow() {
+		sample.RussiaLowStreak = prev.RussiaLowStreak + 1
+	} else {
+		sample.RussiaLowStreak = 0
 	}
 	r.samples[key] = sample
 	RecordRun(r.history, key, sample, time.Now())
@@ -667,6 +676,15 @@ func (r *Runner) finishWhitelist(key string, hits []ProbeHit, pingMs *int, stamp
 	base.WhitelistOK, base.WhitelistTotal = whitelistCounts(base.Probes)
 	base.WhitelistAt = time.Now()
 	base.WhitelistDone = stamp && base.WhitelistTotal > 0
+	// Серию двигает только полный проход: оборванный набор операторов
+	// не говорит, что не ответил никто.
+	if base.WhitelistDone {
+		if base.WhitelistNone() {
+			base.WhitelistLowStreak++
+		} else {
+			base.WhitelistLowStreak = 0
+		}
+	}
 	r.samples[key] = base
 	r.mu.Unlock()
 }

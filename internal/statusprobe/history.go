@@ -69,19 +69,21 @@ func (h *KVHistory) Load(ctx context.Context) (map[string][]RunRecord, error) {
 }
 
 type persistedSample struct {
-	WorldPingMs     *int       `json:"world_ping_ms,omitempty"`
-	WorldOK         int        `json:"world_ok"`
-	WorldTotal      int        `json:"world_total"`
-	RussiaOK        int        `json:"russia_ok"`
-	RussiaTotal     int        `json:"russia_total"`
-	WhitelistOK     int        `json:"whitelist_ok,omitempty"`
-	WhitelistTotal  int        `json:"whitelist_total,omitempty"`
-	WhitelistPingMs *int       `json:"whitelist_ping_ms,omitempty"`
-	WhitelistAt     time.Time  `json:"whitelist_at,omitempty"`
-	WhitelistDone   bool       `json:"whitelist_done,omitempty"`
-	MeasuredAt      time.Time  `json:"measured_at"`
-	Probes          []ProbeHit `json:"probes,omitempty"`
-	FailStreak      int        `json:"fail_streak,omitempty"`
+	WorldPingMs        *int       `json:"world_ping_ms,omitempty"`
+	WorldOK            int        `json:"world_ok"`
+	WorldTotal         int        `json:"world_total"`
+	RussiaOK           int        `json:"russia_ok"`
+	RussiaTotal        int        `json:"russia_total"`
+	WhitelistOK        int        `json:"whitelist_ok,omitempty"`
+	WhitelistTotal     int        `json:"whitelist_total,omitempty"`
+	WhitelistPingMs    *int       `json:"whitelist_ping_ms,omitempty"`
+	WhitelistAt        time.Time  `json:"whitelist_at,omitempty"`
+	WhitelistDone      bool       `json:"whitelist_done,omitempty"`
+	MeasuredAt         time.Time  `json:"measured_at"`
+	Probes             []ProbeHit `json:"probes,omitempty"`
+	FailStreak         int        `json:"fail_streak,omitempty"`
+	RussiaLowStreak    int        `json:"russia_low_streak,omitempty"`
+	WhitelistLowStreak int        `json:"whitelist_low_streak,omitempty"`
 }
 
 func (h *KVHistory) LoadLatest(ctx context.Context) (map[string]Sample, error) {

@@ -86,7 +86,7 @@ func TestSchedulePingsDueNodeWithoutAPageView(t *testing.T) {
 
 	// Замер идёт в своей горутине, тест читает счётчик из другой: без atomic -race ругается.
 	var pinged atomic.Int32
-	pingTarget = func(context.Context, *http.Client, string, int, int, bool) (Sample, error) {
+	pingTarget = func(context.Context, *http.Client, string, int, int, int, bool) (Sample, error) {
 		pinged.Add(1)
 		return Sample{WorldOK: 1, WorldTotal: 1, MeasuredAt: time.Now()}, nil
 	}
@@ -114,7 +114,7 @@ func TestScheduleLeavesFreshNodeAlone(t *testing.T) {
 	t.Setenv("STATUS_PROBES_ENABLED", "true")
 	prevPing := pingTarget
 	t.Cleanup(func() { pingTarget = prevPing })
-	pingTarget = func(context.Context, *http.Client, string, int, int, bool) (Sample, error) {
+	pingTarget = func(context.Context, *http.Client, string, int, int, int, bool) (Sample, error) {
 		t.Fatal("ping started inside the interval")
 		return Sample{}, nil
 	}

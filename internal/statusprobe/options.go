@@ -33,6 +33,12 @@ func ProbeLimits() (world, russia int) {
 	return clampEnvInt("STATUS_WORLD_PROBES", 1, 1, 10), clampEnvInt("STATUS_RUSSIA_PROBES", 10, 1, 30)
 }
 
+// RussiaFailThreshold — сколько зондов из России должны не ответить, чтобы сервер
+// стал «частично». Один сбой из десяти — обычный шум зондов, поэтому по умолчанию 2.
+func RussiaFailThreshold() int {
+	return clampEnvInt("STATUS_RU_FAIL_THRESHOLD", 2, 1, 30)
+}
+
 // ProbeIntervalMinutes — как часто пинговать, если у страны не задан свой интервал.
 func ProbeIntervalMinutes() int {
 	return clampEnvInt("STATUS_PROBE_INTERVAL_MIN", 60, 5, 180)

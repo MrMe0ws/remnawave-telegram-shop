@@ -285,6 +285,8 @@ export interface AdminStatusTargetDTO {
   node_uuid?: string
   exit_node_uuid?: string
   no_external?: boolean
+  /** Порт TCP-пинга — тот, на котором подключаются клиенты. 0 или пусто — 443. */
+  tcp_port?: number
 }
 
 export interface AdminStatusNodeDTO {
@@ -333,6 +335,8 @@ export interface PublicStatusResponse {
   probe_world?: number
   probe_russia?: number
   probe_interval_min?: number
+  /** Сколько зондов из России должны не ответить, чтобы сервер стал «частично» (STATUS_RU_FAIL_THRESHOLD). */
+  ru_fail_threshold?: number
   title?: string
   lead?: string
   nodes: {

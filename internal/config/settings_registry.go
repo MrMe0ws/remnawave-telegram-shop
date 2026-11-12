@@ -587,6 +587,13 @@ func baseRuntimeSettings() []SettingField {
 			Current: cabinetIntCurrent("STATUS_PROBE_INTERVAL_MIN", 60),
 		},
 		{
+			// Сколько зондов из России должны не ответить, чтобы сервер стал «частично».
+			Key: "STATUS_RU_FAIL_THRESHOLD", Group: "status", Type: SettingInt, Instant: true,
+			MinInt: intPtr(1), MaxInt: intPtr(30),
+			Apply:   applyBoundedInt("STATUS_RU_FAIL_THRESHOLD", 1, 30),
+			Current: cabinetIntCurrent("STATUS_RU_FAIL_THRESHOLD", 2),
+		},
+		{
 			Key: "STATUS_SHOW_MAP", Group: "status", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("STATUS_SHOW_MAP"),
 			Current: cabinetBoolCurrent("STATUS_SHOW_MAP", true),

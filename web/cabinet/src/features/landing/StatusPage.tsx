@@ -10,6 +10,7 @@ import { LandingFooter } from './components/LandingFooter'
 import { Rise } from './components/LandingMotion'
 import { StatusMap, type StatusMapNode, type StatusProbe } from './components/StatusMap'
 import { StatusNodeList } from './components/StatusNodeList'
+import { summarizeStatus } from '@/features/status/statusState'
 import './landing.css'
 
 interface StatusNode extends StatusMapNode {
@@ -27,6 +28,7 @@ interface StatusResponse {
   probe_world?: number
   probe_russia?: number
   probe_interval_min?: number
+  ru_fail_threshold?: number
   title?: string
   lead?: string
   nodes?: StatusNode[]
@@ -66,7 +68,7 @@ export default function StatusPage() {
   const data = query.data as StatusResponse | undefined
   const nodes = data?.nodes ?? []
   const total = data?.total ?? nodes.length
-  const down = nodes.filter((n) => n.state === 'down').length
+  const summary = summarizeStatus(nodes)
   const minutesAgo = minutesSince(newestMeasuredAt(nodes) ?? data?.updated_at)
 
   const available = data?.available === true
@@ -74,9 +76,8 @@ export default function StatusPage() {
     if (query.isLoading && !data) return t('landing.status.eyebrow')
     if (!available) return t('landing.status.unavailable')
     if (total === 0) return t('landing.status.empty')
-    if (down === 0) return t('landing.status.allUp')
-    return t('landing.status.partial')
-  }, [available, data, down, query.isLoading, t, total])
+    return t(`landing.status.${summary.level}`)
+  }, [available, data, summary.level, query.isLoading, t, total])
   const probeWorld = data?.probe_world || 1
   const probeRussia = data?.probe_russia || 10
   const probeMinutes = data?.probe_interval_min || 60
@@ -116,7 +117,7 @@ export default function StatusPage() {
             </div>
             {available && (
               <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="landing-status-dot landing-status-dot--up" />
+                <span className={`landing-status-dot landing-status-dot--${total > 0 ? summary.tone : 'up'}`} />
                 {minutesAgo < 1
                   ? t('landing.status.updatedJust')
                   : t('landing.status.updatedMin', { count: minutesAgo })}
@@ -134,7 +135,11 @@ export default function StatusPage() {
             </Rise>
           )}
 
-          <StatusNodeList nodes={nodes} bypassProbes={data?.bypass_probes !== false} />
+          <StatusNodeList
+            nodes={nodes}
+            bypassProbes={data?.bypass_probes !== false}
+            ruFailThreshold={data?.ru_fail_threshold}
+          />
 
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
             <Rise delay={0.05} className="h-full">

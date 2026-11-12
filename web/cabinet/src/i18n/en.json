@@ -3418,6 +3418,10 @@
             "label": "Russia probes",
             "hint": "From 1 to 30. Default is 20"
           },
+          "STATUS_RU_FAIL_THRESHOLD": {
+            "label": "Russia failures before “Partial”",
+            "hint": "How many probes in Russia must fail before the server turns “Partial”. From 1 to 30, default 2"
+          },
           "STATUS_PROBE_INTERVAL_MIN": {
             "label": "Check interval, min",
             "hint": "How often to ping when a country has no interval of its own. From 5 to 180, default 20"
@@ -3589,6 +3593,8 @@
         "fCountry": "Country",
         "fAddress": "Address",
         "fAddressHint": "A public IP or domain. Not shown to users.",
+        "fPort": "Port",
+        "fPortHint": "TCP port clients connect to. Empty — 443.",
         "fNode": "Panel server",
         "fNodeHint": "Used to know whether the server is connected",
         "fEntryNode": "Entry in the panel",
@@ -3635,8 +3641,10 @@
         "STATUS_WORLD_PROBES": "World checks",
         "STATUS_RUSSIA_PROBES": "Russia checks",
         "STATUS_PROBE_INTERVAL_MIN": "Every, min",
+        "STATUS_RU_FAIL_THRESHOLD": "Russia failures before “Partial”",
+        "ruFailHint": "How many probes in Russia must fail before the server turns “Partial”. One failure out of ten is ordinary probe noise, so the default is 2. Half or fewer answering two checks in a row means “Down”.",
         "defaultText": "Default",
-        "moreSettingsHint": "Checks: world 1–10, Russia 1–30. Every: 5 to 180 minutes. Empty texts are the defaults.",
+        "moreSettingsHint": "Checks: world 1–10, Russia 1–30. Every: 5 to 180 minutes. Failures before “Partial”: 1–30. Empty texts are the defaults.",
         "fNoExternalNeedsNode": "Pick the panel server above, otherwise it has no status and the page shows \"No data\".",
         "countryPlaceholder": "Pick a country",
         "fCountryHint": "Users see the flag and the name",
@@ -3807,7 +3815,9 @@
       "status": {
         "eyebrow": "Status",
         "allUp": "Every location is up",
-        "partial": "Some locations are down",
+        "somePartial": "Some locations are unstable",
+        "someDown": "Some locations are down",
+        "allDown": "All locations are down",
         "empty": "No locations yet",
         "unavailable": "Panel status is unavailable",
         "updated": "Updated {{time}}",
@@ -3871,6 +3881,7 @@
         "worldPending": "Still measuring",
         "worldPing": "ping {{ms}} ms",
         "russiaUp": "Reachable",
+        "russiaPartial": "Unstable",
         "inWhitelist": "On whitelists",
         "whitelistUp": "Reachable",
         "whitelistRatio": "{{ok}} of {{total}} operators",

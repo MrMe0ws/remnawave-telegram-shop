@@ -99,6 +99,7 @@ type publicStatusBody struct {
 	ProbeWorld       int                `json:"probe_world"`
 	ProbeRussia      int                `json:"probe_russia"`
 	ProbeIntervalMin int                `json:"probe_interval_min"`
+	RuFailThreshold  int                `json:"ru_fail_threshold"` // порог «частично» по зондам России, им же красится колонка «Из РФ»
 	Title            string             `json:"title,omitempty"`
 	Lead             string             `json:"lead,omitempty"`
 	Nodes            []publicStatusNode `json:"nodes"`
@@ -154,6 +155,7 @@ func (h *PublicStatus) build(ctx context.Context) publicStatusBody {
 		ProbeWorld:       world,
 		ProbeRussia:      russia,
 		ProbeIntervalMin: intervalMinutes(configured),
+		RuFailThreshold:  statusprobe.RussiaFailThreshold(),
 		Title:            title,
 		Lead:             lead,
 	}
@@ -206,7 +208,7 @@ func (h *PublicStatus) build(ctx context.Context) publicStatusBody {
 				}
 			}
 		}
-		node.State = statusprobe.EffectiveState(n.State, measured, n.exit)
+		node.State = statusprobe.EffectiveState(n.State, measured, n.Whitelist, n.exit)
 		if node.State == statusprobe.StateUp {
 			body.Online++
 		}
