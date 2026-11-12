@@ -11,11 +11,16 @@ import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
 import { AdminSelect } from '../components/AdminSelect'
 import { AdminCheckboxField } from '../components/AdminCheckbox'
+import { AdminFeedback } from '../components/AdminFeedback'
+import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
 import { faviconSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
 import { CountryFlag } from '../components/CountryFlag'
 import { Card } from '@/components/ui/card'
 
 type TabKey = 'nodes' | 'providers' | 'history' | 'settings'
+
+/** Отказ сервера во вкладке — общим уведомлением страницы: раньше ошибки тут не показывались вовсе. */
+type TabProps = { onError: (err: unknown) => void }
 
 function toDatetimeLocal(iso?: string | null): string {
   if (!iso) return ''
@@ -29,6 +34,7 @@ function toDatetimeLocal(iso?: string | null): string {
 export default function AdminInfraPage() {
   const { t } = useTranslation()
   const [tab, setTab] = useState<TabKey>('nodes')
+  const { feedback, clear, showError } = useAdminMutationFeedback()
 
   const tabs: { key: TabKey; label: string; icon: typeof Server }[] = [
     { key: 'nodes', label: t('admin.infra.tabs.nodes'), icon: Server },
@@ -39,6 +45,7 @@ export default function AdminInfraPage() {
 
   return (
     <AdminLayout>
+      <AdminFeedback feedback={feedback} onDismiss={clear} />
       <div className="space-y-6">
         <AdminPageHeader
           icon={Server}
@@ -48,11 +55,13 @@ export default function AdminInfraPage() {
         />
 
         <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
-          <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
+          <div role="tablist" className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
             {tabs.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 type="button"
+                role="tab"
+                aria-selected={tab === key}
                 onClick={() => setTab(key)}
                 className={cn(
                   'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-1',
@@ -68,16 +77,16 @@ export default function AdminInfraPage() {
           </div>
         </div>
 
-        {tab === 'nodes' && <NodesTab />}
-        {tab === 'providers' && <ProvidersTab />}
-        {tab === 'history' && <HistoryTab />}
-        {tab === 'settings' && <SettingsTab />}
+        {tab === 'nodes' && <NodesTab onError={showError} />}
+        {tab === 'providers' && <ProvidersTab onError={showError} />}
+        {tab === 'history' && <HistoryTab onError={showError} />}
+        {tab === 'settings' && <SettingsTab onError={showError} />}
       </div>
     </AdminLayout>
   )
 }
 
-function NodesTab() {
+function NodesTab({ onError }: TabProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
@@ -96,12 +105,14 @@ function NodesTab() {
 
   const deleteMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (uuid: string) => api.adminInfraDeleteNode(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] }),
   })
 
   const createMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
       api.adminInfraCreateNode(body),
     onSuccess: () => {
@@ -112,6 +123,7 @@ function NodesTab() {
 
   const patchMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (body: { uuid: string; next_billing_at: string }) => api.adminInfraPatchNode(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] })
@@ -299,7 +311,7 @@ function NodesTab() {
   )
 }
 
-function ProvidersTab() {
+function ProvidersTab({ onError }: TabProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
@@ -312,12 +324,14 @@ function ProvidersTab() {
 
   const deleteMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (uuid: string) => api.adminInfraDeleteProvider(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-providers'] }),
   })
 
   const createMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (body: { name: string; favicon_link?: string; login_url?: string }) =>
       api.adminInfraCreateProvider(body),
     onSuccess: () => {
@@ -328,6 +342,7 @@ function ProvidersTab() {
 
   const patchMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (body: { uuid: string; name?: string; favicon_link?: string; login_url?: string }) =>
       api.adminInfraPatchProvider(body),
     onSuccess: () => {
@@ -533,7 +548,7 @@ function ProviderForm({
   )
 }
 
-function HistoryTab() {
+function HistoryTab({ onError }: TabProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [start, setStart] = useState(0)
@@ -553,12 +568,14 @@ function HistoryTab() {
 
   const deleteMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (uuid: string) => api.adminInfraDeleteHistory(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-history'] }),
   })
 
   const createMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (body: { provider_uuid: string; amount: number; billed_at: string }) =>
       api.adminInfraCreateHistory(body),
     onSuccess: () => {
@@ -720,7 +737,7 @@ function HistoryTab() {
   )
 }
 
-function SettingsTab() {
+function SettingsTab({ onError }: TabProps) {
   const { t } = useTranslation()
   const { data, isLoading } = useQuery({
     queryKey: ['admin-infra-settings'],
@@ -729,6 +746,7 @@ function SettingsTab() {
   const queryClient = useQueryClient()
   const toggleMutation = useMutation({
     meta: { haptics: true },
+    onError,
     mutationFn: (params: { days: number; enabled: boolean }) => api.adminInfraUpdateSettings(params),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-settings'] }),
   })
