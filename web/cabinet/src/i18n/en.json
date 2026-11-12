@@ -3546,7 +3546,7 @@
           },
           "MONITORING_SUPPORT_WAIT_MIN": {
             "label": "Unanswered support, min",
-            "hint": "After how many minutes an unanswered support message shows in «Needs attention»"
+            "hint": "After how many minutes an unanswered support message shows in «Needs attention». 0 hides it; older than 7 days is ignored"
           },
           "MONITORING_RETENTION_DAYS": {
             "label": "Keep events, days",
@@ -3814,6 +3814,7 @@
           "all": "All events",
           "plusBot": "+ bot taps",
           "botActions": "Bot taps",
+          "botActionsOff": "Recording is off. Turn on: Bot settings → Notifications → Monitoring",
           "reset": "Reset"
         },
         "category": {

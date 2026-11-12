@@ -99,6 +99,7 @@ export function EventFilterMenu({
   botActionsAvailable,
   compact,
   align,
+  botActionsOff,
 }: {
   value: FeedFilter
   onChange: (next: FeedFilter) => void
@@ -106,6 +107,8 @@ export function EventFilterMenu({
   /** На телефоне — только значок и счётчик. */
   compact?: boolean
   align?: 'left' | 'right'
+  /** Запись нажатий выключена в настройках — показать подсказку, где включить. */
+  botActionsOff?: boolean
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -188,6 +191,15 @@ export function EventFilterMenu({
               </button>
             )
           })}
+          {!botActionsAvailable && botActionsOff && (
+            <>
+              <span className="my-1 block h-px bg-border" aria-hidden />
+              <div className="px-2.5 py-2 text-[12.5px] leading-snug text-muted-foreground">
+                <p className="text-sm text-foreground/80">{t('admin.monitoring.filter.botActions')}</p>
+                <p className="mt-0.5">{t('admin.monitoring.filter.botActionsOff')}</p>
+              </div>
+            </>
+          )}
           {botActionsAvailable && (
             <>
               <span className="my-1 block h-px bg-border" aria-hidden />

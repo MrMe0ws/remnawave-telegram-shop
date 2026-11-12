@@ -72,7 +72,7 @@ func TestMonitoringDaysParsing(t *testing.T) {
 }
 
 func TestMonitoringSupportWaitMinutes(t *testing.T) {
-	for raw, want := range map[string]int{"": 15, "0": 15, "1": 1, "1440": 1440, "1441": 15, "x": 15} {
+	for raw, want := range map[string]int{"": 15, "0": 0, "-1": 15, "1": 1, "1440": 1440, "1441": 15, "x": 15} {
 		t.Setenv(monitoringSupportWaitKey, raw)
 		if got := MonitoringSupportWaitMinutes(); got != want {
 			t.Errorf("MONITORING_SUPPORT_WAIT_MIN=%q -> %d, want %d", raw, got, want)

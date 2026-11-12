@@ -40,10 +40,10 @@ func MonitoringBotActionsRetentionDays() int {
 }
 
 // MonitoringSupportWaitMinutes — через сколько минут обращение без ответа
-// попадает в «Требует внимания».
+// попадает в «Требует внимания». 0 — не показывать это вовсе.
 func MonitoringSupportWaitMinutes() int {
 	v, err := strconv.Atoi(strings.TrimSpace(EffectiveEnv(monitoringSupportWaitKey)))
-	if err != nil || v < 1 || v > 1440 {
+	if err != nil || v < 0 || v > 1440 {
 		return 15
 	}
 	return v
@@ -79,8 +79,8 @@ func monitoringRegistry() []SettingField {
 		},
 		{
 			Key: monitoringSupportWaitKey, Group: "monitoring", Type: SettingInt,
-			MinInt: intPtr(1), MaxInt: intPtr(1440),
-			Apply:   applyBoundedInt(monitoringSupportWaitKey, 1, 1440),
+			MinInt: intPtr(0), MaxInt: intPtr(1440),
+			Apply:   applyBoundedInt(monitoringSupportWaitKey, 0, 1440),
 			Current: cabinetIntCurrent(monitoringSupportWaitKey, 15),
 		},
 		days(monitoringRetentionKey, 365),

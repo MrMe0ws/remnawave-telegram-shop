@@ -298,10 +298,10 @@ export default function AdminMonitoringPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <CustomerSearch value={customer} onChange={setCustomer} />
             <div className="sm:hidden">
-              <EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={botAvailable} compact />
+              <EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={botAvailable} botActionsOff compact />
             </div>
             <div className="hidden sm:block">
-              <EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={botAvailable} />
+              <EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={botAvailable} botActionsOff />
             </div>
           </div>
 

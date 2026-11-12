@@ -34,6 +34,9 @@ type cachedSummary struct {
 
 const summaryTTL = 30 * time.Second
 
+// supportWaitingMaxAge — обращения без ответа старше этого не считаются.
+const supportWaitingMaxAge = 7 * 24 * time.Hour
+
 // NewAdminMonitoring — конструктор.
 func NewAdminMonitoring(pool *pgxpool.Pool) *AdminMonitoringHandler {
 	return &AdminMonitoringHandler{pool: pool, store: adminevents.NewStore(pool), summary: map[string]cachedSummary{}}
@@ -181,24 +184,28 @@ func (h *AdminMonitoringHandler) Incidents(ctx context.Context) []AttentionItem 
 	if h.pool == nil {
 		return items
 	}
-	wait := time.Duration(config.MonitoringSupportWaitMinutes()) * time.Minute
-	var (
-		waiting int
-		oldest  *time.Time
-	)
-	err := h.pool.QueryRow(ctx, `
-		SELECT count(*), min(m.created_at)
-		FROM cabinet_support_ticket t
-		JOIN LATERAL (
-			SELECT direction, created_at FROM cabinet_support_message
-			WHERE ticket_id = t.id ORDER BY created_at DESC, id DESC LIMIT 1
-		) m ON TRUE
-		WHERE t.status = 'open' AND m.direction = 'in' AND m.created_at < $1`,
-		time.Now().Add(-wait)).Scan(&waiting, &oldest)
-	if err != nil {
-		slog.Warn("admin monitoring: support waiting", "error", err)
-	} else if waiting > 0 {
-		items = append(items, AttentionItem{Key: "support_waiting", Kind: "incident", Severity: "warn", Count: waiting, Since: oldest})
+	var err error
+	// 0 в настройке — «ждёт ответа» не показывать. Обращения старше недели
+	// тоже не считаем: на них уже не ответят, а плашка висела бы вечно.
+	if waitMin := config.MonitoringSupportWaitMinutes(); waitMin > 0 {
+		var (
+			waiting int
+			oldest  *time.Time
+		)
+		err = h.pool.QueryRow(ctx, `
+			SELECT count(*), min(m.created_at)
+			FROM cabinet_support_ticket t
+			JOIN LATERAL (
+				SELECT direction, created_at FROM cabinet_support_message
+				WHERE ticket_id = t.id ORDER BY created_at DESC, id DESC LIMIT 1
+			) m ON TRUE
+			WHERE t.status = 'open' AND m.direction = 'in' AND m.created_at < $1 AND m.created_at > $2`,
+			time.Now().Add(-time.Duration(waitMin)*time.Minute), time.Now().Add(-supportWaitingMaxAge)).Scan(&waiting, &oldest)
+		if err != nil {
+			slog.Warn("admin monitoring: support waiting", "error", err)
+		} else if waiting > 0 {
+			items = append(items, AttentionItem{Key: "support_waiting", Kind: "incident", Severity: "warn", Count: waiting, Since: oldest})
+		}
 	}
 	var (
 		failed      int
