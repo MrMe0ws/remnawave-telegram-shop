@@ -30,6 +30,7 @@ import { AdminBreadcrumbs } from './AdminBreadcrumbs'
 import { AdminPageMetaContext, type AdminPageMeta } from './useAdminPageMeta'
 import { AdminShellProvider, useAdminShell } from './AdminShellContext'
 import { useAdminLeftEdgeSwipe } from '../hooks/useAdminLeftEdgeSwipe'
+import { useAdminSelectionHaptics } from '../hooks/useAdminSelectionHaptics'
 import { useAdminMobileNavWidth } from '../hooks/useAdminMobileNavWidth'
 
 interface AdminLayoutProps {
@@ -100,6 +101,7 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   const effectiveMeta = meta ? { ...pageMeta, ...meta } : pageMeta
 
   useAdminLeftEdgeSwipe(true)
+  useAdminSelectionHaptics()
 
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
   const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false

@@ -95,11 +95,13 @@ function NodesTab() {
   })
 
   const deleteMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (uuid: string) => api.adminInfraDeleteNode(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] }),
   })
 
   const createMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
       api.adminInfraCreateNode(body),
     onSuccess: () => {
@@ -109,6 +111,7 @@ function NodesTab() {
   })
 
   const patchMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (body: { uuid: string; next_billing_at: string }) => api.adminInfraPatchNode(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] })
@@ -308,11 +311,13 @@ function ProvidersTab() {
   })
 
   const deleteMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (uuid: string) => api.adminInfraDeleteProvider(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-providers'] }),
   })
 
   const createMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (body: { name: string; favicon_link?: string; login_url?: string }) =>
       api.adminInfraCreateProvider(body),
     onSuccess: () => {
@@ -322,6 +327,7 @@ function ProvidersTab() {
   })
 
   const patchMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (body: { uuid: string; name?: string; favicon_link?: string; login_url?: string }) =>
       api.adminInfraPatchProvider(body),
     onSuccess: () => {
@@ -546,11 +552,13 @@ function HistoryTab() {
   })
 
   const deleteMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (uuid: string) => api.adminInfraDeleteHistory(uuid),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-history'] }),
   })
 
   const createMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (body: { provider_uuid: string; amount: number; billed_at: string }) =>
       api.adminInfraCreateHistory(body),
     onSuccess: () => {
@@ -720,6 +728,7 @@ function SettingsTab() {
   })
   const queryClient = useQueryClient()
   const toggleMutation = useMutation({
+    meta: { haptics: true },
     mutationFn: (params: { days: number; enabled: boolean }) => api.adminInfraUpdateSettings(params),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-settings'] }),
   })

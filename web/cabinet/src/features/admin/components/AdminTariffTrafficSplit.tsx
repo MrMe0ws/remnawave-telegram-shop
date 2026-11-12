@@ -192,6 +192,7 @@ export function AdminTariffTrafficSplit({
   }, [squadsData, tariffSquads])
 
   const save = useMutation({
+    meta: { haptics: true },
     mutationFn: () => {
       const bytes = enabled ? Math.round(Number(limitGb) * GB) : 0
       return api.adminTariffTrafficSave(tariffId, {

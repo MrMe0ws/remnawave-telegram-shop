@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 
+import { hapticTap } from '@/lib/haptic'
 import { useAdminShell } from '../layout/AdminShellContext'
+import { getAdminMobileNavWidthPx } from '../layout/adminMobileNav'
 
 const MOBILE_MQ = '(max-width: 1023px)'
 /** Не с самого края — иначе срабатывает системный жест «назад». */
@@ -40,6 +42,7 @@ export function useAdminLeftEdgeSwipe(enabled: boolean) {
     startY: 0,
     preventBack: false,
     lastOffset: 0,
+    armed: false,
   })
 
   useEffect(() => {
@@ -55,6 +58,7 @@ export function useAdminLeftEdgeSwipe(enabled: boolean) {
         startY: 0,
         preventBack: false,
         lastOffset: 0,
+        armed: false,
       }
     }
 
@@ -85,6 +89,7 @@ export function useAdminLeftEdgeSwipe(enabled: boolean) {
         startY: touch.clientY,
         preventBack: false,
         lastOffset: 0,
+        armed: false,
       }
     }
 
@@ -115,6 +120,10 @@ export function useAdminLeftEdgeSwipe(enabled: boolean) {
       }
 
       state.lastOffset = dx
+      // Толчок в момент, когда меню уже откроется при отпускании (порог — как в commitMobileNavDrag).
+      const armed = dx >= getAdminMobileNavWidthPx() * 0.35
+      if (armed && !state.armed) hapticTap()
+      state.armed = armed
       setMobileNavDrag(dx)
     }
 

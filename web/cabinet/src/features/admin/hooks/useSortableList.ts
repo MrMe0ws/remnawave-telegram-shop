@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 
+import { hapticImpact, hapticSelection } from '@/lib/haptic'
+
 /**
  * Перетаскивание строк списка за ручку — как на странице статуса серверов.
  * Строка поднимается и идёт за курсором, соседи плавно расступаются, поэтому
@@ -43,6 +45,8 @@ export function useSortableList(ids: string[], onReorder: (next: string[]) => vo
     if (to === from) return
     const next = ids.filter((id) => id !== dragId)
     next.splice(to, 0, dragId)
+    // Тик на каждый шаг строки — как у перетаскивания в списках iOS.
+    hapticSelection()
     onReorder(next)
   }
 
@@ -114,6 +118,7 @@ export function useSortableList(ids: string[], onReorder: (next: string[]) => vo
         const el = rowRefs.current.get(id)
         pointerY.current = e.clientY
         grabOffset.current = el ? e.clientY - el.getBoundingClientRect().top : 0
+        hapticImpact('medium')
         setDragId(id)
       },
       onKeyDown: (e: React.KeyboardEvent) => {

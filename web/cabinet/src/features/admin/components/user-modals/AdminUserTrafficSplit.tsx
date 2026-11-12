@@ -12,6 +12,7 @@ import { surface } from '../Surface'
 import { AdminConfirmModal } from '../AdminConfirmModal'
 import { formatAdminApiError } from '../../utils/formatAdminApiError'
 import { formatAdminDateTime } from '../../utils/datetime'
+import { useErrorHaptic } from '@/lib/haptic'
 
 const GB = 1024 ** 3
 const gb = (bytes: number) => formatDecimals(bytes / GB, bytes / GB >= 10 ? 0 : 1)
@@ -30,6 +31,7 @@ export function AdminUserTrafficSplit({ userId }: { userId: number }) {
   const [kind, setKind] = useState<'main' | 'bypass'>('bypass')
   const [amount, setAmount] = useState('10')
   const [error, setError] = useState<string | null>(null)
+  useErrorHaptic(error)
   const [revokeId, setRevokeId] = useState<number | null>(null)
 
   const refresh = () => {
@@ -37,6 +39,7 @@ export function AdminUserTrafficSplit({ userId }: { userId: number }) {
     void qc.invalidateQueries({ queryKey: ['admin-user', userId] })
   }
   const grant = useMutation({
+    meta: { haptics: true },
     mutationFn: () => api.adminUserTrafficGrant(userId, kind, Math.round(Number(amount) * GB)),
     onSuccess: () => {
       setError(null)
@@ -45,6 +48,7 @@ export function AdminUserTrafficSplit({ userId }: { userId: number }) {
     onError: (e) => setError(formatAdminApiError(e, t)),
   })
   const revoke = useMutation({
+    meta: { haptics: true },
     mutationFn: (extraId: number) => api.adminUserTrafficRevoke(userId, extraId),
     onSuccess: () => {
       setRevokeId(null)

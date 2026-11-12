@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
+import { hapticError, hapticSuccess } from '@/lib/haptic'
 import { NavPendingTracker } from '@/lib/navPending'
 import i18n from '@/i18n'
 import { useAuthStore } from '@/store/auth'
@@ -88,6 +89,19 @@ const AdminSyncPage = lazy(() => import('@/features/admin/pages/AdminSyncPage'))
 const AdminSettingsPage = lazy(() => import('@/features/admin/pages/AdminSettingsPage'))
 
 const queryClient = new QueryClient({
+  /*
+   * Вибрация по итогу мутаций с `meta: { haptics: true }` — для действий админки,
+   * у которых нет своего уведомления (партнёры, инфраструктура, синхронизация).
+   * Только по метке: в кабинете много фоновых мутаций (прочитать чат и т.п.).
+   */
+  mutationCache: new MutationCache({
+    onSuccess: (_data, _variables, _context, mutation) => {
+      if (mutation.meta?.haptics) hapticSuccess()
+    },
+    onError: (_error, _variables, _context, mutation) => {
+      if (mutation.meta?.haptics) hapticError()
+    },
+  }),
   defaultOptions: {
     queries: {
       retry: 1,

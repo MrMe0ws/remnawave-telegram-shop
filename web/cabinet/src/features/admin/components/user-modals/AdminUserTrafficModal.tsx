@@ -18,6 +18,7 @@ import {
 } from '../../hooks/useAdminUsers'
 import { trafficStrategyLabel } from './strategyLabels'
 import { AdminUserTrafficSplit } from './AdminUserTrafficSplit'
+import { useErrorHaptic } from '@/lib/haptic'
 
 const GB = 1024 * 1024 * 1024
 
@@ -53,6 +54,7 @@ export function AdminUserTrafficModal({
   const [draftStrategy, setDraftStrategy] = useState(rw.traffic_limit_strategy)
   const [customTrafficGB, setCustomTrafficGB] = useState('')
   const [error, setError] = useState<string | null>(null)
+  useErrorHaptic(error)
   const [confirmReset, setConfirmReset] = useState(false)
   const [saving, setSaving] = useState(false)
 
