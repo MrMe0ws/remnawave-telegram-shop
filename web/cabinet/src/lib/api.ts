@@ -2010,9 +2010,12 @@ export const api = {
     categories?: string[]
     botActions?: boolean
     customerId?: number
+    /** Не старше этого момента, мс от эпохи. */
+    sinceMs?: number
     limit?: number
   }) => {
     const q = new URLSearchParams()
+    if (params.sinceMs) q.set('since', String(Math.floor(params.sinceMs / 1000)))
     if (params.afterId) q.set('after_id', String(params.afterId))
     if (params.beforeId) q.set('before_id', String(params.beforeId))
     if (params.categories?.length) q.set('categories', params.categories.join(','))

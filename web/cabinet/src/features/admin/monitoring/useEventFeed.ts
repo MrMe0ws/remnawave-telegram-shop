@@ -13,6 +13,8 @@ interface FeedOptions {
   botActions: boolean
   /** История одного клиента. */
   customerId?: number
+  /** Окно ленты в мс: показываются только события за этот срок. */
+  periodMs?: number
   paused?: boolean
   pageSize?: number
   /** false — не опрашивать новые (окно истории клиента). */
@@ -28,6 +30,7 @@ export function useEventFeed({
   categories,
   botActions,
   customerId,
+  periodMs,
   paused = false,
   pageSize = 50,
   live = true,
@@ -50,7 +53,8 @@ export function useEventFeed({
   const polling = useRef(false)
   const timers = useRef<number[]>([])
   useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), [])
-  const filterKey = `${categories.join(',')}|${botActions ? 1 : 0}|${customerId ?? 0}`
+  const since = () => (periodMs ? Date.now() - periodMs : undefined)
+  const filterKey = `${categories.join(',')}|${botActions ? 1 : 0}|${customerId ?? 0}|${periodMs ?? 0}`
 
   const load = useCallback(async () => {
     const my = ++gen.current
@@ -61,7 +65,7 @@ export function useEventFeed({
     setLoading(true)
     setError(false)
     try {
-      const res = await api.adminMonitoringEvents({ categories, botActions, customerId, limit: pageSize })
+      const res = await api.adminMonitoringEvents({ categories, botActions, customerId, sinceMs: since(), limit: pageSize })
       if (my !== gen.current) return
       setItems(res.items ?? [])
       setHasMore((res.items ?? []).length >= pageSize)
@@ -151,7 +155,7 @@ export function useEventFeed({
     const my = gen.current
     setLoadingMore(true)
     try {
-      const res = await api.adminMonitoringEvents({ categories, botActions, customerId, beforeId: last, limit: pageSize })
+      const res = await api.adminMonitoringEvents({ categories, botActions, customerId, beforeId: last, sinceMs: since(), limit: pageSize })
       if (my !== gen.current) return
       const older = (res.items ?? []).filter((e) => e.id < last)
       setItems((cur) => [...cur, ...older])

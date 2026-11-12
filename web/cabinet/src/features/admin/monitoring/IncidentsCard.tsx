@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { ChevronRight, CircleCheck, MessageCircleWarning, ServerOff, TriangleAlert, Unplug } from 'lucide-react'
+import { ChevronRight, MessageCircleWarning, ServerOff, TriangleAlert, Unplug } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -14,6 +14,9 @@ const ICONS: Record<string, LucideIcon> = {
   support_waiting: MessageCircleWarning,
   support_undelivered: MessageCircleWarning,
 }
+
+/** Больше проблем в плашке не показываем. */
+const MAX_SHOWN = 3
 
 const LINKS: Record<string, string> = {
   node_down: '/admin/nodes',
@@ -38,20 +41,14 @@ export function incidentLink(item: AdminAttentionItemDTO): string {
 export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO[]; compact?: boolean }) {
   const { t } = useTranslation()
 
-  if (items.length === 0) {
-    return (
-      <div className="flex items-center gap-3 rounded-[--radius] border border-emerald-500/40 bg-emerald-500/[0.07] p-4 sm:px-5">
-        <CircleCheck className="size-5 shrink-0 text-emerald-500" aria-hidden />
-        <span className="text-sm font-medium">{t('admin.monitoring.allClear')}</span>
-      </div>
-    )
-  }
-
-  const crit = items.some((i) => i.severity === 'crit')
+  // Всё спокойно — плашки нет вовсе; больше трёх проблем не показываем.
+  if (items.length === 0) return null
+  const shown = items.slice(0, MAX_SHOWN)
+  const crit = shown.some((i) => i.severity === 'crit')
   return (
     <section
       className={cn(
-        'flex flex-col rounded-[--radius] border px-4 pb-1.5 pt-3.5 sm:px-5 sm:pt-4',
+        'flex w-full flex-col rounded-[--radius] border px-4 pb-1.5 pt-3.5 sm:w-fit sm:min-w-[22rem] sm:max-w-full sm:px-5 sm:pt-4',
         crit
           ? 'border-rose-500/45 bg-gradient-to-br from-rose-500/[0.13] via-rose-500/[0.05] to-transparent'
           : 'border-amber-500/45 bg-gradient-to-br from-amber-500/[0.13] via-amber-500/[0.05] to-transparent',
@@ -61,8 +58,8 @@ export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO
         <TriangleAlert className={cn('size-4', crit ? 'text-rose-500' : 'text-amber-500')} aria-hidden />
         {t('admin.monitoring.attention')}
       </h2>
-      <ul className="flex flex-1 flex-col">
-        {items.map((item, i) => {
+      <ul className="flex flex-col">
+        {shown.map((item, i) => {
           const Icon = ICONS[item.key] ?? TriangleAlert
           const to = LINKS[item.key]
           const tone = item.severity === 'crit' ? 'text-rose-500' : 'text-amber-500'
@@ -86,7 +83,7 @@ export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO
             </>
           )
           return (
-            <li key={`${item.key}-${i}`} className={cn('flex flex-1', i > 0 && 'border-t border-border/50')}>
+            <li key={`${item.key}-${i}`} className={cn('flex', i > 0 && 'border-t border-border/50')}>
               {to ? (
                 <Link to={to} className="flex min-h-12 flex-1 items-center gap-3 rounded-lg py-2 hover:opacity-90">
                   {row}

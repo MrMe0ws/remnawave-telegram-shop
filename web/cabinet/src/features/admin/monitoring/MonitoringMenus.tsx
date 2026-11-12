@@ -7,7 +7,9 @@ import type { AdminMonitoringPeriod } from '@/lib/types/admin'
 import { CATEGORY_DOT, EVENT_CATEGORIES, type EventCategory } from './eventView'
 
 const FILTER_KEY = 'admin.monitoring.filter'
-const PERIOD_KEY = 'admin.monitoring.period'
+// v2: раньше период влиял только на плитки, теперь — на ленту; сохранённый
+// «час» спрятал бы почти все события.
+const PERIOD_KEY = 'admin.monitoring.period.v2'
 
 export interface FeedFilter {
   /** Пусто — все категории. */
@@ -40,9 +42,9 @@ export const PERIODS: AdminMonitoringPeriod[] = ['hour', 'day', 'week', 'month']
 export function loadPeriod(): AdminMonitoringPeriod {
   try {
     const v = localStorage.getItem(PERIOD_KEY) as AdminMonitoringPeriod | null
-    return v && PERIODS.includes(v) ? v : 'hour'
+    return v && PERIODS.includes(v) ? v : 'day'
   } catch {
-    return 'hour'
+    return 'day'
   }
 }
 

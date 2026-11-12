@@ -65,6 +65,9 @@ func (h *AdminMonitoringHandler) Events(w http.ResponseWriter, r *http.Request) 
 		BotActions: q.Get("bot_actions") == "1",
 		Limit:      int(parseInt64Param(q.Get("limit"))),
 	}
+	if sec := parseInt64Param(q.Get("since")); sec > 0 {
+		f.Since = time.Unix(sec, 0)
+	}
 	f.HideExpired = f.CustomerID == 0
 	for _, c := range strings.Split(q.Get("categories"), ",") {
 		c = strings.TrimSpace(c)

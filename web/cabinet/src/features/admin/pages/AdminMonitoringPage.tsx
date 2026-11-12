@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Network, Pause, Play, Radar, Search, UserPlus, Wallet, X } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Pause, Play, Radar, Search, X } from 'lucide-react'
 
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -9,90 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import type { AdminCustomerDTO, AdminMonitoringPeriod, AdminMonitoringSummaryDTO } from '@/lib/types/admin'
+import type { AdminCustomerDTO, AdminMonitoringPeriod } from '@/lib/types/admin'
 import { AdminLayout } from '../layout/AdminLayout'
 import { EventList } from '../monitoring/EventList'
 import { IncidentsCard } from '../monitoring/IncidentsCard'
 import { EventFilterMenu, PeriodMenu, loadFeedFilter, loadPeriod, type FeedFilter } from '../monitoring/MonitoringMenus'
-import { formatMoney } from '../monitoring/eventView'
-import { useAdminAttention, useAdminMonitoringSummary } from '../monitoring/useMonitoring'
+import { useAdminAttention } from '../monitoring/useMonitoring'
 import { useEventFeed } from '../monitoring/useEventFeed'
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  valueTone,
-  subTone,
-  className,
-}: {
-  icon: LucideIcon
-  label: string
-  value: ReactNode
-  sub?: ReactNode
-  valueTone?: string
-  subTone?: string
-  className?: string
-}) {
-  return (
-    <div className={cn('min-w-0 rounded-2xl border border-border/50 bg-muted/40 px-3.5 py-3 sm:px-4', className)}>
-      <p className="flex items-center gap-1.5 truncate text-[12.5px] text-muted-foreground">
-        <Icon className="size-3.5 shrink-0" aria-hidden />
-        {label}
-      </p>
-      <p className={cn('mt-1 truncate font-mono text-[22px] font-bold tracking-tight sm:text-2xl', valueTone)}>{value}</p>
-      <p className={cn('truncate text-[12px] text-muted-foreground sm:text-[12.5px]', subTone)}>{sub ?? ' '}</p>
-    </div>
-  )
-}
-
-function SummaryTiles({ data, downNow }: { data?: AdminMonitoringSummaryDTO; downNow: number }) {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language?.startsWith('en') ? 'en-US' : 'ru-RU'
-  const revenue = data
-    ? Object.entries(data.revenue ?? {})
-        .sort(([a], [b]) => (a === 'RUB' ? -1 : b === 'RUB' ? 1 : a.localeCompare(b)))
-        .map(([cur, sum]) => formatMoney(sum, cur, locale))
-        .join(' · ')
-    : ''
-  const regs = data ? data.registrations_bot + data.registrations_cabinet : 0
-  let nodesSub = t('admin.monitoring.stats.allOnline')
-  let nodesSubTone: string | undefined
-  if (downNow > 0) {
-    nodesSub = t('admin.monitoring.stats.downNow', { count: downNow })
-    nodesSubTone = 'text-rose-500'
-  } else if (data && data.node_downs > 0) {
-    nodesSub = t('admin.monitoring.stats.downs', { count: data.node_downs })
-  }
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
-      <StatTile className="col-span-2 sm:col-span-1" icon={Wallet} label={t('admin.monitoring.stats.payments')} value={data ? data.payments : '—'} sub={revenue || '—'} />
-      <StatTile
-        icon={UserPlus}
-        label={t('admin.monitoring.stats.registrations')}
-        value={data ? regs : '—'}
-        sub={data ? t('admin.monitoring.stats.regSplit', { bot: data.registrations_bot, cabinet: data.registrations_cabinet }) : '—'}
-      />
-      <StatTile
-        icon={Network}
-        label={t('admin.monitoring.stats.nodes')}
-        value={
-          data?.nodes_known ? (
-            <>
-              {data.nodes_online}
-              <span className="text-base font-semibold text-muted-foreground"> / {data.nodes_total}</span>
-            </>
-          ) : (
-            '—'
-          )
-        }
-        sub={data?.nodes_known ? nodesSub : '—'}
-        subTone={nodesSubTone}
-      />
-    </div>
-  )
-}
 
 /** Поиск клиента для ленты: подбор по нику или ID, выбранный — фильтр ленты. */
 function CustomerSearch({
@@ -200,6 +122,14 @@ function CustomerSearch({
   )
 }
 
+/** Окно ленты по выбранному периоду. */
+const PERIOD_MS: Record<AdminMonitoringPeriod, number> = {
+  hour: 3_600_000,
+  day: 86_400_000,
+  week: 7 * 86_400_000,
+  month: 30 * 86_400_000,
+}
+
 export default function AdminMonitoringPage() {
   const { t } = useTranslation()
   const [paused, setPaused] = useState(false)
@@ -208,9 +138,7 @@ export default function AdminMonitoringPage() {
   const [customer, setCustomer] = useState<{ id: number; label: string } | null>(null)
 
   const attention = useAdminAttention(paused ? 30_000 : 10_000)
-  const summary = useAdminMonitoringSummary(period)
   const incidents = attention.data?.items ?? []
-  const downNow = incidents.filter((i) => i.key === 'node_down').length
 
   const categories = useMemo(() => [...filter.categories], [filter.categories])
   // Нажатия показываем, только пока их запись включена: иначе сохранённое
@@ -221,12 +149,13 @@ export default function AdminMonitoringPage() {
     categories,
     botActions,
     customerId: customer?.id,
+    periodMs: PERIOD_MS[period],
     paused,
   })
   useEffect(() => {
     if (!feed.loading) setBotAvailable(feed.botActionsEnabled)
   }, [feed.loading, feed.botActionsEnabled])
-  const resetKey = `${categories.join(',')}|${botActions}|${customer?.id ?? 0}`
+  const resetKey = `${categories.join(',')}|${botActions}|${customer?.id ?? 0}|${period}`
 
   const pauseButton = (
     <Button
@@ -274,25 +203,14 @@ export default function AdminMonitoringPage() {
             {live}
           </div>
           <div className="flex items-center gap-2 sm:ml-auto">
-            <div className="lg:hidden">
+            <div className="sm:hidden">
               <PeriodMenu value={period} onChange={setPeriod} short className="h-10 px-3 text-sm" />
             </div>
             {pauseButton}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-4">
-          {attention.isLoading ? <Skeleton className="h-[184px] rounded-[--radius]" /> : <IncidentsCard items={incidents} />}
-          <Card className="hidden rounded-[--radius] p-4 lg:block lg:p-5">
-            <div className="mb-3">
-              <PeriodMenu value={period} onChange={setPeriod} className="h-8 px-2.5 text-[13px]" />
-            </div>
-            <SummaryTiles data={summary.data} downNow={downNow} />
-          </Card>
-          <div className="lg:hidden">
-            <SummaryTiles data={summary.data} downNow={downNow} />
-          </div>
-        </div>
+        {incidents.length > 0 && <IncidentsCard items={incidents} />}
 
         <Card className="rounded-[--radius] px-3.5 pb-3 pt-3.5 sm:px-5 sm:pt-4">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -302,6 +220,9 @@ export default function AdminMonitoringPage() {
             </div>
             <div className="hidden sm:block">
               <EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={botAvailable} botActionsOff />
+            </div>
+            <div className="hidden sm:block">
+              <PeriodMenu value={period} onChange={setPeriod} className="h-10 px-3.5 text-sm" />
             </div>
           </div>
 

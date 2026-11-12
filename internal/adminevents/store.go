@@ -90,7 +90,9 @@ type ListFilter struct {
 	// HideExpired — убрать одиночные «подписка истекла»: в общей ленте их
 	// заменяет одна сводная строка за сутки.
 	HideExpired bool
-	Limit       int
+	// Since — только события не старше этого момента (период ленты).
+	Since time.Time
+	Limit int
 }
 
 // Row — строка ленты с подписями клиента и админа.
@@ -187,6 +189,9 @@ func listWhere(f ListFilter) (string, []any) {
 	}
 	if f.BeforeID > 0 {
 		conds = append(conds, "e.id < "+arg(f.BeforeID))
+	}
+	if !f.Since.IsZero() {
+		conds = append(conds, "e.created_at >= "+arg(f.Since))
 	}
 	if f.CustomerID > 0 {
 		conds = append(conds, "e.customer_id = "+arg(f.CustomerID))
