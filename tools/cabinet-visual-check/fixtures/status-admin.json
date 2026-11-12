@@ -126,6 +126,13 @@
             "max_int": 30
           },
           {
+            "key": "STATUS_ALERT_WORLD",
+            "type": "bool",
+            "value": "true",
+            "source": "default",
+            "instant": true
+          },
+          {
             "key": "STATUS_SHOW_MAP",
             "type": "bool",
             "value": "true",

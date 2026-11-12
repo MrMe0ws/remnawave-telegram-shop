@@ -104,6 +104,15 @@ type Sample struct {
 	RussiaLowStreak int
 	// WhitelistLowStreak — сколько полных проходов подряд не ответил ни один оператор.
 	WhitelistLowStreak int
+	// RussiaFailStreak — сколько замеров подряд из России не ответили STATUS_RU_FAIL_THRESHOLD зондов и больше.
+	RussiaFailStreak int
+	// WorldFailStreak — сколько замеров подряд не ответил ни один зонд из мира.
+	WorldFailStreak int
+	// WhitelistFailStreak — сколько полных проходов подряд не ответил хотя бы один оператор.
+	WhitelistFailStreak int
+	// Alerts — открытые тревоги админу: причина → с какого момента. Лежит в замере,
+	// чтобы после перезапуска не прийти второй раз. Меняется только копией.
+	Alerts map[string]time.Time
 }
 
 // AllFailed — в этом замере не ответил ни один зонд. Частичный провал не считается:

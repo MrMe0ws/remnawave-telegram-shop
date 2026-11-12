@@ -426,6 +426,9 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 		slog.Warn("status probe history import", "error", err)
 	}
 	statusRunner := statusprobe.NewRunner(statusStore)
+	// Сбои серверов — в вид «Статус серверов» «Оповещений админу». До Watch:
+	// первый проход может начаться сразу.
+	statusRunner.OnAlerts(notification.StatusAlerts(cabcfg.PublicURL()))
 	statusRunner.Watch(ctx, func(c context.Context) ([]statusprobe.Target, error) {
 		list, err := statusTargets.Load(c)
 		if err != nil {

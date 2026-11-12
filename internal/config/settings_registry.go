@@ -600,6 +600,13 @@ func baseRuntimeSettings() []SettingField {
 			Current: cabinetIntCurrent("STATUS_RU_FAIL_THRESHOLD", 2),
 		},
 		{
+			// Оповещать админа, когда обычный сервер не отвечает из мира. Куда — вид
+			// «Статус серверов» в «Оповещениях админу».
+			Key: "STATUS_ALERT_WORLD", Group: "status", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("STATUS_ALERT_WORLD"),
+			Current: cabinetBoolCurrent("STATUS_ALERT_WORLD", true),
+		},
+		{
 			Key: "STATUS_SHOW_MAP", Group: "status", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("STATUS_SHOW_MAP"),
 			Current: cabinetBoolCurrent("STATUS_SHOW_MAP", true),

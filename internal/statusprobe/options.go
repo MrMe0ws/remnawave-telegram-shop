@@ -39,6 +39,17 @@ func RussiaFailThreshold() int {
 	return clampEnvInt("STATUS_RU_FAIL_THRESHOLD", 2, 1, 30)
 }
 
+// AlertWorldEnabled — писать админу, когда обычный сервер не отвечает из мира.
+// Пустое значение значит «да».
+func AlertWorldEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(config.EffectiveEnv("STATUS_ALERT_WORLD"))) {
+	case "false", "0":
+		return false
+	default:
+		return true
+	}
+}
+
 // ProbeIntervalMinutes — как часто пинговать, если у страны не задан свой интервал.
 func ProbeIntervalMinutes() int {
 	return clampEnvInt("STATUS_PROBE_INTERVAL_MIN", 60, 5, 180)

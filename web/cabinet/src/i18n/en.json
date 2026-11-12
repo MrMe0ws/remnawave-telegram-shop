@@ -3480,6 +3480,10 @@
             "label": "Check interval, min",
             "hint": "How often to ping when a country has no interval of its own. From 5 to 180, default 20"
           },
+          "STATUS_ALERT_WORLD": {
+            "label": "“Unreachable from the world” alert",
+            "hint": "Notify the admin when a regular server fails two world checks in a row"
+          },
           "STATUS_SHOW_MAP": {
             "label": "Map",
             "hint": "Location dots and lines to the Russia probes"
@@ -3689,6 +3693,10 @@
         "probesToggleHint": "Turn off to show only the panel state.",
         "mapToggle": "Show the map",
         "mapToggleHint": "On the public page, before sign-in.",
+        "alertWorldToggle": "Alert when a server is unreachable from the world",
+        "alertWorldToggleHint": "Regular servers only. Russia and bypass operator outages are always reported, after two checks in a row.",
+        "alertsRoute": "Where outage alerts go —",
+        "alertsRouteLink": "Bot settings → Notifications → Admin alerts",
         "moreSettings": "Advanced",
         "STATUS_PAGE_TITLE": "Public page title",
         "STATUS_PAGE_LEAD": "Public page subtitle",

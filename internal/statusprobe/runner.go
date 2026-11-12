@@ -47,6 +47,7 @@ type Runner struct {
 	pingBusy          bool
 	listBusy          bool
 	loaded            bool
+	onAlerts          func([]AlertEvent)
 }
 
 func NewRunner(store HistoryStore) *Runner {
@@ -180,6 +181,13 @@ func (r *Runner) retainLocked(targets []Target) bool {
 			key = ProbeKey("", target.Country, target.Name, target.Address)
 		}
 		keep[key] = struct{}{}
+		if target.Disabled || target.NoExternal {
+			if sample, ok := r.samples[key]; ok && len(sample.Alerts) > 0 {
+				sample.Alerts = nil
+				r.samples[key] = sample
+				changed = true
+			}
+		}
 		legacy := NodeKey(target.Country, target.Name)
 		if _, ok := r.samples[key]; !ok && legacy != key && legacyUsers[legacy] == 1 {
 			if sample, ok := r.samples[legacy]; ok {
@@ -262,6 +270,8 @@ func stripWhitelist(sample Sample) Sample {
 	sample.WhitelistAt = time.Time{}
 	sample.WhitelistDone = false
 	sample.WhitelistLowStreak = 0
+	sample.WhitelistFailStreak = 0
+	sample.Alerts = forgetAlert(sample.Alerts, AlertOperators)
 	return sample
 }
 
@@ -552,6 +562,8 @@ func (r *Runner) execute(targets []Target, force bool) {
 
 func (r *Runner) pingPass(ctx context.Context, targets []Target) {
 	measured := 0
+	var events []AlertEvent
+	defer func() { r.emitAlerts(events) }()
 	for _, target := range targets {
 		host, ok := PublicTarget(target.Address)
 		if !ok {
@@ -588,6 +600,9 @@ func (r *Runner) pingPass(ctx context.Context, targets []Target) {
 			sample.MeasuredAt = time.Now()
 		}
 		r.storeSample(target.Key, sample)
+		r.mu.Lock()
+		events = append(events, r.pingAlertsLocked(target, time.Now())...)
+		r.mu.Unlock()
 		r.persist()
 		measured++
 	}
@@ -598,6 +613,8 @@ func (r *Runner) pingPass(ctx context.Context, targets []Target) {
 
 func (r *Runner) whitelistPass(ctx context.Context, targets []Target) {
 	measured := 0
+	var events []AlertEvent
+	defer func() { r.emitAlerts(events) }()
 	for _, target := range targets {
 		host, ok := PublicTarget(target.Address)
 		if !ok {
@@ -626,6 +643,9 @@ func (r *Runner) whitelistPass(ctx context.Context, targets []Target) {
 			continue
 		}
 		r.finishWhitelist(target.Key, wl.Hits, wl.PingMs, wlErr == nil && wl.Total > 0)
+		r.mu.Lock()
+		events = append(events, r.operatorAlertsLocked(target, time.Now())...)
+		r.mu.Unlock()
 		r.persist()
 		measured++
 		slog.Info("whitelist probe", "operators", wl.Total)
@@ -644,6 +664,18 @@ func (r *Runner) storeSample(key string, sample Sample) {
 	sample.WhitelistAt = prev.WhitelistAt
 	sample.WhitelistDone = prev.WhitelistDone
 	sample.WhitelistLowStreak = prev.WhitelistLowStreak
+	sample.WhitelistFailStreak = prev.WhitelistFailStreak
+	sample.Alerts = prev.Alerts
+	if sample.RussiaTotal > 0 && sample.RussiaTotal-sample.RussiaOK >= RussiaFailThreshold() {
+		sample.RussiaFailStreak = prev.RussiaFailStreak + 1
+	} else {
+		sample.RussiaFailStreak = 0
+	}
+	if sample.WorldTotal > 0 && sample.WorldOK == 0 {
+		sample.WorldFailStreak = prev.WorldFailStreak + 1
+	} else {
+		sample.WorldFailStreak = 0
+	}
 	if sample.AllFailed() {
 		sample.FailStreak = prev.FailStreak + 1
 	} else {
@@ -683,6 +715,11 @@ func (r *Runner) finishWhitelist(key string, hits []ProbeHit, pingMs *int, stamp
 			base.WhitelistLowStreak++
 		} else {
 			base.WhitelistLowStreak = 0
+		}
+		if base.WhitelistOK < base.WhitelistTotal {
+			base.WhitelistFailStreak++
+		} else {
+			base.WhitelistFailStreak = 0
 		}
 	}
 	r.samples[key] = base

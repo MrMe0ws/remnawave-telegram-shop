@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { ChevronDown, CircleHelp, Loader2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -66,6 +67,19 @@ export function AdminStatusSettings() {
           busy={togglingKey === 'STATUS_SHOW_MAP'}
           onChange={(v) => void handleToggle('STATUS_SHOW_MAP', v)}
         />
+        <AdminToggleRow
+          label={t('admin.statusPage.alertWorldToggle')}
+          hint={t('admin.statusPage.alertWorldToggleHint')}
+          checked={on('STATUS_ALERT_WORLD')}
+          busy={togglingKey === 'STATUS_ALERT_WORLD'}
+          onChange={(v) => void handleToggle('STATUS_ALERT_WORLD', v)}
+        />
+        <p className="pb-1 pt-2 text-xs text-muted-foreground">
+          {t('admin.statusPage.alertsRoute')}{' '}
+          <Link to="/admin/settings" className="font-medium text-primary hover:underline">
+            {t('admin.statusPage.alertsRouteLink')}
+          </Link>
+        </p>
       </div>
 
       <div className="mt-2 rounded-xl border border-border/60">
