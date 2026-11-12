@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"remnawave-tg-shop-bot/internal/adminevents"
 )
 
 // skipTelegramCustomerDM — для web-only / synthetic telegram_id нет TG-чата;
@@ -783,6 +784,12 @@ func (s PaymentService) maybeNotifyLoyaltyLevelUp(ctx context.Context, customer 
 	if newProg.CurrentTier.SortOrder <= oldProg.CurrentTier.SortOrder {
 		return
 	}
+	adminevents.Emit(adminevents.Event{
+		Type: adminevents.LoyaltyLevelUp, CustomerID: customer.ID, Source: adminevents.SourceSystem,
+		Payload: map[string]any{
+			"level": newProg.CurrentTier.SortOrder, "discount": newProg.CurrentTier.DiscountPercent,
+		},
+	})
 	tm := s.translation
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf(tm.GetText(lang, "loyalty_level_up_title"), newProg.CurrentTier.SortOrder))
@@ -1687,6 +1694,11 @@ func (s PaymentService) ActivateTrial(ctx context.Context, telegramId int64) (st
 	if err != nil {
 		return "", err
 	}
+	adminevents.Emit(adminevents.Event{
+		Type: adminevents.TrialActivated, CustomerID: customer.ID,
+		Source:  adminevents.SourceFrom(ctx, adminevents.SourceBot),
+		Payload: map[string]any{"days": config.TrialDays()},
+	})
 
 	return user.SubscriptionUrl, nil
 

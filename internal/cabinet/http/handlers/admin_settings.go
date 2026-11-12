@@ -153,7 +153,7 @@ func buildAdminSettingsResponse() adminSettingsGetResp {
 		"cabinet", "status", "cabinet_connect", "tariffs",
 		"trial", "hwid", "traffic", "referral", "partner", "stars", "loyalty",
 		"payments", "admin_alerts", "moynalog", "access", "links", "tags",
-		"lifecycle", "notifications", "fortune",
+		"lifecycle", "notifications", "monitoring", "fortune",
 	}
 	groupFields := make(map[string][]adminSettingFieldDTO)
 	for _, f := range config.RuntimeSettingsRegistry() {

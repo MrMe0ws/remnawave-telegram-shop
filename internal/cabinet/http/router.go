@@ -450,12 +450,17 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	)
 	adminStatusTargets := handlers.NewAdminStatusTargets(statusTargets, statusRunner, rw, publicStatus.Invalidate)
 	adminAlerts := handlers.NewAdminAlerts()
+	adminMonitoring := handlers.NewAdminMonitoring(pool)
+	adminOverviewHandler.SetIncidents(adminMonitoring.Incidents)
 	for route, handler := range map[string]http.HandlerFunc{
-		"/cabinet/api/admin/alerts/test":    adminAlerts.Test,
-		"/cabinet/api/admin/status/targets": adminStatusTargets.Handle,
-		"/cabinet/api/admin/status/probe":   adminStatusTargets.Probe,
-		"/cabinet/api/admin/status/nodes":   adminStatusTargets.Nodes,
-		"/cabinet/api/admin/status/quota":   adminStatusTargets.Quota,
+		"/cabinet/api/admin/monitoring/events":  adminMonitoring.Events,
+		"/cabinet/api/admin/monitoring/summary": adminMonitoring.Summary,
+		"/cabinet/api/admin/attention":          adminMonitoring.Attention,
+		"/cabinet/api/admin/alerts/test":        adminAlerts.Test,
+		"/cabinet/api/admin/status/targets":     adminStatusTargets.Handle,
+		"/cabinet/api/admin/status/probe":       adminStatusTargets.Probe,
+		"/cabinet/api/admin/status/nodes":       adminStatusTargets.Nodes,
+		"/cabinet/api/admin/status/quota":       adminStatusTargets.Quota,
 	} {
 		api.Handle(route,
 			middleware.Chain(

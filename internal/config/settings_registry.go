@@ -76,7 +76,8 @@ var remnaTagPattern = regexp.MustCompile(`^[A-Z0-9_]+$`)
 
 // RuntimeSettingsRegistry — Phase 1 whitelist (~50 ключей).
 func RuntimeSettingsRegistry() []SettingField {
-	return append(append(baseRuntimeSettings(), cabinetPushRegistry()...), adminAlertsRegistry()...)
+	out := append(append(baseRuntimeSettings(), cabinetPushRegistry()...), adminAlertsRegistry()...)
+	return append(out, monitoringRegistry()...)
 }
 
 func baseRuntimeSettings() []SettingField {

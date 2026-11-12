@@ -367,6 +367,7 @@ func (s *PaymentService) NotifyHeleketNeedsAttention(ctx context.Context, purcha
 	if s == nil || purchase == nil {
 		return
 	}
+	s.emitPurchaseCanceled(ctx, purchase, "heleket_needs_attention")
 	var b strings.Builder
 	b.WriteString("⚠️ <b>Heleket: нужен ручной разбор</b>\n\n")
 	b.WriteString(reason)
@@ -432,6 +433,7 @@ func (s *PaymentService) loyaltyDiscountPercentForNotify(ctx context.Context, _ 
 
 // tryNotifyPurchasePaid — уведомление в группу после успешной оплаты (не влияет на результат покупки).
 func (s *PaymentService) tryNotifyPurchasePaid(ctx context.Context, p *database.Purchase, c *database.Customer, expireBefore, expireAfter *time.Time) {
+	s.emitPurchasePaid(ctx, p, expireBefore, expireAfter)
 	if p == nil || c == nil || !config.PaymentsNotifySendPaid() {
 		return
 	}
@@ -447,6 +449,7 @@ func (s *PaymentService) tryNotifyPurchasePaid(ctx context.Context, p *database.
 
 // tryNotifyPurchaseCancel — уведомление об отмене счёта (YooKassa worker, Tribute cancel и т.д.).
 func (s *PaymentService) tryNotifyPurchaseCancel(ctx context.Context, p *database.Purchase, c *database.Customer) {
+	s.emitPurchaseCanceled(ctx, p, "")
 	if p == nil || !config.PaymentsNotifySendCancel() {
 		return
 	}

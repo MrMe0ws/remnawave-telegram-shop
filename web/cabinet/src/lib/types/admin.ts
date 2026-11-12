@@ -96,8 +96,62 @@ export interface AdminBandwidthDTO {
   difference: string
 }
 
+/** Пункт «Требует внимания» из «Мониторинга»: горит сейчас (incident) или дело на дни (task). */
+export interface AdminAttentionItemDTO {
+  /** node_down | panel_down | support_waiting | support_undelivered */
+  key: string
+  kind: 'incident' | 'task'
+  severity: 'crit' | 'warn'
+  count: number
+  since?: string
+  params?: Record<string, string | number>
+}
+
+/** Строка ленты «Мониторинга» и истории клиента. */
+export interface AdminEventDTO {
+  id: number
+  at: string
+  type: string
+  /** 1 — важное, 2 — нажатие в боте и прочие мелочи. */
+  level: number
+  /** money | users | subs | promo | support | nodes | admin | bot */
+  category: string
+  /** bot | cabinet | panel | system */
+  source: string
+  payload: Record<string, unknown>
+  customer_id?: number
+  customer?: string
+  actor_tg_id?: number
+  actor?: string
+}
+
+export interface AdminEventsDTO {
+  items: AdminEventDTO[]
+  bot_actions_enabled: boolean
+  /** Всего событий клиента — только в первой странице его истории. */
+  total?: number
+}
+
+export type AdminMonitoringPeriod = 'hour' | 'day' | 'week' | 'month'
+
+export interface AdminMonitoringSummaryDTO {
+  period: AdminMonitoringPeriod
+  payments: number
+  revenue: Record<string, number>
+  failed: number
+  failed_provider?: string
+  registrations_bot: number
+  registrations_cabinet: number
+  node_downs: number
+  nodes_online: number
+  nodes_total: number
+  nodes_known: boolean
+}
+
 export interface AdminOverviewDTO {
   captured_at: string
+  /** Инциденты «Мониторинга»: показываются в той же полосе «Требует внимания». */
+  incidents?: AdminAttentionItemDTO[]
   shop: {
     total_customers: number
     active_subscriptions: number

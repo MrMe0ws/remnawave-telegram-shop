@@ -11,6 +11,10 @@
 
 import { getCookie } from './utils'
 import type {
+  AdminAttentionItemDTO,
+  AdminEventsDTO,
+  AdminMonitoringPeriod,
+  AdminMonitoringSummaryDTO,
   AdminBootstrapDTO,
   AdminBroadcastAudienceDTO,
   AdminBroadcastMediaDTO,
@@ -2000,6 +2004,27 @@ export const api = {
     request<AdminBroadcastHistoryItemDTO>('GET', `/admin/broadcast/history/${id}`),
 
   adminNodes: () => request<AdminNodesDTO>('GET', '/admin/nodes'),
+  adminMonitoringEvents: (params: {
+    afterId?: number
+    beforeId?: number
+    categories?: string[]
+    botActions?: boolean
+    customerId?: number
+    limit?: number
+  }) => {
+    const q = new URLSearchParams()
+    if (params.afterId) q.set('after_id', String(params.afterId))
+    if (params.beforeId) q.set('before_id', String(params.beforeId))
+    if (params.categories?.length) q.set('categories', params.categories.join(','))
+    if (params.botActions) q.set('bot_actions', '1')
+    if (params.customerId) q.set('customer_id', String(params.customerId))
+    if (params.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return request<AdminEventsDTO>('GET', `/admin/monitoring/events${qs ? `?${qs}` : ''}`)
+  },
+  adminMonitoringSummary: (period: AdminMonitoringPeriod) =>
+    request<AdminMonitoringSummaryDTO>('GET', `/admin/monitoring/summary?period=${period}`),
+  adminAttention: () => request<{ items: AdminAttentionItemDTO[] }>('GET', '/admin/attention'),
   adminInfraNodes: () => request<AdminInfraNodesDTO>('GET', '/admin/infra/nodes'),
   adminInfraCreateNode: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
     request<AdminInfraNodesDTO>('POST', '/admin/infra/nodes', body),

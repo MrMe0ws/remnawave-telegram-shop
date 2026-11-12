@@ -59,6 +59,7 @@ type config struct {
 	isMoynalogEnabled                                                            bool
 	moynalogReceiptYookasa, moynalogReceiptPlatega, moynalogReceiptCrypto        bool // MOYNALOG_RECEIPT_FOR
 	adminTelegramId                                                              int64
+	adminTelegramIds                                                             []int64
 	forwardUserMessagesToAdmin                                                   bool
 	suspiciousUserFilterEnabled                                                  bool
 	trialDays                                                                    int
@@ -1052,9 +1053,10 @@ func InitConfig() {
 		}
 	}
 	var err error
-	conf.adminTelegramId, err = strconv.ParseInt(os.Getenv("ADMIN_TELEGRAM_ID"), 10, 64)
+	// Первый id — главный: бот-админка, уведомления и «написать админу».
+	conf.adminTelegramId, conf.adminTelegramIds, err = parseAdminTelegramIDs(os.Getenv("ADMIN_TELEGRAM_ID"))
 	if err != nil {
-		panic("ADMIN_TELEGRAM_ID .env variable not set")
+		panic(fmt.Sprintf("ADMIN_TELEGRAM_ID .env variable not set or invalid: %v", err))
 	}
 
 	conf.forwardUserMessagesToAdmin = envBoolDefault("FORWARD_USER_MESSAGES_TO_ADMIN", true)

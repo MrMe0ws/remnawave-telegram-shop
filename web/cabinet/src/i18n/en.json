@@ -1307,7 +1307,8 @@
         "infra": "Infrastructure",
         "sync": "Sync",
         "settings": "Bot settings",
-        "status": "Status"
+        "status": "Status",
+        "monitoring": "Monitoring"
       },
       "backToCabinet": "Back to cabinet",
       "breadcrumb": {
@@ -2830,7 +2831,8 @@
           "tariffs": "Price display",
           "notifications": "Browser push",
           "status": "Status page",
-          "traffic": "Traffic: bypass and top-up"
+          "traffic": "Traffic: bypass and top-up",
+          "monitoring": "Monitoring"
         },
         "groupIntros": {
           "admin_alerts": "Where the bot tells you about problems and events: cabinet mail is not sending, a server is down, a server bill is due, a payment came in, a partner asks for a payout. Easiest: one group with topics set above, and a topic per kind.",
@@ -3529,6 +3531,26 @@
           "TRAFFIC_POLL_MINUTES": {
             "label": "How often to check usage, min",
             "hint": "Lower — a more exact limit, but more load on the panel."
+          },
+          "MONITORING_BOT_ACTIONS": {
+            "label": "Record bot taps",
+            "hint": "Every button and command customers use. Shown in the customer's history and in the feed with the «Bot taps» switch"
+          },
+          "MONITORING_SUPPORT_WAIT_MIN": {
+            "label": "Unanswered support, min",
+            "hint": "After how many minutes an unanswered support message shows in «Needs attention»"
+          },
+          "MONITORING_RETENTION_DAYS": {
+            "label": "Keep events, days",
+            "hint": "Payments, sign-ups, promo codes and other important events. 0 — keep forever"
+          },
+          "MONITORING_RETENTION_NOISY_DAYS": {
+            "label": "Keep frequent events, days",
+            "hint": "Sign-ins, support chat, bot messages, torrent blocker. 0 — keep forever"
+          },
+          "MONITORING_BOT_ACTIONS_DAYS": {
+            "label": "Keep bot taps, days",
+            "hint": "0 — keep forever"
           }
         },
         "plategaMethods": {
@@ -3726,6 +3748,240 @@
         "addressIsNode": "This is the address of the panel node itself. For a bypass enter the whitelisted host, otherwise operators will not reach it.",
         "drag": "Drag to reorder (or use the up and down arrows)",
         "neverMeasured": "Not checked yet"
+      },
+      "monitoring": {
+        "title": "Monitoring",
+        "live": "Live",
+        "paused": "Paused",
+        "pause": "Pause the feed",
+        "resume": "Resume",
+        "attention": "Needs attention",
+        "allClear": "All quiet — nothing is on fire",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "loading": "Loading",
+        "showMore": "Show more",
+        "error": "Couldn't load events",
+        "retry": "Retry",
+        "empty": "No events yet — they'll show up here as soon as something happens",
+        "emptyFiltered": "No events match this filter",
+        "lessMinute": "< 1 min",
+        "minutes": "{{count}} min",
+        "hours": "{{count}} h",
+        "days": "{{count}} d",
+        "monthsShort": "{{count}} mo",
+        "daysShort": "{{count}} d",
+        "discount": "{{count}}% off",
+        "incident": {
+          "node_down": "Node {{name}} is down",
+          "panel_down": "Remnawave panel isn't responding",
+          "support_waiting": "Unanswered in support: {{count}}",
+          "support_undelivered": "Not delivered to the support bot: {{count}}"
+        },
+        "stats": {
+          "payments": "Payments",
+          "unpaid": "Unpaid",
+          "registrations": "Sign-ups",
+          "regSplit": "{{bot}} bot · {{cabinet}} cabinet",
+          "nodes": "Nodes",
+          "allOnline": "all online",
+          "downNow_one": "{{count}} down",
+          "downNow_other": "{{count}} down",
+          "downs": "outages in period: {{count}}"
+        },
+        "period": {
+          "hour": "Last hour",
+          "day": "Last 24 hours",
+          "week": "Last week",
+          "month": "Last month",
+          "short": {
+            "hour": "Hour",
+            "day": "Day",
+            "week": "Week",
+            "month": "Month"
+          }
+        },
+        "filter": {
+          "title": "Event filter",
+          "all": "All events",
+          "plusBot": "+ bot taps",
+          "botActions": "Bot taps",
+          "reset": "Reset"
+        },
+        "category": {
+          "money": "Payments",
+          "users": "Users",
+          "subs": "Subscriptions",
+          "promo": "Promotions",
+          "support": "Support",
+          "nodes": "Nodes",
+          "admin": "Admins and system"
+        },
+        "search": {
+          "placeholder": "@username or ID",
+          "label": "Find a customer",
+          "empty": "No one found",
+          "clear": "Show everyone"
+        },
+        "history": {
+          "title": "History",
+          "empty": "This customer has no events yet",
+          "button": "History · {{count}}"
+        },
+        "fortune": {
+          "days": "+{{count}} d",
+          "discount": "{{count}}% off",
+          "xp": "+{{count}} XP"
+        },
+        "promo": {
+          "days": "+{{count}} d",
+          "trial": "{{count}}-day trial",
+          "devices": "+{{count}} devices",
+          "discount": "{{count}}% off"
+        },
+        "ev": {
+          "srcBot": "bot",
+          "srcCabinet": "cabinet",
+          "registered": "Signed up",
+          "login": "Signed in to the cabinet",
+          "via": "via {{method}}",
+          "linked": "Linked: {{provider}}",
+          "merged": "Accounts merged",
+          "deleted": "Account deleted",
+          "emailVerified": "Email confirmed",
+          "passwordReset": "Password reset",
+          "trial": "Trial started",
+          "buy": "Subscription bought",
+          "buyTariff": "Bought «{{tariff}}»",
+          "renew": "Subscription renewed",
+          "renewTariff": "Renewed «{{tariff}}»",
+          "upgrade": "Switched to «{{tariff}}»",
+          "downgrade": "Moved to «{{tariff}}»",
+          "extraHwid": "Extra devices: +{{count}}",
+          "extraTraffic": "Extra traffic: +{{gb}} GB",
+          "unpaid": "Invoice not paid",
+          "reason": {
+            "heleket_needs_attention": "Heleket: needs manual review"
+          },
+          "expired": "Subscription expired",
+          "expiredDigest": "Subscriptions expired in 24 h: {{count}}",
+          "notRenewed": "not renewed: {{count}}",
+          "list": "List",
+          "linkReset": "Subscription link reset",
+          "deviceRemoved": "Device removed",
+          "torrent": "Torrent blocker",
+          "promo": "Promo code {{code}}",
+          "promoInvalid": "Wrong promo code {{code}}",
+          "fortune": "Wheel of fortune",
+          "won": "won: {{reward}}",
+          "loyalty": "Loyalty level {{level}}",
+          "referral": "Referral bonus +{{count}} d",
+          "forInvite": "for an invited friend",
+          "forJoin": "for joining via a link",
+          "partnerApplied": "Partner application",
+          "autoApproved": "approved automatically",
+          "payoutRequested": "Partner payout requested",
+          "supportMessage": "Message to support",
+          "images": "photos: {{count}}",
+          "supportReply": "Support replied",
+          "supportClosed": "Ticket closed",
+          "botMessage": "Message to the bot",
+          "command": "command {{command}}",
+          "button": "button «{{label}}»",
+          "nodeDown": "Node {{name}} is down",
+          "nodeUp": "Node {{name}} is back online",
+          "panelLost": "panel lost connection",
+          "fromRussia": "from Russia {{ok}} of {{total}} answered",
+          "probe": {
+            "ru": "not reachable from Russia",
+            "world": "not reachable worldwide",
+            "operators": "whitelist operators don't answer",
+            "any": "status check"
+          },
+          "downFor": "outage lasted {{time}}",
+          "broadcast": "Broadcast: delivered {{sent}} of {{total}}",
+          "blocked": "blocked the bot: {{count}}",
+          "failedSends": "errors: {{count}}",
+          "sync": "Panel sync",
+          "syncDetails": "new {{created}} · updated {{updated}} · removed {{deleted}}",
+          "heleketReview": "Heleket: needs manual review"
+        },
+        "botButton": {
+          "start": "Main menu",
+          "buy": "Buy",
+          "sell": "Choose period",
+          "payment": "Payment",
+          "connect": "Connect",
+          "trial": "Trial",
+          "activate_trial": "Start trial",
+          "referral": "Referrals",
+          "referral_list": "Referral list",
+          "loyalty_root": "Loyalty",
+          "manage_devices": "Devices",
+          "devices": "Devices",
+          "delete_device": "Delete device",
+          "add_device": "Add device",
+          "add_device_confirm": "Add device",
+          "add_device_apply": "Add device",
+          "add_device_payment": "Pay for device",
+          "purchase_history": "Purchase history"
+        },
+        "adminAction": {
+          "any": {
+            "users": {
+              "id": {
+                "extend": "Subscription extended",
+                "disable": "Customer disabled",
+                "enable": "Customer enabled",
+                "delete": "Customer deleted",
+                "reset-traffic": "Traffic reset",
+                "expire": "Subscription end date changed",
+                "hwid-limit": "Device limit",
+                "hwid-pin": "Device limit pinned",
+                "squads": "Customer servers",
+                "traffic": "Traffic limit",
+                "strategy": "Traffic reset strategy",
+                "description": "Customer note",
+                "tariff": "Plan changed",
+                "extra-hwid": "Extra devices",
+                "traffic-split": "Split traffic",
+                "devices": {
+                  "id": "Device removed"
+                }
+              }
+            },
+            "promos": {
+              "id": "Promo code edited"
+            },
+            "tariffs": {
+              "id": "Plan edited"
+            },
+            "settings": "Bot settings changed",
+            "sync": "Sync started",
+            "broadcast": {
+              "send": "Broadcast started"
+            },
+            "status": {
+              "targets": "Status server list",
+              "probe": "Status check"
+            },
+            "loyalty": {
+              "recalc": "Loyalty recalculation"
+            }
+          },
+          "POST": {
+            "promos": "New promo code",
+            "tariffs": "New plan"
+          },
+          "DELETE": {
+            "promos": {
+              "id": "Promo code deleted"
+            },
+            "tariffs": {
+              "id": "Plan deleted"
+            }
+          }
+        }
       }
     },
     "landing": {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"remnawave-tg-shop-bot/internal/adminalert"
+	"remnawave-tg-shop-bot/internal/adminevents"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/statusprobe"
 	"remnawave-tg-shop-bot/utils"
@@ -19,6 +20,7 @@ import (
 // publicURL — адрес кабинета для ссылки на страницу статуса в админке, может быть пустым.
 func StatusAlerts(publicURL string) func([]statusprobe.AlertEvent) {
 	return func(events []statusprobe.AlertEvent) {
+		emitStatusEvents(events)
 		text := StatusAlertText(events, config.DefaultLanguage(), publicURL)
 		if text == "" {
 			return
@@ -30,6 +32,24 @@ func StatusAlerts(publicURL string) func([]statusprobe.AlertEvent) {
 				slog.Error("status alert: send failed", "error", err)
 			}
 		})
+	}
+}
+
+// emitStatusEvents — сбои и восстановления со страницы статуса в «Мониторинг».
+// Это взгляд снаружи (зонды из России и мира), он дополняет опрос панели.
+func emitStatusEvents(events []statusprobe.AlertEvent) {
+	for _, e := range events {
+		typ := adminevents.NodeUp
+		payload := map[string]any{"name": e.Name, "country": e.Country, "reason": e.Reason, "probe": true}
+		if e.Open {
+			typ = adminevents.NodeDown
+			if e.Reason == statusprobe.AlertRussia {
+				payload["ok"], payload["total"] = e.RussiaOK, e.RussiaTotal
+			}
+		} else if !e.Since.IsZero() {
+			payload["down_minutes"] = int(e.At.Sub(e.Since).Minutes())
+		}
+		adminevents.Emit(adminevents.Event{Type: typ, Source: adminevents.SourceSystem, At: e.At, Payload: payload})
 	}
 }
 

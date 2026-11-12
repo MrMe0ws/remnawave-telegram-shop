@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"remnawave-tg-shop-bot/internal/adminevents"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	"remnawave-tg-shop-bot/internal/cabinet/supportbot"
@@ -391,6 +392,16 @@ func (s *Support) SendMessage(ctx context.Context, accountID int64, text string,
 		return nil, err
 	}
 
+	var customerID int64
+	if uc.CustomerID != nil {
+		customerID = *uc.CustomerID
+	}
+	adminevents.Emit(adminevents.Event{
+		Type: adminevents.SupportMessage, CustomerID: customerID, AccountID: accountID,
+		Source:  adminevents.SourceCabinet,
+		Payload: map[string]any{"preview": adminevents.Preview(msgText, 100), "images": len(files)},
+	})
+
 	dto := messageDTO(*saved, savedAtts)
 	return &dto, nil
 }
@@ -554,6 +565,13 @@ func (s *Support) webhookMessage(ctx context.Context, p SupportWebhookPayload) e
 	}
 	if notifyAccountID > 0 {
 		s.notifyCabinetReply(ctx, notifyAccountID, notifyMsgID, text, len(items) > 0)
+		adminevents.Emit(adminevents.Event{
+			Type: adminevents.SupportReply, AccountID: notifyAccountID, Source: adminevents.SourceCabinet,
+			Payload: map[string]any{
+				"preview": adminevents.Preview(text, 100), "author": adminevents.Preview(p.AuthorLabel, 60),
+				"images": len(items),
+			},
+		})
 	}
 	return nil
 }
@@ -595,7 +613,8 @@ func (s *Support) notifyCabinetReply(ctx context.Context, accountID, msgID int64
 }
 
 func (s *Support) webhookClosed(ctx context.Context, p SupportWebhookPayload) error {
-	return s.repo.WithTx(ctx, func(tx pgx.Tx) error {
+	var closedAccountID int64
+	err := s.repo.WithTx(ctx, func(tx pgx.Tx) error {
 		// Advisory lock по account_id — защита от race condition
 		if p.AccountID > 0 {
 			if err := s.repo.LockAccount(ctx, tx, p.AccountID); err != nil {
@@ -610,8 +629,18 @@ func (s *Support) webhookClosed(ctx context.Context, p SupportWebhookPayload) er
 			return nil
 		}
 		s.clearTyping(ticket.ID)
-		return s.repo.CloseTicketTx(ctx, tx, ticket.ID, time.Now().UTC())
+		if err := s.repo.CloseTicketTx(ctx, tx, ticket.ID, time.Now().UTC()); err != nil {
+			return err
+		}
+		closedAccountID = ticket.AccountID
+		return nil
 	})
+	if err == nil && closedAccountID > 0 {
+		adminevents.Emit(adminevents.Event{
+			Type: adminevents.SupportClosed, AccountID: closedAccountID, Source: adminevents.SourceCabinet,
+		})
+	}
+	return err
 }
 
 // webhookTyping — ИИ саппорт-бота готовит ответ по тикету: кабинет покажет «печатает…».

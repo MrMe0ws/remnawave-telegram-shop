@@ -19,6 +19,7 @@ import (
 	"remnawave-tg-shop-bot/utils"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"remnawave-tg-shop-bot/internal/adminevents"
 )
 
 // FortuneRewardTypesOrder — стабильный порядок секторов на UI (индекс = sector_index в API).
@@ -589,6 +590,13 @@ func (s *FortuneService) Spin(ctx context.Context, accountID int64) (*FortuneSpi
 		"free", isFree,
 		"daily_free", isDailyFree,
 	)
+	adminevents.Emit(adminevents.Event{
+		Type: adminevents.FortuneSpin, CustomerID: cust.ID, Source: adminevents.SourceCabinet,
+		Payload: map[string]any{
+			"reward_type": resp.RewardType, "reward_value": resp.RewardValue,
+			"cost_days": resp.CostDays, "free": resp.IsFreeSpin,
+		},
+	})
 
 	return resp, nil
 }

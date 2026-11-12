@@ -61,6 +61,12 @@ func ValidCodePattern(s string) bool {
 // Activate validates and applies a promo code for the customer. Customer must be non-nil.
 // One-time discount: pending row is cleared after the next successful subscription payment (see payment flow).
 func (s *Service) Activate(ctx context.Context, telegramID int64, username string, customer *database.Customer, rawCode string) (*ActivateResult, error) {
+	res, err := s.activate(ctx, telegramID, username, customer, rawCode)
+	emitPromoEvent(ctx, customer, rawCode, res, err)
+	return res, err
+}
+
+func (s *Service) activate(ctx context.Context, telegramID int64, username string, customer *database.Customer, rawCode string) (*ActivateResult, error) {
 	if customer == nil {
 		return nil, database.ValidationErrorf("no customer")
 	}

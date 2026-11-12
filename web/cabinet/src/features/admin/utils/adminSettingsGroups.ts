@@ -17,6 +17,7 @@ import {
   Megaphone,
   MessageSquare,
   Percent,
+  Radar,
   Receipt,
   RefreshCw,
   Scale,
@@ -57,6 +58,7 @@ export const ADMIN_SETTINGS_GROUP_ORDER = [
   'tags',
   'lifecycle',
   'notifications',
+  'monitoring',
   'fortune',
 ] as const
 
@@ -79,6 +81,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   tags: Tag,
   lifecycle: RefreshCw,
   notifications: BellRing,
+  monitoring: Radar,
   fortune: CircleDot,
   cabinet: Sparkles,
   status: Activity,
@@ -107,6 +110,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   tags: { box: 'bg-orange-500/10 dark:bg-orange-500/20', icon: 'text-orange-500' },
   lifecycle: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
   notifications: { box: 'bg-red-500/10 dark:bg-red-500/20', icon: 'text-red-500' },
+  monitoring: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
   fortune: { box: 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20', icon: 'text-fuchsia-500' },
   cabinet: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
   status: { box: 'bg-cyan-500/10 dark:bg-cyan-500/20', icon: 'text-cyan-500' },
@@ -185,7 +189,7 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     id: 'notifications',
     titleKey: 'admin.settings.categories.notifications',
     icon: BellRing,
-    groups: ['admin_alerts', 'notifications'],
+    groups: ['admin_alerts', 'notifications', 'monitoring'],
     iconStyle: { box: 'bg-red-500/10 dark:bg-red-500/20', icon: 'text-red-500' },
   },
   {

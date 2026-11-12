@@ -28,15 +28,21 @@ func NewChecker(ids *repository.IdentityRepo) *Checker {
 // IsAdmin возвращает true, если у аккаунта есть привязанный Telegram identity
 // с provider_user_id == ADMIN_TELEGRAM_ID.
 func (c *Checker) IsAdmin(ctx context.Context, accountID int64) bool {
-	adminTgID := config.GetAdminTelegramId()
-	if adminTgID <= 0 {
-		return false
+	_, ok := c.AdminTelegramID(ctx, accountID)
+	return ok
+}
+
+// AdminTelegramID — Telegram id, под которым аккаунт признан админом. Нужен
+// журналу «Мониторинга»: видно, кто из админов что сделал.
+func (c *Checker) AdminTelegramID(ctx context.Context, accountID int64) (int64, bool) {
+	if len(config.GetAdminTelegramIds()) == 0 {
+		return 0, false
 	}
 
 	ids, err := c.ids.ListLinkedByAccount(ctx, accountID)
 	if err != nil {
 		slog.Warn("admin checker: list identities", "account_id", accountID, "error", err)
-		return false
+		return 0, false
 	}
 
 	for _, id := range ids {
@@ -51,9 +57,9 @@ func (c *Checker) IsAdmin(ctx context.Context, accountID int64) bool {
 		if perr != nil {
 			continue
 		}
-		if v == adminTgID {
-			return true
+		if config.IsAdminTelegramID(v) {
+			return v, true
 		}
 	}
-	return false
+	return 0, false
 }
