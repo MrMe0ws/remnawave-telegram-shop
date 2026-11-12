@@ -411,6 +411,18 @@ export interface AdminCustomerDTO {
    * может не быть — тогда сам запрос отвечает 404, и UI рисует инициалы.
    */
   avatar_url?: string | null
+  /**
+   * Веб-кабинет клиента — только в карточке одного пользователя.
+   * Нет поля — клиент живёт только в боте.
+   */
+  cabinet?: AdminCustomerCabinetDTO | null
+}
+
+export interface AdminCustomerCabinetDTO {
+  email: string | null
+  email_verified: boolean
+  /** Способы входа: email (только при заданном пароле), telegram, google, yandex, vk. */
+  providers: string[]
 }
 
 export interface AdminUsersListDTO {

@@ -97,6 +97,41 @@ type adminCustomerDTO struct {
 	// страницу. Пусто у web-клиентов; 404 на саму картинку — законный ответ
 	// (аватарки нет или закрыта приватностью), UI рисует инициалы.
 	AvatarURL string `json:"avatar_url,omitempty"`
+	// Cabinet — веб-кабинет клиента: почта, её подтверждение, способы входа.
+	// Только в карточке одного пользователя; nil — кабинета нет (клиент
+	// только в боте) или данные не загрузились.
+	Cabinet *adminCabinetDTO `json:"cabinet,omitempty"`
+}
+
+type adminCabinetDTO struct {
+	Email         *string  `json:"email"`
+	EmailVerified bool     `json:"email_verified"`
+	Providers     []string `json:"providers"`
+}
+
+// cabinetIdentity — почта и способы входа клиента для карточки.
+// Ошибка не фатальна: карточка без этого блока всё равно полезна.
+func (h *AdminUsersHandler) cabinetIdentity(ctx context.Context, customerID int64) (*adminCabinetDTO, *database.CabinetIdentity) {
+	if h.customers == nil {
+		return nil, nil
+	}
+	ci, err := h.customers.CabinetIdentityByCustomerID(ctx, customerID)
+	if err != nil {
+		slog.Warn("admin users: cabinet identity", "customer_id", customerID, "error", err)
+		return nil, nil
+	}
+	if ci == nil {
+		return nil, nil
+	}
+	dto := &adminCabinetDTO{EmailVerified: ci.EmailVerified, Providers: ci.Providers}
+	if dto.Providers == nil {
+		dto.Providers = []string{}
+	}
+	if ci.Email != "" {
+		e := ci.Email
+		dto.Email = &e
+	}
+	return dto, ci
 }
 
 // avatarURL — ссылка на аватарку пользователя бота.
@@ -439,6 +474,7 @@ func (h *AdminUsersHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	dto := h.customerDTOWithStatus(r.Context(), cust)
 	dto.AvatarURL = h.avatarURL(cust)
+	dto.Cabinet, _ = h.cabinetIdentity(r.Context(), cust.ID)
 	writeJSON(w, http.StatusOK, dto)
 }
 

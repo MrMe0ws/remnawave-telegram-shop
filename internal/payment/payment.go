@@ -53,10 +53,17 @@ func emailLocalPartForDescription(email string) string {
 }
 
 func (s PaymentService) withRemnawavePanelUsername(ctx context.Context, customer *database.Customer) context.Context {
-	if customer == nil || (!customer.IsWebOnly && !utils.IsSyntheticTelegramID(customer.TelegramID)) {
+	if customer == nil || s.customerRepository == nil {
 		return ctx
 	}
-	if s.customerRepository == nil {
+	// Полный адрес — в поле email панели: в логине и описании от него остаётся
+	// только часть до «@». Касается и Telegram-клиентов с привязанной почтой.
+	if email, err := s.customerRepository.VerifiedCabinetEmail(ctx, customer.ID); err != nil {
+		slog.Warn("payment: load verified cabinet email", "customer_id", customer.ID, "error", err)
+	} else if email != "" {
+		ctx = context.WithValue(ctx, remnawave.CtxKeyEmail, email)
+	}
+	if !customer.IsWebOnly && !utils.IsSyntheticTelegramID(customer.TelegramID) {
 		return ctx
 	}
 	emails, err := s.customerRepository.CabinetAccountEmailsByCustomerIDs(ctx, []int64{customer.ID})
