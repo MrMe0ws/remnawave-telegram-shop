@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"remnawave-tg-shop-bot/internal/adminalert"
 	"remnawave-tg-shop-bot/internal/cache"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -281,6 +282,7 @@ func newE2EEnv(t *testing.T) *e2eEnv {
 	if err != nil {
 		t.Fatalf("bot: %v", err)
 	}
+	adminalert.Init(tgBot)
 
 	rw := remnawave.NewClient(panelSrv.URL, "test", "remote")
 	customers := database.NewCustomerRepository(pool)

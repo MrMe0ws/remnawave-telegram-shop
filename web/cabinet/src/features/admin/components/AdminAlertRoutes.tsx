@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Activity, ChevronDown, CircleCheck, CircleX, Mail, Send, Server, type LucideIcon } from 'lucide-react'
+import { Activity, ChevronDown, CircleCheck, CircleX, Handshake, Mail, Send, Server, Wallet, type LucideIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ApiError, api, type AdminAlertTestResult } from '@/lib/api'
@@ -9,11 +9,40 @@ import type { AdminSettingGroupDTO } from '@/lib/types/admin'
 import { cn } from '@/lib/utils'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
 
-/** Синхрон с internal/config/admin_alerts.go: порядок — порядок строк. */
-const KINDS: { kind: string; prefix: string; icon: LucideIcon }[] = [
-  { kind: 'system', prefix: 'ADMIN_ALERT_SYSTEM', icon: Mail },
-  { kind: 'servers', prefix: 'ADMIN_ALERT_SERVERS', icon: Activity },
-  { kind: 'infra', prefix: 'ADMIN_ALERT_INFRA', icon: Server },
+interface AlertKind {
+  kind: string
+  enabledKey: string
+  chatKey: string
+  threadKey: string
+  icon: LucideIcon
+}
+
+function prefixed(kind: string, prefix: string, icon: LucideIcon): AlertKind {
+  return { kind, enabledKey: `${prefix}_ENABLED`, chatKey: `${prefix}_CHAT_ID`, threadKey: `${prefix}_THREAD_ID`, icon }
+}
+
+/**
+ * Синхрон с internal/config/admin_alerts.go: порядок — порядок строк.
+ * Оплаты и партнёрка — на своих старых ключах, их уже заполнили в .env и в БД.
+ */
+const KINDS: AlertKind[] = [
+  prefixed('system', 'ADMIN_ALERT_SYSTEM', Mail),
+  prefixed('servers', 'ADMIN_ALERT_SERVERS', Activity),
+  prefixed('infra', 'ADMIN_ALERT_INFRA', Server),
+  {
+    kind: 'payments',
+    enabledKey: 'PAYMENTS_NOTIFY_ENABLED',
+    chatKey: 'PAYMENTS_NOTIFY_CHAT_ID',
+    threadKey: 'PAYMENTS_NOTIFY_MESSAGE_THREAD_ID',
+    icon: Wallet,
+  },
+  {
+    kind: 'partner',
+    enabledKey: 'PARTNER_NOTIFY_ENABLED',
+    chatKey: 'PARTNER_NOTIFY_CHAT_ID',
+    threadKey: 'PARTNER_NOTIFY_MESSAGE_THREAD_ID',
+    icon: Handshake,
+  },
 ]
 
 const SHARED_KEY = 'ADMIN_ALERTS_CHAT_ID'
@@ -41,14 +70,20 @@ export function AdminAlertRoutes({ group, draft, saving, togglingKey, onDraftCha
   const [help, setHelp] = useState(false)
   const [tests, setTests] = useState<Record<string, TestState>>({})
 
-  const value = (key: string) => (draft[key] ?? group.fields.find((f) => f.key === key)?.value ?? '').trim()
+  // Старые ключи оплат и партнёрки хранят «не задано» как 0: в поле это пусто.
+  const value = (key: string) => {
+    const raw = (draft[key] ?? group.fields.find((f) => f.key === key)?.value ?? '').trim()
+    return raw === '0' ? '' : raw
+  }
   const shared = value(SHARED_KEY)
+  // Ключи, которых нет в ответе (бэкенд старее фронта), не рисуем.
+  const kinds = KINDS.filter((k) => group.fields.some((f) => f.key === k.enabledKey))
 
-  const runTest = async (kind: string, prefix: string) => {
+  const runTest = async ({ kind, chatKey, threadKey }: AlertKind) => {
     try {
       const result = await api.adminAlertTest({
         kind,
-        draft: { shared_chat_id: shared, chat_id: value(`${prefix}_CHAT_ID`), thread_id: value(`${prefix}_THREAD_ID`) },
+        draft: { shared_chat_id: shared, chat_id: value(chatKey), thread_id: value(threadKey) },
       })
       if (result.ok) {
         hapticSuccess()
@@ -107,10 +142,8 @@ export function AdminAlertRoutes({ group, draft, saving, togglingKey, onDraftCha
         )}
       </div>
 
-      {KINDS.map(({ kind, prefix, icon: Icon }) => {
-        const enabledKey = `${prefix}_ENABLED`
-        const chatKey = `${prefix}_CHAT_ID`
-        const threadKey = `${prefix}_THREAD_ID`
+      {kinds.map((item) => {
+        const { kind, enabledKey, chatKey, threadKey, icon: Icon } = item
         const enabled = value(enabledKey) !== 'false'
         const chat = value(chatKey)
         const thread = value(threadKey)
@@ -163,7 +196,7 @@ export function AdminAlertRoutes({ group, draft, saving, togglingKey, onDraftCha
                   className={cn(inputClass, 'mt-1')}
                   inputMode="numeric"
                   placeholder={t('admin.settings.alerts.chatPlaceholder')}
-                  value={draft[chatKey] ?? chat}
+                  value={value(chatKey)}
                   disabled={saving}
                   onChange={(e) => onDraftChange(chatKey, e.target.value)}
                 />
@@ -174,7 +207,7 @@ export function AdminAlertRoutes({ group, draft, saving, togglingKey, onDraftCha
                   className={cn(inputClass, 'mt-1')}
                   inputMode="numeric"
                   placeholder="—"
-                  value={draft[threadKey] ?? thread}
+                  value={value(threadKey)}
                   disabled={saving}
                   onChange={(e) => onDraftChange(threadKey, e.target.value)}
                 />
@@ -183,7 +216,7 @@ export function AdminAlertRoutes({ group, draft, saving, togglingKey, onDraftCha
                 type="button"
                 variant="outline"
                 className="col-span-2 h-10 sm:col-span-1"
-                onClick={() => runTest(kind, prefix)}
+                onClick={() => runTest(item)}
               >
                 <Send />
                 {t('admin.settings.alerts.test')}

@@ -216,7 +216,9 @@ func baseRuntimeSettings() []SettingField {
 
 		// --- payments_notify ---
 		{
-			Key: "PAYMENTS_NOTIFY_ENABLED", Group: "payments_notify", Type: SettingBool, Instant: true,
+			// Включено / чат / тема оплат — на экране «Оповещения админу»
+			// (вид payments), в своей группе остались только события.
+			Key: "PAYMENTS_NOTIFY_ENABLED", Group: "admin_alerts", Type: SettingBool, Instant: true,
 			Apply:   applyBoolField(func(v bool) { conf.paymentsNotifyEnabled = v }),
 			Current: func() string { return boolStr(conf.paymentsNotifyEnabled) },
 		},
@@ -225,7 +227,7 @@ func baseRuntimeSettings() []SettingField {
 			// (-1001234567890), и запрет на минус делал настройку из админки
 			// пригодной только для личных чатов — при том что из .env то же
 			// значение принималось.
-			Key: "PAYMENTS_NOTIFY_CHAT_ID", Group: "payments_notify", Type: SettingText,
+			Key: "PAYMENTS_NOTIFY_CHAT_ID", Group: "admin_alerts", Type: SettingText,
 			Apply: applyInt64Field(func(v int64) error {
 				conf.paymentsNotifyChatID = v
 				return nil
@@ -233,8 +235,8 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return strconv.FormatInt(conf.paymentsNotifyChatID, 10) },
 		},
 		{
-			Key: "PAYMENTS_NOTIFY_MESSAGE_THREAD_ID", Group: "payments_notify", Type: SettingInt,
-			Apply: applyIntField(func(v int) error {
+			Key: "PAYMENTS_NOTIFY_MESSAGE_THREAD_ID", Group: "admin_alerts", Type: SettingInt,
+			Apply: applyThreadIntField(func(v int) error {
 				if v < 0 {
 					return fmt.Errorf("must be >= 0")
 				}
@@ -472,21 +474,25 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return boolStr(conf.partnerCountExtraHwid) },
 		},
 		{
-			Key: "PARTNER_NOTIFY_ENABLED", Group: "partner", Type: SettingBool, Instant: true,
+			// Включено / чат / тема партнёрки — на экране «Оповещения админу» (вид partner).
+			Key: "PARTNER_NOTIFY_ENABLED", Group: "admin_alerts", Type: SettingBool, Instant: true,
 			Apply:   applyBoolField(func(v bool) { conf.partnerNotifyEnabled = v }),
 			Current: func() string { return boolStr(conf.partnerNotifyEnabled) },
 		},
 		{
 			// Отрицательные значения допустимы и обязательны: у супергруппы
-			// chat id вида -1001234567890. Ноль — «в личку админу».
-			Key: "PARTNER_NOTIFY_CHAT_ID", Group: "partner", Type: SettingText,
+			// chat id вида -1001234567890. Ноль — общий чат оповещений, без него личка админу.
+			Key: "PARTNER_NOTIFY_CHAT_ID", Group: "admin_alerts", Type: SettingText,
 			Apply:   applyInt64Field(func(v int64) error { conf.partnerNotifyChatID = v; return nil }),
 			Current: func() string { return strconv.FormatInt(conf.partnerNotifyChatID, 10) },
 		},
 		{
-			Key: "PARTNER_NOTIFY_MESSAGE_THREAD_ID", Group: "partner", Type: SettingInt,
+			Key: "PARTNER_NOTIFY_MESSAGE_THREAD_ID", Group: "admin_alerts", Type: SettingInt,
 			MinInt: intPtr(0),
-			Apply: applyIntField(func(v int) error {
+			Apply: applyThreadIntField(func(v int) error {
+				if v < 0 {
+					return fmt.Errorf("must be >= 0")
+				}
 				conf.partnerNotifyThreadID = v
 				return nil
 			}),
@@ -818,6 +824,18 @@ func applyIntField(set func(int) error) func(string) error {
 			return fmt.Errorf("invalid integer")
 		}
 		return set(v)
+	}
+}
+
+// applyThreadIntField — номер темы форума: пустое поле на экране оповещений
+// значит «без темы», то есть 0.
+func applyThreadIntField(set func(int) error) func(string) error {
+	inner := applyIntField(set)
+	return func(value string) error {
+		if strings.TrimSpace(value) == "" {
+			value = "0"
+		}
+		return inner(value)
 	}
 }
 

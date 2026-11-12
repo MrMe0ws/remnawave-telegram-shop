@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"remnawave-tg-shop-bot/internal/adminalert"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
 	"remnawave-tg-shop-bot/utils"
 
-	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"github.com/google/uuid"
 )
@@ -383,27 +383,13 @@ func (s *PaymentService) NotifyHeleketNeedsAttention(ctx context.Context, purcha
 }
 
 func (s *PaymentService) sendPaymentsGroupHTML(ctx context.Context, text string, replyMarkup models.ReplyMarkup) {
-	if s.telegramBot == nil || !config.PaymentsNotifyEnabled() {
+	if s.telegramBot == nil {
 		return
 	}
-	chatID := config.PaymentsNotifyChatID()
-	if chatID == 0 {
-		slog.Warn("payments notify: PAYMENTS_NOTIFY_CHAT_ID пуст — пропуск отправки")
-		return
-	}
-	params := &bot.SendMessageParams{
-		ChatID:    chatID,
-		Text:      text,
-		ParseMode: models.ParseModeHTML,
-	}
-	if replyMarkup != nil {
-		params.ReplyMarkup = replyMarkup
-	}
-	if tid := config.PaymentsNotifyMessageThreadID(); tid > 0 {
-		params.MessageThreadID = tid
-	}
-	if _, err := s.telegramBot.SendMessage(ctx, params); err != nil {
-		slog.Warn("payments notify: не удалось отправить в группу", "error", err)
+	// Куда — вид payments в «Оповещениях админу»: PAYMENTS_NOTIFY_CHAT_ID, иначе
+	// общий чат, иначе личка. Выключен PAYMENTS_NOTIFY_ENABLED — Send молчит.
+	if err := adminalert.Send(ctx, config.AdminAlertPayments, text, replyMarkup); err != nil {
+		slog.Warn("payments notify: не удалось отправить", "error", err)
 	}
 }
 

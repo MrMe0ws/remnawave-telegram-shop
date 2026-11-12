@@ -301,6 +301,16 @@ func kindLabel(kind string) string {
 			return "Server billing"
 		}
 		return "Оплата серверов"
+	case config.AdminAlertPayments:
+		if en {
+			return "Client payments"
+		}
+		return "Оплаты клиентов"
+	case config.AdminAlertPartner:
+		if en {
+			return "Partner program"
+		}
+		return "Партнёрка"
 	}
 	return kind
 }

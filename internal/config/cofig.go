@@ -1501,7 +1501,7 @@ func InitConfig() {
 	conf.paymentsNotifySendCancel = false
 	if conf.paymentsNotifyEnabled {
 		if conf.paymentsNotifyChatID == 0 {
-			slog.Warn("PAYMENTS_NOTIFY_ENABLED=true but PAYMENTS_NOTIFY_CHAT_ID is empty — уведомления о платежах отправляться не будут")
+			slog.Info("PAYMENTS_NOTIFY_CHAT_ID пуст — уведомления о платежах уйдут в общий чат оповещений (ADMIN_ALERTS_CHAT_ID) или в личку админу")
 		}
 		eventsRaw := strings.TrimSpace(os.Getenv("PAYMENTS_NOTIFY_EVENTS"))
 		if eventsRaw == "" {

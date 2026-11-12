@@ -11,14 +11,21 @@ import (
 // своя тема; при желании виду можно задать отдельный чат. Пустой общий чат —
 // личка ADMIN_TELEGRAM_ID, как было до этих настроек.
 //
-// Оплаты и партнёрка пока живут на своих ключах (PAYMENTS_NOTIFY_*,
-// PARTNER_NOTIFY_*), их перенос — следующий шаг.
+// Оплаты и партнёрка — тоже виды оповещений, но на своих старых ключах
+// (PAYMENTS_NOTIFY_*, PARTNER_NOTIFY_*): их уже заполнили в .env и в БД,
+// переименование сломало бы рабочие установки. В админке они на том же экране.
 
 // Виды оповещений. Значения уходят в API админки и в ключи настроек.
 const (
 	AdminAlertSystem  = "system"
 	AdminAlertServers = "servers"
 	AdminAlertInfra   = "infra"
+	// AdminAlertPayments — оплаты клиентов (PAYMENTS_NOTIFY_*). Какие события
+	// слать, решает PAYMENTS_NOTIFY_EVENTS у самих оплат.
+	AdminAlertPayments = "payments"
+	// AdminAlertPartner — партнёрка (PARTNER_NOTIFY_*). Партнёру в личку пишет
+	// сам PartnerNotifier, сюда идёт только админская половина.
+	AdminAlertPartner = "partner"
 )
 
 // AdminAlertsChatKey — общий чат для всех видов.
@@ -38,16 +45,22 @@ var adminAlertSettings = []adminAlertSetting{
 
 // AdminAlertKinds — все виды в порядке экрана.
 func AdminAlertKinds() []string {
-	out := make([]string, 0, len(adminAlertSettings))
+	out := make([]string, 0, len(adminAlertSettings)+2)
 	for _, s := range adminAlertSettings {
 		out = append(out, s.kind)
 	}
-	return out
+	return append(out, AdminAlertPayments, AdminAlertPartner)
 }
 
 // AdminAlertSettings — как настроен вид: включён ли, свой чат (0 — общий) и тема.
 // ok=false — вида нет.
 func AdminAlertSettings(kind string) (enabled bool, chatID int64, threadID int, ok bool) {
+	switch kind {
+	case AdminAlertPayments:
+		return PaymentsNotifyEnabled(), PaymentsNotifyChatID(), PaymentsNotifyMessageThreadID(), true
+	case AdminAlertPartner:
+		return PartnerNotifyEnabled(), PartnerNotifyChatID(), PartnerNotifyMessageThreadID(), true
+	}
 	for _, s := range adminAlertSettings {
 		if s.kind != kind {
 			continue

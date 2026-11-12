@@ -331,20 +331,6 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       keys: ['CABINET_PUSH_PAYMENT', 'CABINET_PUSH_DEVICES', 'CABINET_PUSH_REFERRAL', 'CABINET_PUSH_LOYALTY', 'CABINET_PUSH_PARTNER'],
     },
   ],
-  payments_notify: [
-    {
-      id: 'toggle',
-      titleKey: 'admin.settings.subsections.payments_notify.toggle',
-      icon: Bell,
-      keys: ['PAYMENTS_NOTIFY_ENABLED'],
-    },
-    {
-      id: 'delivery',
-      titleKey: 'admin.settings.subsections.payments_notify.delivery',
-      icon: Send,
-      keys: ['PAYMENTS_NOTIFY_CHAT_ID', 'PAYMENTS_NOTIFY_MESSAGE_THREAD_ID', 'PAYMENTS_NOTIFY_EVENTS'],
-    },
-  ],
   payments: [
     {
       id: 'providers',
