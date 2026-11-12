@@ -51,6 +51,7 @@ export const ADMIN_SETTINGS_GROUP_ORDER = [
   'stars',
   'loyalty',
   'payments',
+  'admin_alerts',
   'payments_notify',
   'moynalog',
   'links',
@@ -74,6 +75,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   loyalty: Gem,
   payments: Wallet,
   payments_notify: Bell,
+  admin_alerts: Send,
   moynalog: Receipt,
   access: Shield,
   links: Link2,
@@ -102,6 +104,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   loyalty: { box: 'bg-teal-500/10 dark:bg-teal-500/20', icon: 'text-teal-500' },
   payments: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
   payments_notify: { box: 'bg-rose-500/10 dark:bg-rose-500/20', icon: 'text-rose-500' },
+  admin_alerts: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
   moynalog: { box: 'bg-green-500/10 dark:bg-green-500/20', icon: 'text-green-600 dark:text-green-400' },
   access: { box: 'bg-blue-500/10 dark:bg-blue-500/20', icon: 'text-blue-500' },
   links: { box: 'bg-indigo-500/10 dark:bg-indigo-500/20', icon: 'text-indigo-500' },
@@ -180,12 +183,13 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     iconStyle: { box: 'bg-emerald-500/10 dark:bg-emerald-500/20', icon: 'text-emerald-500' },
   },
   {
-    // Что прилетает вам в чат (платежи) и клиентам в браузер (push). В ленту
-    // под колокольчиком попадает всё, push дублирует выбранные виды.
+    // Что прилетает вам в Telegram (оповещения админу, платежи) и клиентам
+    // в браузер (push). В ленту под колокольчиком попадает всё, push дублирует
+    // выбранные виды.
     id: 'notifications',
     titleKey: 'admin.settings.categories.notifications',
     icon: BellRing,
-    groups: ['payments_notify', 'notifications'],
+    groups: ['admin_alerts', 'payments_notify', 'notifications'],
     iconStyle: { box: 'bg-red-500/10 dark:bg-red-500/20', icon: 'text-red-500' },
   },
   {

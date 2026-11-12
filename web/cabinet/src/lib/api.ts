@@ -289,6 +289,20 @@ export interface AdminStatusTargetDTO {
   tcp_port?: number
 }
 
+/** Ответ кнопки «Тест» в «Оповещениях админу» (internal/adminalert.TestResult). */
+export interface AdminAlertTestResult {
+  ok: boolean
+  /** Ушло в личку админу: общий чат и чат вида не заданы. */
+  direct: boolean
+  chat_id?: number
+  thread_id?: number
+  chat_title?: string
+  /** Текст ошибки Telegram. */
+  error?: string
+  /** not_member | no_thread | topic_closed */
+  hint?: string
+}
+
 export interface AdminStatusNodeDTO {
   uuid: string
   name: string
@@ -2017,6 +2031,10 @@ export const api = {
     request<{ targets: AdminStatusTargetDTO[] }>('PUT', '/admin/status/targets', { targets }),
 
   adminStatusProbe: () => request<{ ok: boolean }>('POST', '/admin/status/probe'),
+
+  /** Пробное оповещение админу. draft — чат и тема из формы, ещё не сохранённые. */
+  adminAlertTest: (body: { kind: string; draft?: { shared_chat_id: string; chat_id: string; thread_id: string } }) =>
+    request<AdminAlertTestResult>('POST', '/admin/alerts/test', body),
 
   adminStatusNodes: () => request<{ nodes: AdminStatusNodeDTO[] }>('GET', '/admin/status/nodes'),
 

@@ -2814,6 +2814,7 @@
           "stars": "Telegram Stars",
           "payments": "Payment methods",
           "payments_notify": "Payment notifications",
+          "admin_alerts": "Admin alerts",
           "moynalog": "Moy Nalog",
           "trial": "Trial & traffic",
           "tags": "Remnawave tags",
@@ -2832,7 +2833,51 @@
           "traffic": "Traffic: bypass and top-up"
         },
         "groupIntros": {
+          "admin_alerts": "Where the bot tells you about problems: cabinet mail is not sending, a server is down, a server bill is due. Easiest: one group with topics set above, and a topic per kind. Client payments and partners are still configured in their own sections.",
           "notifications": "This doesn't turn cabinet notifications on or off: they always appear under the bell for everyone. These toggles decide what is also sent as a system notification to the browser or phone of those who tapped \"Turn on\" in the notification feed. People who didn't subscribe get nothing."
+        },
+        "alerts": {
+          "sharedChat": "Alerts chat",
+          "sharedPlaceholder": "Empty — admin DM",
+          "sharedHint": "Id of a group the bot is in. Supergroup ids start with -100.",
+          "howTo": "How to find the group and topic id",
+          "howTo1": "Add the bot to the group and allow it to post. For topics, turn on “Topics” in the group settings.",
+          "howTo2": "Open the group in Telegram Web: the number after # in the address is the id. Supergroup ids start with -100.",
+          "howTo3": "The topic number is the middle number in a link to a message from it: t.me/c/1234567890/12/345 → topic 12.",
+          "kinds": {
+            "system": {
+              "title": "System",
+              "desc": "Cabinet mail stopped sending and is back"
+            },
+            "servers": {
+              "title": "Server status",
+              "desc": "A server is unreachable from Russia or the world, and back up"
+            },
+            "infra": {
+              "title": "Server billing",
+              "desc": "Payment reminders for nodes from the panel infrastructure"
+            }
+          },
+          "chat": "Own chat",
+          "chatPlaceholder": "Shared",
+          "thread": "Topic",
+          "test": "Test",
+          "where": "Goes to",
+          "toOwnChat": "chat {{chat}}",
+          "toShared": "shared chat",
+          "toDirect": "admin DM",
+          "topic": "topic {{id}}",
+          "off": "off",
+          "threadIgnored": "topic is ignored in DM",
+          "sent": "Sent: {{where}}",
+          "tooFast": "Wait a couple of seconds and press again",
+          "badId": "Chat and topic ids are digits only; a chat id may start with a minus",
+          "testFailed": "Could not send the test",
+          "hints": {
+            "not_member": "The bot is not in the group or cannot post there",
+            "no_thread": "No such topic — check the number",
+            "topic_closed": "The topic is closed — reopen it or pick another"
+          }
         },
         "yookassaMethods": {
           "all": "YooKassa form with all methods",

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/go-telegram/bot"
-	"github.com/go-telegram/bot/models"
 
+	"remnawave-tg-shop-bot/internal/adminalert"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/translation"
 	"remnawave-tg-shop-bot/utils"
@@ -32,10 +32,11 @@ const (
 )
 
 // MailHealthAlert возвращает обработчик для mail.Sender.OnHealthChange: пишет
-// админу в личку, когда почта кабинета перестала отправляться и когда
-// заработала снова. nil, если слать нечем или некому.
+// админу, когда почта кабинета перестала отправляться и когда заработала снова.
+// Куда — вид «Система» в «Оповещениях админу» (по умолчанию личка).
+// nil, если слать нечем.
 func MailHealthAlert(b *bot.Bot, tm *translation.Manager, smtpHost string, smtpPort int) func(down bool, reason string) {
-	if b == nil || tm == nil || config.GetAdminTelegramId() == 0 {
+	if b == nil || tm == nil {
 		return nil
 	}
 	addr := smtpHost + ":" + strconv.Itoa(smtpPort)
@@ -51,12 +52,7 @@ func MailHealthAlert(b *bot.Bot, tm *translation.Manager, smtpHost string, smtpP
 		utils.Go("mail health alert", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
-			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID:    config.GetAdminTelegramId(),
-				Text:      text,
-				ParseMode: models.ParseModeHTML,
-			})
-			if err != nil {
+			if err := adminalert.Send(ctx, config.AdminAlertSystem, text, nil); err != nil {
 				slog.Error("mail health alert: send failed", "error", err)
 			}
 		})

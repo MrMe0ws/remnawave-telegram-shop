@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"remnawave-tg-shop-bot/internal/adminalert"
 	"remnawave-tg-shop-bot/internal/broadcast"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
 	cabinethttp "remnawave-tg-shop-bot/internal/cabinet/http"
@@ -245,6 +246,7 @@ func main() {
 
 	// Инициализация сервиса уведомлений о подписках
 	subService := notification.NewSubscriptionService(customerRepository, purchaseRepository, paymentService, b, tm)
+	adminalert.Init(b)
 	infraBillingNotifyService := notification.NewInfraBillingNotifyService(remnawaveClient, infraBillingRepository, b, tm)
 
 	// Настройка cron-задачи для проверки истечения подписок (каждый день в 16:00)

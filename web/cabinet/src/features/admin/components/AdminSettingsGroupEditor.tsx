@@ -25,6 +25,7 @@ import {
 } from '../utils/adminSettingsGroups'
 import { groupSettingsFieldsForLayout, isTextareaSettingType } from '../utils/adminSettingsFieldLayout'
 import { decorThemeOptionLabelStyle } from '@/features/decor/decorThemeAdmin'
+import { AdminAlertRoutes } from './AdminAlertRoutes'
 import type { AdminSettingFieldDTO, AdminSettingGroupDTO } from '@/lib/types/admin'
 
 export function parseBool(v: string): boolean {
@@ -375,7 +376,16 @@ export function AdminSettingsGroupEditor({
                 <p>{groupIntro}</p>
               </div>
             )}
-            {subsectionBlocks.length === 1 && !subsectionBlocks[0].def ? (
+            {group.id === 'admin_alerts' ? (
+              <AdminAlertRoutes
+                group={group}
+                draft={draft}
+                saving={saving}
+                togglingKey={togglingKey}
+                onDraftChange={onDraftChange}
+                onToggle={onToggle}
+              />
+            ) : subsectionBlocks.length === 1 && !subsectionBlocks[0].def ? (
               <div className="rounded-lg border border-border/60 bg-card/80 px-3 shadow-sm">
                 {renderFieldsLayout(subsectionBlocks[0].fields)}
               </div>
