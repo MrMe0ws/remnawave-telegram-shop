@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CircleX, Network, Pause, Play, Radar, Search, UserPlus, Wallet, X } from 'lucide-react'
+import { Network, Pause, Play, Radar, Search, UserPlus, Wallet, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { api } from '@/lib/api'
@@ -14,7 +14,7 @@ import { AdminLayout } from '../layout/AdminLayout'
 import { EventList } from '../monitoring/EventList'
 import { IncidentsCard } from '../monitoring/IncidentsCard'
 import { EventFilterMenu, PeriodMenu, loadFeedFilter, loadPeriod, type FeedFilter } from '../monitoring/MonitoringMenus'
-import { formatMoney, providerLabel } from '../monitoring/eventView'
+import { formatMoney } from '../monitoring/eventView'
 import { useAdminAttention, useAdminMonitoringSummary } from '../monitoring/useMonitoring'
 import { useEventFeed } from '../monitoring/useEventFeed'
 
@@ -25,6 +25,7 @@ function StatTile({
   sub,
   valueTone,
   subTone,
+  className,
 }: {
   icon: LucideIcon
   label: string
@@ -32,9 +33,10 @@ function StatTile({
   sub?: ReactNode
   valueTone?: string
   subTone?: string
+  className?: string
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-border/50 bg-muted/40 px-3.5 py-3 sm:px-4">
+    <div className={cn('min-w-0 rounded-2xl border border-border/50 bg-muted/40 px-3.5 py-3 sm:px-4', className)}>
       <p className="flex items-center gap-1.5 truncate text-[12.5px] text-muted-foreground">
         <Icon className="size-3.5 shrink-0" aria-hidden />
         {label}
@@ -64,15 +66,8 @@ function SummaryTiles({ data, downNow }: { data?: AdminMonitoringSummaryDTO; dow
     nodesSub = t('admin.monitoring.stats.downs', { count: data.node_downs })
   }
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-      <StatTile icon={Wallet} label={t('admin.monitoring.stats.payments')} value={data ? data.payments : '—'} sub={revenue || '—'} />
-      <StatTile
-        icon={CircleX}
-        label={t('admin.monitoring.stats.unpaid')}
-        value={data ? data.failed : '—'}
-        valueTone={data && data.failed > 0 ? 'text-rose-500' : undefined}
-        sub={data?.failed_provider ? providerLabel(data.failed_provider) : '—'}
-      />
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
+      <StatTile className="col-span-2 sm:col-span-1" icon={Wallet} label={t('admin.monitoring.stats.payments')} value={data ? data.payments : '—'} sub={revenue || '—'} />
       <StatTile
         icon={UserPlus}
         label={t('admin.monitoring.stats.registrations')}

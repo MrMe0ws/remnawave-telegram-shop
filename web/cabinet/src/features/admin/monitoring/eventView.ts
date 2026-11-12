@@ -223,7 +223,9 @@ export function buildEventView(e: AdminEventDTO, t: TFunction, locale: string): 
     }
     case 'payment.failed':
       return {
-        ...base, icon: CircleX, tone: TONE.bad,
+        // Брошенный счёт — не авария, красным только разбор Heleket.
+        ...base, icon: CircleX,
+        tone: str(p, 'reason') === 'heleket_needs_attention' ? TONE.bad : TONE.admin,
         title: str(p, 'reason') === 'heleket_needs_attention' ? T('heleketReview') : T('unpaid'),
         sub: [str(p, 'provider') ? providerLabel(str(p, 'provider')) : '', str(p, 'reason') ? T(`reason.${str(p, 'reason')}`, { defaultValue: str(p, 'reason') }) : '']
           .filter(Boolean).join(' · '),
