@@ -98,12 +98,14 @@ export function EventFilterMenu({
   onChange,
   botActionsAvailable,
   compact,
+  align,
 }: {
   value: FeedFilter
   onChange: (next: FeedFilter) => void
   botActionsAvailable: boolean
   /** На телефоне — только значок и счётчик. */
   compact?: boolean
+  align?: 'left' | 'right'
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -161,7 +163,7 @@ export function EventFilterMenu({
         )}
       </button>
       {open && (
-        <Popover align={compact ? 'right' : 'left'}>
+        <Popover align={align ?? (compact ? 'right' : 'left')}>
           {EVENT_CATEGORIES.map((c) => {
             const checked = value.categories.includes(c)
             return (

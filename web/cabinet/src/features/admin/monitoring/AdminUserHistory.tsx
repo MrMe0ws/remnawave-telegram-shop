@@ -57,12 +57,13 @@ function HistoryModal({ customerId, onClose }: { customerId: number; onClose: ()
       title={t('admin.monitoring.history.title')}
       icon={History}
       size="lg"
-      panelClassName="sm:max-h-[min(86dvh,860px)]"
+      // Минимальная высота: раскрытый список фильтра не должен обрезаться
+      // краем окна, даже когда событий у клиента нет.
+      panelClassName="min-h-[min(30rem,92dvh)] sm:max-h-[min(86dvh,860px)]"
       bodyClassName="px-4 pb-4 pt-3 sm:px-5"
+      hideClose
+      headerAction={<EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={false} align="right" />}
     >
-      <div className="mb-1 flex justify-end">
-        <EventFilterMenu value={filter} onChange={setFilter} botActionsAvailable={false} />
-      </div>
       {feed.loading && feed.items.length === 0 ? (
         <div className="space-y-2 pt-2">
           {Array.from({ length: 6 }).map((_, i) => (
