@@ -152,7 +152,7 @@ func buildAdminSettingsResponse() adminSettingsGetResp {
 	order := []string{
 		"cabinet", "status", "cabinet_connect", "tariffs",
 		"trial", "hwid", "traffic", "referral", "partner", "stars", "loyalty",
-		"payments", "admin_alerts", "payments_notify", "moynalog", "access", "links", "tags",
+		"payments", "admin_alerts", "moynalog", "access", "links", "tags",
 		"lifecycle", "notifications", "fortune",
 	}
 	groupFields := make(map[string][]adminSettingFieldDTO)

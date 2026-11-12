@@ -632,26 +632,21 @@
           {
             "key": "PAYMENTS_NOTIFY_CHAT_ID",
             "type": "text",
-            "value": "",
+            "value": "-1003729719472",
             "source": "default",
             "instant": false
           },
           {
             "key": "PAYMENTS_NOTIFY_MESSAGE_THREAD_ID",
             "type": "int",
-            "value": "3",
+            "value": "1106",
             "source": "default",
             "instant": false
-          }
-        ]
-      },
-      {
-        "id": "payments_notify",
-        "fields": [
+          },
           {
             "key": "PAYMENTS_NOTIFY_EVENTS",
             "type": "csv",
-            "value": "paid, cancel",
+            "value": "paid,cancel",
             "source": "default",
             "instant": false
           }

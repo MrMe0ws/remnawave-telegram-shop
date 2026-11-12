@@ -246,7 +246,8 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return strconv.Itoa(conf.paymentsNotifyMessageThreadID) },
 		},
 		{
-			Key: "PAYMENTS_NOTIFY_EVENTS", Group: "payments_notify", Type: SettingCSV,
+			// Какие события оплат слать — галочки в карточке «Оплаты клиентов».
+			Key: "PAYMENTS_NOTIFY_EVENTS", Group: "admin_alerts", Type: SettingCSV,
 			Apply: func(value string) error {
 				applyPaymentsNotifyEvents(value)
 				return nil
@@ -921,10 +922,15 @@ func applyRemnaTagOptional(set func(string)) func(string) error {
 	}
 }
 
+// applyPaymentsNotifyEvents: пусто — оба события (как было всегда), none — ни одного,
+// иначе список paid, cancel через запятую.
 func applyPaymentsNotifyEvents(value string) {
 	conf.paymentsNotifySendPaid = false
 	conf.paymentsNotifySendCancel = false
 	s := strings.TrimSpace(value)
+	if strings.EqualFold(s, "none") {
+		return
+	}
 	if s == "" {
 		conf.paymentsNotifySendPaid = true
 		conf.paymentsNotifySendCancel = true
@@ -947,6 +953,10 @@ func paymentsNotifyEventsCurrent() string {
 	}
 	if conf.paymentsNotifySendCancel {
 		parts = append(parts, "cancel")
+	}
+	// Пустая строка означала бы «оба»: сохранённое «ничего» должно им и остаться.
+	if len(parts) == 0 {
+		return "none"
 	}
 	return strings.Join(parts, ",")
 }

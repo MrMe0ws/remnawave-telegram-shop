@@ -1497,29 +1497,19 @@ func InitConfig() {
 		conf.paymentsNotifyChatID = cid
 	}
 	conf.paymentsNotifyMessageThreadID = envIntDefault("PAYMENTS_NOTIFY_MESSAGE_THREAD_ID", 0)
-	conf.paymentsNotifySendPaid = false
-	conf.paymentsNotifySendCancel = false
-	if conf.paymentsNotifyEnabled {
-		if conf.paymentsNotifyChatID == 0 {
-			slog.Info("PAYMENTS_NOTIFY_CHAT_ID пуст — уведомления о платежах уйдут в общий чат оповещений (ADMIN_ALERTS_CHAT_ID) или в личку админу")
+	// События читаются всегда, а не только при PAYMENTS_NOTIFY_ENABLED=true:
+	// оповещения об оплатах включают и из админки, и тогда пустые флаги
+	// молча глушили бы все уведомления.
+	for _, p := range strings.Split(os.Getenv("PAYMENTS_NOTIFY_EVENTS"), ",") {
+		switch tok := strings.ToLower(strings.TrimSpace(p)); tok {
+		case "", "paid", "cancel", "none":
+		default:
+			slog.Warn("PAYMENTS_NOTIFY_EVENTS: неизвестное значение, пропуск", "token", tok)
 		}
-		eventsRaw := strings.TrimSpace(os.Getenv("PAYMENTS_NOTIFY_EVENTS"))
-		if eventsRaw == "" {
-			conf.paymentsNotifySendPaid = true
-			conf.paymentsNotifySendCancel = true
-		} else {
-			for _, p := range strings.Split(eventsRaw, ",") {
-				switch strings.ToLower(strings.TrimSpace(p)) {
-				case "paid":
-					conf.paymentsNotifySendPaid = true
-				case "cancel":
-					conf.paymentsNotifySendCancel = true
-				case "":
-				default:
-					slog.Warn("PAYMENTS_NOTIFY_EVENTS: неизвестное значение, пропуск", "token", p)
-				}
-			}
-		}
+	}
+	applyPaymentsNotifyEvents(os.Getenv("PAYMENTS_NOTIFY_EVENTS"))
+	if conf.paymentsNotifyEnabled && conf.paymentsNotifyChatID == 0 {
+		slog.Info("PAYMENTS_NOTIFY_CHAT_ID пуст — уведомления о платежах уйдут в общий чат оповещений (ADMIN_ALERTS_CHAT_ID) или в личку админу")
 	}
 
 	// Lifecycle notifications

@@ -2833,11 +2833,17 @@
           "traffic": "Traffic: bypass and top-up"
         },
         "groupIntros": {
-          "payments_notify": "On/off, chat and topic are in “Admin alerts” above. Here — which events to send.",
           "admin_alerts": "Where the bot tells you about problems and events: cabinet mail is not sending, a server is down, a server bill is due, a payment came in, a partner asks for a payout. Easiest: one group with topics set above, and a topic per kind.",
           "notifications": "This doesn't turn cabinet notifications on or off: they always appear under the bell for everyone. These toggles decide what is also sent as a system notification to the browser or phone of those who tapped \"Turn on\" in the notification feed. People who didn't subscribe get nothing."
         },
         "alerts": {
+          "events": "What to send",
+          "event": {
+            "paid": "Payment received",
+            "cancel": "Invoice cancelled"
+          },
+          "eventCancelHint": "“Invoice cancelled” — the client did not pay in time or cancelled the payment",
+          "eventsNone": "Nothing selected — the bot will not report payments",
           "sharedChat": "Alerts chat",
           "sharedPlaceholder": "Empty — admin DM",
           "sharedHint": "Id of a group the bot is in. Supergroup ids start with -100.",
@@ -2860,7 +2866,7 @@
             },
             "payments": {
               "title": "Client payments",
-              "desc": "Paid and cancelled invoices. Which events — in “Payment notifications”"
+              "desc": "Payments and cancelled invoices"
             },
             "partner": {
               "title": "Partner program",
