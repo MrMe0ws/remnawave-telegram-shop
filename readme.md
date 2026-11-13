@@ -9,11 +9,16 @@
 <p align="center">
   <img src="documentation/img/readme/home-pc.png" alt="Главная кабинета: подписка, трафик, устройства" width="100%">
 </p>
-<p align="center">
-  <img src="documentation/img/readme/tariffs-pc.png" alt="Выбор тарифа" width="49%">
-  <img src="documentation/img/readme/home-phone.png" alt="Кабинет на телефоне" width="24%">
-  <img src="documentation/img/readme/admin-pc.png" alt="Админка: статистика" width="49%">
-</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="documentation/img/readme/tariffs-pc.png" alt="Выбор тарифа"></td>
+    <td width="50%"><img src="documentation/img/readme/admin-pc.png" alt="Админка: статистика"></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="documentation/img/readme/home-phone.png" alt="Кабинет на телефоне и в Telegram Mini App" width="30%"></td>
+  </tr>
+</table>
 
 ---
 
