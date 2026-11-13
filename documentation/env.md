@@ -378,7 +378,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_DEEPLINK_HAPP_CRYPT_VERSION` | Формат ссылки Happ: `crypt5` (по умолчанию) или `crypt4` — для старых сборок Happ 4.x, которые crypt5 не понимают |
 | `CABINET_DEEPLINK_INCY_ENCRYPT` | Обфусцировать INCY deep link (`incy://crypt1/`) |
 | `CABINET_MINI_APP_URL` / `CABINET_MINI_APP_PATH` | Mini App для web↔telegram |
-| `CABINET_TELEGRAM_UI_MODE` | `classic` или `minimalism` |
+| `CABINET_TELEGRAM_UI_MODE` | `minimalism` (кнопки бота ведут в кабинет, рекомендуется) или `classic`; установщик ставит `minimalism` |
 | `CABINET_TELEGRAM_SHOW_CHANNEL_BUTTON` | В minimalism — кнопка «Канал» |
 | `CABINET_TELEGRAM_SHOW_FEEDBACK_BUTTON` | В minimalism — кнопка «Отзывы» |
 | `CABINET_SMTP_*` / `CABINET_MAIL_FROM` | SMTP для verify/reset email |
