@@ -7,6 +7,14 @@
 **Совместимость:** Remnawave `3.3.*`–`3.4.*` ↔ бот `5.x`. Панель `2.8.*` — бот `4.x` (заморожен). Полная матрица — [documentation/compatibility.md](documentation/compatibility.md).
 
 <p align="center">
+  <a href="https://www.youtube.com/watch?v=gYlpIEpLLFY">
+    <img src="documentation/img/readme/video-preview.png" alt="Видеообзор проекта за 4 минуты — смотреть на YouTube" width="100%">
+  </a>
+  <br>
+  <sub>▶ Видеообзор за 4 минуты — нажмите, чтобы смотреть на YouTube</sub>
+</p>
+
+<p align="center">
   <img src="documentation/img/readme/home-pc.png" alt="Главная кабинета: подписка, трафик, устройства" width="100%">
 </p>
 
