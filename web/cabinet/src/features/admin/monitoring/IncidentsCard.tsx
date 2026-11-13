@@ -48,17 +48,17 @@ export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO
   return (
     <section
       className={cn(
-        'flex w-full flex-col rounded-[--radius] border px-4 pb-1.5 pt-3.5 sm:w-fit sm:min-w-[22rem] sm:max-w-full sm:px-5 sm:pt-4',
+        'flex w-full flex-col rounded-[--radius] border px-4 pb-1.5 pt-3.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-2.5',
         crit
           ? 'border-rose-500/45 bg-gradient-to-br from-rose-500/[0.13] via-rose-500/[0.05] to-transparent'
           : 'border-amber-500/45 bg-gradient-to-br from-amber-500/[0.13] via-amber-500/[0.05] to-transparent',
       )}
     >
-      <h2 className="mb-1 flex items-center gap-2 text-[15px] font-semibold">
+      <h2 className="mb-1 flex shrink-0 items-center gap-2 text-[15px] font-semibold sm:mb-0 sm:whitespace-nowrap">
         <TriangleAlert className={cn('size-4', crit ? 'text-rose-500' : 'text-amber-500')} aria-hidden />
         {t('admin.monitoring.attention')}
       </h2>
-      <ul className="flex flex-col">
+      <ul className="flex flex-col sm:flex-row sm:flex-wrap sm:gap-2.5">
         {shown.map((item, i) => {
           const Icon = ICONS[item.key] ?? TriangleAlert
           const to = LINKS[item.key]
@@ -67,7 +67,7 @@ export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO
             <>
               <span
                 className={cn(
-                  'flex shrink-0 items-center justify-center rounded-[10px]',
+                  'flex shrink-0 items-center justify-center rounded-[10px] sm:size-[30px]',
                   compact ? 'size-8' : 'size-9',
                   item.severity === 'crit' ? 'bg-rose-500/[0.12]' : 'bg-amber-500/[0.12]',
                   tone,
@@ -75,7 +75,7 @@ export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO
               >
                 <Icon className="size-4" data-pending-icon aria-hidden />
               </span>
-              <span className="min-w-0 flex-1 truncate text-sm">{incidentLabel(item, t)}</span>
+              <span className="min-w-0 flex-1 truncate text-sm sm:flex-none sm:whitespace-nowrap">{incidentLabel(item, t)}</span>
               {item.since && (
                 <span className={cn('shrink-0 text-[13px] font-medium tabular-nums', tone)}>{sinceText(item.since, t)}</span>
               )}
@@ -83,13 +83,17 @@ export function IncidentsCard({ items, compact }: { items: AdminAttentionItemDTO
             </>
           )
           return (
-            <li key={`${item.key}-${i}`} className={cn('flex', i > 0 && 'border-t border-border/50')}>
+            <li key={`${item.key}-${i}`} className={cn(
+                'flex sm:rounded-[14px] sm:border sm:border-border/60 sm:bg-background/50',
+                i > 0 && 'border-t border-border/50 sm:border-t-border/60',
+              )}
+            >
               {to ? (
-                <Link to={to} className="flex min-h-12 flex-1 items-center gap-3 rounded-lg py-2 hover:opacity-90">
+                <Link to={to} className="flex min-h-12 flex-1 items-center gap-3 rounded-lg py-2 hover:opacity-90 sm:min-h-0 sm:gap-2.5 sm:py-1.5 sm:pl-2 sm:pr-3.5">
                   {row}
                 </Link>
               ) : (
-                <div className="flex min-h-12 flex-1 items-center gap-3 py-2">{row}</div>
+                <div className="flex min-h-12 flex-1 items-center gap-3 py-2 sm:min-h-0 sm:gap-2.5 sm:py-1.5 sm:pl-2 sm:pr-3.5">{row}</div>
               )}
             </li>
           )
