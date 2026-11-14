@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,8 +71,10 @@ func paymentMonths(desc string) (months int, days int, ok bool) {
 	if m == nil {
 		return 0, 0, false
 	}
-	fmt.Sscanf(m[1], "%d", &days)
-	if days <= 0 {
+	// Регулярка пропускает только цифры, но число может не влезть в int — такую запись
+	// не угадываем, а пропускаем, как и запись без срока.
+	days, err := strconv.Atoi(m[1])
+	if err != nil || days <= 0 {
 		return 0, 0, false
 	}
 	months = int(math.Round(float64(days) / 30))

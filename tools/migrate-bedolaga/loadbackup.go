@@ -25,7 +25,7 @@ var backupTables = []string{"users", "subscriptions", "tariffs", "transactions",
 // database.json, формат orm-1.0) в Postgres по dsn. Типы колонок в файле не хранятся —
 // выводим из значений. Таблицы создаются заново (DROP IF EXISTS), так что dsn должен
 // указывать на временную базу, а не на рабочую.
-func loadBackup(ctx context.Context, file, dsn string) error {
+func loadBackup(ctx context.Context, file, dsn string) (err error) {
 	raw, closeFn, err := openBackupJSON(file)
 	if err != nil {
 		return err
@@ -53,7 +53,13 @@ func loadBackup(ctx context.Context, file, dsn string) error {
 	if err != nil {
 		return fmt.Errorf("подключение к временной базе: %w", err)
 	}
-	defer conn.Close(ctx)
+	// Ошибка закрытия значит, что сервер мог не дописать последние данные: если загрузка
+	// иначе прошла, о ней надо сказать, а не вернуть «успех».
+	defer func() {
+		if cerr := conn.Close(ctx); cerr != nil && err == nil {
+			err = fmt.Errorf("закрытие подключения к временной базе: %w", cerr)
+		}
+	}()
 
 	for _, table := range backupTables {
 		rows, ok := doc.Data[table]
