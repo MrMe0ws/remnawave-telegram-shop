@@ -141,6 +141,10 @@ func TestRuFromCheburcheck(t *testing.T) {
 
 func chebRunner(t *testing.T, mode string) *Runner {
 	t.Helper()
+	// Проходы в тестах идут без минутной паузы между серверами.
+	prevGap := chebGap
+	chebGap = 0
+	t.Cleanup(func() { chebGap = prevGap })
 	r := newAlertRunner(t)
 	t.Setenv("CHEBURCHECK_TOKEN", "tok")
 	t.Setenv("STATUS_RU_SOURCE", mode)
@@ -359,3 +363,68 @@ func TestChecksOfNamesSourceAndFailedScanners(t *testing.T) {
 }
 
 func intp(v int) *int { return &v }
+
+func TestChebPassPacesMeasuresAcrossServersAndPasses(t *testing.T) {
+	r := chebRunner(t, SourceAuto)
+	chebGap = 80 * time.Millisecond
+	var starts []time.Time
+	prev := chebMeasure
+	t.Cleanup(func() { chebMeasure = prev })
+	chebMeasure = func(context.Context, string) (chebResult, error) {
+		starts = append(starts, time.Now())
+		return chebHits(10, 0), nil
+	}
+	targets := []Target{
+		{Key: "a", Address: "8.8.8.8"},
+		{Key: "b", Address: "8.8.4.4"},
+		{Key: "c", Address: "1.1.1.1"},
+	}
+	r.chebPass(context.Background(), targets[:2])
+	// Второй проход сразу следом: слот общий, пауза выдерживается и между проходами.
+	r.chebPass(context.Background(), targets[2:])
+	if len(starts) != 3 {
+		t.Fatalf("measures: %d", len(starts))
+	}
+	for i := 1; i < len(starts); i++ {
+		if gap := starts[i].Sub(starts[i-1]); gap < 70*time.Millisecond {
+			t.Fatalf("gap %d too short: %v", i, gap)
+		}
+	}
+}
+
+func TestChebPassStopsWhileWaitingForASlot(t *testing.T) {
+	r := chebRunner(t, SourceAuto)
+	chebGap = time.Hour
+	calls := 0
+	prev := chebMeasure
+	t.Cleanup(func() { chebMeasure = prev })
+	chebMeasure = func(context.Context, string) (chebResult, error) {
+		calls++
+		return chebHits(10, 0), nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Millisecond)
+	defer cancel()
+	r.chebPass(ctx, []Target{{Key: "a", Address: "8.8.8.8"}, {Key: "b", Address: "8.8.4.4"}})
+	if calls != 1 {
+		t.Fatalf("the second server must wait for its slot and give up with the context: %d calls", calls)
+	}
+}
+
+func TestChebVerdictCountsWhitelistAsOpen(t *testing.T) {
+	cases := []struct {
+		verdicts        []string
+		wantOK, wantBad bool
+	}{
+		{[]string{"ok"}, true, false},
+		{[]string{"whitelist"}, true, false},
+		{[]string{"cdn_block"}, false, true},
+		{[]string{"whitelist", "cdn_block"}, false, true},
+		{[]string{"uncertain"}, false, false},
+		{nil, false, false},
+	}
+	for _, c := range cases {
+		if ok, bad := chebVerdict(c.verdicts); ok != c.wantOK || bad != c.wantBad {
+			t.Errorf("%v: got ok=%v blocked=%v", c.verdicts, ok, bad)
+		}
+	}
+}

@@ -48,6 +48,11 @@ const (
 	chebUserAgent    = "meows-status-probe/1 (+cheburcheck)"
 )
 
+// chebGap — пауза между началами замеров. Сервис разрешает до двух запросов в минуту (на 14.11,
+// лимит может меняться), а на один сервер уходят два запроса: /check и /probe. Поэтому серверы
+// идут по одному в минуту, а не подряд. Переменная, чтобы тесты не ждали минуту.
+var chebGap = 60 * time.Second
+
 // chebHTTP без общего таймаута: поток событий идёт секунд пятнадцать, срок держит контекст.
 var chebHTTP = &http.Client{}
 
@@ -94,14 +99,17 @@ var chebBlocked = map[string]bool{
 	"cdn_block":    true,
 }
 
-// chebVerdict — итог одного сканера. uncertain и пустой ответ не считаются ни тем, ни другим.
+// chebVerdict — итог одного сканера. ok и whitelist (домен снимает ограничение на заблокированных
+// CDN) значат «открыл», uncertain и пустой ответ не считаются ни тем, ни другим.
+// cdn_block — это блокировка по лимиту 16–20 КБ на соединение к заблокированным диапазонам
+// хостинга: сервер в такой сети «открывается», но соединение рвётся, VPN в ней не работает.
 func chebVerdict(verdicts []string) (ok, blocked bool) {
 	for _, v := range verdicts {
 		v = strings.ToLower(strings.TrimSpace(v))
 		if chebBlocked[v] {
 			blocked = true
 		}
-		if v == "ok" {
+		if v == "ok" || v == "whitelist" {
 			ok = true
 		}
 	}
@@ -443,7 +451,8 @@ func (r *Runner) kickCheburcheck(targets []Target, force bool) {
 			r.chebBusy = false
 			r.mu.Unlock()
 		}()
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+		// Каждый сервер занимает минуту паузы и до 75 секунд замера: срок считается от числа серверов.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(len(picks)+1)*(chebGap+chebProbeTimeout))
 		defer cancel()
 		r.EnsureLoaded(ctx)
 		r.chebPass(ctx, picks)
@@ -459,7 +468,7 @@ func (r *Runner) chebPass(ctx context.Context, targets []Target) {
 		if !ok {
 			continue
 		}
-		if ctx.Err() != nil {
+		if !r.waitChebSlot(ctx) {
 			return
 		}
 		res, err := chebMeasure(ctx, host)
@@ -493,6 +502,29 @@ func (r *Runner) chebPass(ctx context.Context, targets []Target) {
 	if measured > 0 {
 		slog.Info("cheburcheck probes updated", "nodes", measured)
 	}
+}
+
+// waitChebSlot ждёт, пока с начала прошлого замера пройдёт chebGap, и занимает слот.
+// Слот общий для всех проходов: лимит сервиса считается по запросам, а не по проходам.
+// false — контекст закончился.
+func (r *Runner) waitChebSlot(ctx context.Context) bool {
+	r.mu.Lock()
+	wait := chebGap - time.Since(r.chebLastStart)
+	if wait < 0 {
+		wait = 0
+	}
+	r.chebLastStart = time.Now().Add(wait)
+	r.mu.Unlock()
+	if wait > 0 {
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return false
+		case <-timer.C:
+		}
+	}
+	return ctx.Err() == nil
 }
 
 func (r *Runner) pauseCheb(wait time.Duration, note string) {

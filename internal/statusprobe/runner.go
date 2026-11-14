@@ -55,6 +55,7 @@ type Runner struct {
 	chebBusy          bool
 	chebCooldownUntil time.Time
 	chebPauseNote     string
+	chebLastStart     time.Time
 	loaded            bool
 	onAlerts          func([]AlertEvent)
 }
