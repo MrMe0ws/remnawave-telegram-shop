@@ -37,8 +37,8 @@ export function AdminPageHeader({
   accent = 'primary',
 }: AdminPageHeaderProps) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="flex items-center gap-3">
+    <div className={cn('flex items-start justify-between gap-4', !actionsEnd && 'flex-wrap')}>
+      <div className={cn('flex items-center gap-3', actionsEnd && 'min-w-0 flex-1')}>
         <div className={cn('flex size-11 items-center justify-center rounded-xl', accentStyles[accent])}>
           <Icon className="size-5" />
         </div>
@@ -48,7 +48,7 @@ export function AdminPageHeader({
         </div>
       </div>
       {center && <div className="flex min-w-0 flex-1 items-center justify-center self-center">{center}</div>}
-      {actions && <div className={cn('flex flex-wrap items-center gap-2', actionsEnd && 'ml-auto')}>{actions}</div>}
+      {actions && <div className={cn('flex flex-wrap items-center gap-2', actionsEnd && 'ml-auto shrink-0')}>{actions}</div>}
     </div>
   )
 }
