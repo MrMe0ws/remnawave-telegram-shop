@@ -291,12 +291,9 @@ export function AdminStatusTargets() {
 
   return (
     <section className="rounded-2xl border border-border/60 bg-card/50 p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-tight">{t('admin.statusPage.serversTitle')}</h2>
-          <p className="text-sm text-muted-foreground">{t('admin.statusPage.serversHint')}</p>
-        </div>
-        <div className="flex w-full items-center gap-2 sm:w-auto sm:flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
+        <h2 className="min-w-0 text-base font-semibold tracking-tight">{t('admin.statusPage.serversTitle')}</h2>
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
           {rows.length > 0 && (
             <span className="mr-auto min-w-0 text-xs text-muted-foreground sm:mr-1">
               {minutesAgo == null
@@ -312,7 +309,7 @@ export function AdminStatusTargets() {
             title={dirty ? t('admin.statusPage.saveFirst') : t('admin.statusPage.checkNow')}
             aria-label={t('admin.statusPage.checkNow')}
             onClick={() => probe.mutate()}
-            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted disabled:opacity-50 sm:px-3.5"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50 sm:px-3.5"
           >
             {probe.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
             <span className="max-sm:hidden">{t('admin.statusPage.checkNow')}</span>
@@ -482,7 +479,6 @@ function TargetRow({
       }}
       className={cn(
         'flex cursor-pointer items-center gap-2 max-sm:grid max-sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] max-sm:gap-y-2 rounded-xl border border-border/60 bg-background/40 p-3 transition-[opacity,box-shadow,border-color,background-color] duration-200',
-        !row.enabled && 'opacity-60',
         dragging && 'relative z-20 border-primary/60 bg-card opacity-100 shadow-2xl shadow-black/40',
       )}
     >
@@ -498,13 +494,14 @@ function TargetRow({
           }
         }}
         className={cn(
+          !row.enabled && 'opacity-60',
           '-ml-1 flex h-9 w-6 shrink-0 touch-none max-sm:col-start-1 max-sm:row-start-1 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           dragging ? 'cursor-grabbing' : 'cursor-grab',
         )}
       >
         <GripVertical className="size-5" />
       </button>
-      <div className="flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted max-sm:col-start-2 max-sm:row-start-1">
+      <div className={cn('flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted max-sm:col-start-2 max-sm:row-start-1', !row.enabled && 'opacity-60')}>
         {row.country ? (
           <CountryFlag code={row.country} className="h-full w-full object-cover" />
         ) : (
@@ -512,11 +509,11 @@ function TargetRow({
         )}
       </div>
       <button type="button" onClick={onEdit} className="min-w-0 flex-1 overflow-hidden text-left max-sm:contents">
-        <div className="flex items-center gap-2 max-sm:col-start-3 max-sm:row-start-1 max-sm:min-w-0">
+        <div className={cn('flex items-center gap-2 max-sm:col-start-3 max-sm:row-start-1 max-sm:min-w-0', !row.enabled && 'opacity-60')}>
           <span className="truncate font-medium">{row.name || t('admin.statusPage.noName')}</span>
           <span className={cn(kindClass, 'max-sm:hidden')}>{kindLabel}</span>
         </div>
-        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground max-sm:col-span-3 max-sm:col-start-1 max-sm:row-start-2 max-sm:mt-0">
+        <p className={cn('mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground max-sm:col-span-3 max-sm:col-start-1 max-sm:row-start-2 max-sm:mt-0', !row.enabled && 'opacity-60')}>
           <span className={cn(kindClass, 'sm:hidden')}>{kindLabel}</span>
           {node ? (
             <>

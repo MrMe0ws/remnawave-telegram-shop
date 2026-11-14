@@ -56,7 +56,7 @@ export function AdminStatusRowChecks({
         <CheckBadge
           result={registryResult}
           title={t('admin.statusPage.chkRkn')}
-          hint={registry.state === 'bad' && registry.kind === 'cdn' ? t('admin.statusPage.chkRknCdnHint') : t('admin.statusPage.chkRknHint')}
+          hint={t(registry.state === 'bad' ? (registry.kind === 'cdn' ? 'admin.statusPage.chkRknCdnHint' : 'admin.statusPage.chkRknHint') : 'admin.statusPage.chkRknOkHint')}
           verdict={t(`admin.statusPage.chkRkn${registry.state[0].toUpperCase()}${registry.state.slice(1)}`)}
           icon={<span className="text-[10px] font-extrabold leading-none">РКН</span>}
         />
