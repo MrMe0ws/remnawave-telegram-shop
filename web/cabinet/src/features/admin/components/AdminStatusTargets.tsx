@@ -534,7 +534,7 @@ function TargetRow({
         enabled={row.enabled}
         className="max-sm:col-span-2 max-sm:col-start-3 max-sm:row-start-2"
       />
-      <div className="max-sm:col-start-4 max-sm:row-start-1 max-sm:self-center">
+      <div className="max-sm:col-start-4 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center">
         <AdminToggleSwitch checked={row.enabled} onChange={onToggle} aria-label={t('admin.statusPage.showOnPage')} />
       </div>
       <button
