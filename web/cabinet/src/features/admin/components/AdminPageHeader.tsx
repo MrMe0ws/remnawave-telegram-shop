@@ -8,6 +8,8 @@ interface AdminPageHeaderProps {
   title: string
   subtitle?: string
   actions?: ReactNode
+  /** Прижать действия вправо, даже когда на узком экране они ушли на свою строку. */
+  actionsEnd?: boolean
   /** Между заголовком и действиями (например, вкладки страницы). */
   center?: ReactNode
   accent?: 'primary' | 'emerald' | 'amber' | 'violet' | 'rose' | 'blue' | 'indigo' | 'slate' | 'cyan'
@@ -30,6 +32,7 @@ export function AdminPageHeader({
   title,
   subtitle,
   actions,
+  actionsEnd,
   center,
   accent = 'primary',
 }: AdminPageHeaderProps) {
@@ -45,7 +48,7 @@ export function AdminPageHeader({
         </div>
       </div>
       {center && <div className="flex min-w-0 flex-1 items-center justify-center self-center">{center}</div>}
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className={cn('flex flex-wrap items-center gap-2', actionsEnd && 'ml-auto')}>{actions}</div>}
     </div>
   )
 }

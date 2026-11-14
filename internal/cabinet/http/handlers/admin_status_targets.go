@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"remnawave-tg-shop-bot/internal/remnawave"
@@ -26,6 +27,35 @@ func NewAdminStatusTargets(store *statusprobe.KVTargets, probes *statusprobe.Run
 
 type statusTargetsBody struct {
 	Targets []statusprobe.ConfiguredTarget `json:"targets"`
+	// Checks — значки «мир / РФ» по id строки; только в ответе на GET.
+	Checks map[string]statusprobe.RowChecks `json:"checks,omitempty"`
+}
+
+// checksFor берёт последний замер каждой строки. Порядок совпадает с TargetsFrom:
+// строки без адреса там пропускаются.
+func (h *AdminStatusTargets) checksFor(list []statusprobe.ConfiguredTarget) map[string]statusprobe.RowChecks {
+	if h.probes == nil {
+		return nil
+	}
+	targets := statusprobe.TargetsFrom(list)
+	out := make(map[string]statusprobe.RowChecks, len(list))
+	next := 0
+	for _, item := range list {
+		if next >= len(targets) {
+			break
+		}
+		if strings.TrimSpace(item.Address) == "" {
+			continue
+		}
+		key := targets[next].Key
+		next++
+		var sample *statusprobe.Sample
+		if s, _, ok := h.probes.Snapshot(key); ok {
+			sample = &s
+		}
+		out[item.ID] = statusprobe.ChecksOf(sample, item.IsBypass())
+	}
+	return out
 }
 
 func (h *AdminStatusTargets) Handle(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +66,10 @@ func (h *AdminStatusTargets) Handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		writeJSON(w, http.StatusOK, statusTargetsBody{Targets: list})
+		if h.probes != nil {
+			h.probes.EnsureLoaded(r.Context())
+		}
+		writeJSON(w, http.StatusOK, statusTargetsBody{Targets: list, Checks: h.checksFor(list)})
 	case http.MethodPut:
 		var req statusTargetsBody
 		if !decodeJSON(w, r, &req) {
@@ -131,12 +164,20 @@ func (h *AdminStatusTargets) Quota(w http.ResponseWriter, r *http.Request) {
 	if h.probes != nil {
 		now := time.Now()
 		ping, white := h.probes.Pauses()
+		pingNote, whiteNote := h.probes.PauseNotes()
 		if ping.After(now) {
 			est.GlobalpingPausedUntil = &ping
+			est.GlobalpingPauseNote = pingNote
 		}
 		if white.After(now) {
 			est.LatencyLabPausedUntil = &white
+			est.LatencyLabPauseNote = whiteNote
 		}
+	}
+	limCtx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
+	defer cancel()
+	if lim, err := statusprobe.FetchGlobalpingLimits(limCtx, nil); err == nil {
+		est.Real = lim
 	}
 	writeJSON(w, http.StatusOK, est)
 }

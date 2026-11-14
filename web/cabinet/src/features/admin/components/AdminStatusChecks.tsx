@@ -16,8 +16,12 @@ export function AdminStatusChecks() {
     queryFn: () => api.adminStatusQuota(),
   })
   const data = quota.data
-  const tight = data ? data.per_hour > data.limit * 0.8 : false
-  const percent = data ? Math.min(100, Math.round((data.per_hour / data.limit) * 100)) : 0
+  // Настоящий остаток у Globalping, если он ответил; иначе наша прикидка расхода.
+  const real = data?.real && data.real.limit > 0 && data.real.remaining >= 0 ? data.real : null
+  const used = real ? real.limit - real.remaining : (data?.per_hour ?? 0)
+  const cap = real ? real.limit : (data?.limit ?? 1)
+  const tight = data ? (real ? real.remaining < real.limit * 0.2 : data.per_hour > data.limit * 0.8) : false
+  const percent = data ? Math.min(100, Math.round((used / cap) * 100)) : 0
 
   return (
     <section className="rounded-2xl border border-border/60 bg-card/50 p-4 sm:p-5">
@@ -51,12 +55,35 @@ export function AdminStatusChecks() {
               />
             </div>
             <p className={cn('mt-1.5 text-xs', tight ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
-              {t('admin.statusPage.gpUsage', { used: data.per_hour, limit: data.limit })}
+              {real
+                ? `${t('admin.statusPage.gpReal', { remaining: real.remaining, limit: real.limit })}${
+                    real.reset_sec > 0
+                      ? `, ${t('admin.statusPage.gpRealReset', { min: Math.max(1, Math.round(real.reset_sec / 60)) })}`
+                      : ''
+                  }`
+                : t('admin.statusPage.gpUsage', { used: data.per_hour, limit: data.limit })}
             </p>
+            {real && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('admin.statusPage.gpEstimate', { used: data.per_hour })}
+                {real.credits != null && <> · {t('admin.statusPage.gpCredits', { n: real.credits })}</>}
+              </p>
+            )}
+            {!real && (
+              <p className="mt-1 text-xs text-muted-foreground">{t('admin.statusPage.gpRealFail')}</p>
+            )}
             {data.globalping_paused_until && (
               <p className="mt-1.5 flex items-start gap-1.5 text-xs text-rose-500">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                {t('admin.statusPage.pausedUntil', { time: clock(data.globalping_paused_until) })}
+                <span>
+                  {t('admin.statusPage.pausedUntil', { time: clock(data.globalping_paused_until) })}
+                  <span className="mt-0.5 block text-muted-foreground">
+                    {data.globalping_pause_note && data.globalping_pause_note !== 'HTTP 429'
+                      ? t('admin.statusPage.pauseNote', { note: data.globalping_pause_note })
+                      : t('admin.statusPage.pauseNoteEmpty')}
+                    {real && real.remaining > 0 && <> · {t('admin.statusPage.pauseNotCredits')}</>}
+                  </span>
+                </span>
               </p>
             )}
             {tight && (
@@ -82,7 +109,14 @@ export function AdminStatusChecks() {
             {data.latencylab_paused_until && (
               <p className="mt-1.5 flex items-start gap-1.5 text-xs text-rose-500">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                {t('admin.statusPage.pausedUntil', { time: clock(data.latencylab_paused_until) })}
+                <span>
+                  {t('admin.statusPage.pausedUntil', { time: clock(data.latencylab_paused_until) })}
+                  {data.latencylab_pause_note && (
+                    <span className="mt-0.5 block text-muted-foreground">
+                      {t('admin.statusPage.pauseNote', { note: data.latencylab_pause_note })}
+                    </span>
+                  )}
+                </span>
               </p>
             )}
           </div>

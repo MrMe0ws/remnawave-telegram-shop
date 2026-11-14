@@ -44,6 +44,8 @@ type Runner struct {
 	lastRun           time.Time
 	cooldownUntil     time.Time
 	listCooldownUntil time.Time
+	cooldownNote      string
+	listCooldownNote  string
 	pingBusy          bool
 	listBusy          bool
 	loaded            bool
@@ -586,6 +588,7 @@ func (r *Runner) pingPass(ctx context.Context, targets []Target) {
 				}
 				r.mu.Lock()
 				r.cooldownUntil = time.Now().Add(wait)
+				r.cooldownNote = limited.Note()
 				r.mu.Unlock()
 				slog.Warn("status probe paused", "error", err, "retry_in", wait.String())
 				break
@@ -629,6 +632,7 @@ func (r *Runner) whitelistPass(ctx context.Context, targets []Target) {
 			}
 			r.mu.Lock()
 			r.listCooldownUntil = time.Now().Add(wait)
+			r.listCooldownNote = limited.Note()
 			r.mu.Unlock()
 			slog.Warn("whitelist probe paused", "error", wlErr, "retry_in", wait.String())
 			break

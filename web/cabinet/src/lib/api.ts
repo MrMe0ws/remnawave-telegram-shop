@@ -323,6 +323,37 @@ export interface AdminStatusQuotaDTO {
   /** Сервис ответил 429: проверки стоят до этого времени (ISO). */
   globalping_paused_until?: string
   latencylab_paused_until?: string
+  /** Что сервис написал в ответе 429. */
+  globalping_pause_note?: string
+  latencylab_pause_note?: string
+  /** Настоящий остаток у Globalping (GET /v1/limits). Нет — спросить не вышло. */
+  real?: AdminGlobalpingLimitsDTO
+}
+
+export interface AdminGlobalpingLimitsDTO {
+  type?: string
+  /** -1 — сервис не сказал. */
+  limit: number
+  remaining: number
+  reset_sec: number
+  credits?: number
+}
+
+export type AdminCheckState = 'ok' | 'partial' | 'bad' | 'none'
+
+export interface AdminCheckResult {
+  state: AdminCheckState
+  ok: number
+  total: number
+}
+
+/** Значки «мир / РФ» у строки списка серверов. */
+export interface AdminRowChecksDTO {
+  world: AdminCheckResult
+  russia: AdminCheckResult
+  /** «РФ» посчитано по операторам с белыми списками. */
+  operators?: boolean
+  measured_at?: string
 }
 
 export interface PublicStatusHit {
@@ -2053,7 +2084,8 @@ export const api = {
   adminInfraDeleteHistory: (uuid: string) =>
     request<AdminInfraHistoryDTO>('DELETE', `/admin/infra/history/${uuid}`),
   adminInfraSettings: () => request<AdminInfraSettingsDTO>('GET', '/admin/infra/settings'),
-  adminStatusTargets: () => request<{ targets: AdminStatusTargetDTO[] }>('GET', '/admin/status/targets'),
+  adminStatusTargets: () =>
+    request<{ targets: AdminStatusTargetDTO[]; checks?: Record<string, AdminRowChecksDTO> }>('GET', '/admin/status/targets'),
 
   saveAdminStatusTargets: (targets: AdminStatusTargetDTO[]) =>
     request<{ targets: AdminStatusTargetDTO[] }>('PUT', '/admin/status/targets', { targets }),

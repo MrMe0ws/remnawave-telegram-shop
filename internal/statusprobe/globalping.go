@@ -24,6 +24,10 @@ var probesURL = "https://api.globalping.io/v1/probes"
 // RateLimitError — Globalping ответил 429. RetryAfter берётся из заголовка, не из попытки обойти лимит.
 type RateLimitError struct {
 	RetryAfter time.Duration
+	// HasRetryAfter — сервис сам назвал время; иначе пауза взята по умолчанию.
+	HasRetryAfter bool
+	// Message — что сервис написал в теле ответа.
+	Message string
 }
 
 func (e *RateLimitError) Error() string { return "globalping rate limit" }
@@ -278,7 +282,7 @@ func MeasurePingCounts(ctx context.Context, client *http.Client, target string, 
 	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	_ = res.Body.Close()
 	if res.StatusCode == http.StatusTooManyRequests {
-		return Sample{}, &RateLimitError{RetryAfter: retryAfter(res.Header)}
+		return Sample{}, rateLimitFrom(res, raw)
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return Sample{}, fmt.Errorf("globalping create: %d", res.StatusCode)
@@ -540,7 +544,7 @@ func fetchMeasurement(ctx context.Context, client *http.Client, id string) (gpMe
 	defer res.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode == http.StatusTooManyRequests {
-		return gpMeasurement{}, &RateLimitError{RetryAfter: retryAfter(res.Header)}
+		return gpMeasurement{}, rateLimitFrom(res, raw)
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return gpMeasurement{}, fmt.Errorf("globalping get: %d", res.StatusCode)

@@ -139,6 +139,11 @@ type QuotaEstimate struct {
 	// GlobalpingPausedUntil / LatencyLabPausedUntil — сервис ответил 429, проверки стоят до этого времени.
 	GlobalpingPausedUntil *time.Time `json:"globalping_paused_until,omitempty"`
 	LatencyLabPausedUntil *time.Time `json:"latencylab_paused_until,omitempty"`
+	// GlobalpingPauseNote / LatencyLabPauseNote — что сервис написал в ответе 429.
+	GlobalpingPauseNote string `json:"globalping_pause_note,omitempty"`
+	LatencyLabPauseNote string `json:"latencylab_pause_note,omitempty"`
+	// Real — настоящий остаток у Globalping; nil, если спросить не вышло.
+	Real *GlobalpingLimits `json:"real,omitempty"`
 }
 
 // EstimateQuota считает расход по тем же правилам, что и замер: один зонд — одна единица.

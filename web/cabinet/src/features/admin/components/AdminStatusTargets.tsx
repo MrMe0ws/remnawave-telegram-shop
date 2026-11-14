@@ -13,11 +13,12 @@ import {
   Trash2,
 } from 'lucide-react'
 
-import { api, type AdminStatusNodeDTO, type AdminStatusTargetDTO } from '@/lib/api'
+import { api, type AdminRowChecksDTO, type AdminStatusNodeDTO, type AdminStatusTargetDTO } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { AdminFeedback, type AdminFeedbackState } from './AdminFeedback'
 import { AdminModal } from './AdminModal'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
+import { AdminStatusRowChecks } from './AdminStatusRowChecks'
 import { CountryFlag } from './CountryFlag'
 import { CountrySelect } from './CountrySelect'
 import { AdminSelect } from './AdminSelect'
@@ -132,6 +133,7 @@ export function AdminStatusTargets() {
   const query = useQuery({
     queryKey: ['admin-status-targets'],
     queryFn: () => api.adminStatusTargets(),
+    refetchInterval: 60_000,
   })
   const nodesQuery = useQuery({
     queryKey: ['admin-status-nodes'],
@@ -294,9 +296,9 @@ export function AdminStatusTargets() {
           <h2 className="text-base font-semibold tracking-tight">{t('admin.statusPage.serversTitle')}</h2>
           <p className="text-sm text-muted-foreground">{t('admin.statusPage.serversHint')}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto sm:flex-wrap">
           {rows.length > 0 && (
-            <span className="mr-1 text-xs text-muted-foreground">
+            <span className="mr-auto min-w-0 text-xs text-muted-foreground sm:mr-1">
               {minutesAgo == null
                 ? t('admin.statusPage.neverMeasured')
                 : minutesAgo < 1
@@ -307,20 +309,22 @@ export function AdminStatusTargets() {
           <button
             type="button"
             disabled={probe.isPending || rows.length === 0 || dirty}
-            title={dirty ? t('admin.statusPage.saveFirst') : undefined}
+            title={dirty ? t('admin.statusPage.saveFirst') : t('admin.statusPage.checkNow')}
+            aria-label={t('admin.statusPage.checkNow')}
             onClick={() => probe.mutate()}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3.5 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted disabled:opacity-50 sm:px-3.5"
           >
             {probe.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            {t('admin.statusPage.checkNow')}
+            <span className="max-sm:hidden">{t('admin.statusPage.checkNow')}</span>
           </button>
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="size-4" />
-            {t('admin.statusPage.add')}
+            <span className="sm:hidden">{t('admin.statusPage.addShort')}</span>
+            <span className="max-sm:hidden">{t('admin.statusPage.add')}</span>
           </button>
         </div>
       </div>
@@ -363,6 +367,7 @@ export function AdminStatusTargets() {
                 key={row.id}
                 row={row}
                 node={nodes.find((n) => n.uuid === row.node_uuid)}
+                checks={query.data?.checks?.[row.id]}
                 dragging={dragId === row.id}
                 liRef={(el) => {
                   if (el) rowRefs.current.set(row.id, el)
@@ -442,6 +447,7 @@ export function AdminStatusTargets() {
 function TargetRow({
   row,
   node,
+  checks,
   dragging,
   liRef,
   onToggle,
@@ -451,6 +457,7 @@ function TargetRow({
 }: {
   row: StatusTargetDraft
   node?: AdminStatusNodeDTO
+  checks?: AdminRowChecksDTO
   dragging: boolean
   liRef: (el: HTMLLIElement | null) => void
   onToggle: (enabled: boolean) => void
@@ -460,11 +467,16 @@ function TargetRow({
 }) {
   const { t } = useTranslation()
   const bypass = row.kind === 'bypass'
+  const kindLabel = bypass ? t('admin.statusPage.kindBypass') : t('admin.statusPage.kindRegular')
+  const kindClass = cn(
+    'shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold',
+    bypass ? 'bg-violet-500/15 text-violet-600 dark:text-violet-300' : 'bg-primary/10 text-primary',
+  )
   return (
     <li
       ref={liRef}
       className={cn(
-        'flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-3 transition-[opacity,box-shadow,border-color,background-color] duration-200',
+        'flex items-center gap-2 max-sm:flex-wrap rounded-xl border border-border/60 bg-background/40 p-3 transition-[opacity,box-shadow,border-color,background-color] duration-200',
         !row.enabled && 'opacity-60',
         dragging && 'relative z-20 border-primary/60 bg-card opacity-100 shadow-2xl shadow-black/40',
       )}
@@ -494,19 +506,13 @@ function TargetRow({
           <Server className="size-4 text-muted-foreground" />
         )}
       </div>
-      <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
-        <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={onEdit} className="min-w-0 flex-1 overflow-hidden text-left">
+        <div className="flex items-center gap-2">
           <span className="truncate font-medium">{row.name || t('admin.statusPage.noName')}</span>
-          <span
-            className={cn(
-              'rounded-md px-1.5 py-0.5 text-[11px] font-semibold',
-              bypass ? 'bg-violet-500/15 text-violet-600 dark:text-violet-300' : 'bg-primary/10 text-primary',
-            )}
-          >
-            {bypass ? t('admin.statusPage.kindBypass') : t('admin.statusPage.kindRegular')}
-          </span>
+          <span className={cn(kindClass, 'max-sm:hidden')}>{kindLabel}</span>
         </div>
         <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className={cn(kindClass, 'sm:hidden')}>{kindLabel}</span>
           {node ? (
             <>
               <span className={cn('size-1.5 shrink-0 rounded-full', STATE_DOT[node.state] ?? 'bg-muted-foreground')} />
@@ -518,12 +524,17 @@ function TargetRow({
           <span className="truncate">· {row.address || t('admin.statusPage.noAddress')}</span>
         </p>
       </button>
+      <AdminStatusRowChecks
+        checks={checks}
+        enabled={row.enabled}
+        className="max-sm:order-last max-sm:basis-full max-sm:pl-[68px]"
+      />
       <AdminToggleSwitch checked={row.enabled} onChange={onToggle} aria-label={t('admin.statusPage.showOnPage')} />
       <button
         type="button"
         aria-label={t('admin.statusPage.edit')}
         onClick={onEdit}
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground max-sm:hidden"
       >
         <Pencil className="size-4" />
       </button>

@@ -181,6 +181,7 @@ function AdminDashboardContent() {
         title={t('admin.overview.title')}
         subtitle={t('admin.overview.subtitle')}
         accent="blue"
+        actionsEnd
         actions={
           <button
             type="button"
