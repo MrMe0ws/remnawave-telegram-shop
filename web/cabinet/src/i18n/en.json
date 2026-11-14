@@ -3770,6 +3770,7 @@
         "fCountryHint": "Users see the flag and the name",
         "howGp": "Globalping: a free key in your account at",
         "howLl": "Latency Lab: an ll_… key in your profile at",
+        "howCheb": "Cheburcheck: the service administrator issues keys by hand. Fill in the request form on the page, the key comes as a reply, it can take a while:",
         "llQuota": "The service does not report the remaining limit; see it in the console at",
         "pausedUntil": "Checks are paused until {{time}}",
         "pauseNote": "Service replied: \"{{note}}\"",

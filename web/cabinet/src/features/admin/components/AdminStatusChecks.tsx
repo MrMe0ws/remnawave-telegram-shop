@@ -160,12 +160,16 @@ export function AdminStatusChecks() {
                 {t('admin.statusPage.howLl')}{' '}
                 <ExtLink href="https://console.latencylab.ru">console.latencylab.ru</ExtLink>
               </li>
+              <li>
+                {t('admin.statusPage.howCheb')}{' '}
+                <ExtLink href="https://cheburcheck.ru/kb/api">cheburcheck.ru/kb/api</ExtLink>
+              </li>
             </ul>
           </li>
           <li>
             <p className="font-medium">2. {t('admin.statusPage.howStep2')}</p>
             <pre className="mt-2 overflow-x-auto rounded-lg bg-muted px-3 py-2.5 text-xs leading-relaxed">
-              {'GLOBALPING_TOKEN=<token>\nLATENCYLAB_TOKEN=<token>'}
+              {'GLOBALPING_TOKEN=<token>\nLATENCYLAB_TOKEN=<token>\nCHEBURCHECK_TOKEN=<token>'}
             </pre>
           </li>
           <li>
