@@ -179,7 +179,6 @@ function AdminDashboardContent() {
       <AdminPageHeader
         icon={LayoutGrid}
         title={t('admin.overview.title')}
-        subtitle={t('admin.overview.subtitle')}
         accent="blue"
         actionsEnd
         actions={
