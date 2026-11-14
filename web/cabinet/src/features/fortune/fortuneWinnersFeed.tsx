@@ -40,6 +40,9 @@ function sectorIdxForType(rt: string): number {
   return i === -1 ? 0 : i
 }
 
+/** Секунд на одну запись ленты: скорость не зависит от того, сколько побед пришло с сервера. */
+const MARQUEE_SEC_PER_ITEM = 5
+
 function buildMarqueeStrip(items: FortuneRecentWinItem[]): FortuneRecentWinItem[] {
   if (items.length === 0) return []
   const minLen = 12
@@ -164,7 +167,10 @@ export function FortuneWinnersMarquee({ items, t }: FeedProps) {
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[hsl(228_56%_97%)] to-transparent dark:from-[#0a0e27]" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[hsl(228_56%_97%)] to-transparent dark:from-[#0a0e27]" />
       <div className="overflow-hidden py-2.5 px-4 sm:px-5">
-        <div className="flex w-max min-w-full animate-fortune-winners-marquee items-center motion-reduce:animate-none">
+        <div
+          className="flex w-max min-w-full animate-fortune-winners-marquee items-center motion-reduce:animate-none"
+          style={{ animationDuration: `${strip.length * MARQUEE_SEC_PER_ITEM}s` }}
+        >
           <div className="inline-flex shrink-0 items-center whitespace-nowrap">
             <MarqueeStrip strip={strip} t={t} stripKey="a" />
           </div>

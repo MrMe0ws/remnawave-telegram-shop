@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, useAnimation } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Ticket, Volume2, VolumeX } from 'lucide-react'
+import { CalendarDays, CalendarMinus, Ticket, Volume2, VolumeX } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
@@ -354,14 +354,18 @@ export default function FortunePage() {
   )
   const nextFreeCountdownMs = useUtcMidnightCountdown(showNextFreeTimer)
 
-  // Колесо ограничено ещё и высотой окна: 430px / 380px — всё остальное на странице (шапка, заголовок,
-  // лента, кнопка, отступы; на телефоне ещё нижняя панель). Так кнопка «Крутить» видна без прокрутки.
+  const bonusSpins = status?.bonus_spins ?? 0
+  const hasFreeSpin = Boolean(status?.daily_free_available) || bonusSpins > 0
+
+  // Колесо ограничено ещё и высотой окна: 430px — всё остальное на странице (шапка, заголовок, лента,
+  // кнопка, отступы, нижняя панель). Так кнопка «Крутить» видна без прокрутки. На ПК кнопка справа от
+  // колеса, поэтому снизу остаются только шапка, заголовок и лента — 300px.
   // max(12rem, …) — на совсем низком окне колесо не схлопывается, страница просто прокручивается.
   const wheelWrapClassName =
-    'relative mx-auto flex w-full max-w-[min(calc(100vw-1.5rem),500px,max(12rem,calc(100dvh-430px)))] flex-col items-center gap-4 sm:max-w-[min(100%,520px,max(12rem,calc(100dvh-430px)))] md:max-w-[min(100%,560px,max(12rem,calc(100dvh-380px)))]'
+    'relative mx-auto w-full max-w-[min(calc(100vw-1.5rem),500px,max(12rem,calc(100dvh-430px)))] sm:max-w-[min(100%,520px,max(12rem,calc(100dvh-430px)))] md:max-w-[min(100%,540px,max(16rem,calc(100dvh-300px)))]'
 
   const wheelColumn = (
-    <>
+    <div className={wheelWrapClassName}>
       <div
         className="pointer-events-none absolute -top-1 left-1/2 z-20 -translate-x-1/2 drop-shadow-md"
         aria-hidden
@@ -388,12 +392,24 @@ export default function FortunePage() {
           designVariant={designVariant}
         />
       </motion.div>
+    </div>
+  )
 
+  // Плашка в самой кнопке: при бесплатных — билетик с числом выигранных попыток, при платных — цена
+  // крутки в днях подписки (сколько платных осталось, видно в шапке).
+  const showSpinPill = !spinning && !spinMut.isPending && (hasFreeSpin ? bonusSpins > 0 : paidSpinsLeft > 0)
+  const spinPillHint = hasFreeSpin
+    ? t('fortune.bonusSpinsHint', { count: bonusSpins })
+    : t('fortune.subtitle', { count: spinCostDays })
+
+  // Телефон: кнопка под колесом, таймер в шапке. ПК: кнопка справа от колеса, таймер под ней.
+  const spinPanel = (
+    <div className="mt-4 flex w-full flex-col items-center gap-2 md:mt-0">
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
         <Button
           type="button"
           size="lg"
-          className="w-full sm:w-auto min-w-[200px]"
+          className="w-full min-w-[200px] sm:w-auto md:w-full"
           loading={spinMut.isPending}
           disabled={!canPress}
           onClick={() => {
@@ -408,24 +424,39 @@ export default function FortunePage() {
           }}
         >
           {spinButtonLabel}
-          {(status?.bonus_spins ?? 0) > 0 && !spinning && !spinMut.isPending && (
+          {showSpinPill && (
             <span
               className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs font-semibold tabular-nums"
-              title={t('fortune.bonusSpinsHint', { count: status?.bonus_spins ?? 0 })}
-              aria-label={t('fortune.bonusSpinsHint', { count: status?.bonus_spins ?? 0 })}
+              title={spinPillHint}
+              aria-label={spinPillHint}
             >
-              <Ticket className="size-3.5" aria-hidden />
-              {status?.bonus_spins}
+              {hasFreeSpin ? (
+                <>
+                  <Ticket className="size-3.5" aria-hidden />
+                  {bonusSpins}
+                </>
+              ) : (
+                <>
+                  <CalendarMinus className="size-3.5" aria-hidden />
+                  {t('fortune.spinCostPill', { count: spinCostDays })}
+                </>
+              )}
             </span>
           )}
         </Button>
       </div>
 
+      {showNextFreeTimer && (
+        <p className="hidden text-center text-sm text-muted-foreground md:mt-1 md:block">
+          <span className="mr-1.5">{t('fortune.nextFreeIn')}</span>
+          <span className="font-semibold tabular-nums text-foreground">{formatCountdownHms(nextFreeCountdownMs, t)}</span>
+        </p>
+      )}
       {reasonText && !status?.can_spin && (
         <p className="text-center text-sm text-muted-foreground">{reasonText}</p>
       )}
       {spinError && <p className="text-center text-sm text-destructive">{spinError}</p>}
-    </>
+    </div>
   )
 
   return (
@@ -505,7 +536,7 @@ export default function FortunePage() {
                   </Button>
                 </div>
                 {showNextFreeTimer && (
-                  <p className="max-w-[11rem] text-right text-[11px] leading-snug text-muted-foreground sm:max-w-none sm:text-xs">
+                  <p className="max-w-[11rem] text-right text-[11px] leading-snug text-muted-foreground sm:max-w-none sm:text-xs md:hidden">
                     <span className="mr-1.5 align-middle">{t('fortune.nextFreeIn')}</span>
                     <span className="inline-block align-middle font-semibold tabular-nums text-foreground">
                       {formatCountdownHms(nextFreeCountdownMs, t)}
@@ -552,7 +583,10 @@ export default function FortunePage() {
               </RevealItem>
             )}
 
-            <RevealItem className={wheelWrapClassName}>{wheelColumn}</RevealItem>
+            <RevealItem className="md:grid md:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] md:items-center md:gap-8">
+              {wheelColumn}
+              {spinPanel}
+            </RevealItem>
 
             <RevealItem>
               <FortunePossiblePrizes sectors={slotSectors} t={t} />

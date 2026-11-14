@@ -761,6 +761,7 @@
       "daysShortSuffix": " дн.",
       "nextFreeIn": "Бесплатная попытка",
       "countdownHms": "{{h}}ч {{m}}м {{s}}с",
+      "spinCostPill": "−{{count}} д",
       "youCanWinTitle": "Вы можете получить:",
       "prizeCard": {
         "micro": "Лояльность XP",

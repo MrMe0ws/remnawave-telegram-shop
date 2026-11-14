@@ -113,16 +113,16 @@ export function FortunePossiblePrizes({ sectors, t }: FortunePossiblePrizesProps
           return (
             <div
               key={s.reward_type}
-              className="flex min-w-[112px] max-w-[132px] shrink-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/30 shadow-sm sm:min-w-[140px] sm:max-w-[168px]"
+              className="flex min-w-[112px] max-w-[132px] shrink-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/30 shadow-sm sm:min-w-[140px] sm:max-w-[168px] md:min-w-[116px] md:max-w-[116px]"
             >
               <div className={cn('h-1 w-full shrink-0', bar)} />
               <div className="flex flex-1 flex-col items-center gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-2.5 sm:py-3.5">
-                <Icon className={cn('size-7 shrink-0 sm:size-10', iconCls)} strokeWidth={2} aria-hidden />
-                <p className="text-center text-[12px] font-semibold leading-snug text-foreground sm:text-[14px]">
+                <Icon className={cn('size-7 shrink-0 sm:size-10 md:size-7', iconCls)} strokeWidth={2} aria-hidden />
+                <p className="text-center text-[12px] font-semibold leading-snug text-foreground sm:text-[14px] md:text-[13px]">
                   {prizeTitle(t, s)}
                 </p>
                 {sub ? (
-                  <p className="text-center text-[10px] leading-snug text-muted-foreground sm:text-[12px]">{sub}</p>
+                  <p className="text-center text-[10px] leading-snug text-muted-foreground sm:text-[12px] md:text-[11px]">{sub}</p>
                 ) : null}
               </div>
             </div>

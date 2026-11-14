@@ -599,6 +599,7 @@
       "daysShortSuffix": " d",
       "nextFreeIn": "Free spin in",
       "countdownHms": "{{h}}h {{m}}m {{s}}s",
+      "spinCostPill": "−{{count}} d",
       "youCanWinTitle": "You can win:",
       "prizeCard": {
         "micro": "Micro XP",
