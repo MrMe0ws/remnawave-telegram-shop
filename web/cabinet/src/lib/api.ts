@@ -330,6 +330,7 @@ export interface AdminStatusQuotaDTO {
   latencylab_pause_note?: string
   /** Настоящий остаток у Globalping (GET /v1/limits). Нет — спросить не вышло. */
   real?: AdminGlobalpingLimitsDTO
+  cheburcheck?: AdminCheburcheckDTO
   /** Проверка по спискам блокировок (cheburcheck). */
   registry?: {
     info?: { updated_at?: string; domains?: number }
@@ -367,6 +368,28 @@ export interface AdminRowChecksDTO {
   measured_at?: string
   /** Значок «РКН»: числится ли адрес в списках блокировок. ok — нет, bad — числится. */
   registry?: { state: AdminCheckState; kind?: 'registry' | 'cdn'; checked_at?: string }
+  /** Кто дал «Россию»: globalping или cheburcheck. */
+  russia_source?: 'globalping' | 'cheburcheck'
+  /** Кто из сканеров Cheburcheck не открыл сервер: «провайдер (регион)», до четырёх. */
+  russia_failed?: string[]
+}
+
+/** Cheburcheck: живые сканеры в российских сетях и выбор источника «России». */
+export interface AdminCheburcheckDTO {
+  /** Задан CHEBURCHECK_TOKEN. */
+  configured: boolean
+  /** Выбор админа. */
+  mode: 'auto' | 'globalping' | 'cheburcheck'
+  /** Кто даёт «Россию» сейчас. */
+  active: 'globalping' | 'cheburcheck'
+  /** Сервис ответил 429 или не принял ключ: проходы стоят до этого времени (ISO). */
+  paused_until?: string
+  pause_note?: string
+  /** Остаток кредитов; ноль и пусто не показываем, проверки идут и при нуле. */
+  credits?: number
+  last_at?: string
+  pass?: number
+  total?: number
 }
 
 export interface PublicStatusHit {

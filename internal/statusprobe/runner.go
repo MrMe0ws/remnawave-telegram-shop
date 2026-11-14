@@ -51,8 +51,12 @@ type Runner struct {
 	// Проверка по спискам блокировок идёт отдельным проходом: у неё свой сервис, свои лимиты.
 	registryBusy          bool
 	registryCooldownUntil time.Time
-	loaded                bool
-	onAlerts              func([]AlertEvent)
+	// Проход Cheburcheck («Россия» из живых сканеров) тоже отдельный: свой сервис и свои лимиты.
+	chebBusy          bool
+	chebCooldownUntil time.Time
+	chebPauseNote     string
+	loaded            bool
+	onAlerts          func([]AlertEvent)
 }
 
 func NewRunner(store HistoryStore) *Runner {
@@ -307,6 +311,7 @@ func (r *Runner) Kick(targets []Target) {
 	r.mu.Unlock()
 	r.launch(pingTargets, listTargets)
 	r.kickRegistry(targets, false)
+	r.kickCheburcheck(targets, false)
 }
 
 // Force измеряет все переданные страны сразу, не дожидаясь интервала.
@@ -336,9 +341,11 @@ func (r *Runner) Force(targets []Target) error {
 		r.listBusy = true
 	}
 	r.registryCooldownUntil = time.Time{}
+	r.chebCooldownUntil = time.Time{}
 	r.mu.Unlock()
 	r.launch(pingTargets, listTargets)
 	r.kickRegistry(targets, true)
+	r.kickCheburcheck(targets, true)
 	return nil
 }
 
@@ -584,7 +591,15 @@ func (r *Runner) pingPass(ctx context.Context, targets []Target) {
 			break
 		}
 		world, russia := probeCounts(target)
-		sample, err := pingTarget(ctx, r.client, host, TCPPortOrDefault(target.TCPPort), world, russia, target.RepeatCities)
+		repeat := target.RepeatCities
+		r.mu.Lock()
+		fromCheb := r.ruFromCheburLocked(r.samples[target.Key], time.Now())
+		r.mu.Unlock()
+		if fromCheb {
+			// «Россию» даёт Cheburcheck: Globalping меряет мир и берёт один зонд из России про запас.
+			russia, repeat = 1, true
+		}
+		sample, err := pingTarget(ctx, r.client, host, TCPPortOrDefault(target.TCPPort), world, russia, repeat)
 		if err != nil {
 			var limited *RateLimitError
 			if errors.As(err, &limited) {
@@ -678,9 +693,21 @@ func (r *Runner) storeSample(key string, sample Sample) {
 	sample.Alerts = prev.Alerts
 	sample.RegistryAt, sample.RegistryTryAt, sample.RegistryOK = prev.RegistryAt, prev.RegistryTryAt, prev.RegistryOK
 	sample.RegistryBlocked, sample.RegistryKind, sample.RegistryStreak = prev.RegistryBlocked, prev.RegistryKind, prev.RegistryStreak
-	if sample.RussiaTotal > 0 && sample.RussiaTotal-sample.RussiaOK >= RussiaFailThreshold() {
-		sample.RussiaFailStreak = prev.RussiaFailStreak + 1
+	sample.ChebAt, sample.ChebTryAt, sample.ChebOK = prev.ChebAt, prev.ChebTryAt, prev.ChebOK
+	sample.ChebPass, sample.ChebTotal, sample.ChebHits = prev.ChebPass, prev.ChebTotal, prev.ChebHits
+	ruCheb := r.ruFromCheburLocked(sample, time.Now())
+	if ruCheb {
+		sample = applyCheburRU(sample)
 	} else {
+		sample.RuSource = SourceGlobalping
+	}
+	switch {
+	case ruCheb:
+		// Серии сбоев из России ведёт проход Cheburcheck: здесь «Россия» не менялась.
+		sample.RussiaFailStreak = prev.RussiaFailStreak
+	case sample.RussiaTotal > 0 && sample.RussiaTotal-sample.RussiaOK >= RussiaFailThreshold():
+		sample.RussiaFailStreak = prev.RussiaFailStreak + 1
+	default:
 		sample.RussiaFailStreak = 0
 	}
 	if sample.WorldTotal > 0 && sample.WorldOK == 0 {
@@ -693,9 +720,12 @@ func (r *Runner) storeSample(key string, sample Sample) {
 	} else {
 		sample.FailStreak = 0
 	}
-	if sample.RussiaLow() {
+	switch {
+	case ruCheb:
+		sample.RussiaLowStreak = prev.RussiaLowStreak
+	case sample.RussiaLow():
 		sample.RussiaLowStreak = prev.RussiaLowStreak + 1
-	} else {
+	default:
 		sample.RussiaLowStreak = 0
 	}
 	r.samples[key] = sample
