@@ -3810,6 +3810,7 @@
         "pickerHintCheb": "Cheburcheck only: scanners in Russian networks, no backup source.",
         "chebOff": "Not connected",
         "chebText": "Live scanners in Russian networks: home providers and mobile operators. Sees TSPU, SNI and DNS blocking, not just ping.",
+        "chebDomain": "Use a domain for the server, not an IP: scanners do not check DNS and SNI for a bare IP, and that is where blocking usually happens.",
         "chebNoKey": "A key is needed: add CHEBURCHECK_TOKEN to the bot .env and restart it.",
         "chebCredits": "{{n}} credits left",
         "chebLast": "Last check {{ago}} ago: {{pass}} of {{total}} scanners reached the server",

@@ -295,6 +295,7 @@ function CheburcheckCard({ cheb }: { cheb?: AdminCheburcheckDTO }) {
         <Status on={configured} onText={t('admin.statusPage.keyOn')} offText={t('admin.statusPage.chebOff')} />
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{t('admin.statusPage.chebText')}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground">{t('admin.statusPage.chebDomain')}</p>
       {configured ? (
         <>
           {cheb?.credits != null && (
