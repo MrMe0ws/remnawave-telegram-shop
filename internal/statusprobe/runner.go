@@ -452,8 +452,9 @@ func pingDue(target Target, sample Sample, ok bool, now time.Time) bool {
 }
 
 // NextPingMinutes — через сколько минут снова мерить сервер.
-// Если часть зондов не достучалась, следующий замер через 10 минут,
-// пока не будет замера без провалов.
+// Новый сбой перепроверяется через 10 минут один раз: повтор либо снимает его,
+// либо подтверждает, и дальше сервер идёт по обычному интервалу. Иначе сервер,
+// который из России режут постоянно, мерился бы раз в 10 минут и съедал лимит Globalping.
 func NextPingMinutes(configuredMin int, sample Sample) int {
 	if configuredMin <= 0 {
 		configuredMin = ProbeIntervalMinutes()
@@ -461,7 +462,7 @@ func NextPingMinutes(configuredMin int, sample Sample) int {
 	if configuredMin < 5 {
 		configuredMin = 5
 	}
-	if configuredMin > 10 && probeFailed(sample) {
+	if configuredMin > 10 && freshFailure(sample) {
 		return 10
 	}
 	return configuredMin
@@ -475,17 +476,10 @@ func pingInterval(target Target, sample Sample) time.Duration {
 	return time.Duration(NextPingMinutes(minutes, sample)) * time.Minute
 }
 
-func probeFailed(sample Sample) bool {
-	if sample.WorldTotal > sample.WorldOK || sample.RussiaTotal > sample.RussiaOK {
-		return true
-	}
-	for _, hit := range sample.Probes {
-		if hit.Kind == "whitelist" || hit.OK {
-			continue
-		}
-		return true
-	}
-	return false
+// freshFailure — в этом замере сбой впервые: из России не ответили STATUS_RU_FAIL_THRESHOLD
+// зондов и больше или из мира не ответил никто. Один молчащий город из десяти — шум, не сбой.
+func freshFailure(sample Sample) bool {
+	return sample.RussiaFailStreak == 1 || sample.WorldFailStreak == 1
 }
 
 func whitelistDue(target Target, sample Sample, ok bool, now time.Time) bool {
