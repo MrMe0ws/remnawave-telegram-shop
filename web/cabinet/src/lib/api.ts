@@ -328,6 +328,15 @@ export interface AdminStatusQuotaDTO {
   latencylab_pause_note?: string
   /** Настоящий остаток у Globalping (GET /v1/limits). Нет — спросить не вышло. */
   real?: AdminGlobalpingLimitsDTO
+  /** Проверка по спискам блокировок (cheburcheck). */
+  registry?: {
+    info?: { updated_at?: string; domains?: number }
+    /** Сервис ответил 429: проверка стоит до этого времени (ISO). */
+    paused_until?: string
+    /** У скольких серверов есть ответ и сколько из них числятся в списках. */
+    checked: number
+    listed: number
+  }
 }
 
 export interface AdminGlobalpingLimitsDTO {
@@ -354,6 +363,8 @@ export interface AdminRowChecksDTO {
   /** «РФ» посчитано по операторам с белыми списками. */
   operators?: boolean
   measured_at?: string
+  /** Значок «РКН»: числится ли адрес в списках блокировок. ok — нет, bad — числится. */
+  registry?: { state: AdminCheckState; kind?: 'registry' | 'cdn'; checked_at?: string }
 }
 
 export interface PublicStatusHit {

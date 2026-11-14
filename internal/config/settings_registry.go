@@ -609,6 +609,13 @@ func baseRuntimeSettings() []SettingField {
 			Current: cabinetBoolCurrent("STATUS_ALERT_WORLD", true),
 		},
 		{
+			// Оповещать админа, когда адрес сервера попал в списки блокировок РКН.
+			// Приходит тем же видом «Статус серверов».
+			Key: "STATUS_ALERT_REGISTRY", Group: "status", Type: SettingBool, Instant: true,
+			Apply:   applyFortuneBool("STATUS_ALERT_REGISTRY"),
+			Current: cabinetBoolCurrent("STATUS_ALERT_REGISTRY", true),
+		},
+		{
 			Key: "STATUS_SHOW_MAP", Group: "status", Type: SettingBool, Instant: true,
 			Apply:   applyFortuneBool("STATUS_SHOW_MAP"),
 			Current: cabinetBoolCurrent("STATUS_SHOW_MAP", true),

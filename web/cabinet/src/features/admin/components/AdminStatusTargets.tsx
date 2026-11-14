@@ -532,6 +532,7 @@ function TargetRow({
       <AdminStatusRowChecks
         checks={checks}
         enabled={row.enabled}
+        showRegistry={!bypass}
         className="max-sm:col-span-2 max-sm:col-start-3 max-sm:row-start-2"
       />
       <div className="max-sm:col-start-4 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center">

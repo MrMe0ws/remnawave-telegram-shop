@@ -117,6 +117,15 @@ type Sample struct {
 	// Alerts — открытые тревоги админу: причина → с какого момента. Лежит в замере,
 	// чтобы после перезапуска не прийти второй раз. Меняется только копией.
 	Alerts map[string]time.Time
+	// Проверка по спискам блокировок (cheburcheck). Живёт по своему расписанию, как белые списки.
+	// RegistryAt — последний полученный ответ, RegistryTryAt — последняя попытка (в том числе неудачная).
+	RegistryAt      time.Time
+	RegistryTryAt   time.Time
+	RegistryOK      bool
+	RegistryBlocked bool
+	RegistryKind    string
+	// RegistryStreak — сколько ответов подряд адрес числится в списках.
+	RegistryStreak int
 }
 
 // AllFailed — в этом замере не ответил ни один зонд. Частичный провал не считается:

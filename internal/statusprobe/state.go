@@ -144,6 +144,18 @@ type QuotaEstimate struct {
 	LatencyLabPauseNote string `json:"latencylab_pause_note,omitempty"`
 	// Real — настоящий остаток у Globalping; nil, если спросить не вышло.
 	Real *GlobalpingLimits `json:"real,omitempty"`
+	// Registry — состояние проверки по спискам блокировок (cheburcheck).
+	Registry *RegistryQuota `json:"registry,omitempty"`
+}
+
+// RegistryQuota — что показать в карточке «Реестр РКН»: свежесть списков сервиса,
+// пауза после 429 и итог по серверам.
+type RegistryQuota struct {
+	Info        *RegistryInfo `json:"info,omitempty"`
+	PausedUntil *time.Time    `json:"paused_until,omitempty"`
+	// Checked — у скольких строк есть ответ, Listed — сколько из них числятся в списках.
+	Checked int `json:"checked"`
+	Listed  int `json:"listed"`
 }
 
 // EstimateQuota считает расход по тем же правилам, что и замер: один зонд — одна единица.

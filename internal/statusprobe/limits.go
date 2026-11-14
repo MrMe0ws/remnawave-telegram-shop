@@ -169,7 +169,9 @@ func FetchGlobalpingLimits(ctx context.Context, client *http.Client) (*Globalpin
 
 type limitsStatusError struct{ code int }
 
-func (e *limitsStatusError) Error() string { return "globalping limits: http " + http.StatusText(e.code) }
+func (e *limitsStatusError) Error() string {
+	return "globalping limits: http " + http.StatusText(e.code)
+}
 
 // CheckState — итог одной проверки у строки для значка в админке.
 const (
@@ -193,6 +195,8 @@ type RowChecks struct {
 	// Operators — «РФ» посчитано по операторам, а не по зондам в России.
 	Operators  bool       `json:"operators,omitempty"`
 	MeasuredAt *time.Time `json:"measured_at,omitempty"`
+	// Registry — значок «РКН»: числится ли адрес в списках блокировок.
+	Registry RegistryCheck `json:"registry"`
 }
 
 func checkOf(ok, total int) CheckResult {
@@ -210,9 +214,9 @@ func checkOf(ok, total int) CheckResult {
 // ChecksOf превращает последний замер в значки. sample nil — замера ещё нет.
 func ChecksOf(sample *Sample, bypass bool) RowChecks {
 	if sample == nil {
-		return RowChecks{World: CheckResult{State: CheckNone}, Russia: CheckResult{State: CheckNone}}
+		return RowChecks{World: CheckResult{State: CheckNone}, Russia: CheckResult{State: CheckNone}, Registry: RegistryCheck{State: CheckNone}}
 	}
-	out := RowChecks{World: checkOf(sample.WorldOK, sample.WorldTotal)}
+	out := RowChecks{World: checkOf(sample.WorldOK, sample.WorldTotal), Registry: registryOf(sample)}
 	if bypass && sample.WhitelistTotal > 0 {
 		out.Russia = checkOf(sample.WhitelistOK, sample.WhitelistTotal)
 		out.Operators = true

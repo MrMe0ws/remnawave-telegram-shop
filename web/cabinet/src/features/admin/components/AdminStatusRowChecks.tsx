@@ -23,16 +23,21 @@ const MARK_BG: Record<AdminCheckState, string> = {
 export function AdminStatusRowChecks({
   checks,
   enabled,
+  showRegistry = false,
   className,
 }: {
   checks?: AdminRowChecksDTO
   enabled: boolean
+  /** Третий значок «РКН». У строк обхода его нет: там адрес — хост из белого списка, не сервер. */
+  showRegistry?: boolean
   className?: string
 }) {
   const { t } = useTranslation()
   const none: AdminCheckResult = { state: 'none', ok: 0, total: 0 }
   const world = enabled && checks ? checks.world : none
   const russia = enabled && checks ? checks.russia : none
+  const registry = enabled && checks?.registry ? checks.registry : { state: 'none' as const }
+  const registryResult: AdminCheckResult = { state: registry.state, ok: 0, total: 0 }
   return (
     <div className={cn('flex shrink-0 gap-1', className)} role="group" aria-label={t('admin.statusPage.chkAria')}>
       <CheckBadge
@@ -47,6 +52,15 @@ export function AdminStatusRowChecks({
         hint={checks?.operators ? t('admin.statusPage.chkOpsHint') : t('admin.statusPage.chkRuHint')}
         icon={<span className="text-[10px] font-extrabold leading-none">РФ</span>}
       />
+      {showRegistry && (
+        <CheckBadge
+          result={registryResult}
+          title={t('admin.statusPage.chkRkn')}
+          hint={registry.state === 'bad' && registry.kind === 'cdn' ? t('admin.statusPage.chkRknCdnHint') : t('admin.statusPage.chkRknHint')}
+          verdict={t(`admin.statusPage.chkRkn${registry.state[0].toUpperCase()}${registry.state.slice(1)}`)}
+          icon={<span className="text-[10px] font-extrabold leading-none">РКН</span>}
+        />
+      )}
     </div>
   )
 }
@@ -56,11 +70,14 @@ function CheckBadge({
   title,
   hint,
   icon,
+  verdict: verdictText,
 }: {
   result: AdminCheckResult
   title: string
   hint: string
   icon: React.ReactNode
+  /** Свой вердикт вместо «отвечает / не отвечает»: у «РКН» смысл другой. */
+  verdict?: string
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -75,7 +92,7 @@ function CheckBadge({
     return () => document.removeEventListener('pointerdown', close)
   }, [open])
 
-  const verdict = t(`admin.statusPage.chk${result.state[0].toUpperCase()}${result.state.slice(1)}`)
+  const verdict = verdictText ?? t(`admin.statusPage.chk${result.state[0].toUpperCase()}${result.state.slice(1)}`)
 
   return (
     <div ref={ref} className="group relative" onMouseLeave={() => setOpen(false)}>
@@ -104,7 +121,7 @@ function CheckBadge({
       <div
         role="tooltip"
         className={cn(
-          'absolute right-0 top-9 z-30 w-60 max-w-[75vw] rounded-xl border border-border bg-popover p-3 text-left text-xs shadow-xl',
+          'absolute right-0 top-9 z-30 w-60 max-w-[75vw] rounded-xl border border-border bg-card p-3 text-left text-xs shadow-xl',
           open ? 'block' : 'hidden group-hover:block',
         )}
       >
@@ -112,7 +129,7 @@ function CheckBadge({
           {title}: {verdict}
         </p>
         <p className="mt-1 text-muted-foreground">
-          {result.state === 'none' ? t('admin.statusPage.chkNoneHint') : hint}
+          {result.state === 'none' ? (verdictText ? t('admin.statusPage.chkRknNoneHint') : t('admin.statusPage.chkNoneHint')) : hint}
           {result.total > 0 && <> {t('admin.statusPage.chkCount', { ok: result.ok, total: result.total })}</>}
         </p>
       </div>

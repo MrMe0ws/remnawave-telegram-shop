@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, CircleHelp, ExternalLink, KeyRound } from 'lucide-react'
 
-import { api } from '@/lib/api'
+import { api, type AdminStatusQuotaDTO } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { AdminModal } from './AdminModal'
 
@@ -41,7 +41,7 @@ export function AdminStatusChecks() {
       </div>
 
       {data && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-xl border border-border/60 bg-background/40 p-3.5">
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium">Globalping</span>
@@ -120,6 +120,8 @@ export function AdminStatusChecks() {
               </p>
             )}
           </div>
+
+          <RegistryCard data={data.registry} />
         </div>
       )}
 
@@ -160,6 +162,45 @@ export function AdminStatusChecks() {
       </AdminModal>
     </section>
   )
+}
+
+/** «Реестр РКН»: числится ли адрес сервера в списках блокировок. Ключа не нужно. */
+function RegistryCard({ data }: { data?: AdminStatusQuotaDTO['registry'] }) {
+  const { t } = useTranslation()
+  const updated = data?.info?.updated_at ? ago(data.info.updated_at, t) : ''
+  const listed = (data?.listed ?? 0) > 0
+  return (
+    <div className="rounded-xl border border-border/60 bg-background/40 p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="whitespace-nowrap font-medium">{t('admin.statusPage.rknTitle')}</span>
+        <Status on onText={t('admin.statusPage.rknNoKey')} offText="" />
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{t('admin.statusPage.rknText')}</p>
+      {updated && <p className="mt-3 text-xs text-muted-foreground">{t('admin.statusPage.rknUpdated', { ago: updated })}</p>}
+      {data && data.checked > 0 && (
+        <p className={cn('mt-1.5 text-xs', listed ? 'font-medium text-rose-500' : 'text-muted-foreground')}>
+          {t('admin.statusPage.rknListed', { listed: data.listed, checked: data.checked })}
+        </p>
+      )}
+      {data?.paused_until && (
+        <p className="mt-1.5 flex items-start gap-1.5 text-xs text-rose-500">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {t('admin.statusPage.pausedUntil', { time: clock(data.paused_until) })}
+        </p>
+      )}
+      <p className="mt-1.5 text-xs">
+        <ExtLink href="https://cheburcheck.ru">cheburcheck.ru</ExtLink>
+      </p>
+    </div>
+  )
+}
+
+/** «12 мин», «3 ч»: сколько прошло с момента iso. */
+function ago(iso: string, t: (key: string, o?: Record<string, unknown>) => string): string {
+  const at = new Date(iso).getTime()
+  if (Number.isNaN(at)) return ''
+  const min = Math.max(0, Math.round((Date.now() - at) / 60000))
+  return min < 90 ? t('admin.statusPage.rknAgoMin', { n: Math.max(1, min) }) : t('admin.statusPage.rknAgoHour', { n: Math.round(min / 60) })
 }
 
 function ExtLink({ href, children }: { href: string; children: string }) {

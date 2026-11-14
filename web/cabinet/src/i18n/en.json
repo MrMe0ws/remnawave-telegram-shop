@@ -3500,6 +3500,10 @@
             "label": "“Unreachable from the world” alert",
             "hint": "Notify the admin when a regular server fails two world checks in a row"
           },
+          "STATUS_ALERT_REGISTRY": {
+            "label": "“Server in the RKN registry” alert",
+            "hint": "Notify the admin when a regular server address is found in the block lists twice in a row"
+          },
           "STATUS_SHOW_MAP": {
             "label": "Map",
             "hint": "Location dots and lines to the Russia probes"
@@ -3771,6 +3775,22 @@
         "chkNone": "no data",
         "chkCount": "{{ok}} of {{total}} answered.",
         "chkNoneHint": "No measurement yet, or the server is hidden from the page.",
+        "chkRkn": "RKN registry",
+        "chkRknOk": "not listed",
+        "chkRknBad": "listed",
+        "chkRknNone": "no data",
+        "chkRknHint": "The server address is in the Roskomnadzor registry. It may not open from Russia even if pings from the world succeed.",
+        "chkRknCdnHint": "The server address is in a blocked CDN range. It may not open from Russia even if pings from the world succeed.",
+        "chkRknNoneHint": "No list check yet, or the service did not answer.",
+        "rknTitle": "RKN registry",
+        "rknNoKey": "No key needed",
+        "rknText": "Cheburcheck tells whether the server address is in the Roskomnadzor registry or in blocked CDN ranges. It is not a ping: it shows blocking by list, not a live outage.",
+        "rknUpdated": "Service lists updated {{ago}} ago",
+        "rknListed": "In the lists: {{listed}} of {{checked}} servers",
+        "rknAgoMin": "{{n}} min",
+        "rknAgoHour": "{{n}} h",
+        "alertRegistryToggle": "Alert when a server gets into the RKN registry",
+        "alertRegistryToggleHint": "The address was found in the block lists twice in a row. Comes with the other server alerts.",
         "chkAria": "Server checks",
         "titleHint": "Only for the /status page opened without signing in. The \"Servers\" section inside the cabinet has its own title.",
         "fAddressBypass": "Host to check",
@@ -3927,6 +3947,7 @@
             "ru": "not reachable from Russia",
             "world": "not reachable worldwide",
             "operators": "whitelist operators don't answer",
+            "registry": "address is in the RKN block lists",
             "any": "status check"
           },
           "downFor": "outage lasted {{time}}",

@@ -149,6 +149,32 @@ func (h *AdminStatusTargets) Nodes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"nodes": out})
 }
 
+// registryQuota — данные карточки «Реестр РКН»: свежесть списков сервиса и итог по серверам.
+// Сервис не ответил — карточка просто без времени обновления.
+func (h *AdminStatusTargets) registryQuota(ctx context.Context, list []statusprobe.ConfiguredTarget) *statusprobe.RegistryQuota {
+	out := &statusprobe.RegistryQuota{}
+	if info, err := statusprobe.FetchRegistryInfo(ctx, nil); err == nil {
+		out.Info = info
+	}
+	if h.probes != nil {
+		if until := h.probes.RegistryPause(); until.After(time.Now()) {
+			out.PausedUntil = &until
+		}
+		checks := h.checksFor(list)
+		for _, item := range list {
+			check, ok := checks[item.ID]
+			if !ok || !item.Enabled || item.NoExternal || item.IsBypass() || check.Registry.State == statusprobe.CheckNone {
+				continue
+			}
+			out.Checked++
+			if check.Registry.State == statusprobe.CheckBad {
+				out.Listed++
+			}
+		}
+	}
+	return out
+}
+
 // Quota — оценка расхода Globalping для сохранённого списка.
 func (h *AdminStatusTargets) Quota(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -179,5 +205,6 @@ func (h *AdminStatusTargets) Quota(w http.ResponseWriter, r *http.Request) {
 	if lim, err := statusprobe.FetchGlobalpingLimits(limCtx, nil); err == nil {
 		est.Real = lim
 	}
+	est.Registry = h.registryQuota(limCtx, list)
 	writeJSON(w, http.StatusOK, est)
 }
