@@ -313,9 +313,9 @@ export default function FortunePage() {
 
   const spinButtonLabel = useMemo(() => {
     if (spinning || spinMut.isPending) return t('fortune.spinning')
-    if (status?.daily_free_available) return t('fortune.spinButtonFree')
+    if (status?.daily_free_available || (status?.bonus_spins ?? 0) > 0) return t('fortune.spinButtonFree')
     return t('fortune.spinButtonPaid', { count: spinCostDays })
-  }, [spinning, spinMut.isPending, status?.daily_free_available, spinCostDays, t])
+  }, [spinning, spinMut.isPending, status?.daily_free_available, status?.bonus_spins, spinCostDays, t])
 
   const rawRemainDays = status?.subscription_remain_days
   const subscriptionDaysLeft =
@@ -354,8 +354,11 @@ export default function FortunePage() {
   )
   const nextFreeCountdownMs = useUtcMidnightCountdown(showNextFreeTimer)
 
+  // Колесо ограничено ещё и высотой окна: 430px / 380px — всё остальное на странице (шапка, заголовок,
+  // лента, кнопка, отступы; на телефоне ещё нижняя панель). Так кнопка «Крутить» видна без прокрутки.
+  // max(12rem, …) — на совсем низком окне колесо не схлопывается, страница просто прокручивается.
   const wheelWrapClassName =
-    'relative mx-auto flex w-full max-w-[min(calc(100vw-1.5rem),500px)] flex-col items-center gap-4 sm:max-w-[min(100%,520px)] md:max-w-[min(100%,560px)]'
+    'relative mx-auto flex w-full max-w-[min(calc(100vw-1.5rem),500px,max(12rem,calc(100dvh-430px)))] flex-col items-center gap-4 sm:max-w-[min(100%,520px,max(12rem,calc(100dvh-430px)))] md:max-w-[min(100%,560px,max(12rem,calc(100dvh-380px)))]'
 
   const wheelColumn = (
     <>
@@ -386,12 +389,6 @@ export default function FortunePage() {
         />
       </motion.div>
 
-      {status?.daily_free_enabled && status?.daily_free_available && (
-        <p className="text-center text-xs font-medium text-primary">
-          {t('fortune.dailyFreeHint')}
-        </p>
-      )}
-
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
         <Button
           type="button"
@@ -411,6 +408,16 @@ export default function FortunePage() {
           }}
         >
           {spinButtonLabel}
+          {(status?.bonus_spins ?? 0) > 0 && !spinning && !spinMut.isPending && (
+            <span
+              className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs font-semibold tabular-nums"
+              title={t('fortune.bonusSpinsHint', { count: status?.bonus_spins ?? 0 })}
+              aria-label={t('fortune.bonusSpinsHint', { count: status?.bonus_spins ?? 0 })}
+            >
+              <Ticket className="size-3.5" aria-hidden />
+              {status?.bonus_spins}
+            </span>
+          )}
         </Button>
       </div>
 
