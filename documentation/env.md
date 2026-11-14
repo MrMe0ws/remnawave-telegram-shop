@@ -425,10 +425,10 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `FORTUNE_DAILY_FREE_SPIN` | Один бесплатный спин в сутки (UTC) |
 | `FORTUNE_WINNER_TICKER_ENABLED` | Лента победителей на странице |
 | `FORTUNE_WINNER_TICKER_FAKE_FILL` | `true` — только синтетическая лента |
-| `FORTUNE_WEIGHT_*` | Веса секторов RNG |
-| `FORTUNE_REWARD_*` | Величины призов (дни, XP, %) |
+| `FORTUNE_WEIGHT_*` | Веса секторов RNG. Вес 0 — приз выключен, сектор пропадает с колеса (кроме «+180 дней»: он остаётся на колесе и не выпадает). `FORTUNE_WEIGHT_FREE_SPIN` — шанс приза «бесплатный спин» (по умолчанию 10 из 1000 = 1%) |
+| `FORTUNE_REWARD_*` | Величины призов (дни, XP, %, `FORTUNE_REWARD_FREE_SPINS` — сколько бесплатных спинов даёт приз) |
 
-Конфиг в коде: `internal/cabinet/config/fortune_wheel.go`. Миграции `000033`, `000034`.
+Конфиг в коде: `internal/cabinet/config/fortune_wheel.go`. Миграции `000033`, `000034`, `000068` (бонусные спины). Скидки колеса 3% и 5% действуют на одну оплату (миграция `000067` переводит старые бессрочные).
 
 ---
 

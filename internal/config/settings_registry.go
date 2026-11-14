@@ -764,6 +764,7 @@ func baseRuntimeSettings() []SettingField {
 		{Key: "FORTUNE_WEIGHT_DAYS_15", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_WEIGHT_DAYS_15", 0), Current: fortuneCurrent("FORTUNE_WEIGHT_DAYS_15")},
 		{Key: "FORTUNE_WEIGHT_DAYS_30", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_WEIGHT_DAYS_30", 0), Current: fortuneCurrent("FORTUNE_WEIGHT_DAYS_30")},
 		{Key: "FORTUNE_WEIGHT_DAYS_180", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_WEIGHT_DAYS_180", 0), Current: fortuneCurrent("FORTUNE_WEIGHT_DAYS_180")},
+		{Key: "FORTUNE_WEIGHT_FREE_SPIN", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_WEIGHT_FREE_SPIN", 0), Current: fortuneCurrent("FORTUNE_WEIGHT_FREE_SPIN")},
 		{Key: "FORTUNE_REWARD_XP_AMOUNT", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_REWARD_XP_AMOUNT", 0), Current: fortuneCurrent("FORTUNE_REWARD_XP_AMOUNT")},
 		{Key: "FORTUNE_REWARD_MICRO_XP_MIN", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_REWARD_MICRO_XP_MIN", 0), Current: fortuneCurrent("FORTUNE_REWARD_MICRO_XP_MIN")},
 		{Key: "FORTUNE_REWARD_MICRO_XP_MAX", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_REWARD_MICRO_XP_MAX", 0), Current: fortuneCurrent("FORTUNE_REWARD_MICRO_XP_MAX")},
@@ -775,6 +776,7 @@ func baseRuntimeSettings() []SettingField {
 		{Key: "FORTUNE_REWARD_DAYS_15", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_REWARD_DAYS_15", 0), Current: fortuneCurrent("FORTUNE_REWARD_DAYS_15")},
 		{Key: "FORTUNE_REWARD_DAYS_30", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_REWARD_DAYS_30", 0), Current: fortuneCurrent("FORTUNE_REWARD_DAYS_30")},
 		{Key: "FORTUNE_REWARD_DAYS_180", Group: "fortune", Type: SettingInt, MinInt: intPtr(0), Apply: applyFortuneInt("FORTUNE_REWARD_DAYS_180", 0), Current: fortuneCurrent("FORTUNE_REWARD_DAYS_180")},
+		{Key: "FORTUNE_REWARD_FREE_SPINS", Group: "fortune", Type: SettingInt, MinInt: intPtr(1), Apply: applyFortuneInt("FORTUNE_REWARD_FREE_SPINS", 1), Current: fortuneCurrent("FORTUNE_REWARD_FREE_SPINS")},
 	}
 }
 

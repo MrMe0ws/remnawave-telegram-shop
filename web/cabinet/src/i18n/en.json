@@ -582,6 +582,7 @@
       "moduleOff": "The fortune wheel is disabled on this server.",
       "noPanel": "Remnawave panel is not configured — spins are unavailable.",
       "dailyFreeHint": "You have 1 free spin today.",
+      "bonusSpinsHint": "Free spins won: {{count}}",
       "spinButtonFree": "Spin for FREE",
       "spinButtonPaid": "Spin the wheel",
       "spin": "Spin",
@@ -606,13 +607,16 @@
         "plusDays": "+{{d}} days",
         "hintDays": "Added to subscription",
         "hintDiscount": "On your next payment",
-        "hintXp": "Loyalty program"
+        "hintXp": "Loyalty program",
+        "freeSpin": "Free spin",
+        "hintFreeSpin": "One more try"
       },
       "wheelShort": {
         "micro": "Micro XP",
         "xp": "XP",
         "discount": "−{{pct}}%",
-        "plusDays": "+{{d}} d"
+        "plusDays": "+{{d}} d",
+        "freeSpin": "+{{n}} spin"
       },
       "soundEnableHint": "Enable wheel sounds",
       "soundDisableHint": "Disable wheel sounds",
@@ -636,7 +640,8 @@
         "days_7": "+7 days",
         "days_15": "+15 days",
         "days_30": "+30 days",
-        "days_180": "+180 days"
+        "days_180": "+180 days",
+        "free_spin": "Free spin"
       },
       "result": {
         "micro": "Loyalty bonus: +{{value}} XP",
@@ -648,7 +653,8 @@
         "days_7": "+{{value}} days to subscription",
         "days_15": "+{{value}} days to subscription",
         "days_30": "+{{value}} days to subscription",
-        "days_180": "+{{value}} days to subscription"
+        "days_180": "+{{value}} days to subscription",
+        "free_spin": "+{{value}} free spin"
       },
       "winnerFeedEmpty": "No wins to show yet — be the first to spin.",
       "ticker": {
@@ -656,7 +662,8 @@
         "knocked": "got",
         "discount": "{{pct}}% off",
         "daysPrize": "+{{d}} d",
-        "xpPrize": "+{{value}} XP"
+        "xpPrize": "+{{value}} XP",
+        "freeSpin": "a free spin"
       },
       "relative": {
         "justNow": "just now",
@@ -3388,6 +3395,10 @@
             "label": "Sector «+180 days»",
             "hint": ""
           },
+          "FORTUNE_WEIGHT_FREE_SPIN": {
+            "label": "Sector «Free spin»",
+            "hint": "Prize chance. 0 turns the prize off and removes the sector from the wheel. Keep it small (1–2% of the weight total), or spins snowball."
+          },
           "FORTUNE_REWARD_XP_AMOUNT": {
             "label": "XP for large bonus",
             "hint": ""
@@ -3430,6 +3441,10 @@
           },
           "FORTUNE_REWARD_DAYS_180": {
             "label": "Days for +180 prize",
+            "hint": ""
+          },
+          "FORTUNE_REWARD_FREE_SPINS": {
+            "label": "Spins per «Free spin» prize",
             "hint": ""
           },
           "CABINET_PUSH_IMPORTANT": {
@@ -3882,7 +3897,8 @@
         "fortune": {
           "days": "+{{count}} d",
           "discount": "{{count}}% off",
-          "xp": "+{{count}} XP"
+          "xp": "+{{count}} XP",
+          "freeSpin": "+{{count}} free spin"
         },
         "promo": {
           "days": "+{{count}} d",

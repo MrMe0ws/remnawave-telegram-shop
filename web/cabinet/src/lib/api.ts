@@ -1098,6 +1098,7 @@ export interface FortuneSectorDTO {
   reward_type: string
   display_days?: number
   display_percent?: number
+  display_spins?: number
 }
 
 export interface FortuneStatusResponse {
@@ -1111,6 +1112,8 @@ export interface FortuneStatusResponse {
   daily_free_enabled?: boolean
   /** Сегодня по UTC ещё не использован ежедневный бесплатный спин */
   daily_free_available?: boolean
+  /** Выигранные на колесе бесплатные спины, ещё не потраченные */
+  bonus_spins?: number
   min_subscription_days: number
   /** FORTUNE_SPIN_COST_DAYS: платный спин списывает столько дней подписки. */
   spin_cost_days?: number

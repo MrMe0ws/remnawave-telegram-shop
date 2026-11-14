@@ -744,6 +744,7 @@
       "moduleOff": "Колесо фортуны выключено.",
       "noPanel": "Панель Remnawave не настроена — спин недоступен.",
       "dailyFreeHint": "У вас есть 1 бесплатная попытка",
+      "bonusSpinsHint": "Выигранных бесплатных попыток: {{count}}",
       "spinButtonFree": "Крутить БЕСПЛАТНО",
       "spinButtonPaid": "Вращать колесо",
       "spin": "Крутить",
@@ -768,13 +769,16 @@
         "plusDays": "+{{d}} дней",
         "hintDays": "К подписке",
         "hintDiscount": "На следующую оплату",
-        "hintXp": "В программу лояльности"
+        "hintXp": "В программу лояльности",
+        "freeSpin": "Бесплатный спин",
+        "hintFreeSpin": "Ещё одна попытка"
       },
       "wheelShort": {
         "micro": "Лояльность XP",
         "xp": "Лояльность XP",
         "discount": "−{{pct}}%",
-        "plusDays": "+{{d}} д"
+        "plusDays": "+{{d}} д",
+        "freeSpin": "+{{n}} спин"
       },
       "soundEnableHint": "Включить звуки колеса",
       "soundDisableHint": "Выключить звуки колеса",
@@ -798,7 +802,8 @@
         "days_7": "+7 дней",
         "days_15": "+15 дней",
         "days_30": "+30 дней",
-        "days_180": "+180 дней"
+        "days_180": "+180 дней",
+        "free_spin": "Бесплатный спин"
       },
       "result": {
         "micro": "Бонус лояльности: +{{value}} XP",
@@ -810,7 +815,8 @@
         "days_7": "+{{value}} дн. к подписке",
         "days_15": "+{{value}} дн. к подписке",
         "days_30": "+{{value}} дн. к подписке",
-        "days_180": "+{{value}} дн. к подписке"
+        "days_180": "+{{value}} дн. к подписке",
+        "free_spin": "+{{value}} бесплатный спин"
       },
       "winnerFeedEmpty": "Пока нет записей о выигрышах — крутите колесо первыми.",
       "ticker": {
@@ -818,7 +824,8 @@
         "knocked": "выбил",
         "discount": "скидка {{pct}}%",
         "daysPrize": "+{{d}} дн.",
-        "xpPrize": "+{{value}} XP"
+        "xpPrize": "+{{value}} XP",
+        "freeSpin": "бесплатный спин"
       },
       "relative": {
         "justNow": "только что",
@@ -3458,6 +3465,10 @@
             "label": "Сектор «+180 дней»",
             "hint": ""
           },
+          "FORTUNE_WEIGHT_FREE_SPIN": {
+            "label": "Сектор «Бесплатный спин»",
+            "hint": "Шанс приза. 0 — приз выключен, сектор пропадает с колеса. Держите значение небольшим (1–2% от суммы весов), иначе попытки размножаются."
+          },
           "FORTUNE_REWARD_XP_AMOUNT": {
             "label": "XP за крупный бонус",
             "hint": ""
@@ -3500,6 +3511,10 @@
           },
           "FORTUNE_REWARD_DAYS_180": {
             "label": "Дней за приз +180",
+            "hint": ""
+          },
+          "FORTUNE_REWARD_FREE_SPINS": {
+            "label": "Спинов за приз «Бесплатный спин»",
             "hint": ""
           },
           "CABINET_PUSH_IMPORTANT": {
@@ -3954,7 +3969,8 @@
         "fortune": {
           "days": "+{{count}} дн.",
           "discount": "скидка {{count}}%",
-          "xp": "+{{count}} XP"
+          "xp": "+{{count}} XP",
+          "freeSpin": "+{{count}} бесплатный спин"
         },
         "promo": {
           "days": "+{{count}} дн.",
