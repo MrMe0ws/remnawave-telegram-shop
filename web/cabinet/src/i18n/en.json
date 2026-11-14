@@ -3772,6 +3772,7 @@
         "pauseNote": "Service replied: \"{{note}}\"",
         "pauseNoteEmpty": "The service answered 429 with no explanation",
         "pauseNotCredits": "Globalping limit is not used up — a problem on their side",
+        "pauseShortCredits": "One check costs up to {{cost}} units and only {{remaining}} are left — not enough for a measurement until the limit resets",
         "gpReal": "{{remaining}} of {{limit}} checks left this hour",
         "gpRealReset": "resets in {{min}} min",
         "gpCredits": "Extra credits: {{n}}",

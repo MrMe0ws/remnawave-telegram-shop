@@ -81,7 +81,12 @@ export function AdminStatusChecks() {
                     {data.globalping_pause_note && data.globalping_pause_note !== 'HTTP 429'
                       ? t('admin.statusPage.pauseNote', { note: data.globalping_pause_note })
                       : t('admin.statusPage.pauseNoteEmpty')}
-                    {real && real.remaining > 0 && <> · {t('admin.statusPage.pauseNotCredits')}</>}
+                    {real && real.remaining >= Math.max(1, data.max_cost) && (
+                      <> · {t('admin.statusPage.pauseNotCredits')}</>
+                    )}
+                    {real && data.max_cost > 0 && real.remaining < data.max_cost && (
+                      <> · {t('admin.statusPage.pauseShortCredits', { cost: data.max_cost, remaining: real.remaining })}</>
+                    )}
                   </span>
                 </span>
               </p>

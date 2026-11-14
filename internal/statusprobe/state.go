@@ -132,6 +132,9 @@ func LatencyLabConfigured() bool {
 type QuotaEstimate struct {
 	PerHour int `json:"per_hour"`
 	Limit   int `json:"limit"`
+	// MaxCost — сколько единиц стоит самая дорогая проверка из списка. Globalping не запускает
+	// замер, если остаток меньше его цены, поэтому «осталось 5» при цене 16 — это исчерпанный лимит.
+	MaxCost int `json:"max_cost"`
 	// TokenSet — задан GLOBALPING_TOKEN (лимит выше).
 	TokenSet bool `json:"token_set"`
 	// LatencyLabSet — задан LATENCYLAB_TOKEN, проверка обхода возможна.
@@ -163,6 +166,7 @@ type RegistryQuota struct {
 func EstimateQuota(list []ConfiguredTarget) QuotaEstimate {
 	defWorld, defRussia := ProbeLimits()
 	total := 0.0
+	maxCost := 0
 	for _, item := range list {
 		if !item.Enabled || item.NoExternal || strings.TrimSpace(item.Address) == "" {
 			continue
@@ -183,6 +187,9 @@ func EstimateQuota(list []ConfiguredTarget) QuotaEstimate {
 			}
 			cost = world + extra
 		}
+		if cost > maxCost {
+			maxCost = cost
+		}
 		minutes := item.IntervalMin
 		if minutes <= 0 {
 			minutes = ProbeIntervalMinutes()
@@ -197,6 +204,7 @@ func EstimateQuota(list []ConfiguredTarget) QuotaEstimate {
 	return QuotaEstimate{
 		PerHour:       int(total + 0.5),
 		Limit:         limit,
+		MaxCost:       maxCost,
 		TokenSet:      token,
 		LatencyLabSet: LatencyLabConfigured(),
 	}

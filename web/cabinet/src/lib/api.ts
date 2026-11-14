@@ -318,6 +318,8 @@ export interface AdminStatusNodeDTO {
 export interface AdminStatusQuotaDTO {
   per_hour: number
   limit: number
+  /** Цена самой дорогой проверки из списка: остаток меньше неё — замер не запустится. */
+  max_cost: number
   token_set: boolean
   latencylab_set: boolean
   /** Сервис ответил 429: проверки стоят до этого времени (ISO). */
