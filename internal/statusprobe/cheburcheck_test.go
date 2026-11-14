@@ -2,6 +2,7 @@ package statusprobe
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,7 @@ data: {"id":"x","status":"done"}
 `
 
 func TestReadChebStreamCountsOnlyDecidedScanners(t *testing.T) {
-	res, err := readChebStream(strings.NewReader(chebStream))
+	res, err := readChebStream(strings.NewReader(chebStream), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,7 @@ func TestReadChebStreamCountsOnlyDecidedScanners(t *testing.T) {
 
 func TestReadChebStreamKeepsPartialResultOnBrokenStream(t *testing.T) {
 	cut := chebStream[:strings.Index(chebStream, "event: result\ndata: {\"asn\":\"AS1\"")] + "event: result\ndata: {\"asn\":\"A"
-	res, err := readChebStream(strings.NewReader(cut))
+	res, err := readChebStream(strings.NewReader(cut), false)
 	if err != nil || res.Total != 2 {
 		t.Fatalf("partial stream: %+v err %v", res, err)
 	}
@@ -459,6 +460,31 @@ func TestChebPassStopsWhileWaitingForASlot(t *testing.T) {
 	r.chebPass(ctx, []Target{{Key: "a", Address: "8.8.8.8"}, {Key: "b", Address: "8.8.4.4"}})
 	if calls != 1 {
 		t.Fatalf("the second server must wait for its slot and give up with the context: %d calls", calls)
+	}
+}
+
+func TestChebDisplayVerdictsFollowTheSite(t *testing.T) {
+	scanner := func(unblocked bool, hosts int, verdicts ...string) chebScanner {
+		return chebScanner{Verdicts: verdicts, CDNUnblocked: unblocked, HostResults: make([]json.RawMessage, hosts)}
+	}
+	cases := []struct {
+		name          string
+		sc            chebScanner
+		staticCDN     bool
+		wantOK, isBad bool
+	}{
+		{"cdn_block, server outside CDN ranges: the limit does not touch it", scanner(false, 13, "cdn_block"), false, true, false},
+		{"cdn_block, server in a CDN range", scanner(false, 13, "cdn_block"), true, false, true},
+		{"ok, server in a CDN range, scanner cannot reach control hosts", scanner(false, 13, "ok"), true, false, true},
+		{"ok, server in a CDN range, scanner reaches them", scanner(true, 13, "ok"), true, true, false},
+		{"ok outside CDN ranges", scanner(false, 13, "ok"), false, true, false},
+		{"tspu_block stays a block anywhere", scanner(true, 13, "tspu_block"), false, false, true},
+	}
+	for _, c := range cases {
+		ok, bad := chebVerdict(chebDisplayVerdicts(c.sc, c.staticCDN))
+		if ok != c.wantOK || bad != c.isBad {
+			t.Errorf("%s: got ok=%v blocked=%v", c.name, ok, bad)
+		}
 	}
 }
 

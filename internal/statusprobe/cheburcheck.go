@@ -101,8 +101,9 @@ var chebBlocked = map[string]bool{
 
 // chebVerdict — итог одного сканера. ok и whitelist (домен снимает ограничение на заблокированных
 // CDN) значат «открыл», uncertain и пустой ответ не считаются ни тем, ни другим.
-// cdn_block — это блокировка по лимиту 16–20 КБ на соединение к заблокированным диапазонам
-// хостинга: сервер в такой сети «открывается», но соединение рвётся, VPN в ней не работает.
+// cdn_block — лимит 16–20 КБ на соединение к заблокированным диапазонам CDN: сервер в таком
+// диапазоне «открывается», но соединение рвётся. Применять его к серверу вне диапазонов
+// нельзя, это делает chebDisplayVerdicts.
 func chebVerdict(verdicts []string) (ok, blocked bool) {
 	for _, v := range verdicts {
 		v = strings.ToLower(strings.TrimSpace(v))
@@ -114,6 +115,26 @@ func chebVerdict(verdicts []string) (ok, blocked bool) {
 		}
 	}
 	return ok && !blocked, blocked
+}
+
+// chebDisplayVerdicts приводит вердикты сканера к тому, что показывает сам cheburcheck.ru.
+// Лимит 16–20 КБ действует только на диапазоны CDN из списков сервиса. Если адрес сервера в них
+// не лежит, cdn_block значит лишь «в сети этого сканера лимит есть», а до сервера он не касается:
+// сайт показывает такой ответ как ok. Обратно: в диапазоне CDN сканер без доступа к контрольным
+// серверам с ok тоже считается cdn_block.
+func chebDisplayVerdicts(sc chebScanner, staticCDN bool) []string {
+	out := make([]string, 0, len(sc.Verdicts))
+	for _, v := range sc.Verdicts {
+		switch lv := strings.ToLower(strings.TrimSpace(v)); {
+		case lv == "cdn_block" && !staticCDN:
+			out = append(out, "ok")
+		case lv == "ok" && staticCDN && !sc.CDNUnblocked && len(sc.HostResults) != 0:
+			out = append(out, "cdn_block")
+		default:
+			out = append(out, lv)
+		}
+	}
+	return out
 }
 
 // chebResult — итог одного прохода: Pass из Total сканеров открыли сервер.
@@ -202,7 +223,7 @@ func measureCheburcheck(ctx context.Context, host string) (chebResult, error) {
 	if resp.StatusCode != http.StatusOK {
 		return chebResult{}, chebError(resp, "probe")
 	}
-	res, readErr := readChebStream(io.LimitReader(resp.Body, 8<<20))
+	res, readErr := readChebStream(io.LimitReader(resp.Body, 8<<20), reg != nil && reg.InCDN)
 	res.Registry = reg
 	// Оборванный поток с частью ответов годится: сканеры и так отвечают не все.
 	if res.Total == 0 {
@@ -215,14 +236,16 @@ func measureCheburcheck(ctx context.Context, host string) (chebResult, error) {
 }
 
 type chebScanner struct {
-	ASN      string   `json:"asn"`
-	Provider string   `json:"provider"`
-	Region   string   `json:"region"`
-	Verdicts []string `json:"verdicts"`
+	ASN          string            `json:"asn"`
+	Provider     string            `json:"provider"`
+	Region       string            `json:"region"`
+	Verdicts     []string          `json:"verdicts"`
+	CDNUnblocked bool              `json:"cdn_unblocked"`
+	HostResults  []json.RawMessage `json:"host_results"`
 }
 
 // readChebStream разбирает SSE: события result несут вердикты, done закрывает поток.
-func readChebStream(r io.Reader) (chebResult, error) {
+func readChebStream(r io.Reader, staticCDN bool) (chebResult, error) {
 	var out chebResult
 	br := bufio.NewReaderSize(r, 64<<10)
 	event := ""
@@ -237,7 +260,7 @@ func readChebStream(r io.Reader) (chebResult, error) {
 			if err := json.Unmarshal([]byte(data.String()), &sc); err != nil {
 				return false
 			}
-			ok, blocked := chebVerdict(sc.Verdicts)
+			ok, blocked := chebVerdict(chebDisplayVerdicts(sc, staticCDN))
 			if !ok && !blocked {
 				return false
 			}

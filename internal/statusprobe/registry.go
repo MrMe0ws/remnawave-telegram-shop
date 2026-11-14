@@ -42,6 +42,8 @@ const (
 type registryResult struct {
 	Blocked bool
 	Kind    string
+	// InCDN — адрес лежит в диапазоне какого-либо CDN из списков сервиса (blocked при этом может быть false).
+	InCDN bool
 }
 
 // registryCheck — подменяется в тестах.
@@ -89,7 +91,7 @@ func parseRegistry(body []byte) (registryResult, error) {
 	if parsed.Blocked == nil {
 		return registryResult{}, errors.New("cheburcheck: no verdict")
 	}
-	out := registryResult{Blocked: *parsed.Blocked}
+	out := registryResult{Blocked: *parsed.Blocked, InCDN: len(parsed.CDNProviders) > 0}
 	if out.Blocked {
 		out.Kind = RegistryKindRegistry
 		if len(parsed.BlockedSubnet) == 0 && len(parsed.CDNProviders) > 0 {
