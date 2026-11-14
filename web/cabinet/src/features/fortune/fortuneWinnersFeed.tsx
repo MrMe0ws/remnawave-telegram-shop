@@ -163,9 +163,8 @@ export function FortuneWinnersMarquee({ items, t }: FeedProps) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-300/90 bg-[hsl(228_56%_97%)] shadow-sm dark:border-white/[0.08] dark:bg-[#0a0e27] dark:shadow-none">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[hsl(228_56%_97%)] to-transparent dark:from-[#0a0e27]" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[hsl(228_56%_97%)] to-transparent dark:from-[#0a0e27]" />
+    // Края ленты растворяются целиком, вместе с рамкой и фоном: строка «выезжает» из ниоткуда.
+    <div className="relative overflow-hidden rounded-xl border border-slate-300/90 bg-[hsl(228_56%_97%)] shadow-sm [mask-image:linear-gradient(90deg,transparent,#000_5%,#000_95%,transparent)] dark:border-white/[0.08] dark:bg-[#0a0e27] dark:shadow-none">
       <div className="overflow-hidden py-2.5 px-4 sm:px-5">
         <div
           className="flex w-max min-w-full animate-fortune-winners-marquee items-center motion-reduce:animate-none"
