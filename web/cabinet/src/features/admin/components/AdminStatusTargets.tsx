@@ -475,8 +475,13 @@ function TargetRow({
   return (
     <li
       ref={liRef}
+      onClick={(e) => {
+        // Пустое место карточки открывает правку; кнопки, переключатель и значки работают сами.
+        if ((e.target as HTMLElement).closest('button,input,label,[role="tooltip"],[role="switch"]')) return
+        onEdit()
+      }}
       className={cn(
-        'flex items-center gap-2 max-sm:flex-wrap rounded-xl border border-border/60 bg-background/40 p-3 transition-[opacity,box-shadow,border-color,background-color] duration-200',
+        'flex cursor-pointer items-center gap-2 max-sm:grid max-sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] max-sm:gap-y-2 rounded-xl border border-border/60 bg-background/40 p-3 transition-[opacity,box-shadow,border-color,background-color] duration-200',
         !row.enabled && 'opacity-60',
         dragging && 'relative z-20 border-primary/60 bg-card opacity-100 shadow-2xl shadow-black/40',
       )}
@@ -493,20 +498,20 @@ function TargetRow({
           }
         }}
         className={cn(
-          '-ml-1 flex h-9 w-6 shrink-0 touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          '-ml-1 flex h-9 w-6 shrink-0 touch-none max-sm:col-start-1 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           dragging ? 'cursor-grabbing' : 'cursor-grab',
         )}
       >
         <GripVertical className="size-5" />
       </button>
-      <div className="flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+      <div className="flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center">
         {row.country ? (
           <CountryFlag code={row.country} className="h-full w-full object-cover" />
         ) : (
           <Server className="size-4 text-muted-foreground" />
         )}
       </div>
-      <button type="button" onClick={onEdit} className="min-w-0 flex-1 overflow-hidden text-left">
+      <button type="button" onClick={onEdit} className="min-w-0 flex-1 overflow-hidden text-left max-sm:col-start-3 max-sm:row-start-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-medium">{row.name || t('admin.statusPage.noName')}</span>
           <span className={cn(kindClass, 'max-sm:hidden')}>{kindLabel}</span>
@@ -527,9 +532,11 @@ function TargetRow({
       <AdminStatusRowChecks
         checks={checks}
         enabled={row.enabled}
-        className="max-sm:order-last max-sm:basis-full max-sm:pl-[68px]"
+        className="max-sm:col-span-2 max-sm:col-start-3 max-sm:row-start-2"
       />
-      <AdminToggleSwitch checked={row.enabled} onChange={onToggle} aria-label={t('admin.statusPage.showOnPage')} />
+      <div className="max-sm:col-start-4 max-sm:row-start-1 max-sm:self-center">
+        <AdminToggleSwitch checked={row.enabled} onChange={onToggle} aria-label={t('admin.statusPage.showOnPage')} />
+      </div>
       <button
         type="button"
         aria-label={t('admin.statusPage.edit')}
