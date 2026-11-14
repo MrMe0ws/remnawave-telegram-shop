@@ -99,14 +99,14 @@ export function FortunePossiblePrizes({ sectors, t }: FortunePossiblePrizesProps
   if (sorted.length === 0) return null
 
   return (
-    <div className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
-      <p className="mb-3 text-[14px] font-semibold leading-snug tracking-tight text-foreground sm:text-[16px]">
+    <div className="rounded-[20px] border border-border bg-card/80 p-3.5 shadow-sm">
+      <p className="mb-3 text-base font-semibold leading-snug tracking-tight text-foreground">
         {t('fortune.youCanWinTitle')}
       </p>
       <div
         ref={scrollRef}
         className={cn(
-          'fortune-prizes-scroll -mx-1 flex gap-2.5 overflow-x-auto pb-2 pt-0.5',
+          'fortune-prizes-scroll flex gap-2.5 overflow-x-auto pb-1.5',
           'motion-reduce:scroll-auto',
         )}
       >
@@ -118,16 +118,16 @@ export function FortunePossiblePrizes({ sectors, t }: FortunePossiblePrizesProps
           return (
             <div
               key={s.reward_type}
-              className="flex min-w-[112px] max-w-[132px] shrink-0 flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/30 shadow-sm sm:min-w-[140px] sm:max-w-[168px] md:min-w-[116px] md:max-w-[116px]"
+              className="flex w-24 shrink-0 flex-col overflow-hidden rounded-[14px] border border-border/80 bg-muted/30 shadow-sm sm:w-[108px]"
             >
-              <div className={cn('h-1 w-full shrink-0', bar)} />
-              <div className="flex flex-1 flex-col items-center gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-2.5 sm:py-3.5">
-                <Icon className={cn('size-7 shrink-0 sm:size-10 md:size-7', iconCls)} strokeWidth={2} aria-hidden />
-                <p className="text-center text-[12px] font-semibold leading-snug text-foreground sm:text-[14px] md:text-[13px]">
+              <div className={cn('h-[3px] w-full shrink-0', bar)} />
+              <div className="flex flex-1 flex-col items-center gap-1 px-1.5 py-3">
+                <Icon className={cn('size-6 shrink-0', iconCls)} strokeWidth={2} aria-hidden />
+                <p className="mt-0.5 text-center text-[13px] font-semibold leading-tight text-foreground sm:text-sm">
                   {prizeTitle(t, s)}
                 </p>
                 {sub ? (
-                  <p className="text-center text-[10px] leading-snug text-muted-foreground sm:text-[12px] md:text-[11px]">{sub}</p>
+                  <p className="text-center text-[11px] leading-snug text-muted-foreground sm:text-xs">{sub}</p>
                 ) : null}
               </div>
             </div>

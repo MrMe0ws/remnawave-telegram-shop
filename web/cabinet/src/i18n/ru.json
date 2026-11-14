@@ -766,15 +766,15 @@
       "spinCostPill": "−{{count}} д",
       "youCanWinTitle": "Вы можете получить:",
       "prizeCard": {
-        "micro": "Лояльность XP",
-        "xp": "Лояльность XP",
+        "micro": "Немного XP",
+        "xp": "Много XP",
         "discount": "Скидка {{pct}}%",
         "plusDays": "+{{d}} дней",
         "hintDays": "К подписке",
-        "hintDiscount": "На следующую оплату",
-        "hintXp": "В программу лояльности",
+        "hintDiscount": "На оплату",
+        "hintXp": "В лояльность",
         "freeSpin": "Бесплатный спин",
-        "hintFreeSpin": "Ещё одна попытка"
+        "hintFreeSpin": "Ещё попытка"
       },
       "wheelShort": {
         "micro": "Лояльность XP",

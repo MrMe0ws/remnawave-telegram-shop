@@ -608,8 +608,8 @@
         "xp": "XP points",
         "discount": "{{pct}}% off",
         "plusDays": "+{{d}} days",
-        "hintDays": "Added to subscription",
-        "hintDiscount": "On your next payment",
+        "hintDays": "To subscription",
+        "hintDiscount": "On payment",
         "hintXp": "Loyalty program",
         "freeSpin": "Free spin",
         "hintFreeSpin": "One more try"
