@@ -498,44 +498,44 @@ function TargetRow({
           }
         }}
         className={cn(
-          '-ml-1 flex h-9 w-6 shrink-0 touch-none max-sm:col-start-1 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          '-ml-1 flex h-9 w-6 shrink-0 touch-none max-sm:col-start-1 max-sm:row-start-1 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           dragging ? 'cursor-grabbing' : 'cursor-grab',
         )}
       >
         <GripVertical className="size-5" />
       </button>
-      <div className="flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center">
+      <div className="flex h-7 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted max-sm:col-start-2 max-sm:row-start-1">
         {row.country ? (
           <CountryFlag code={row.country} className="h-full w-full object-cover" />
         ) : (
           <Server className="size-4 text-muted-foreground" />
         )}
       </div>
-      <button type="button" onClick={onEdit} className="min-w-0 flex-1 overflow-hidden text-left max-sm:col-start-3 max-sm:row-start-1">
-        <div className="flex items-center gap-2">
+      <button type="button" onClick={onEdit} className="min-w-0 flex-1 overflow-hidden text-left max-sm:contents">
+        <div className="flex items-center gap-2 max-sm:col-start-3 max-sm:row-start-1 max-sm:min-w-0">
           <span className="truncate font-medium">{row.name || t('admin.statusPage.noName')}</span>
           <span className={cn(kindClass, 'max-sm:hidden')}>{kindLabel}</span>
         </div>
-        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground max-sm:col-span-3 max-sm:col-start-1 max-sm:row-start-2 max-sm:mt-0">
           <span className={cn(kindClass, 'sm:hidden')}>{kindLabel}</span>
           {node ? (
             <>
               <span className={cn('size-1.5 shrink-0 rounded-full', STATE_DOT[node.state] ?? 'bg-muted-foreground')} />
-              <span className="shrink-0">{t(`admin.statusPage.panel.${node.state}`)}</span>
+              <span className="shrink-0 max-sm:sr-only">{t(`admin.statusPage.panel.${node.state}`)}</span>
             </>
           ) : (
-            <span className="shrink-0">{t('admin.statusPage.noPanel')}</span>
+            <span className="shrink-0 max-sm:sr-only">{t('admin.statusPage.noPanel')}</span>
           )}
-          <span className="truncate">· {row.address || t('admin.statusPage.noAddress')}</span>
+          <span className="truncate"><span className="max-sm:hidden">· </span>{row.address || t('admin.statusPage.noAddress')}</span>
         </p>
       </button>
       <AdminStatusRowChecks
         checks={checks}
         enabled={row.enabled}
         showRegistry={!bypass}
-        className="max-sm:col-span-2 max-sm:col-start-3 max-sm:row-start-2"
+        className="max-sm:col-start-4 max-sm:row-start-2 max-sm:justify-self-end"
       />
-      <div className="max-sm:col-start-4 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center">
+      <div className="max-sm:col-start-4 max-sm:row-start-1 max-sm:justify-self-end">
         <AdminToggleSwitch checked={row.enabled} onChange={onToggle} aria-label={t('admin.statusPage.showOnPage')} />
       </div>
       <button
