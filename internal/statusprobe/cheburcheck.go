@@ -120,6 +120,8 @@ func chebVerdict(verdicts []string) (ok, blocked bool) {
 type chebResult struct {
 	Pass, Total int
 	Hits        []ProbeHit
+	// Registry — что тот же запрос /check сказал про реестр и списки CDN. Nil, если ответ не разобрался.
+	Registry *registryResult
 }
 
 // chebMeasure подменяется в тестах.
@@ -135,33 +137,42 @@ func chebError(resp *http.Response, what string) error {
 	return fmt.Errorf("cheburcheck %s: http %d", what, resp.StatusCode)
 }
 
-// chebCheckID берёт у /check подписанный id замера (живёт сутки, ключ не нужен).
-func chebCheckID(ctx context.Context, host string) (string, error) {
+// chebCheckID берёт у /check подписанный id замера (живёт сутки, ключ не нужен). Тот же ответ
+// говорит, числится ли адрес в реестре и списках CDN: он возвращается как второй результат.
+func chebCheckID(ctx context.Context, host string) (string, *registryResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	q := url.Values{}
 	q.Set("target", host)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cheburcheckAPI+"/check?"+q.Encode(), nil)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", chebUserAgent)
 	resp, err := chebHTTP.Do(req)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", chebError(resp, "check")
+		return "", nil, chebError(resp, "check")
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", nil, err
 	}
 	var parsed struct {
 		ID string `json:"id"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&parsed); err != nil || parsed.ID == "" {
-		return "", errors.New("cheburcheck check: no id")
+	if err := json.Unmarshal(body, &parsed); err != nil || parsed.ID == "" {
+		return "", nil, errors.New("cheburcheck check: no id")
 	}
-	return parsed.ID, nil
+	var reg *registryResult
+	if res, err := parseRegistry(body); err == nil {
+		reg = &res
+	}
+	return parsed.ID, reg, nil
 }
 
 // measureCheburcheck гоняет сканеры по адресу и собирает вердикты из потока событий.
@@ -170,7 +181,7 @@ func measureCheburcheck(ctx context.Context, host string) (chebResult, error) {
 	if token == "" {
 		return chebResult{}, errChebToken
 	}
-	id, err := chebCheckID(ctx, host)
+	id, reg, err := chebCheckID(ctx, host)
 	if err != nil {
 		return chebResult{}, err
 	}
@@ -192,6 +203,7 @@ func measureCheburcheck(ctx context.Context, host string) (chebResult, error) {
 		return chebResult{}, chebError(resp, "probe")
 	}
 	res, readErr := readChebStream(io.LimitReader(resp.Body, 8<<20))
+	res.Registry = reg
 	// Оборванный поток с частью ответов годится: сканеры и так отвечают не все.
 	if res.Total == 0 {
 		if readErr != nil {
@@ -493,8 +505,14 @@ func (r *Runner) chebPass(ctx context.Context, targets []Target) {
 			continue
 		}
 		r.storeCheburcheck(target.Key, res)
+		if res.Registry != nil {
+			r.storeRegistry(target.Key, *res.Registry)
+		}
 		r.mu.Lock()
 		events = append(events, r.pingAlertsLocked(target, time.Now())...)
+		if res.Registry != nil {
+			events = append(events, r.registryAlertsLocked(target, time.Now())...)
+		}
 		r.mu.Unlock()
 		r.persist()
 		measured++

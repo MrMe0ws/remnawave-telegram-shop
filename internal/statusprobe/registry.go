@@ -34,8 +34,6 @@ const (
 	registryEvery = 30 * time.Minute
 	// registryRecheck — повтор после находки или сбоя: находку подтверждаем быстро, а не через полчаса.
 	registryRecheck = 10 * time.Minute
-	// registryGap — пауза между серверами, чтобы не бить по чужому API пачкой.
-	registryGap = 700 * time.Millisecond
 	// registryUserAgent — чтобы владельцы сервиса видели, кто ходит.
 	registryUserAgent = "meows-status-probe/1 (+registry check)"
 )
@@ -74,6 +72,11 @@ func checkRegistry(ctx context.Context, client *http.Client, host string) (regis
 	case resp.StatusCode != http.StatusOK:
 		return registryResult{}, fmt.Errorf("cheburcheck: http %d", resp.StatusCode)
 	}
+	return parseRegistry(body)
+}
+
+// parseRegistry разбирает ответ /check: числится ли адрес в списках. Тот же ответ несёт id замера Cheburcheck.
+func parseRegistry(body []byte) (registryResult, error) {
 	var parsed struct {
 		Blocked       *bool            `json:"blocked"`
 		BlockedSubnet []any            `json:"blocked_subnets"`
@@ -182,9 +185,11 @@ func (r *Runner) pickRegistryLocked(targets []Target, force bool) []Target {
 	}
 	now := time.Now()
 	paused := now.Before(r.registryCooldownUntil)
+	// Пока идут замеры Cheburcheck, списки приходят в том же запросе /check: отдельный проход не нужен.
+	covered := CheburcheckConfigured() && RussiaSourceMode() != SourceGlobalping && !now.Before(r.chebCooldownUntil)
 	var out []Target
 	for _, target := range targets {
-		if !registryApplies(target) {
+		if covered || !registryApplies(target) {
 			continue
 		}
 		sample, ok := r.samples[target.Key]
@@ -225,7 +230,8 @@ func (r *Runner) kickRegistry(targets []Target, force bool) {
 	r.mu.Unlock()
 	go func() {
 		defer r.doneRegistry()
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		// Запросы идут в общей очереди с замерами Cheburcheck: по одному на сервер в минуту.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(len(picks)+2)*chebGap)
 		defer cancel()
 		r.EnsureLoaded(ctx)
 		r.registryPass(ctx, picks)
@@ -242,17 +248,13 @@ func (r *Runner) registryPass(ctx context.Context, targets []Target) {
 	var events []AlertEvent
 	defer func() { r.emitAlerts(events) }()
 	measured := 0
-	for i, target := range targets {
+	for _, target := range targets {
 		host, ok := PublicTarget(target.Address)
 		if !ok {
 			continue
 		}
-		if i > 0 {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(registryGap):
-			}
+		if !r.waitChebSlot(ctx) {
+			return
 		}
 		res, err := registryCheck(ctx, r.client, host)
 		if err != nil {

@@ -92,6 +92,58 @@ func TestMeasureCheburcheckSendsBearerAndParses(t *testing.T) {
 	}
 }
 
+func TestMeasureCheburcheckTakesRegistryFromTheSameCheck(t *testing.T) {
+	t.Setenv("CHEBURCHECK_TOKEN", "secret-token")
+	chebServer(t, 200, chebStream)
+	id, reg, err := chebCheckID(context.Background(), "203.0.113.7")
+	if err != nil || id != "signed.id.value" || reg == nil || reg.Blocked {
+		t.Fatalf("%q %+v %v", id, reg, err)
+	}
+	res, err := measureCheburcheck(context.Background(), "203.0.113.7")
+	if err != nil || res.Registry == nil || res.Registry.Blocked {
+		t.Fatalf("measure must carry the registry answer: %+v %v", res, err)
+	}
+}
+
+func TestChebPassFillsRegistryWithoutSeparateCheck(t *testing.T) {
+	r := chebRunner(t, SourceAuto)
+	target := Target{Key: "de", Name: "Германия", Country: "DE", Address: "8.8.8.8"}
+	prev := chebMeasure
+	t.Cleanup(func() { chebMeasure = prev })
+	chebMeasure = func(context.Context, string) (chebResult, error) {
+		res := chebHits(10, 0)
+		res.Registry = &registryResult{Blocked: true, Kind: RegistryKindCDN}
+		return res, nil
+	}
+	runCheb(r, target)
+	s := r.samples["de"]
+	if !s.RegistryOK || !s.RegistryBlocked || s.RegistryKind != RegistryKindCDN || s.RegistryStreak != 1 {
+		t.Fatalf("registry must come from the same /check: %+v", s)
+	}
+}
+
+func TestRegistryPassIsSkippedWhileCheburcheckCoversIt(t *testing.T) {
+	r := chebRunner(t, SourceAuto)
+	target := Target{Key: "de", Name: "Германия", Country: "DE", Address: "8.8.8.8"}
+	r.mu.Lock()
+	if got := r.pickRegistryLocked([]Target{target}, true); len(got) != 0 {
+		t.Fatalf("cheburcheck measures list the registry itself: %+v", got)
+	}
+	r.chebCooldownUntil = time.Now().Add(time.Hour)
+	if got := r.pickRegistryLocked([]Target{target}, true); len(got) != 1 {
+		t.Fatalf("on pause the registry goes by itself: %+v", got)
+	}
+	r.mu.Unlock()
+	t.Setenv("STATUS_RU_SOURCE", SourceGlobalping)
+	r.mu.Lock()
+	r.chebCooldownUntil = time.Time{}
+	got := r.pickRegistryLocked([]Target{target}, true)
+	r.mu.Unlock()
+	if len(got) != 1 {
+		t.Fatalf("without cheburcheck as the source the registry goes by itself: %+v", got)
+	}
+}
+
 func TestMeasureCheburcheckErrors(t *testing.T) {
 	t.Setenv("CHEBURCHECK_TOKEN", "secret-token")
 	chebServer(t, 429, `{}`)
