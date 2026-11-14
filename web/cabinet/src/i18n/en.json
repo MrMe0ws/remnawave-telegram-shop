@@ -3397,7 +3397,7 @@
           },
           "FORTUNE_WEIGHT_FREE_SPIN": {
             "label": "Sector «Free spin»",
-            "hint": "Prize chance. 0 turns the prize off and removes the sector from the wheel. Keep it small (1–2% of the weight total), or spins snowball."
+            "hint": ""
           },
           "FORTUNE_REWARD_XP_AMOUNT": {
             "label": "XP for large bonus",

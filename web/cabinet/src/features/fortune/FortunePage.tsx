@@ -434,8 +434,8 @@ export default function FortunePage() {
         <RevealItem className="flex flex-col gap-2">
           <div className="flex min-w-0 flex-row items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t('fortune.title')}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h1 className="whitespace-nowrap text-xl font-semibold tracking-tight sm:text-3xl">{t('fortune.title')}</h1>
+              <p className="mt-1 hidden text-sm text-muted-foreground sm:block">
                 {t('fortune.subtitle', { count: spinCostDays })}
               </p>
             </div>
@@ -444,7 +444,7 @@ export default function FortunePage() {
                 <div className="flex flex-row items-center justify-end gap-1.5 sm:gap-2">
                   <div ref={statsHintClusterRef} className="relative">
                     <div
-                      className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-border/80 bg-card/60 px-1.5 py-1 text-sm tabular-nums shadow-sm backdrop-blur-sm dark:bg-card/40"
+                      className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-border/80 bg-card/60 px-1 py-0.5 text-xs tabular-nums sm:min-h-9 sm:px-1.5 sm:py-1 sm:text-sm shadow-sm backdrop-blur-sm dark:bg-card/40"
                       aria-label={t('fortune.statsCompactAria')}
                     >
                       <button
@@ -488,7 +488,7 @@ export default function FortunePage() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="shrink-0"
+                    className="size-8 shrink-0 sm:size-9"
                     aria-pressed={soundMuted}
                     aria-label={soundMuted ? t('fortune.soundEnableHint') : t('fortune.soundDisableHint')}
                     title={soundMuted ? t('fortune.soundEnableHint') : t('fortune.soundDisableHint')}
