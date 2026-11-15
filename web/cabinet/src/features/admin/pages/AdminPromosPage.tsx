@@ -19,6 +19,7 @@ import {
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
+import { toDatetimeLocalValue } from '../utils/datetime'
 import { Card } from '@/components/ui/card'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -194,7 +195,7 @@ function CreatePromoModal({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">{t('admin.promos.validUntil')}</label>
-            <input type="datetime-local" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.valid_until ? form.valid_until.slice(0, 16) : ''} onChange={(e) => set('valid_until', e.target.value ? new Date(e.target.value).toISOString() : null)} />
+            <input type="datetime-local" className="admin-input w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={form.valid_until ? toDatetimeLocalValue(form.valid_until) : ''} onChange={(e) => set('valid_until', e.target.value ? new Date(e.target.value).toISOString() : null)} />
           </div>
           <AdminCheckboxField
             checked={form.first_purchase_only ?? false}
@@ -642,7 +643,7 @@ function EditPromoModal({
     String(promo.discount_max_subscription_payments_per_customer ?? 0),
   )
   const [validUntil, setValidUntil] = useState(
-    promo.valid_until ? promo.valid_until.slice(0, 16) : '',
+    promo.valid_until ? toDatetimeLocalValue(promo.valid_until) : '',
   )
   const [firstPurchaseOnly, setFirstPurchaseOnly] = useState(promo.first_purchase_only)
 
@@ -656,7 +657,7 @@ function EditPromoModal({
     setDiscountTTL(promo.discount_ttl_hours?.toString() ?? '')
     setTariffId(promo.tariff_id?.toString() ?? '')
     setDiscountMaxPayments(String(promo.discount_max_subscription_payments_per_customer ?? 0))
-    setValidUntil(promo.valid_until ? promo.valid_until.slice(0, 16) : '')
+    setValidUntil(promo.valid_until ? toDatetimeLocalValue(promo.valid_until) : '')
     setFirstPurchaseOnly(promo.first_purchase_only)
   }, [open, promo])
 
@@ -698,7 +699,7 @@ function EditPromoModal({
     }
 
     const validUntilIso = validUntil ? new Date(validUntil).toISOString() : null
-    const oldValidSlice = promo.valid_until ? promo.valid_until.slice(0, 16) : ''
+    const oldValidSlice = promo.valid_until ? toDatetimeLocalValue(promo.valid_until) : ''
     if (validUntil !== oldValidSlice) {
       fields.valid_until = validUntilIso
     }
