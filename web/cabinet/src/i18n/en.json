@@ -1323,7 +1323,9 @@
         "sync": "Sync",
         "settings": "Bot settings",
         "status": "Status",
-        "monitoring": "Monitoring"
+        "monitoring": "Monitoring",
+        "collapse": "Collapse menu",
+        "expand": "Expand menu"
       },
       "backToCabinet": "Back to cabinet",
       "breadcrumb": {

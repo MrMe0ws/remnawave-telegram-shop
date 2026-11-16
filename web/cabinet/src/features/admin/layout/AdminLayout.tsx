@@ -20,6 +20,8 @@ import {
   X,
   SlidersHorizontal,
   Radar,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -34,6 +36,8 @@ import { AdminShellProvider, useAdminShell } from './AdminShellContext'
 import { useAdminLeftEdgeSwipe } from '../hooks/useAdminLeftEdgeSwipe'
 import { useAdminSelectionHaptics } from '../hooks/useAdminSelectionHaptics'
 import { useAdminMobileNavWidth } from '../hooks/useAdminMobileNavWidth'
+import { useAdminSidebarCollapsed } from '../hooks/useAdminSidebarCollapsed'
+import { useAdminNavTooltip } from './AdminNavTooltip'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -107,6 +111,9 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   useAdminLeftEdgeSwipe(true)
   useAdminSelectionHaptics()
 
+  const { collapsed, toggle: toggleCollapsed } = useAdminSidebarCollapsed()
+  const navTip = useAdminNavTooltip(collapsed)
+
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
   const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false
   const partnerEnabled = bootstrap?.partner_enabled ?? false
@@ -174,81 +181,142 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
     return location.pathname === to || location.pathname.startsWith(`${to}/`)
   }
 
-  const sidebarContent = (
-    <>
-      <div className="mb-6 flex items-center gap-2.5 px-1">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 dark:bg-primary/25">
-          <ShieldCheck className="size-5 text-primary" />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{t('admin.dashboard.title')}</p>
-          {bootstrap?.version && (
-            <p className="truncate text-xs text-muted-foreground" title={bootstrap.version}>
-              {bootstrap.version}
-            </p>
+  const toggleLabel = t(collapsed ? 'admin.nav.expand' : 'admin.nav.collapse')
+  const toggleHotkey = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘B' : 'Ctrl+B'
+
+  function onToggleCollapsed() {
+    navTip.hide()
+    toggleCollapsed()
+  }
+
+  /**
+   * `compact` — свёрнутое меню на ПК: одни иконки, подписи всплывают сбоку.
+   * Шторка на телефоне всегда полная, поэтому флаг считается тут, а не
+   * берётся из `collapsed` напрямую.
+   */
+  function renderSidebar(desktop: boolean) {
+    const compact = desktop && collapsed
+    const tipFor = (label: string, hint?: string) => (compact ? navTip.bind(label, hint) : {})
+    // Подпись не пропадает рывком: ширина и прозрачность уходят вместе с колонкой.
+    const labelCn = cn(
+      'truncate transition-[max-width,opacity] duration-200 ease-out',
+      compact ? 'max-w-0 opacity-0' : 'max-w-[12rem] opacity-100',
+    )
+
+    return (
+      <>
+        {/* С кнопкой сворачивания шапке тесно: без px-1 и с gap-2 «Админ-панель» влезает целиком. */}
+        <div className={cn('mb-6 flex items-center', compact ? 'flex-col gap-2' : desktop ? 'gap-2' : 'gap-2.5 px-1')}>
+          <div
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 dark:bg-primary/25"
+            {...tipFor(t('admin.dashboard.title'), bootstrap?.version)}
+          >
+            <ShieldCheck className="size-5 text-primary" />
+          </div>
+          {!compact && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{t('admin.dashboard.title')}</p>
+              {bootstrap?.version && (
+                <p className="truncate text-xs text-muted-foreground" title={bootstrap.version}>
+                  {bootstrap.version}
+                </p>
+              )}
+            </div>
+          )}
+          {desktop && (
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label={toggleLabel}
+              aria-expanded={!collapsed}
+              aria-keyshortcuts="Control+B Meta+B"
+              title={compact ? undefined : `${toggleLabel} (${toggleHotkey})`}
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/80 hover:text-foreground"
+              {...tipFor(toggleLabel, toggleHotkey)}
+            >
+              {compact ? <PanelLeftOpen className="size-[18px]" /> : <PanelLeftClose className="size-[18px]" />}
+            </button>
           )}
         </div>
-      </div>
 
-      <nav className="space-y-5" aria-label={t('admin.nav.label')}>
-        {navGroups.map((group) => {
-          const visible = group.items.filter((item) => item.condition !== false)
-          if (visible.length === 0) return null
-          return (
-            <div key={group.labelKey}>
-              <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {t(group.labelKey)}
-              </p>
-              <ul className="space-y-0.5">
-                {visible.map((item) => {
-                  const Icon = item.icon
-                  const active = isActive(item.to)
-                  return (
-                    <li key={item.to}>
-                      <Link
-                        to={item.to}
-                        onClick={closeMobileNav}
-                        className={cn(
-                          'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                          active
-                            ? 'bg-primary/15 text-primary shadow-sm dark:bg-primary/20'
-                            : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
-                        )}
-                      >
-                        <Icon className={cn('size-4 shrink-0', active && 'text-primary')} />
-                        <span className="truncate">{t(item.labelKey)}</span>
-                        {item.badge ? (
-                          <span
-                            className={cn(
-                              'ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                              item.badgeAlert ? 'bg-rose-500 text-white' : 'bg-primary text-primary-foreground',
-                            )}
-                          >
-                            {item.badge}
-                          </span>
-                        ) : null}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )
-        })}
-      </nav>
+        <nav className="space-y-5" aria-label={t('admin.nav.label')}>
+          {navGroups.map((group) => {
+            const visible = group.items.filter((item) => item.condition !== false)
+            if (visible.length === 0) return null
+            return (
+              <div key={group.labelKey}>
+                {compact ? (
+                  // Вместо заголовка группы — короткая черта: деление на группы остаётся видно.
+                  <p className="mb-2 flex h-4 items-center justify-center" aria-hidden>
+                    <span className="h-px w-5 bg-border" />
+                  </p>
+                ) : (
+                  <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    {t(group.labelKey)}
+                  </p>
+                )}
+                <ul className="space-y-0.5">
+                  {visible.map((item) => {
+                    const Icon = item.icon
+                    const active = isActive(item.to)
+                    const label = t(item.labelKey)
+                    return (
+                      <li key={item.to}>
+                        <Link
+                          to={item.to}
+                          onClick={closeMobileNav}
+                          className={cn(
+                            'relative flex items-center rounded-lg text-sm font-medium transition-colors',
+                            compact ? 'justify-center py-2.5' : 'gap-2.5 px-3 py-2',
+                            active
+                              ? 'bg-primary/15 text-primary shadow-sm dark:bg-primary/20'
+                              : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
+                          )}
+                          {...tipFor(label)}
+                        >
+                          <Icon className={cn('shrink-0', compact ? 'size-[18px]' : 'size-4', active && 'text-primary')} />
+                          <span className={labelCn}>{label}</span>
+                          {item.badge ? (
+                            <span
+                              className={cn(
+                                'shrink-0 rounded-full text-[10px] font-semibold',
+                                // В свёрнутом бейдж садится на угол иконки.
+                                compact
+                                  ? 'absolute left-1/2 top-0.5 ml-1 h-4 min-w-[1rem] px-1 text-center leading-4 ring-2 ring-background'
+                                  : 'ml-auto px-1.5 py-0.5',
+                                item.badgeAlert ? 'bg-rose-500 text-white' : 'bg-primary text-primary-foreground',
+                              )}
+                            >
+                              {item.badge}
+                            </span>
+                          ) : null}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })}
+        </nav>
 
-      <div className="mt-auto border-t border-border/50 pt-4">
-        <Link
-          to="/dashboard"
-          onClick={closeMobileNav}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" />
-          {t('admin.backToCabinet')}
-        </Link>
-      </div>
-    </>
-  )
+        <div className="mt-auto border-t border-border/50 pt-4">
+          <Link
+            to="/dashboard"
+            onClick={closeMobileNav}
+            className={cn(
+              'flex items-center rounded-lg py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+              compact ? 'justify-center' : 'gap-2 px-3',
+            )}
+            {...tipFor(t('admin.backToCabinet'))}
+          >
+            <ChevronLeft className="size-4 shrink-0" />
+            <span className={labelCn}>{t('admin.backToCabinet')}</span>
+          </Link>
+        </div>
+      </>
+    )
+  }
 
   return (
     <AdminPageMetaContext.Provider value={metaContextValue}>
@@ -288,11 +356,16 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
               >
                 <X className="size-5" />
               </button>
-              {sidebarContent}
+              {renderSidebar(false)}
             </aside>
           </div>
 
-          <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-4">
+          <div
+            className={cn(
+              'flex flex-col gap-4 lg:grid lg:items-start lg:gap-x-8 lg:gap-y-4 lg:transition-[grid-template-columns] lg:duration-200 lg:ease-out',
+              collapsed ? 'lg:grid-cols-[4.25rem_minmax(0,1fr)]' : 'lg:grid-cols-[14rem_minmax(0,1fr)]',
+            )}
+          >
             <AdminBreadcrumbs
               pathname={location.pathname}
               pageMeta={effectiveMeta}
@@ -302,11 +375,20 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
               )}
             />
 
-            <aside className="hidden w-56 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:overflow-y-auto lg:overscroll-y-contain lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]">
-              <div className="rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur-sm">
-                {sidebarContent}
+            <aside
+              onScroll={navTip.hide}
+              className="hidden w-full min-w-0 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-y-contain lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]"
+            >
+              <div
+                className={cn(
+                  'rounded-xl border border-border/60 bg-card/50 py-4 backdrop-blur-sm transition-[padding] duration-200 ease-out',
+                  collapsed ? 'px-2.5' : 'px-4',
+                )}
+              >
+                {renderSidebar(true)}
               </div>
             </aside>
+            {navTip.node}
 
             <main className="relative z-[1] min-w-0 overflow-x-clip lg:col-start-2 lg:row-start-2">
               {children}

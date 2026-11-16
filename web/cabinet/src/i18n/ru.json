@@ -1369,7 +1369,9 @@
         "sync": "Синхронизация",
         "settings": "Настройки бота",
         "status": "Статус",
-        "monitoring": "Мониторинг"
+        "monitoring": "Мониторинг",
+        "collapse": "Свернуть меню",
+        "expand": "Развернуть меню"
       },
       "backToCabinet": "Назад в кабинет",
       "breadcrumb": {
