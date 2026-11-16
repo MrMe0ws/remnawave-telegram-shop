@@ -2473,8 +2473,7 @@
           "usage": "Активации"
         },
         "payback": {
-          "paidDiscount": "Оплатили со скидкой",
-          "paidAfter": "Купили после ввода",
+          "paidDiscount": "Оплатили со скидкой",
           "revenue": "Выручка",
           "none": "—",
           "activations": "Активаций"

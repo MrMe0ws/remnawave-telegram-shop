@@ -2382,8 +2382,7 @@
           "usage": "Redemptions"
         },
         "payback": {
-          "paidDiscount": "Paid with discount",
-          "paidAfter": "Bought after entry",
+          "paidDiscount": "Paid with discount",
           "revenue": "Revenue",
           "none": "—",
           "activations": "Redemptions"
