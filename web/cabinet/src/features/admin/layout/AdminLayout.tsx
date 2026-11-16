@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react'
+import { type ReactNode, type UIEvent, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -69,6 +69,20 @@ interface AdminNavGroup {
   items: AdminNavItem[]
 }
 
+/**
+ * Прокрутка бокового меню между страницами. Каждая страница рендерит свой
+ * `<AdminLayout>`, меню монтируется заново и без этого прыгало в начало —
+ * выбранный внизу пункт («Настройки бота») уезжал из вида.
+ */
+let savedNavScrollTop = 0
+const NAV_SCROLL_MARGIN_PX = 16
+/** Зазор между низом меню и краем окна. */
+const NAV_BOTTOM_GAP_PX = 16
+/** Ниже этого меню не сжимаем даже в очень низком окне. */
+const NAV_MIN_HEIGHT_PX = 160
+/** Сколько после перехода держать выбранный пункт в виде, пока меню меняет высоту. */
+const NAV_REVEAL_WINDOW_MS = 1000
+
 export function AdminLayout({ children, meta }: AdminLayoutProps) {
   return (
     <AdminShellProvider>
@@ -123,6 +137,81 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   // Инциденты «Мониторинга» видно с любой страницы админки.
   const attention = useAdminAttention()
   const incidentCount = attention.data?.items?.length ?? 0
+
+  const navAsideRef = useRef<HTMLElement>(null)
+  const navScrollRef = useRef<HTMLDivElement>(null)
+
+  /** До какого момента подкручивать меню к выбранному пункту при пересчёте высоты. */
+  const revealUntilRef = useRef(0)
+
+  /** Докрутить меню так, чтобы выбранный пункт был виден целиком. */
+  function revealActiveNavItem() {
+    const el = navScrollRef.current
+    const active = el?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!el || !active) return
+    const box = el.getBoundingClientRect()
+    const item = active.getBoundingClientRect()
+    if (item.bottom > box.bottom - NAV_SCROLL_MARGIN_PX) el.scrollTop += item.bottom - box.bottom + NAV_SCROLL_MARGIN_PX
+    else if (item.top < box.top + NAV_SCROLL_MARGIN_PX) el.scrollTop -= box.top + NAV_SCROLL_MARGIN_PX - item.top
+  }
+
+  /*
+   * Меню кончается у нижнего края окна. Прежний max-h считал верх меню равным
+   * «прилипшему» (сразу под шапкой), а до прокрутки страницы оно стоит ниже —
+   * на высоту хлебных крошек, и низ списка уходил за окно: последние пункты
+   * не докрутить. Верх меняется при прокрутке страницы, поэтому пересчёт.
+   */
+  useLayoutEffect(() => {
+    const aside = navAsideRef.current
+    if (!aside) return
+    let frame = 0
+    const fit = () => {
+      frame = 0
+      // Не выше «прилипшего» меню: если страница короче меню, sticky не
+      // держит, верх уезжает вверх, и без этой границы меню растягивалось бы.
+      const stickyTop = parseFloat(getComputedStyle(aside).top) || 0
+      const top = Math.max(aside.getBoundingClientRect().top, stickyTop)
+      aside.style.maxHeight = `${Math.max(NAV_MIN_HEIGHT_PX, window.innerHeight - top - NAV_BOTTOM_GAP_PX)}px`
+      // После перехода страница отматывается наверх, меню сжимается, и
+      // выбранный пункт уходил вниз из вида.
+      if (performance.now() < revealUntilRef.current) revealActiveNavItem()
+    }
+    const schedule = (e: Event) => {
+      // Прокрутка самого меню его высоту не меняет.
+      if (e.target instanceof Node && aside.contains(e.target)) return
+      if (!frame) frame = requestAnimationFrame(fit)
+    }
+    fit()
+    // capture: прокрутку ловим у любого контейнера, а не только у window.
+    document.addEventListener('scroll', schedule, { passive: true, capture: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('scroll', schedule, { capture: true })
+      window.removeEventListener('resize', schedule)
+    }
+  }, [])
+
+  // До отрисовки, иначе меню мелькнёт в начале списка и прыгнет вниз.
+  useLayoutEffect(() => {
+    const el = navScrollRef.current
+    if (el) el.scrollTop = savedNavScrollTop
+  }, [])
+
+  /*
+   * Прямой заход по ссылке или F5 на нижней странице: выбранный пункт должен
+   * быть виден. Повторяем, когда меняется состав пунктов — «Лояльность» и
+   * «Партнёры» появляются после загрузки bootstrap и сдвигают список вниз.
+   */
+  useLayoutEffect(() => {
+    revealUntilRef.current = performance.now() + NAV_REVEAL_WINDOW_MS
+    revealActiveNavItem()
+  }, [location.pathname, collapsed, loyaltyEnabled, partnerEnabled])
+
+  function onNavScroll(e: UIEvent<HTMLDivElement>) {
+    savedNavScrollTop = e.currentTarget.scrollTop
+    navTip.hide()
+  }
 
   const navGroups: AdminNavGroup[] = [
     {
@@ -265,9 +354,11 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
                         <Link
                           to={item.to}
                           onClick={closeMobileNav}
+                          aria-current={active ? 'page' : undefined}
                           className={cn(
-                            'relative flex items-center rounded-lg text-sm font-medium transition-colors',
-                            compact ? 'justify-center py-2.5' : 'gap-2.5 px-3 py-2',
+                            'relative flex items-center rounded-lg py-2 text-sm font-medium transition-colors',
+                            // Высота как у развёрнутого: скрытая подпись всё равно держит строку.
+                            compact ? 'justify-center' : 'gap-2.5 px-3',
                             active
                               ? 'bg-primary/15 text-primary shadow-sm dark:bg-primary/20'
                               : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
@@ -375,14 +466,17 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
               )}
             />
 
-            <aside className="hidden w-full min-w-0 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]">
+            <aside
+              ref={navAsideRef}
+              className="hidden w-full min-w-0 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]">
               {/*
                * Прокручивается карточка, а не aside: у aside полоса рисовалась
                * справа от скруглённой рамки. Справа отступ меньше на 10px —
                * это место полосы (admin-nav-scroll в index.css).
                */}
               <div
-                onScroll={navTip.hide}
+                ref={navScrollRef}
+                onScroll={onNavScroll}
                 className={cn(
                   'admin-nav-scroll min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-xl border border-border/60 bg-card/50 py-4 backdrop-blur-sm transition-[padding] duration-200 ease-out',
                   collapsed ? 'pl-2.5 pr-0' : 'pl-4 pr-1.5',
