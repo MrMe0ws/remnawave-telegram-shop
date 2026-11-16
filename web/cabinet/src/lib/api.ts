@@ -44,7 +44,10 @@ import type {
   AdminPromoGetDTO,
   AdminPromoRedemptionsListDTO,
   AdminPromoListDTO,
+  AdminPromoSort,
   AdminPromoStatsDTO,
+  AdminPromoStatusFilter,
+  AdminPromoTypeFilter,
   AdminReferralsDTO,
   AdminOverviewDTO,
   AdminStatsDTO,
@@ -1771,7 +1774,7 @@ export const api = {
     const q = new URLSearchParams()
     q.set('scope', params?.scope ?? 'all')
     if (params?.sort) q.set('sort', params.sort)
-    if (params?.sort && params.dir) q.set('dir', params.dir)
+    if (q.has('sort') && params?.dir) q.set('dir', params.dir)
     if (params?.page != null) q.set('page', String(params.page))
     if (params?.limit != null) q.set('limit', String(params.limit))
     const suffix = q.toString() ? `?${q.toString()}` : ''
@@ -1884,10 +1887,24 @@ export const api = {
     URL.revokeObjectURL(url)
   },
 
-  adminPromos: (params?: { page?: number; limit?: number }) => {
+  adminPromos: (params?: {
+    page?: number
+    limit?: number
+    status?: AdminPromoStatusFilter
+    type?: AdminPromoTypeFilter | null
+    q?: string
+    sort?: AdminPromoSort
+    dir?: 'asc' | 'desc'
+  }) => {
     const q = new URLSearchParams()
     if (params?.page != null) q.set('page', String(params.page))
     if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.status && params.status !== 'all') q.set('status', params.status)
+    if (params?.type) q.set('type', params.type)
+    if (params?.q?.trim()) q.set('q', params.q.trim())
+    // «new» по убыванию — порядок по умолчанию, его в адрес не пишем.
+    if (params?.sort && (params.sort !== 'new' || params.dir === 'asc')) q.set('sort', params.sort)
+    if (params?.sort && params.dir) q.set('dir', params.dir)
     const suffix = q.toString() ? `?${q.toString()}` : ''
     return request<AdminPromoListDTO>('GET', `/admin/promos${suffix}`)
   },
