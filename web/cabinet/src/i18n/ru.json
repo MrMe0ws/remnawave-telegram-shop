@@ -465,7 +465,7 @@
       "title": "Оформление",
       "chooseProvider": "Способ оплаты",
       "pay": "Оплатить",
-      "card": "Картой / СБП",
+      "card": "Карты и кошельки",
       "crypto": "Крипта",
       "otherCrypto": "Другая крипта",
       "telegramStars": "Telegram Stars",
@@ -508,7 +508,7 @@
       "switchDaysExact": "{{days}} дн.",
       "switchDaysBonus": "+{{days}} дн.",
       "previewError": "Не удалось пересчитать сумму. Показана цена из каталога — при оплате спишется фактическая сумма.",
-      "plategaAll": "Все способы",
+      "plategaAll": "Карты, СБП и крипта",
       "devicesTitle_one": "{{count}} устройство",
       "devicesTitle_few": "{{count}} устройства",
       "devicesTitle_many": "{{count}} устройств",
@@ -2476,7 +2476,7 @@
           "usage": "Активации"
         },
         "payback": {
-          "paidDiscount": "Оплатили со скидкой",
+          "paidDiscount": "Оплатили со скидкой",
           "revenue": "Выручка",
           "none": "—",
           "activations": "Активаций"

@@ -1077,7 +1077,7 @@
       "title": "Checkout",
       "chooseProvider": "Payment method",
       "pay": "Pay",
-      "card": "Card / Bank transfer",
+      "card": "Cards & wallets",
       "crypto": "Crypto",
       "otherCrypto": "Other crypto",
       "telegramStars": "Telegram Stars",
@@ -1119,7 +1119,7 @@
       "switchDaysExact": "{{days}} d",
       "switchDaysBonus": "+{{days}} d",
       "previewError": "Could not recalculate the amount. Showing catalog price — you will be charged the actual total at checkout.",
-      "plategaAll": "All methods",
+      "plategaAll": "Cards, SBP & crypto",
       "devicesTitle_one": "{{count}} device",
       "devicesTitle_other": "{{count}} devices",
       "trafficLimited": "{{gb}} GB of traffic",
@@ -2385,7 +2385,7 @@
           "usage": "Redemptions"
         },
         "payback": {
-          "paidDiscount": "Paid with discount",
+          "paidDiscount": "Paid with discount",
           "revenue": "Revenue",
           "none": "—",
           "activations": "Redemptions"
