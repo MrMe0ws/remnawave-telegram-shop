@@ -375,14 +375,17 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
               )}
             />
 
-            <aside
-              onScroll={navTip.hide}
-              className="hidden w-full min-w-0 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-y-contain lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]"
-            >
+            <aside className="hidden w-full min-w-0 shrink-0 lg:col-start-1 lg:row-start-2 lg:z-20 lg:flex lg:max-h-[calc(100dvh-3.75rem-var(--cabinet-tg-safe-top))] lg:flex-col lg:self-start lg:sticky lg:top-[calc(3.75rem+var(--cabinet-tg-safe-top))]">
+              {/*
+               * Прокручивается карточка, а не aside: у aside полоса рисовалась
+               * справа от скруглённой рамки. Справа отступ меньше на 10px —
+               * это место полосы (admin-nav-scroll в index.css).
+               */}
               <div
+                onScroll={navTip.hide}
                 className={cn(
-                  'rounded-xl border border-border/60 bg-card/50 py-4 backdrop-blur-sm transition-[padding] duration-200 ease-out',
-                  collapsed ? 'px-2.5' : 'px-4',
+                  'admin-nav-scroll min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-xl border border-border/60 bg-card/50 py-4 backdrop-blur-sm transition-[padding] duration-200 ease-out',
+                  collapsed ? 'pl-2.5 pr-0' : 'pl-4 pr-1.5',
                 )}
               >
                 {renderSidebar(true)}
