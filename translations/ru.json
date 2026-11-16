@@ -108,6 +108,9 @@
   "yookasa_tinkoff_bank_button": {
     "text": "🟡 T-Pay"
   },
+  "yookasa_alfa_pay_button": {
+    "text": "🔴 Alfa Pay"
+  },
   "yookasa_yoo_money_button": {
     "text": "👛 ЮMoney"
   },

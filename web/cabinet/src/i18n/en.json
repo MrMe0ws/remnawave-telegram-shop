@@ -1078,7 +1078,7 @@
       "chooseProvider": "Payment method",
       "pay": "Pay",
       "card": "Card / Bank transfer",
-      "crypto": "Cryptocurrency",
+      "crypto": "Crypto",
       "otherCrypto": "Other crypto",
       "telegramStars": "Telegram Stars",
       "providerHintYookassa": "YooKassa",
@@ -1087,14 +1087,15 @@
       "providerHintTelegram": "Telegram Stars",
       "providerHintPlatega": "Platega",
       "plategaSbp": "SBP",
-      "plategaAcquiring": "Card",
-      "plategaWorldwide": "Card",
+      "plategaAcquiring": "Mir card",
+      "plategaWorldwide": "Foreign cards",
       "plategaCrypto": "Crypto",
       "yookassaMethod": {
         "sbp": "SBP",
         "bank_card": "Card",
         "sberbank": "SberPay",
         "tinkoff_bank": "T-Pay",
+        "alfa_pay": "Alfa Pay",
         "yoo_money": "YooMoney"
       },
       "changeMethod": "Change",
@@ -3116,7 +3117,7 @@
         },
         "yookassaMethods": {
           "all": "YooKassa form with all methods",
-          "allHint": "Same as without the setting: one “Card / Bank transfer” button",
+          "allHint": "The payer picks the method on the YooKassa page",
           "connectWarning": "Each method has to be enabled in your YooKassa account, or the payment won't be created.",
           "noAllWarning": "No form with all methods: methods missing from the list aren't available via YooKassa."
         },

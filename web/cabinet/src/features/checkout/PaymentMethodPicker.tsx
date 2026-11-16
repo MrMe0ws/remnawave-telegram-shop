@@ -188,7 +188,7 @@ function LastUsedPicker({
       aria-expanded={false}
       className="flex w-full items-center gap-3 rounded-[16px] border border-primary/60 bg-primary/[0.07] px-3 py-2.5 text-left transition-colors hover:bg-primary/[0.11] dark:bg-primary/[0.1] dark:hover:bg-primary/[0.14]"
     >
-      <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-muted dark:bg-white/[0.07]">
+      <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted dark:bg-white/[0.07] outline outline-1 -outline-offset-1 outline-black/[0.08] dark:outline-0">
         {meta.icon}
       </div>
       <div className="min-w-0 flex-1">
@@ -256,7 +256,7 @@ function MethodTile({ id, selected, onClick }: { id: CheckoutMethodId; selected:
           : 'border-border bg-foreground/[0.03] hover:border-primary/40 hover:bg-foreground/[0.06] dark:bg-black/20 dark:hover:bg-black/30',
       )}
     >
-      <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-muted dark:bg-white/[0.07]">
+      <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted dark:bg-white/[0.07] outline outline-1 -outline-offset-1 outline-black/[0.08] dark:outline-0">
         {meta.icon}
       </div>
       {/* Две строки вместо многоточия: «Другая крипта» в узкую плитку на телефоне не влезает. */}
