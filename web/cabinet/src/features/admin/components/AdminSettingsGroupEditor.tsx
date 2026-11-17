@@ -26,6 +26,7 @@ import {
 import { groupSettingsFieldsForLayout, isTextareaSettingType } from '../utils/adminSettingsFieldLayout'
 import { decorThemeOptionLabelStyle } from '@/features/decor/decorThemeAdmin'
 import { AdminAlertRoutes } from './AdminAlertRoutes'
+import { AdminChannelGateEditor } from './AdminChannelGateEditor'
 import type { AdminSettingFieldDTO, AdminSettingGroupDTO } from '@/lib/types/admin'
 
 export function parseBool(v: string): boolean {
@@ -385,6 +386,8 @@ export function AdminSettingsGroupEditor({
                 onDraftChange={onDraftChange}
                 onToggle={onToggle}
               />
+            ) : group.id === 'channel_gate' ? (
+              <AdminChannelGateEditor draft={draft} saving={saving} onDraftChange={onDraftChange} />
             ) : subsectionBlocks.length === 1 && !subsectionBlocks[0].def ? (
               <div className="rounded-lg border border-border/60 bg-card/80 px-3 shadow-sm">
                 {renderFieldsLayout(subsectionBlocks[0].fields)}

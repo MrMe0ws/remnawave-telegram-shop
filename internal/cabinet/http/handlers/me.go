@@ -16,6 +16,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/auth/service"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
+	"remnawave-tg-shop-bot/internal/cabinet/gate"
 	"remnawave-tg-shop-bot/internal/cabinet/http/middleware"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	cabsvc "remnawave-tg-shop-bot/internal/cabinet/service"
@@ -42,6 +43,7 @@ type MeHandler struct {
 	adminChecker *adminauth.Checker
 	tgProfiles   *tgprofile.Service
 	traffic      *database.TrafficSplitRepository
+	channelGate  *gate.Gate
 	// avatarSecret — секрет кабинета: им подписываются ссылки на аватарку.
 	avatarSecret        []byte
 	cookieDomain        string
@@ -51,6 +53,9 @@ type MeHandler struct {
 	vkOAuthEnabled      bool
 	telegramOIDCEnabled bool
 }
+
+// SetChannelGate подключает обязательную подписку на канал (nil — выключено).
+func (h *MeHandler) SetChannelGate(g *gate.Gate) { h.channelGate = g }
 
 // NewMe — конструктор. links может быть nil в тестах; тогда /me не отдаст
 // customer_id, но работать будет.
@@ -143,6 +148,9 @@ type meResp struct {
 	VKMaskedEmail     *string `json:"vk_masked_email,omitempty"`
 	// IsAdmin — true, если linked Telegram identity == ADMIN_TELEGRAM_ID.
 	IsAdmin bool `json:"is_admin"`
+	// ChannelGate — есть только когда аккаунт нужно остановить на окне обязательной
+	// подписки на канал; фронт показывает окно, которое не закрыть.
+	ChannelGate *gate.Info `json:"channel_gate,omitempty"`
 	// identityProfile — имя, ник и аватарка для шапки профиля (поля инлайнятся).
 	identityProfile
 }
@@ -303,6 +311,11 @@ func (h *MeHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.telegramWidgetBot != "" {
 		resp.TelegramWidgetBot = h.telegramWidgetBot
+	}
+	if h.channelGate != nil {
+		if st := h.channelGate.StateFor(r); st.Required {
+			resp.ChannelGate = &st
+		}
 	}
 	writeJSON(w, http.StatusOK, resp)
 }

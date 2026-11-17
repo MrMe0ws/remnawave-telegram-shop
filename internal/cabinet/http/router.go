@@ -23,7 +23,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"remnawave-tg-shop-bot/internal/broadcast"
+	"remnawave-tg-shop-bot/internal/channelgate"
 	adminauth "remnawave-tg-shop-bot/internal/cabinet/admin/auth"
+	"remnawave-tg-shop-bot/internal/cabinet/gate"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/jwt"
 	googleoauth "remnawave-tg-shop-bot/internal/cabinet/auth/oauth"
 	"remnawave-tg-shop-bot/internal/cabinet/auth/password"
@@ -70,7 +72,7 @@ import (
 // (например, локальная разработка без YooKassa/CryptoPay).
 // Mount регистрирует роуты кабинета.
 // rw — клиент Remnawave API; может быть nil (тогда merge-шаг обновления RW пропускается).
-func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentService *botpayment.PaymentService, rw *remnawave.Client, promoService *promo.Service, syncService *sync.SyncService, tgBot *bot.Bot, broadcastSender *broadcast.Sender) error {
+func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentService *botpayment.PaymentService, rw *remnawave.Client, promoService *promo.Service, syncService *sync.SyncService, tgBot *bot.Bot, broadcastSender *broadcast.Sender, channelGateSvc *channelgate.Service) error {
 	spaFS, err := web.FS()
 	if err != nil {
 		return err
@@ -246,6 +248,9 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	meHandler := handlers.NewMe(authSvc, accountRepo, identityRepo, linkRepo, customerBootstrap,
 		paymentService, purchaseRepo, rw, customerRepo, database.NewDeviceNameRepository(pool), adminChecker, tgProfiles, avatarSecret, cabcfg.CookieDomain(), tgWidgetBot, cabcfg.GoogleEnabled(), cabcfg.YandexEnabled(), cabcfg.VKEnabled(), cabcfg.TelegramOIDCEnabled())
 	meHandler.SetTrafficRepo(meTrafficRepo)
+	// Обязательная подписка на канал: те же правила, что в боте, для аккаунтов с Telegram.
+	channelGate := gate.New(channelGateSvc, identityRepo, linkRepo, customerRepo)
+	meHandler.SetChannelGate(channelGate)
 	tariffsHandler := handlers.NewTariffs(catalogSvc)
 	subscriptionHandler := handlers.NewSubscription(subscriptionSvc)
 	// Приглашения «подключить ещё устройство»: токен подписывается тем же
@@ -407,6 +412,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	adminInfraHandler := handlers.NewAdminInfra(rw, infraBillingRepo)
 	adminNodesHandler := handlers.NewAdminNodes(rw)
 	adminSettingsHandler := handlers.NewAdminSettings(runtimeSettingsRepo)
+	adminSettingsHandler.SetChannelGate(channelGateSvc)
 	adminSquadsHandler := handlers.NewAdminSquads(rw)
 	var adminSyncHandler *handlers.AdminSyncHandler
 	if syncService != nil {
@@ -416,7 +422,7 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 	registerAPIRoutes(api, authHandler, contentHandler, meHandler, tariffsHandler, subscriptionHandler, connectInviteHandler, activityHandler, partnerHandler, promoCodesHandler, oauthHandler, paymentsHandler, linkHandler, fortuneHandler, supportHandler, jwtIssuer,
 		adminChecker, adminBootstrapHandler, adminStatsHandler, adminOverviewHandler, adminUsersHandler, adminPaymentsHandler, adminPromosHandler, adminTariffsHandler, adminLoyaltyHandler, adminPartnersHandler, adminBroadcastHandler, adminInfraHandler, adminNodesHandler, adminSettingsHandler, adminSquadsHandler, adminSyncHandler, adminAcctLim,
 		loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
-		oauthIPLim, telegramIPLim, linkAcctLim)
+		oauthIPLim, telegramIPLim, linkAcctLim, channelGate)
 	registerNotificationRoutes(api, notificationsHandler, jwtIssuer)
 
 	// Страница статуса серверов: замер в фоне, список и узлы — в админке.
@@ -584,6 +590,7 @@ func registerAPIRoutes(
 	adminAcctLim,
 	loginIPLim, loginEmailLim, registerIPLim, forgotEmailLim, resendVerifyAcctLim, verifyEmailConfirmIPLim, verifyResendPublicIPLim, paymentsAcctLim, subscriptionAcctLim, connectPublicIPLim, connectTokenLim, deleteAcctLim, passwordChangeAcctLim, trialActivateAcctLim, supportAcctLim, supportWebhookIPLim,
 	oauthIPLim, telegramIPLim, linkAcctLim *ratelimit.Limiter,
+	channelGate *gate.Gate,
 ) {
 	// Healthz — без middleware, открыт всем.
 	api.HandleFunc("/cabinet/api/healthz", healthz)
@@ -860,12 +867,24 @@ func registerAPIRoutes(
 		)),
 	)
 
+	// POST /me/channel-gate/check — кнопка «Да, я подписался» в окне обязательной
+	// подписки. Без RequireVerifiedEmail: окно видит любой аккаунт с Telegram.
+	api.Handle("/cabinet/api/me/channel-gate/check",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(channelGate.Check),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.CSRF(),
+			middleware.RateLimit(subscriptionAcctLim, accountKey("channel_gate_check")),
+		)),
+	)
+
 	// GET /me/trial — trial-параметры (дни/лимиты) и возможность активации.
 	api.Handle("/cabinet/api/me/trial",
 		methodRouter(map[string]http.Handler{
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(me.GetTrial),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 			),
 		}),
 	)
@@ -875,6 +894,7 @@ func registerAPIRoutes(
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.PostTrialActivate),
 			middleware.RequireAuth(jwtIssuer),
+			channelGate.Require(),
 			// Как подписка и оплата: иначе пробный брали на несуществующие
 			// адреса — регистрация, пропуск кода, вход по паролю.
 			middleware.RequireVerifiedEmail(),
@@ -887,6 +907,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(me.GetDevices),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("devices")),
 			),
@@ -897,6 +918,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(me.GetTraffic),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("traffic")),
 			),
@@ -907,6 +929,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(me.GetTrafficUsage),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("traffic_usage")),
 			),
@@ -916,6 +939,7 @@ func registerAPIRoutes(
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.DeleteDevice),
 			middleware.RequireAuth(jwtIssuer),
+			channelGate.Require(),
 			middleware.RequireVerifiedEmail(),
 			middleware.CSRF(),
 			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_delete")),
@@ -927,6 +951,7 @@ func registerAPIRoutes(
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.ResetSubscriptionLink),
 			middleware.RequireAuth(jwtIssuer),
+			channelGate.Require(),
 			middleware.RequireVerifiedEmail(),
 			middleware.CSRF(),
 			middleware.RateLimit(subscriptionAcctLim, accountKey("subscription_reset_link")),
@@ -936,6 +961,7 @@ func registerAPIRoutes(
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.RenameDevice),
 			middleware.RequireAuth(jwtIssuer),
+			channelGate.Require(),
 			middleware.RequireVerifiedEmail(),
 			middleware.CSRF(),
 			middleware.RateLimit(subscriptionAcctLim, accountKey("devices_rename")),
@@ -945,6 +971,7 @@ func registerAPIRoutes(
 		onlyPOST(middleware.Chain(
 			http.HandlerFunc(me.PostHwidExtraApply),
 			middleware.RequireAuth(jwtIssuer),
+			channelGate.Require(),
 			middleware.RequireVerifiedEmail(),
 			middleware.CSRF(),
 			middleware.RateLimit(subscriptionAcctLim, accountKey("hwid_extra_apply")),
@@ -1051,6 +1078,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(subscription.Get),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("subscription")),
 			),
@@ -1064,6 +1092,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(connectInvite.Create),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("connect-invite")),
 			),
@@ -1076,6 +1105,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(subscription.Deeplink),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("deeplink")),
 			),
@@ -1086,6 +1116,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(subscription.Loyalty),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("loyalty")),
 			),
@@ -1096,6 +1127,7 @@ func registerAPIRoutes(
 			http.MethodGet: middleware.Chain(
 				http.HandlerFunc(subscription.LoyaltyHistory),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("loyalty-history")),
 			),
@@ -1127,6 +1159,7 @@ func registerAPIRoutes(
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(fortune.Spin),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.CSRF(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("fortune_spin")),
@@ -1140,6 +1173,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(activity.GetReferrals),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RequireVerifiedEmail(),
 					middleware.RateLimit(subscriptionAcctLim, accountKey("referrals")),
 				),
@@ -1150,6 +1184,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(activity.GetPurchases),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RequireVerifiedEmail(),
 					middleware.RateLimit(subscriptionAcctLim, accountKey("purchases")),
 				),
@@ -1164,6 +1199,7 @@ func registerAPIRoutes(
 		partnerRead := func(h http.HandlerFunc, route string) http.Handler {
 			return middleware.Chain(h,
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey(route)),
 			)
@@ -1171,6 +1207,7 @@ func registerAPIRoutes(
 		partnerWrite := func(h http.HandlerFunc, route string) http.Handler {
 			return middleware.Chain(h,
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.CSRF(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey(route)),
@@ -1279,6 +1316,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(promocodes.GetState),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RequireVerifiedEmail(),
 					middleware.RateLimit(subscriptionAcctLim, accountKey("promocodes_state")),
 				),
@@ -1288,6 +1326,7 @@ func registerAPIRoutes(
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(promocodes.Apply),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.CSRF(),
 				middleware.RateLimit(subscriptionAcctLim, accountKey("promocodes_apply")),
@@ -1302,6 +1341,7 @@ func registerAPIRoutes(
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(pay.Checkout),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.CSRF(),
 				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 			)),
@@ -1313,6 +1353,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(pay.Preview),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 				),
 			}),
@@ -1323,6 +1364,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(pay.LastMethod),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 				),
 			}),
@@ -1332,6 +1374,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(pay.TrafficPreview),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RequireVerifiedEmail(),
 					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 				),
@@ -1342,6 +1385,7 @@ func registerAPIRoutes(
 				http.MethodGet: middleware.Chain(
 					http.HandlerFunc(pay.HwidPreview),
 					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
 					middleware.RequireVerifiedEmail(),
 					middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
 				),
@@ -1351,6 +1395,7 @@ func registerAPIRoutes(
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(pay.TrafficCheckout),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.CSRF(),
 				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
@@ -1360,6 +1405,7 @@ func registerAPIRoutes(
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(pay.HwidCheckout),
 				middleware.RequireAuth(jwtIssuer),
+				channelGate.Require(),
 				middleware.RequireVerifiedEmail(),
 				middleware.CSRF(),
 				middleware.RateLimit(paymentsAcctLim, accountKey("payments")),
@@ -1818,6 +1864,17 @@ func registerAPIRoutes(
 			middleware.CSRF(),
 			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_settings")),
 		),
+	)
+
+	// Кнопка «Проверить канал» в настройках подписки: ничего не сохраняет.
+	api.Handle("/cabinet/api/admin/channel-gate/check",
+		onlyPOST(middleware.Chain(
+			http.HandlerFunc(adminSettings.ProbeChannel),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_channel_gate_check")),
+		)),
 	)
 
 	api.Handle("/cabinet/api/admin/settings",

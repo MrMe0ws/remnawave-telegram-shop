@@ -3,6 +3,14 @@ import type { TFunction } from 'i18next'
 import { ApiError } from '@/lib/api'
 
 const BODY_KEY_MAP: Record<string, string> = {
+  'channel_gate:no_channel': 'admin.errors.channelNoChannel',
+  'channel_gate:bot_not_admin': 'admin.errors.channelBotNotAdmin',
+  'channel_gate:not_found': 'admin.errors.channelNotFound',
+  'channel_gate:private': 'admin.errors.channelPrivate',
+  'channel_gate:unavailable': 'admin.errors.channelUnavailable',
+  'channel_gate:bad_format': 'admin.errors.channelBadFormat',
+  'private channel links are not supported': 'admin.errors.channelBadFormat',
+  'use @name or t.me/name of a public channel': 'admin.errors.channelBadFormat',
   'panel not configured': 'admin.errors.panelUnavailable',
   'not found': 'admin.errors.notFound',
   'not implemented': 'admin.errors.notImplemented',
