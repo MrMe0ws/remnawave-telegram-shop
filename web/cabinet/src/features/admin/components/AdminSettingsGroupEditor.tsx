@@ -335,7 +335,9 @@ export function AdminSettingsGroupEditor({
 
   const groupTitle = t(`admin.settings.groups.${group.id}`)
   // Пояснение ко всей группе — там, где по подписям полей легко понять не то.
-  const groupIntro = t(`admin.settings.groupIntros.${group.id}`, { defaultValue: '' })
+  // У «Подписки на канал» плашки нет: всё нужное — подсказка под переключателем и «Как подключить»
+  const groupIntro =
+    group.id === 'channel_gate' ? '' : t(`admin.settings.groupIntros.${group.id}`, { defaultValue: '' })
 
   return (
     <Card id={adminSettingsGroupAnchor(group.id)} className={cn('cabinet-elevated-card scroll-mt-24 overflow-hidden', expanded && 'lg:col-span-2')}>
