@@ -1110,6 +1110,8 @@
         "yoo_money": "YooMoney"
       },
       "changeMethod": "Change",
+      "selectMethod": "Select",
+      "choosePaymentMethod": "Choose a payment method",
       "recommendedBadge": "Recommended",
       "otherMethods": "Other methods",
       "total": "Total",

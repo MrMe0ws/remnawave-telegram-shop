@@ -487,6 +487,8 @@
         "yoo_money": "ЮMoney"
       },
       "changeMethod": "Изменить",
+      "selectMethod": "Выбрать",
+      "choosePaymentMethod": "Выберите способ оплаты",
       "recommendedBadge": "Рекомендуем",
       "otherMethods": "Другие способы",
       "total": "Итого",
