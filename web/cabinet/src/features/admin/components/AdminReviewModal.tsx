@@ -10,9 +10,8 @@ import {
   type AdminReview,
   type ReviewStatus,
 } from '@/features/reviews/reviewTypes'
-import type { AdminCustomerDTO } from '@/lib/types/admin'
-import { useCreateAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
-import { useAdminUserSearch } from '../hooks/useAdminUsers'
+import type { AdminReviewCustomerHit } from '@/features/reviews/reviewTypes'
+import { useAdminReviewCustomers, useCreateAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
 import { AdminModal } from './AdminModal'
 import { AdminModalSaveFooter } from './AdminModalSaveFooter'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
@@ -47,9 +46,9 @@ function toDateInput(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function customerLabel(c: AdminCustomerDTO): string {
-  const name = c.telegram_username ? `@${c.telegram_username}` : c.panel_login || ''
-  return [`#${c.id}`, name, c.is_web_only ? '' : c.telegram_id].filter(Boolean).join(' · ')
+function customerLabel(c: AdminReviewCustomerHit): string {
+  const name = c.telegram_username ? `@${c.telegram_username}` : ''
+  return [`#${c.id}`, name, c.email, c.telegram_id].filter(Boolean).join(' · ')
 }
 
 /**
@@ -107,7 +106,7 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
     return () => clearTimeout(id)
   }, [custQuery])
 
-  const search = useAdminUserSearch(open && !editing && listOpen ? custDebounced : '')
+  const search = useAdminReviewCustomers(open && !editing && listOpen ? custDebounced : '')
   const suggestions = search.data?.items.slice(0, 8) ?? []
 
   const pending = update.isPending || create.isPending
@@ -187,7 +186,7 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
               className={fieldClass}
             />
             {listOpen && custDebounced.length >= 1 && custPicked == null && (
-              <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
+              <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border bg-card p-1 shadow-xl">
                 {search.isLoading ? (
                   <p className="px-3 py-2 text-sm text-muted-foreground">{t('admin.reviews.modal.customerSearching')}</p>
                 ) : suggestions.length === 0 ? (

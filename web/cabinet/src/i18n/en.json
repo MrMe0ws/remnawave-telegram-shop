@@ -386,7 +386,6 @@
         "torrent": "Restriction",
         "traffic": "Traffic"
       },
-      "publishedOn": "Published {{date}}",
       "showMore": "Show more",
       "showLess": "Show less"
     },
@@ -1183,6 +1182,7 @@
       "disabled": "Reviews are currently turned off.",
       "empty": "No reviews yet. Be the first!",
       "loadError": "Could not load reviews.",
+      "publishedOn": "Published {{date}}",
       "showMore": "Show more",
       "showLess": "Show less",
       "loadMore": "Show more",

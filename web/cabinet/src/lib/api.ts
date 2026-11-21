@@ -10,6 +10,7 @@
  */
 import type {
   AdminReview,
+  AdminReviewCustomerHit,
   AdminReviewByCustomerResponse,
   AdminReviewCreateInput,
   AdminReviewUpdateInput,
@@ -1749,6 +1750,8 @@ export const api = {
   adminReviewUpdate: (id: number, body: AdminReviewUpdateInput) => request<AdminReview>('PUT', `/admin/reviews/${id}`, body),
   adminReviewDelete: (id: number) => request<{ ok: boolean }>('DELETE', `/admin/reviews/${id}`),
   adminReviewCreate: (body: AdminReviewCreateInput) => request<AdminReview>('POST', '/admin/reviews', body),
+  adminReviewCustomers: (q: string) =>
+    request<{ items: AdminReviewCustomerHit[] }>('GET', `/admin/reviews/customers?q=${encodeURIComponent(q)}`),
   adminReviewByCustomer: (customerId: number) =>
     request<AdminReviewByCustomerResponse>('GET', `/admin/reviews/customer/${customerId}`),
 

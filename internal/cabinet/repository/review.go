@@ -181,6 +181,21 @@ func (r *ReviewRepo) FindByID(ctx context.Context, id int64) (*Review, error) {
 	return scanReview(r.pool.QueryRow(ctx, `SELECT `+reviewCols+` FROM cabinet_review WHERE id = $1`, id))
 }
 
+// CustomerEmail — почта аккаунта кабинета клиента для подсказки в поиске; пусто, если аккаунта нет.
+func (r *ReviewRepo) CustomerEmail(ctx context.Context, customerID int64) (string, bool) {
+	var email *string
+	err := r.pool.QueryRow(ctx, `SELECT a.email FROM cabinet_account_customer_link l
+		JOIN cabinet_account a ON a.id = l.account_id
+		WHERE l.customer_id = $1 AND l.link_status = 'linked' ORDER BY l.id LIMIT 1`, customerID).Scan(&email)
+	if err != nil {
+		return "", false
+	}
+	if email == nil {
+		return "", true
+	}
+	return *email, true
+}
+
 // FindByCustomerNoAccount — отзыв от имени клиента без аккаунта кабинета.
 func (r *ReviewRepo) FindByCustomerNoAccount(ctx context.Context, customerID int64) (*Review, error) {
 	return scanReview(r.pool.QueryRow(ctx, `SELECT `+reviewCols+` FROM cabinet_review WHERE customer_id = $1 AND account_id IS NULL`, customerID))

@@ -72,3 +72,13 @@ export function useAdminReviewByCustomer(customerId: number | null) {
     enabled: customerId != null && customerId > 0,
   })
 }
+
+/** Подсказки клиентов по ID, @нику, Telegram ID и почте. */
+export function useAdminReviewCustomers(q: string) {
+  return useQuery({
+    queryKey: ['admin-review-customers', q],
+    queryFn: () => api.adminReviewCustomers(q),
+    enabled: q.trim().length >= 1,
+    staleTime: 10_000,
+  })
+}

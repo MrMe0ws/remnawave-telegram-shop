@@ -11,6 +11,7 @@ import (
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
+	"remnawave-tg-shop-bot/utils"
 )
 
 // AdminReviewsHandler — модерация отзывов: список, правка, ответ, удаление,
@@ -215,6 +216,10 @@ func (h *AdminReviewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 // /cabinet/api/admin/reviews/customer/{customer_id} (GET).
 func (h *AdminReviewsHandler) HandleByID(w http.ResponseWriter, r *http.Request) {
 	rest := strings.Trim(strings.TrimPrefix(r.URL.Path, "/cabinet/api/admin/reviews/"), "/")
+	if rest == "customers" {
+		h.searchCustomers(w, r)
+		return
+	}
 	if cid, ok := strings.CutPrefix(rest, "customer/"); ok {
 		h.byCustomer(w, r, cid)
 		return
@@ -326,4 +331,58 @@ func (h *AdminReviewsHandler) delete(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+type adminReviewCustomerDTO struct {
+	ID               int64  `json:"id"`
+	TelegramUsername string `json:"telegram_username,omitempty"`
+	// TelegramID — настоящий Telegram ID; у web-клиентов пусто.
+	TelegramID string `json:"telegram_id,omitempty"`
+	Email      string `json:"email,omitempty"`
+	HasAccount bool   `json:"has_account"`
+}
+
+// searchCustomers — GET /cabinet/api/admin/reviews/customers?q= : подсказки для окна
+// «от имени клиента». Ищет по ID клиента (точно), @нику, Telegram ID и почте. Поиск
+// «Пользователей» по ID не умеет, а в этом окне ID — самое частое, что вводят.
+func (h *AdminReviewsHandler) searchCustomers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w, http.MethodGet)
+		return
+	}
+	needle := strings.TrimPrefix(strings.TrimSpace(r.URL.Query().Get("q")), "@")
+	out := []adminReviewCustomerDTO{}
+	if needle == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"items": out})
+		return
+	}
+	const limit = 8
+	seen := map[int64]bool{}
+	add := func(c *database.Customer) {
+		if c == nil || seen[c.ID] || len(out) >= limit {
+			return
+		}
+		seen[c.ID] = true
+		dto := adminReviewCustomerDTO{ID: c.ID}
+		if c.TelegramUsername != nil {
+			dto.TelegramUsername = strings.TrimPrefix(strings.TrimSpace(*c.TelegramUsername), "@")
+		}
+		if !c.IsWebOnly && !utils.IsSyntheticTelegramID(c.TelegramID) {
+			dto.TelegramID = strconv.FormatInt(c.TelegramID, 10)
+		}
+		dto.Email, dto.HasAccount = h.reviews.CustomerEmail(r.Context(), c.ID)
+		out = append(out, dto)
+	}
+	// Точное совпадение по ID клиента — первым.
+	if n, err := strconv.ParseInt(needle, 10, 64); err == nil && n > 0 {
+		if c, cerr := h.customers.FindById(r.Context(), n); cerr == nil {
+			add(c)
+		}
+	}
+	if rows, err := h.customers.SearchForAdmin(r.Context(), needle, limit); err == nil {
+		for i := range rows {
+			add(&rows[i])
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": out})
 }

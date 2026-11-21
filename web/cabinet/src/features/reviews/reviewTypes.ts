@@ -115,3 +115,12 @@ export function visibilityFromToggles(showName: boolean, showAvatar: boolean): R
 export function togglesFromVisibility(v: ReviewVisibility | undefined): { showName: boolean; showAvatar: boolean } {
   return { showName: v === 'name' || v === 'name_avatar', showAvatar: v === 'name_avatar' }
 }
+
+/** Подсказка клиента в окне «от имени клиента». */
+export interface AdminReviewCustomerHit {
+  id: number
+  telegram_username?: string
+  telegram_id?: string
+  email?: string
+  has_account: boolean
+}
