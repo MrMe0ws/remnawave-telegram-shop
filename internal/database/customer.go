@@ -1118,6 +1118,8 @@ const (
 	CustomerListScopeExpiringSoon
 	CustomerListScopeTrial
 	CustomerListScopeActive
+	// CustomerListScopeExpired — подписка была и закончилась («Истёк»); у «Неактивных» к ним добавлены те, у кого срока нет вовсе.
+	CustomerListScopeExpired
 )
 
 func customerListWhere(scope CustomerListScope) sq.Sqlizer {
@@ -1125,6 +1127,8 @@ func customerListWhere(scope CustomerListScope) sq.Sqlizer {
 	switch scope {
 	case CustomerListScopeInactive:
 		return sq.Expr("(customer.expire_at IS NULL OR customer.expire_at <= NOW())")
+	case CustomerListScopeExpired:
+		return sq.Expr("(customer.expire_at IS NOT NULL AND customer.expire_at <= NOW())")
 	case CustomerListScopeExpiringSoon:
 		return sq.Expr("(customer.expire_at IS NOT NULL AND customer.expire_at > NOW() AND customer.expire_at <= NOW() + INTERVAL '7 days')")
 	case CustomerListScopeTrial:
@@ -1144,7 +1148,7 @@ func customerListOrder(scope CustomerListScope) string {
 		return "expire_at ASC"
 	case CustomerListScopeTrial:
 		return "id DESC"
-	case CustomerListScopeActive:
+	case CustomerListScopeActive, CustomerListScopeExpired:
 		return "expire_at DESC"
 	default:
 		return "id DESC"

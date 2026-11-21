@@ -80,6 +80,7 @@ function parseArgs(argv) {
     hover: null,
     element: null,
     scroll: null,
+    scrollTimes: 0,
     themes: ['dark'],
     locale: 'ru-RU',
     timezone: 'Europe/Moscow',
@@ -98,6 +99,7 @@ function parseArgs(argv) {
       case '--step': out.steps.push(val); i++; break
       case '--element': out.element = val; i++; break
       case '--scroll': out.scroll = Number(val); i++; break
+      case '--scroll-times': out.scrollTimes = Number(val); i++; break
       case '--theme': out.themes = val.split(','); i++; break
       case '--locale': out.locale = val; i++; break
       case '--timezone': out.timezone = val; i++; break
@@ -290,6 +292,12 @@ async function main() {
           }
           await page.waitForTimeout(250)
           const file = path.join(outDir, `${tag}-${shot.name}.png`)
+          // Длинные списки с подгрузкой: докручиваем до низа N раз, ждём новые строки.
+          for (let k = 0; k < args.scrollTimes; k++) {
+            await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+            await page.waitForTimeout(1200)
+          }
+          if (args.scrollTimes) console.log(`  высота страницы после ${args.scrollTimes} прокруток: ${await page.evaluate(() => document.documentElement.scrollHeight)}px`)
           if (args.scroll != null) {
             // Кадр окна после прокрутки — проверка липких блоков (sticky); fullPage их не покажет.
             // -1 — не крутить самим: кадр окна там, куда страницу привели шаги.
