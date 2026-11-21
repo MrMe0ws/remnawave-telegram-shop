@@ -1,4 +1,7 @@
-const CACHE_NAME = 'cabinet-shell-v1'
+// Кэш только оболочки. Хэшированные /cabinet/assets/* здесь кэшировать нельзя:
+// после деплоя старые имена пропадают, и закэшированный ответ на них (раньше —
+// index.html вместо JS) ломал страницу до очистки данных сайта.
+const CACHE_NAME = 'cabinet-shell-v2'
 const APP_SHELL = ['/cabinet/', '/cabinet/index.html', '/cabinet/favicon.svg']
 
 self.addEventListener('install', (event) => {
@@ -28,13 +31,18 @@ self.addEventListener('fetch', (event) => {
   if (!url.pathname.startsWith('/cabinet/')) return
   if (url.pathname.startsWith('/cabinet/api/')) return
 
+  // Чанки Vite: только сеть. Браузер и так держит их по immutable Cache-Control.
+  if (url.pathname.startsWith('/cabinet/assets/')) return
+
   // Always try network first for navigations, so users get fresh index/app shell.
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put('/cabinet/index.html', copy))
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put('/cabinet/index.html', copy))
+          }
           return res
         })
         .catch(() => caches.match('/cabinet/index.html')),
@@ -42,17 +50,18 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Иконки, шрифты, оболочка: сначала сеть; в кэш кладём только успешные не-HTML ответы.
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached
-      return fetch(req)
-        .then((res) => {
+    fetch(req)
+      .then((res) => {
+        const ctype = (res.headers.get('content-type') || '').toLowerCase()
+        if (res.ok && !ctype.includes('text/html')) {
           const copy = res.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
-          return res
-        })
-        .catch(() => caches.match('/cabinet/index.html'))
-    }),
+        }
+        return res
+      })
+      .catch(() => caches.match(req).then((cached) => cached || caches.match('/cabinet/index.html'))),
   )
 })
 
