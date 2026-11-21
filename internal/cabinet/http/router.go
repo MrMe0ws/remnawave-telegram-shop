@@ -895,6 +895,8 @@ func registerAPIRoutes(
 			http.HandlerFunc(me.PostTrialActivate),
 			middleware.RequireAuth(jwtIssuer),
 			channelGate.Require(),
+			// Режим «подписка только для пробного»: Require его не трогает.
+			channelGate.RequireTrial(),
 			// Как подписка и оплата: иначе пробный брали на несуществующие
 			// адреса — регистрация, пропуск кода, вход по паролю.
 			middleware.RequireVerifiedEmail(),
@@ -1486,6 +1488,17 @@ func registerAPIRoutes(
 				middleware.RequireAuth(jwtIssuer),
 				middleware.RequireAdmin(adminChecker),
 				middleware.RateLimit(adminAcctLim, accountKey("admin_squads")),
+			),
+		}),
+	)
+
+	api.Handle("/cabinet/api/admin/squads/external",
+		methodRouter(map[string]http.Handler{
+			http.MethodGet: middleware.Chain(
+				http.HandlerFunc(adminSquads.ListExternal),
+				middleware.RequireAuth(jwtIssuer),
+				middleware.RequireAdmin(adminChecker),
+				middleware.RateLimit(adminAcctLim, accountKey("admin_squads_external")),
 			),
 		}),
 	)

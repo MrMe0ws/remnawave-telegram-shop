@@ -1876,6 +1876,9 @@ export const api = {
     request<AdminCustomerDTO>('PUT', `/admin/users/${id}/hwid-pin`, { limit }),
 
   adminSquads: () => request<{ items: { uuid: string; name: string }[] }>('GET', '/admin/squads'),
+  /** External squads панели: для выбора внешнего сквада пробного периода. */
+  adminExternalSquads: () =>
+    request<{ items: { uuid: string; name: string }[] }>('GET', '/admin/squads/external'),
 
   adminPayments: (params?: { status?: string; q?: string; page?: number; limit?: number; sort?: string; dir?: string }) => {
     const q = new URLSearchParams()

@@ -273,13 +273,33 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'period',
       titleKey: 'admin.settings.subsections.trial.period',
       icon: CalendarDays,
-      keys: ['TRIAL_DAYS', 'TRIAL_ADD_TO_PAID'],
+      keys: ['TRIAL_ENABLED', 'TRIAL_DAYS', 'TRIAL_ADD_TO_PAID'],
     },
     {
       id: 'traffic',
       titleKey: 'admin.settings.subsections.trial.traffic',
       icon: Gauge,
-      keys: ['TRIAL_TRAFFIC_LIMIT', 'TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY', 'TRAFFIC_LIMIT_RESET_STRATEGY'],
+      keys: ['TRIAL_TRAFFIC_LIMIT', 'TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY', 'TRIAL_HWID_LIMIT'],
+    },
+    {
+      id: 'servers',
+      titleKey: 'admin.settings.subsections.trial.servers',
+      icon: Shield,
+      keys: ['TRIAL_INTERNAL_SQUADS', 'TRIAL_EXTERNAL_SQUAD_UUID', 'TRIAL_REMNAWAVE_TAG'],
+    },
+  ],
+  traffic: [
+    {
+      id: 'split',
+      titleKey: 'admin.settings.subsections.traffic.split',
+      icon: Gauge,
+      keys: ['TRAFFIC_SPLIT_ENABLED', 'TRAFFIC_PACKS_ENABLED', 'TRAFFIC_BYPASS_LABEL', 'TRAFFIC_ALERT_PERCENT', 'TRAFFIC_POLL_MINUTES'],
+    },
+    {
+      id: 'reset',
+      titleKey: 'admin.settings.subsections.traffic.reset',
+      icon: RefreshCw,
+      keys: ['TRAFFIC_LIMIT_RESET_STRATEGY'],
     },
   ],
   hwid: [
@@ -293,7 +313,7 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'limits',
       titleKey: 'admin.settings.subsections.hwid.limits',
       icon: Smartphone,
-      keys: ['HWID_MAX_DEVICE', 'TRIAL_HWID_LIMIT', 'PAID_HWID_LIMIT', 'HWID_FALLBACK_DEVICE_LIMIT'],
+      keys: ['HWID_MAX_DEVICE', 'PAID_HWID_LIMIT', 'HWID_FALLBACK_DEVICE_LIMIT'],
     },
   ],
   referral: [

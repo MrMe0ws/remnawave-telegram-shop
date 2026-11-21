@@ -63,8 +63,10 @@ type config struct {
 	forwardUserMessagesToAdmin                                                   bool
 	channelGateEnabled                                                           bool
 	channelGateChannel                                                           string
+	channelGateScope                                                             string
 	suspiciousUserFilterEnabled                                                  bool
 	trialDays                                                                    int
+	trialEnabled                                                                 bool
 	squadUUIDs                                                                   map[uuid.UUID]uuid.UUID
 	referralDays                                                                 int
 	referralMode                                                                 string
@@ -454,6 +456,12 @@ func TrialTrafficLimit() int {
 
 func TrialDays() int {
 	return conf.trialDays
+}
+
+// TrialEnabled — пробный период выдаётся: включён переключателем и заданы дни.
+// TRIAL_DAYS=0 по-прежнему выключает его, как до появления переключателя.
+func TrialEnabled() bool {
+	return conf.trialEnabled && conf.trialDays > 0
 }
 
 func TrialTrafficLimitResetStrategy() string {
@@ -1066,6 +1074,10 @@ func InitConfig() {
 	conf.channelGateEnabled = envBoolDefault("CHANNEL_GATE_ENABLED", false)
 	// Неверное значение из .env не должно ронять старт: канал просто не задан.
 	conf.channelGateChannel, _ = NormalizeChannelUsername(os.Getenv("CHANNEL_GATE_CHANNEL"))
+	conf.channelGateScope = ChannelGateScopeAll
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("CHANNEL_GATE_SCOPE")), ChannelGateScopeTrial) {
+		conf.channelGateScope = ChannelGateScopeTrial
+	}
 
 	conf.telegramToken = mustEnv("TELEGRAM_TOKEN")
 
@@ -1100,6 +1112,7 @@ func InitConfig() {
 	conf.healthCheckPort = envIntDefault("HEALTH_CHECK_PORT", 8080)
 
 	conf.trialDays = mustEnvInt("TRIAL_DAYS")
+	conf.trialEnabled = envBoolDefault("TRIAL_ENABLED", true)
 
 	conf.trialTrafficLimitResetStrategy = func() string {
 		v := os.Getenv("TRIAL_TRAFFIC_LIMIT_RESET_STRATEGY")

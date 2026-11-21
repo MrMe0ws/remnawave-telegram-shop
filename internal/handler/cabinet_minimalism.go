@@ -41,7 +41,7 @@ func (h Handler) buildCabinetMinimalismCoreRows(langCode string, customer *datab
 		kb = append(kb, []models.InlineKeyboardButton{btn})
 	}
 	noSub := customer == nil || customer.SubscriptionLink == nil
-	if noSub && config.TrialDays() > 0 {
+	if noSub && config.TrialEnabled() {
 		add(h.resolveTrialButton(langCode, "cabinet_minimal_btn_trial"))
 	}
 	if buy := cabinetWebAppURL("/cabinet/tariffs"); buy != "" {

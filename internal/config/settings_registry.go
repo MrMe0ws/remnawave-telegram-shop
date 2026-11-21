@@ -259,6 +259,11 @@ func baseRuntimeSettings() []SettingField {
 
 		// --- trial ---
 		{
+			Key: "TRIAL_ENABLED", Group: "trial", Type: SettingBool, Instant: true,
+			Apply:   applyBoolField(func(v bool) { conf.trialEnabled = v }),
+			Current: func() string { return boolStr(conf.trialEnabled) },
+		},
+		{
 			Key: "TRIAL_DAYS", Group: "trial", Type: SettingInt,
 			MinInt:  intPtr(1),
 			Apply:   applyIntField(func(v int) error { conf.trialDays = v; return nil }),
@@ -282,7 +287,28 @@ func baseRuntimeSettings() []SettingField {
 			Current: func() string { return boolStr(conf.trialAddsToPaid) },
 		},
 		{
-			Key: "TRAFFIC_LIMIT_RESET_STRATEGY", Group: "trial", Type: SettingEnum,
+			Key: "TRIAL_HWID_LIMIT", Group: "trial", Type: SettingInt,
+			MinInt:  intPtr(0),
+			Apply:   applyIntField(func(v int) error { conf.trialHwidLimit = v; return nil }),
+			Current: func() string { return strconv.Itoa(conf.trialHwidLimit) },
+		},
+		{
+			Key: "TRIAL_INTERNAL_SQUADS", Group: "trial", Type: SettingCSV,
+			Apply:   applyTrialInternalSquads,
+			Current: currentTrialInternalSquads,
+		},
+		{
+			Key: "TRIAL_EXTERNAL_SQUAD_UUID", Group: "trial", Type: SettingText,
+			Apply:   applyTrialExternalSquad,
+			Current: func() string { return uuidOrEmpty(conf.trialExternalSquadUUID) },
+		},
+		{
+			Key: "TRIAL_REMNAWAVE_TAG", Group: "trial", Type: SettingText,
+			Apply:   applyRemnaTagOptional(func(v string) { conf.trialRemnawaveTag = v }),
+			Current: func() string { return conf.trialRemnawaveTag },
+		},
+		{
+			Key: "TRAFFIC_LIMIT_RESET_STRATEGY", Group: "traffic", Type: SettingEnum,
 			EnumValues: []string{"day", "week", "month", "month_rolling", "never"},
 			Apply:      applyTrafficResetStrategy(func(v string) { conf.trafficLimitResetStrategy = v }),
 			Current:    func() string { return conf.trafficLimitResetStrategy },
@@ -293,11 +319,6 @@ func baseRuntimeSettings() []SettingField {
 			Key: "REMNAWAVE_TAG", Group: "tags", Type: SettingText,
 			Apply:   applyRemnaTag(func(v string) { conf.remnawaveTag = v }),
 			Current: func() string { return conf.remnawaveTag },
-		},
-		{
-			Key: "TRIAL_REMNAWAVE_TAG", Group: "tags", Type: SettingText,
-			Apply:   applyRemnaTagOptional(func(v string) { conf.trialRemnawaveTag = v }),
-			Current: func() string { return conf.trialRemnawaveTag },
 		},
 
 		// --- traffic (раздельный трафик и докупка) ---
@@ -354,12 +375,6 @@ func baseRuntimeSettings() []SettingField {
 			MinInt:  intPtr(1),
 			Apply:   applyIntField(func(v int) error { conf.hwidMaxDevices = v; return nil }),
 			Current: func() string { return strconv.Itoa(conf.hwidMaxDevices) },
-		},
-		{
-			Key: "TRIAL_HWID_LIMIT", Group: "hwid", Type: SettingInt,
-			MinInt:  intPtr(0),
-			Apply:   applyIntField(func(v int) error { conf.trialHwidLimit = v; return nil }),
-			Current: func() string { return strconv.Itoa(conf.trialHwidLimit) },
 		},
 		{
 			Key: "PAID_HWID_LIMIT", Group: "hwid", Type: SettingInt,

@@ -1273,7 +1273,7 @@ func (h *MeHandler) GetTrial(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := trialResp{
-		Enabled:     config.TrialDays() > 0,
+		Enabled:     config.TrialEnabled(),
 		Days:        config.TrialDays(),
 		TrafficGB:   int(config.TrialTrafficLimit() / (1024 * 1024 * 1024)),
 		DeviceLimit: config.TrialHwidLimit(),
@@ -1309,7 +1309,7 @@ func (h *MeHandler) PostTrialActivate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if config.TrialDays() <= 0 || h.payments == nil || h.links == nil || h.customers == nil {
+	if !config.TrialEnabled() || h.payments == nil || h.links == nil || h.customers == nil {
 		http.Error(w, "trial disabled", http.StatusNotFound)
 		return
 	}

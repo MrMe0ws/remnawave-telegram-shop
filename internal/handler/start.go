@@ -308,7 +308,7 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 	var inlineKeyboard [][]models.InlineKeyboardButton
 
 	// 1. Попробовать бесплатно (если юзер новый)
-	if existingCustomer.SubscriptionLink == nil && config.TrialDays() > 0 {
+	if existingCustomer.SubscriptionLink == nil && config.TrialEnabled() {
 		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
 			h.translation.WithButton(langCode, "trial_button", models.InlineKeyboardButton{CallbackData: CallbackTrial}),
 		})
