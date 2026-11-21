@@ -14,7 +14,7 @@ import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminReviewModal } from '../components/AdminReviewModal'
 import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
-import { useAdminReviewsList, useDeleteAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
+import { useAdminReviewsList, useAdminReviewsPending, useDeleteAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
 import { formatAdminDateTime } from '../utils/datetime'
 
 const TABS = ['all', 'pending', 'published', 'hidden'] as const
@@ -74,7 +74,10 @@ function IconAction({
 
 export default function AdminReviewsPage() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<Tab>('pending')
+  // null — вкладку ещё не выбирали: открываем «На проверке», если там есть что проверять, иначе «Все».
+  const [pickedTab, setTab] = useState<Tab | null>(null)
+  const pendingCounter = useAdminReviewsPending()
+  const tab: Tab = pickedTab ?? (pendingCounter.data && pendingCounter.data.counts.pending === 0 ? 'all' : 'pending')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')

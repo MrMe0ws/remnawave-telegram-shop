@@ -1425,7 +1425,7 @@
           "titleEdit": "Review: {{name}}",
           "titleCreate": "Review on behalf of a customer",
           "subtitleEdit": "Text edits are not shown to the customer. The original is kept and visible only here.",
-          "subtitleCreate": "The review appears under the customer’s name. The customer may have no cabinet account — being in the Users list is enough.",
+          "subtitleCreate": "The review appears on behalf of the customer.",
           "customerId": "Customer ID",
           "customerPlaceholder": "Start typing an ID, @username or Telegram ID",
       "customerSearching": "Searching…",
