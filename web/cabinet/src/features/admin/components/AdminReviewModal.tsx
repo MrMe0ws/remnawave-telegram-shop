@@ -267,7 +267,7 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
         </label>
 
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium">{t('admin.reviews.modal.dateLabel')}</span>
+          <span className="block text-sm font-medium">{t('admin.reviews.modal.dateLabel')}</span>
           <input
             type="date"
             value={date}
