@@ -61,6 +61,7 @@ export const ADMIN_SETTINGS_GROUP_ORDER = [
   'notifications',
   'monitoring',
   'fortune',
+  'reviews',
 ] as const
 
 export type AdminSettingsGroupId = (typeof ADMIN_SETTINGS_GROUP_ORDER)[number]
@@ -85,6 +86,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   notifications: BellRing,
   monitoring: Radar,
   fortune: CircleDot,
+  reviews: Star,
   cabinet: Sparkles,
   status: Activity,
   cabinet_connect: Settings2,
@@ -115,6 +117,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   notifications: { box: 'bg-red-500/10 dark:bg-red-500/20', icon: 'text-red-500' },
   monitoring: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
   fortune: { box: 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20', icon: 'text-fuchsia-500' },
+  reviews: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
   cabinet: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
   status: { box: 'bg-cyan-500/10 dark:bg-cyan-500/20', icon: 'text-cyan-500' },
   cabinet_connect: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
@@ -166,7 +169,7 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     id: 'design',
     titleKey: 'admin.settings.categories.design',
     icon: Sparkles,
-    groups: ['cabinet', 'cabinet_connect'],
+    groups: ['cabinet', 'cabinet_connect', 'reviews'],
     iconStyle: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
   },
   {

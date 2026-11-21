@@ -454,6 +454,10 @@ func Mount(ctx context.Context, mux *http.ServeMux, pool *pgxpool.Pool, paymentS
 			),
 		}),
 	)
+	reviewRepo := repository.NewReviewRepo(pool)
+	reviewsHandler := handlers.NewReviews(reviewRepo, linkRepo, customerRepo, purchaseRepo, tariffRepo, meHandler)
+	adminReviewsHandler := handlers.NewAdminReviews(reviewRepo, linkRepo, customerRepo, reviewsHandler)
+	registerReviewRoutes(ctx, api, reviewsHandler, adminReviewsHandler, jwtIssuer, adminChecker, channelGate, subscriptionAcctLim, adminAcctLim)
 	adminStatusTargets := handlers.NewAdminStatusTargets(statusTargets, statusRunner, rw, publicStatus.Invalidate)
 	adminAlerts := handlers.NewAdminAlerts()
 	adminMonitoring := handlers.NewAdminMonitoring(pool)

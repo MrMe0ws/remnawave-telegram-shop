@@ -8,6 +8,17 @@
  * - При 401 (кроме /auth/*) автоматически вызывается refresh и запрос повторяется
  * - При неудаче refresh — стор сбрасывает сессию
  */
+import type {
+  AdminReview,
+  AdminReviewByCustomerResponse,
+  AdminReviewCreateInput,
+  AdminReviewUpdateInput,
+  AdminReviewsResponse,
+  MyReview,
+  MyReviewResponse,
+  ReviewsListResponse,
+  SaveReviewInput,
+} from '@/features/reviews/reviewTypes'
 
 import { getCookie } from './utils'
 import type {
@@ -209,6 +220,8 @@ export interface AuthBootstrapResponse {
   fortune_nav_visible?: boolean
   /** false, пока в списке статуса нет ни одного сервера: пункт меню, кнопка главной и сама страница скрыты. */
   status_nav_visible?: boolean
+  /** Раздел отзывов включён: пункт «Отзывы» ведёт на /reviews, а не на внешнюю ссылку. */
+  reviews_enabled?: boolean
   /** false при PARTNER_PROGRAM_ENABLED=false — пункт «Партнёрам» скрыт. */
   partner_nav_visible?: boolean
   /** Максимальная ставка партнёрки — бейдж «до N%» рядом с пунктом меню. */
@@ -1718,6 +1731,26 @@ export const api = {
   tariffs: () => request<TariffsRawResponse>('GET', '/tariffs').then(normalizeTariffsResponse),
 
   publicStatus: () => request<PublicStatusResponse>('GET', '/public/status'),
+
+  // --- Отзывы ---
+  publicReviews: (limit = 12, offset = 0) =>
+    request<ReviewsListResponse>('GET', `/public/reviews?limit=${limit}&offset=${offset}`),
+  publicReviewsFeatured: () => request<ReviewsListResponse>('GET', '/public/reviews/featured'),
+  myReview: () => request<MyReviewResponse>('GET', '/me/review'),
+  saveMyReview: (body: SaveReviewInput) => request<MyReview>('PUT', '/me/review', body),
+  adminReviews: (p: { status?: string; q?: string; limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams()
+    if (p.status) qs.set('status', p.status)
+    if (p.q) qs.set('q', p.q)
+    qs.set('limit', String(p.limit ?? 20))
+    qs.set('offset', String(p.offset ?? 0))
+    return request<AdminReviewsResponse>('GET', `/admin/reviews?${qs.toString()}`)
+  },
+  adminReviewUpdate: (id: number, body: AdminReviewUpdateInput) => request<AdminReview>('PUT', `/admin/reviews/${id}`, body),
+  adminReviewDelete: (id: number) => request<{ ok: boolean }>('DELETE', `/admin/reviews/${id}`),
+  adminReviewCreate: (body: AdminReviewCreateInput) => request<AdminReview>('POST', '/admin/reviews', body),
+  adminReviewByCustomer: (customerId: number) =>
+    request<AdminReviewByCustomerResponse>('GET', `/admin/reviews/customer/${customerId}`),
 
   // Payments — тело как в internal/cabinet/http/handlers/payments.go: period, tariff_id, provider, yookassa_method.
   checkout: (

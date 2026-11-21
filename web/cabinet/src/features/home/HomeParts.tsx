@@ -401,7 +401,7 @@ function useQuickActions(data: HomeData): QuickAction[] {
         onClick: () => void copySubscriptionLink(),
       }
     }
-    return { key: id, icon: meta.icon, label: t(meta.labelKey), to: meta.to, href: meta.href?.(bootstrap) }
+    return { key: id, icon: meta.icon, label: t(meta.labelKey), to: meta.resolveTo?.(bootstrap) ?? meta.to, href: meta.resolveTo?.(bootstrap) ? undefined : meta.href?.(bootstrap) }
   }
   const tail = configured.map(toAction)
   const addExtra: QuickAction = { key: 'extra', icon: AddDeviceIcon, label: t('home.qaAddExtra'), onClick: openConnect, disabled: !hasLink }

@@ -15,6 +15,7 @@ import {
 import { useState, useEffect, useMemo } from 'react'
 
 import { AdminUserHistoryModal, historyButtonLabel, useAdminUserEventCount } from '../monitoring/AdminUserHistory'
+import { AdminUserReviewModal } from '../components/user-modals/AdminUserReviewModal'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminSectionCard } from '../components/AdminSectionCard'
 import { AdminSetExpireModal } from '../components/AdminSetExpireModal'
@@ -151,6 +152,7 @@ export default function AdminUserDetailPage() {
   const [disableError, setDisableError] = useState<string | null>(null)
   const [actionsModal, setActionsModal] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [editModal, setEditModal] = useState<UserEditModalKey | null>(null)
   const [paymentsPage, setPaymentsPage] = useState(1)
   const [referralsPage, setReferralsPage] = useState(1)
@@ -325,6 +327,8 @@ export default function AdminUserDetailPage() {
               copy={copy}
               onHistory={() => setHistoryOpen(true)}
               historyLabel={historyLabel}
+              onReview={() => setReviewOpen(true)}
+              reviewLabel={t('admin.reviews.modal.userAction')}
             />
           </div>
         </div>
@@ -578,9 +582,12 @@ export default function AdminUserDetailPage() {
         onChangeTariff={canEditTariff ? () => setEditModal('tariff') : undefined}
         onHistory={() => setHistoryOpen(true)}
         historyLabel={historyLabel}
+        onReview={() => setReviewOpen(true)}
+        reviewLabel={t('admin.reviews.modal.userAction')}
       />
 
       <AdminUserHistoryModal customerId={user.id} open={historyOpen} onClose={() => setHistoryOpen(false)} />
+      <AdminUserReviewModal customerId={user.id} open={reviewOpen} onClose={() => setReviewOpen(false)} />
 
       <AdminSetExpireModal
         open={expireModal}

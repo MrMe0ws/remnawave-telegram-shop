@@ -326,7 +326,10 @@ func (h Handler) buildStartKeyboard(existingCustomer *database.Customer, langCod
 
 	// 4. Собираем кнопки для 2-в-ряд: отзывы, канал
 	var secondRow []models.InlineKeyboardButton
-	if config.FeedbackURL() != "" {
+	if reviewsURL := reviewsWebAppURL(); reviewsURL != "" {
+		// Отзывы включены: открываем страницу прямо в Mini App.
+		secondRow = append(secondRow, h.translation.WithButton(langCode, "feedback_button", models.InlineKeyboardButton{WebApp: &models.WebAppInfo{URL: reviewsURL}}))
+	} else if config.FeedbackURL() != "" {
 		secondRow = append(secondRow, h.translation.WithButton(langCode, "feedback_button", models.InlineKeyboardButton{URL: config.FeedbackURL()}))
 	}
 	if config.ChannelURL() != "" {

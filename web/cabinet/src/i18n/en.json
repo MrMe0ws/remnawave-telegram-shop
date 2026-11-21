@@ -53,7 +53,8 @@
       "password": "Password",
       "passwordConfirm": "Confirm password",
       "forgotPassword": "Forgot password?",
-      "noAccount": "Don't have an account?",
+      "noAccount": "No customer with this ID. Use the ID from the first column of the Users table.",
+      "noCustomer": "No customer with this ID. Use the ID from the first column of the Users table.",
       "haveAccount": "Already have an account?",
       "createAccount": "Create account",
       "openBotInApp": "Open the bot in the app",
@@ -1172,6 +1173,76 @@
       "previewFailed": "Could not calculate the amount. Refresh the page.",
       "devicesBreakdown": "{{base}} in plan + {{count}} extra"
     },
+    "reviews": {
+      "eyebrow": "Reviews",
+      "title": "What customers say",
+      "subtitle": "Real reviews from people who use the service.",
+      "write": "Write a review",
+      "edit": "Edit review",
+      "disabled": "Reviews are currently turned off.",
+      "empty": "No reviews yet. Be the first!",
+      "loadError": "Could not load reviews.",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "loadMore": "Show more",
+      "anonymous": "Anonymous",
+      "trial": "Trial",
+      "clientSince": "customer since {{date}}",
+      "replyTitle": "Team reply",
+      "mine": {
+        "pending": "Your review was sent and will appear after moderation.",
+        "hidden": "Your review is not published right now.",
+        "published": "Your review is published. Thank you!"
+      },
+      "gate": {
+        "paid": {
+          "title": "Reviews are for paying customers",
+          "text": "You can write a review after your first paid subscription. Meanwhile, read what others say.",
+          "cta": "Choose a plan"
+        },
+        "sub": {
+          "title": "Reviews are for customers",
+          "text": "You can write a review after activating a trial or paying for a subscription.",
+          "cta": "Choose a plan"
+        },
+        "verify": {
+          "title": "Verify your contact",
+          "text": "To write a review, verify your email or sign in with Telegram.",
+          "cta": "Open profile"
+        },
+        "customer": {
+          "title": "Review unavailable",
+          "text": "We could not find your customer profile. Open the home page and try again.",
+          "cta": "Go home"
+        }
+      },
+      "form": {
+        "back": "Back to reviews",
+        "titleNew": "Your review",
+        "titleEdit": "Edit review",
+        "subtitle": "Tell us how the service works for you. It helps other customers.",
+        "ratingTitle": "Rating",
+        "rating": "{{n}} of 5",
+        "bodyTitle": "Text",
+        "bodyPlaceholder": "What do you like, what is missing?",
+        "bodyHint": "{{min}} to {{max}} characters · {{n}}",
+        "visibilityTitle": "How to show",
+        "showName": "Show my name",
+        "showNameHint": "Otherwise the review is signed “Anonymous”",
+        "showAvatar": "Show my avatar",
+        "showAvatarHint": "Photo from Telegram or Google sign-in",
+        "nameLabel": "Name in the review",
+        "namePlaceholder": "How should we call you",
+        "preview": "How others will see it",
+        "previewToday": "today",
+        "publish": "Publish",
+        "save": "Save changes",
+        "saved": "Review saved",
+        "moderatedNote": "After sending, the review appears on the page once it is checked.",
+        "error": "Could not save the review. Check the text and rating.",
+        "forbidden": "You cannot leave a review right now."
+      }
+    },
     "paymentStatus": {
       "title": "Payment",
       "pending": "Processing payment…",
@@ -1315,7 +1386,65 @@
       "dismiss": "Dismiss"
     },
     "admin": {
+      "reviews": {
+        "title": "Reviews",
+        "subtitle": "Moderation, team replies and reviews on behalf of customers",
+        "search": "Name, text, customer ID, Telegram ID",
+        "tabAll": "All",
+        "tabPending": "Pending",
+        "tabPublished": "Published",
+        "tabHidden": "Hidden",
+        "colAuthor": "Author",
+        "colRating": "Rating",
+        "colBody": "Review",
+        "colStatus": "Status",
+        "colActions": "Actions",
+        "status": {
+          "pending": "Pending",
+          "published": "Published",
+          "hidden": "Hidden"
+        },
+        "empty": "No reviews in this section.",
+        "loadError": "Could not load reviews.",
+        "disabledNote": "Reviews are turned off: customers do not see the page. Turn them on in Bot settings.",
+        "onBehalf": "On behalf of a customer",
+        "reply": "Team reply",
+        "replyShort": "Reply",
+        "actionPublish": "Publish",
+        "actionHide": "Hide",
+        "actionRestore": "Restore",
+        "actionReply": "Reply",
+        "actionEdit": "Edit",
+        "actionDelete": "Delete",
+        "byAdmin": "on behalf of the customer",
+        "deleteTitle": "Delete the review?",
+        "deleteHint": "The review is deleted permanently, with no trace on the site. To just remove it from the page, hide it instead.",
+        "saved": "Saved",
+        "modal": {
+          "titleEdit": "Review: {{name}}",
+          "titleCreate": "Review on behalf of a customer",
+          "subtitleEdit": "Text edits are not shown to the customer. The original is kept and visible only here.",
+          "subtitleCreate": "The review appears under the customer’s name. The customer may have no cabinet account — being in the Users list is enough.",
+          "customerId": "Customer ID",
+          "customerPlaceholder": "ID from the Users table, e.g. 395",
+          "status": "Status",
+          "rating": "Rating",
+          "body": "Review text",
+          "edited": "Text was edited",
+          "showOriginal": "Show original",
+          "hideOriginal": "Hide original",
+          "replyLabel": "Team reply",
+          "replyHint": "Shown under the review, the customer gets a notification. Empty — no reply.",
+          "showName": "Show name",
+          "showAvatar": "Show avatar",
+          "nameLabel": "Name in the review",
+          "noAccount": "This customer has no cabinet account — a review on their behalf cannot be created.",
+          "error": "Could not save. Check the fields.",
+          "userAction": "Customer review"
+        }
+      },
       "nav": {
+        "reviews": "Reviews",
         "label": "Admin panel navigation",
         "menu": "Menu",
         "group": {
@@ -3069,6 +3198,7 @@
           }
         },
         "groups": {
+          "reviews": "Reviews",
           "loyalty": "Loyalty",
           "stars": "Telegram Stars",
           "payments": "Payment methods",
@@ -3137,9 +3267,44 @@
             "no_channel": "Enter the channel first."
           }
         },
+        "reviews": {
+          "enabledLabel": "Customer reviews",
+          "enabledHint": "Reviews page in the cabinet and bot. Off — the “Reviews” button opens FEEDBACK_URL as before.",
+          "whoTitle": "Who can write reviews",
+          "whoHint": "Anyone can read reviews.",
+          "who": {
+            "verified": {
+              "title": "Everyone with a verified email or Telegram",
+              "text": "Any registered customer, even without a trial or purchases."
+            },
+            "trial_paid": {
+              "title": "Trial and paying customers",
+              "text": "Those who had a subscription at least once: a trial or a payment."
+            },
+            "paid": {
+              "title": "Paying customers only",
+              "text": "At least one paid subscription."
+            }
+          },
+          "publishTitle": "Publishing new reviews",
+          "publish": {
+            "instant": {
+              "title": "Immediately",
+              "text": "The review is visible on the page and landing right after sending. You can remove it later."
+            },
+            "moderated": {
+              "title": "Moderation first",
+              "text": "The review appears after you press “Publish”."
+            }
+          },
+          "landingLabel": "Reviews on the landing",
+          "landingHint": "How many random published reviews to show on the landing. 0 — hide. The block is hidden if fewer than three are published."
+        },
         "alerts": {
           "events": "What to send",
           "event": {
+            "new": "New review",
+            "edited": "Review edited by the customer",
             "paid": "Payment received",
             "cancel": "Invoice cancelled"
           },
@@ -3153,6 +3318,10 @@
           "howTo2": "Open the group in Telegram Web: the number after # in the address is the id. Supergroup ids start with -100.",
           "howTo3": "The topic number is the middle number in a link to a message from it: t.me/c/1234567890/12/345 → topic 12.",
           "kinds": {
+            "reviews": {
+              "title": "Reviews",
+              "desc": "A customer left or edited a review"
+            },
             "system": {
               "title": "System",
               "desc": "Cabinet mail stopped sending and is back"

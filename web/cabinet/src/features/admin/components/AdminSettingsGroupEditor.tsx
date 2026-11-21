@@ -27,6 +27,7 @@ import { groupSettingsFieldsForLayout, isTextareaSettingType } from '../utils/ad
 import { decorThemeOptionLabelStyle } from '@/features/decor/decorThemeAdmin'
 import { AdminAlertRoutes } from './AdminAlertRoutes'
 import { AdminChannelGateEditor } from './AdminChannelGateEditor'
+import { AdminReviewsSettings } from './AdminReviewsSettings'
 import { AdminTrialExternalSquadEditor, AdminTrialInternalSquadsEditor } from './AdminTrialSquadsEditors'
 import type { AdminSettingFieldDTO, AdminSettingGroupDTO } from '@/lib/types/admin'
 
@@ -406,6 +407,15 @@ export function AdminSettingsGroupEditor({
             )}
             {group.id === 'admin_alerts' ? (
               <AdminAlertRoutes
+                group={group}
+                draft={draft}
+                saving={saving}
+                togglingKey={togglingKey}
+                onDraftChange={onDraftChange}
+                onToggle={onToggle}
+              />
+            ) : group.id === 'reviews' ? (
+              <AdminReviewsSettings
                 group={group}
                 draft={draft}
                 saving={saving}

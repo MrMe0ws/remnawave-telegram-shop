@@ -78,7 +78,8 @@ var remnaTagPattern = regexp.MustCompile(`^[A-Z0-9_]+$`)
 func RuntimeSettingsRegistry() []SettingField {
 	out := append(append(baseRuntimeSettings(), cabinetPushRegistry()...), adminAlertsRegistry()...)
 	out = append(out, monitoringRegistry()...)
-	return append(out, channelGateRegistry()...)
+	out = append(out, channelGateRegistry()...)
+	return append(out, reviewsRegistry()...)
 }
 
 func baseRuntimeSettings() []SettingField {

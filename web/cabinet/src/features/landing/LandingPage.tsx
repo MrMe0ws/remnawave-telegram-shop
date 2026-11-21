@@ -10,6 +10,7 @@ import { LandingFeatures } from './components/LandingFeatures'
 import { LandingSteps } from './components/LandingSteps'
 import { LandingTariffs } from './components/LandingTariffs'
 import { LandingFaq } from './components/LandingFaq'
+import { LandingReviews } from './components/LandingReviews'
 import { LandingCtaBand } from './components/LandingCtaBand'
 import { LandingFooter } from './components/LandingFooter'
 import { LandingLayoutSwitcher } from './components/LandingLayoutSwitcher'
@@ -90,6 +91,7 @@ export default function LandingPage() {
           {layout === 'after-steps' && <LandingTariffs brand={brand} />}
 
           <LandingFeatures />
+          <LandingReviews />
           <LandingFaq />
           <LandingCtaBand brand={brand} />
         </main>

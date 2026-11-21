@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CalendarPlus, Check, Copy, History, Loader2, Power, PowerOff, Trash2 } from 'lucide-react'
+import { CalendarPlus, Check, Copy, History, Loader2, Power, PowerOff, Star, Trash2 } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,9 @@ interface Props {
   /** Кнопка «История» — шторка с событиями клиента из «Мониторинга». */
   onHistory?: () => void
   historyLabel?: string
+  /** Кнопка «Отзыв клиента» — правка отзыва или отзыв от имени клиента. */
+  onReview?: () => void
+  reviewLabel?: string
 }
 
 /**
@@ -42,6 +45,8 @@ export function AdminUserActionsPanel({
   copy,
   onHistory,
   historyLabel,
+  onReview,
+  reviewLabel,
 }: Props) {
   const { t } = useTranslation()
   const isActive = rwStatus?.toUpperCase() === 'ACTIVE'
@@ -118,6 +123,12 @@ export function AdminUserActionsPanel({
           >
             <History className="size-4 shrink-0" />
             {historyLabel}
+          </button>
+        )}
+        {onReview && (
+          <button type="button" onClick={onReview} className={actionClass}>
+            <Star className="size-4 shrink-0" />
+            {reviewLabel}
           </button>
         )}
       </div>

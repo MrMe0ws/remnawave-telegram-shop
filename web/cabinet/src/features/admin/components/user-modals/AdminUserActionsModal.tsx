@@ -4,6 +4,7 @@ import {
   Check,
   Copy,
   History,
+  Star,
   Loader2,
   Power,
   PowerOff,
@@ -44,6 +45,9 @@ interface Props {
   /** «История» — шторка с событиями клиента. */
   onHistory?: () => void
   historyLabel?: string
+  /** «Отзыв клиента» — правка отзыва или отзыв от имени клиента. */
+  onReview?: () => void
+  reviewLabel?: string
 }
 
 const variantClasses: Record<NonNullable<ActionItem['variant']>, string> = {
@@ -76,6 +80,8 @@ export function AdminUserActionsModal({
   onChangeTariff,
   onHistory,
   historyLabel,
+  onReview,
+  reviewLabel,
 }: Props) {
   const { t } = useTranslation()
   const isActive = rwStatus?.toUpperCase() === 'ACTIVE'
@@ -137,6 +143,14 @@ export function AdminUserActionsModal({
           label: historyLabel ?? t('admin.monitoring.history.title'),
           icon: History,
           onClick: run(onHistory),
+        }]
+      : []),
+    ...(onReview
+      ? [{
+          key: 'review',
+          label: reviewLabel ?? 'Review',
+          icon: Star,
+          onClick: run(onReview),
         }]
       : []),
   ]

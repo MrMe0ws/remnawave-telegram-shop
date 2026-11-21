@@ -77,10 +77,14 @@ func (h Handler) buildCabinetMinimalismCoreRows(langCode string, customer *datab
 // cabinetMinimalismExternalLinkRow — опциональные URL-кнопки «Отзывы» / «Канал» внизу меню.
 // 1 кнопка в ряд, если включена одна; 2 в ряд, если включены обе (и заданы URL).
 func (h Handler) cabinetMinimalismExternalLinkRow(langCode string) []models.InlineKeyboardButton {
+	feedbackURL := config.FeedbackURL()
+	if u := reviewsWebAppURL(); u != "" {
+		feedbackURL = u
+	}
 	urls := selectCabinetMinimalismExternalURLs(
 		cabcfg.TelegramShowFeedbackButton(),
 		cabcfg.TelegramShowChannelButton(),
-		config.FeedbackURL(),
+		feedbackURL,
 		config.ChannelURL(),
 	)
 	if len(urls) == 0 {
@@ -88,7 +92,11 @@ func (h Handler) cabinetMinimalismExternalLinkRow(langCode string) []models.Inli
 	}
 	row := make([]models.InlineKeyboardButton, 0, len(urls))
 	for _, item := range urls {
-		row = append(row, h.translation.WithButton(langCode, item.key, models.InlineKeyboardButton{URL: item.url}))
+		btn := models.InlineKeyboardButton{URL: item.url}
+		if item.key == "cabinet_minimal_btn_feedback" && item.url == reviewsWebAppURL() {
+			btn = models.InlineKeyboardButton{WebApp: &models.WebAppInfo{URL: item.url}}
+		}
+		row = append(row, h.translation.WithButton(langCode, item.key, btn))
 	}
 	return row
 }

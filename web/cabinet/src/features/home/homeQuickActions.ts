@@ -42,6 +42,8 @@ export interface HomeQuickActionMeta {
   /** Ключ подписи кнопки на главной. */
   labelKey: string
   to?: string
+  /** Внутренний адрес, который зависит от настроек (перекрывает to и href). */
+  resolveTo?: (b: AuthBootstrapResponse | undefined) => string | undefined
   /** Внешняя ссылка из bootstrap (новости и отзывы ведут в Telegram). */
   href?: (b: AuthBootstrapResponse | undefined) => string | undefined
   /** Кнопка не ведёт на страницу, а копирует ссылку подписки (см. HomeParts). */
@@ -74,7 +76,9 @@ export const HOME_QUICK_ACTIONS: Record<HomeQuickActionId, HomeQuickActionMeta> 
     icon: Star,
     labelKey: 'home.qaFeedback',
     href: siteLink('feedback'),
-    available: (b) => !!siteLink('feedback')(b),
+    // Отзывы включены — своя страница кабинета вместо внешней ссылки.
+    resolveTo: (b) => (b?.reviews_enabled ? '/reviews' : undefined),
+    available: (b) => b?.reviews_enabled === true || !!siteLink('feedback')(b),
   },
   sublink: { icon: Link2, labelKey: 'home.qaSubLink', copiesSubscriptionLink: true },
   servers: { icon: Activity, labelKey: 'home.qaServers', to: '/status', available: (b) => b?.status_nav_visible !== false },

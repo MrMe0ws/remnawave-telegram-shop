@@ -68,6 +68,8 @@ const PartnerProgramPage = lazy(() => import('@/features/partner/PartnerProgramP
 const FortunePage = lazy(() => import('@/features/fortune/FortunePage'))
 const LoyaltyProgramPage = lazy(() => import('@/features/loyalty/LoyaltyProgramPage'))
 const PromoCodesPage = lazy(() => import('@/features/promocodes/PromoCodesPage'))
+const ReviewsPage = lazy(() => import('@/features/reviews/ReviewsPage'))
+const WriteReviewPage = lazy(() => import('@/features/reviews/WriteReviewPage'))
 const SupportPage = lazy(() => import('@/features/support/SupportPage'))
 const InfoPage = lazy(() => import('@/features/info/InfoPage'))
 
@@ -78,6 +80,7 @@ const AdminUsersPage = lazy(() => import('@/features/admin/pages/AdminUsersPage'
 const AdminUserDetailPage = lazy(() => import('@/features/admin/pages/AdminUserDetailPage'))
 const AdminPaymentsPage = lazy(() => import('@/features/admin/pages/AdminPaymentsPage'))
 const AdminPromosPage = lazy(() => import('@/features/admin/pages/AdminPromosPage'))
+const AdminReviewsPage = lazy(() => import('@/features/admin/pages/AdminReviewsPage'))
 const AdminTariffsPage = lazy(() => import('@/features/admin/pages/AdminTariffsPage'))
 const AdminLoyaltyPage = lazy(() => import('@/features/admin/pages/AdminLoyaltyPage'))
 const AdminPartnersPage = lazy(() => import('@/features/admin/pages/AdminPartnersPage'))
@@ -365,6 +368,22 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/reviews"
+        element={
+          <ProtectedRoute>
+            <ReviewsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reviews/write"
+        element={
+          <ProtectedRoute requireVerified>
+            <WriteReviewPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/fortune"
         element={
           <ProtectedRoute requireVerified>
@@ -436,6 +455,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AdminRoute>
               <AdminPaymentsPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reviews"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminReviewsPage />
             </AdminRoute>
           </ProtectedRoute>
         }
