@@ -1,1 +1,0 @@
-function c(t,o,f){var e,i;if(t==null)return null;for(const n of[o,f]){const r=n==null?void 0:n.find(s=>s.id===t);if(!r)continue;const l=(e=r.name)==null?void 0:e.trim();if(l)return l;const u=(i=r.slug)==null?void 0:i.trim();if(u)return u}return null}export{c as r};
