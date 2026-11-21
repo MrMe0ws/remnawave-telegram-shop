@@ -5022,6 +5022,53 @@ html[data-cabinet-decor="nebula"]:not([data-nebula-nav="pill"])
   }
 }
 
+/*
+ * Шапка кабинета на ПК во всех темах, кроме «Туманности» (у неё свой блок выше):
+ * вместо плашки у активной страницы и смены фона при наведении — линия под
+ * иконкой в основном цвете темы. Тянется слева направо, ничего не двигает.
+ */
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link {
+  position: relative;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.55));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+  pointer-events: none;
+}
+
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link:hover::after,
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link[aria-current="page"],
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link[aria-current="page"] svg {
+  color: hsl(var(--primary));
+}
+
+html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link:hover {
+  background-color: transparent;
+  color: hsl(var(--foreground));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link::after {
+    transition: none;
+  }
+}
+
 /* =========================================================
    Партнёрский оффер: ползунок калькулятора и схема потока
    ========================================================= */
