@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { api, type PaymentStatusResponse } from '@/lib/api'
 import { hapticError, hapticSuccess } from '@/lib/haptic'
+import { openPaymentUrl } from '@/lib/payment-window'
 import { BypassCard, packSizeLabel } from '@/features/home/trafficSplit'
 import { bypassLabel } from '@/lib/bypassLabel'
 import { splitDateTimeShort } from '@/lib/utils'
@@ -62,7 +63,7 @@ export default function PaymentStatusPage() {
         <Card className="w-full">
           <CardContent className="pt-8 pb-8 flex flex-col items-center gap-5 text-center">
             {isLoading || status === 'new' || status === 'pending' ? (
-              <PendingState />
+              <PendingState paymentUrl={data?.payment_url?.trim() ?? ''} />
             ) : status === 'paid' && data ? (
               <SuccessState data={data} />
             ) : (
@@ -82,7 +83,7 @@ export default function PaymentStatusPage() {
 
 // ── States ─────────────────────────────────────────────────────────────────
 
-function PendingState() {
+function PendingState({ paymentUrl }: { paymentUrl: string }) {
   const { t } = useTranslation()
   return (
     <>
@@ -96,6 +97,11 @@ function PendingState() {
         <p className="font-medium">{t('paymentStatus.pending')}</p>
         <p className="text-sm text-muted-foreground mt-1">{t('paymentStatus.pendingHint')}</p>
       </div>
+      {paymentUrl ? (
+        <Button type="button" className="w-full" onClick={() => openPaymentUrl(paymentUrl)}>
+          {t('paymentStatus.openPayment')}
+        </Button>
+      ) : null}
     </>
   )
 }

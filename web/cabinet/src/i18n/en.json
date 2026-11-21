@@ -1176,6 +1176,7 @@
       "title": "Payment",
       "pending": "Processing payment…",
       "pendingHint": "This usually takes just a few seconds.",
+      "openPayment": "Go to payment",
       "success": "Payment successful!",
       "successHint": "Your subscription is now active.",
       "successHintExtraHwid": "Your device limit has been increased.",

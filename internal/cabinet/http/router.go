@@ -2078,6 +2078,13 @@ func buildSPAHandler(spaFS fs.FS) http.Handler {
 		}
 		filePath := strings.TrimPrefix(trimmed, "/")
 		if _, err := fs.Stat(spaFS, filePath); err != nil {
+			// Хэшированный чанк, которого нет после деплоя, обязан дать 404: если
+			// отдать index.html как JS, браузер и service worker запомнят HTML
+			// под именем скрипта, и страница не оживёт даже после перезагрузки.
+			if strings.HasPrefix(filePath, "assets/") {
+				http.NotFound(w, r)
+				return
+			}
 			serveIndex(w, r, spaFS)
 			return
 		}

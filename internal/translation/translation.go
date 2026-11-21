@@ -3,12 +3,15 @@ package translation
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/go-telegram/bot/models"
+
+	translationfs "remnawave-tg-shop-bot/translations"
 )
 
 type Translation map[string]TranslationValue
@@ -74,6 +77,15 @@ func mergeTranslations(dst Translation, src Translation) {
 	}
 }
 
+// langFile — один JSON-файл переводов: имя без пути и содержимое.
+type langFile struct {
+	name    string
+	content []byte
+}
+
+// InitTranslations грузит тексты, вшитые в бинарник, а поверх них — файлы из
+// translationsDir (том на сервере). Диск перекрывает только свои ключи: всё,
+// чего на томе ещё нет (новая кнопка в свежем релизе), остаётся из образа.
 func (tm *Manager) InitTranslations(translationsDir string, defaultLanguage string) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -81,80 +93,117 @@ func (tm *Manager) InitTranslations(translationsDir string, defaultLanguage stri
 	if defaultLanguage != "" {
 		tm.defaultLanguage = defaultLanguage
 	}
+	tm.translations = make(map[string]Translation)
 
-	files, err := os.ReadDir(translationsDir)
+	bundled, err := readFSLangFiles(translationfs.FS)
 	if err != nil {
-		return fmt.Errorf("failed to read translation directory: %w", err)
+		return fmt.Errorf("bundled translations: %w", err)
+	}
+	if err := tm.applyLangFiles(bundled); err != nil {
+		return fmt.Errorf("bundled translations: %w", err)
 	}
 
-	type overlay struct {
-		name string
-		lang string
-	}
-	var overlays []overlay
-
-	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
-			continue
-		}
-
-		baseName := strings.TrimSuffix(file.Name(), ".json")
-		if strings.HasPrefix(baseName, "admin_") {
-			lang := strings.TrimPrefix(baseName, "admin_")
-			if lang == "" {
-				return fmt.Errorf("invalid admin overlay file name %q (expected admin_<lang>.json)", file.Name())
+	if translationsDir != "" {
+		disk, err := readDirLangFiles(translationsDir)
+		switch {
+		case err == nil:
+			if err := tm.applyLangFiles(disk); err != nil {
+				return err
 			}
-			overlays = append(overlays, overlay{name: file.Name(), lang: lang})
-			continue
+		case os.IsNotExist(err):
+			// Нет папки — работаем на вшитых текстах.
+		default:
+			return fmt.Errorf("failed to read translation directory: %w", err)
 		}
-
-		langCode := baseName
-		filePath := filepath.Join(translationsDir, file.Name())
-
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("failed to read translation file %s: %w", file.Name(), err)
-		}
-
-		var translation Translation
-		if err := json.Unmarshal(content, &translation); err != nil {
-			return fmt.Errorf("failed to parse translation file %s: %w", file.Name(), err)
-		}
-
-		if err := validateButtonStyles(translation, file.Name()); err != nil {
-			return err
-		}
-
-		tm.translations[langCode] = translation
-	}
-
-	for _, o := range overlays {
-		filePath := filepath.Join(translationsDir, o.name)
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("failed to read translation file %s: %w", o.name, err)
-		}
-
-		var overlayTr Translation
-		if err := json.Unmarshal(content, &overlayTr); err != nil {
-			return fmt.Errorf("failed to parse translation file %s: %w", o.name, err)
-		}
-
-		if err := validateButtonStyles(overlayTr, o.name); err != nil {
-			return err
-		}
-
-		base, ok := tm.translations[o.lang]
-		if !ok {
-			return fmt.Errorf("overlay %s: base language %q has no %s.json — load base file first", o.name, o.lang, o.lang)
-		}
-		mergeTranslations(base, overlayTr)
 	}
 
 	if _, exists := tm.translations[tm.defaultLanguage]; !exists {
 		return fmt.Errorf("default language %s translation not found", tm.defaultLanguage)
 	}
+	return nil
+}
 
+func readFSLangFiles(fsys fs.FS) ([]langFile, error) {
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return nil, err
+	}
+	var out []langFile
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		b, err := fs.ReadFile(fsys, e.Name())
+		if err != nil {
+			return nil, fmt.Errorf("failed to read translation file %s: %w", e.Name(), err)
+		}
+		out = append(out, langFile{name: e.Name(), content: b})
+	}
+	return out, nil
+}
+
+func readDirLangFiles(dir string) ([]langFile, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var out []langFile
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read translation file %s: %w", e.Name(), err)
+		}
+		out = append(out, langFile{name: e.Name(), content: b})
+	}
+	return out, nil
+}
+
+// applyLangFiles накладывает набор файлов на уже загруженные переводы: сначала
+// базовые <lang>.json, затем admin_<lang>.json поверх своего языка.
+func (tm *Manager) applyLangFiles(files []langFile) error {
+	var overlays []langFile
+	for _, f := range files {
+		baseName := strings.TrimSuffix(f.name, ".json")
+		if strings.HasPrefix(baseName, "admin_") {
+			if strings.TrimPrefix(baseName, "admin_") == "" {
+				return fmt.Errorf("invalid admin overlay file name %q (expected admin_<lang>.json)", f.name)
+			}
+			overlays = append(overlays, f)
+			continue
+		}
+
+		var tr Translation
+		if err := json.Unmarshal(f.content, &tr); err != nil {
+			return fmt.Errorf("failed to parse translation file %s: %w", f.name, err)
+		}
+		if err := validateButtonStyles(tr, f.name); err != nil {
+			return err
+		}
+		if base, ok := tm.translations[baseName]; ok {
+			mergeTranslations(base, tr)
+		} else {
+			tm.translations[baseName] = tr
+		}
+	}
+
+	for _, f := range overlays {
+		lang := strings.TrimPrefix(strings.TrimSuffix(f.name, ".json"), "admin_")
+		var tr Translation
+		if err := json.Unmarshal(f.content, &tr); err != nil {
+			return fmt.Errorf("failed to parse translation file %s: %w", f.name, err)
+		}
+		if err := validateButtonStyles(tr, f.name); err != nil {
+			return err
+		}
+		base, ok := tm.translations[lang]
+		if !ok {
+			return fmt.Errorf("overlay %s: base language %q has no %s.json — load base file first", f.name, lang, lang)
+		}
+		mergeTranslations(base, tr)
+	}
 	return nil
 }
 

@@ -68,3 +68,37 @@ export function reservePaymentWindow(): PaymentWindow {
     },
   }
 }
+
+/**
+ * Открывает страницу оплаты по нажатию кнопки на экране статуса.
+ *
+ * Нужна на случай, когда окно банка не открылось само: в Telegram Mini App
+ * `openLink` после await молча ничего не делает у части клиентов, а Safari
+ * режет попап, открытый не из жеста. Нажатие кнопки — это жест, поэтому здесь
+ * сработает любой способ; если внешнее окно не дали — уходим в этой вкладке
+ * (return_url провайдера вернёт на /payment/status/:id).
+ */
+export function openPaymentUrl(url: string): void {
+  const target = url.trim()
+  if (!target) return
+
+  const tg = window.Telegram?.WebApp
+  if (getTelegramInitData().length > 0 && tg?.openLink) {
+    try {
+      tg.openLink(target, { try_instant_view: false })
+      return
+    } catch {
+      /* ниже — запасной путь */
+    }
+  }
+  try {
+    const w = window.open(target, '_blank')
+    if (w) {
+      w.opener = null
+      return
+    }
+  } catch {
+    /* ниже — запасной путь */
+  }
+  window.location.assign(target)
+}

@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	cabcfg "remnawave-tg-shop-bot/internal/cabinet/config"
+	"remnawave-tg-shop-bot/internal/translation"
+	translationfs "remnawave-tg-shop-bot/translations"
 )
 
 // CabinetContentHandler отдаёт runtime-контент кабинета из файлов /translations/*.
@@ -46,7 +48,7 @@ func (h *CabinetContentHandler) FAQ(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := h.readFirstExisting(h.faqCandidates)
+	body, err := h.readMerged("cabinet/FAQ.json", h.faqCandidates)
 	if err != nil {
 		http.Error(w, "faq config not found", http.StatusNotFound)
 		return
@@ -101,7 +103,7 @@ func (h *CabinetContentHandler) AppConfig(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	body, err := h.readFirstExisting(h.appConfigCandidates)
+	body, err := h.readMerged("cabinet/app-config.json", h.appConfigCandidates)
 	if err != nil {
 		http.Error(w, "app config not found", http.StatusNotFound)
 		return
@@ -164,4 +166,27 @@ func (h *CabinetContentHandler) readFirstExisting(candidates []string) ([]byte, 
 		return nil, os.ErrNotExist
 	}
 	return nil, lastErr
+}
+
+// readMerged отдаёт файл с диска поверх вшитого в бинарник: ключи, которых на
+// томе ещё нет (том отстал от релиза), приходят из образа, правки владельца
+// на диске сохраняются. Массивы с диска заменяют вшитые целиком.
+func (h *CabinetContentHandler) readMerged(bundledPath string, candidates []string) ([]byte, error) {
+	bundled, bundErr := translationfs.FS.ReadFile(bundledPath)
+	disk, diskErr := h.readFirstExisting(candidates)
+	switch {
+	case bundErr == nil && diskErr == nil:
+		merged, err := translation.DeepMergeJSON(bundled, disk)
+		if err != nil {
+			// Битый файл на диске лучше обойти, чем отдать 500.
+			return bundled, nil
+		}
+		return merged, nil
+	case bundErr == nil:
+		return bundled, nil
+	case diskErr == nil:
+		return disk, nil
+	default:
+		return nil, diskErr
+	}
 }
