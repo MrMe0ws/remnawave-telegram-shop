@@ -185,7 +185,8 @@ func (h *ReviewsHandler) Avatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body, ctype, etag, found := h.identity.ReviewAvatar(r.Context(), *rev.TelegramID)
-	if !found {
+	// Публичная отдача: только настоящие картинки, иначе HTML из чужого ответа ушёл бы как есть.
+	if !found || !strings.HasPrefix(strings.ToLower(ctype), "image/") {
 		http.NotFound(w, r)
 		return
 	}
@@ -200,7 +201,7 @@ func (h *ReviewsHandler) Avatar(w http.ResponseWriter, r *http.Request) {
 	hd.Set("Content-Type", ctype)
 	hd.Set("Content-Length", strconv.Itoa(len(body)))
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(body)
+	_, _ = w.Write(body) //nolint:gosec // G705: Content-Type проверен выше — только image/*, nosniff выставлен глобально
 }
 
 // Mine — GET /cabinet/api/me/review: свой отзыв и можно ли писать.

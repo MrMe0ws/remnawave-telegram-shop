@@ -10,7 +10,9 @@ import {
   type AdminReview,
   type ReviewStatus,
 } from '@/features/reviews/reviewTypes'
+import type { AdminCustomerDTO } from '@/lib/types/admin'
 import { useCreateAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
+import { useAdminUserSearch } from '../hooks/useAdminUsers'
 import { AdminModal } from './AdminModal'
 import { AdminModalSaveFooter } from './AdminModalSaveFooter'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
@@ -36,8 +38,22 @@ interface Props {
 const fieldClass =
   'w-full rounded-lg border border-border bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
 
+/** «2026-11-21» из даты в местном часовом поясе — для <input type="date">. */
+function toDateInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function customerLabel(c: AdminCustomerDTO): string {
+  const name = c.telegram_username ? `@${c.telegram_username}` : c.panel_login || ''
+  return [`#${c.id}`, name, c.is_web_only ? '' : c.telegram_id].filter(Boolean).join(' · ')
+}
+
 /**
- * Окно отзыва: правка (статус, оценка, текст, ответ команды, как показывать автора)
+ * Окно отзыва: правка (статус, оценка, текст, дата, ответ команды, как показывать автора)
  * и «отзыв от имени клиента». Правка текста тихая — клиент её не видит, а оригинал
  * хранится на сервере и показывается только здесь.
  */
@@ -54,9 +70,16 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
   const [showName, setShowName] = useState(true)
   const [showAvatar, setShowAvatar] = useState(true)
   const [name, setName] = useState('')
-  const [custId, setCustId] = useState('')
+  const [date, setDate] = useState('')
+  const [initialDate, setInitialDate] = useState('')
   const [showOriginal, setShowOriginal] = useState(false)
   const [error, setError] = useState('')
+
+  // Клиент для «от имени клиента»: выбирается из подсказок, можно вписать и просто ID.
+  const [custQuery, setCustQuery] = useState('')
+  const [custPicked, setCustPicked] = useState<number | null>(null)
+  const [custDebounced, setCustDebounced] = useState('')
+  const [listOpen, setListOpen] = useState(false)
 
   // Окно открывается заново на каждый отзыв: поля берутся из него.
   useEffect(() => {
@@ -71,13 +94,27 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
     setShowName(review ? tg.showName : true)
     setShowAvatar(review ? tg.showAvatar : true)
     setName(review?.display_name ?? '')
-    setCustId(customerId ? String(customerId) : '')
+    const d = review ? toDateInput(review.published_at ?? review.created_at) : ''
+    setDate(d)
+    setInitialDate(d)
+    setCustQuery(customerId ? String(customerId) : '')
+    setCustPicked(customerId ?? null)
+    setListOpen(false)
   }, [open, review, customerId])
+
+  useEffect(() => {
+    const id = setTimeout(() => setCustDebounced(custQuery.trim().replace(/^@/, '')), 300)
+    return () => clearTimeout(id)
+  }, [custQuery])
+
+  const search = useAdminUserSearch(open && !editing && listOpen ? custDebounced : '')
+  const suggestions = search.data?.items.slice(0, 8) ?? []
 
   const pending = update.isPending || create.isPending
   const bodyLen = body.trim().length
-  const custNum = Number(custId)
+  const custNum = custPicked ?? (/^\d+$/.test(custQuery.trim()) ? Number(custQuery.trim()) : 0)
   const valid = bodyLen >= 5 && bodyLen <= 1000 && (editing || (Number.isInteger(custNum) && custNum > 0))
+  const today = toDateInput(new Date().toISOString())
 
   const submit = async () => {
     setError('')
@@ -87,10 +124,27 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
       if (review) {
         await update.mutateAsync({
           id: review.id,
-          body: { rating, body: body.trim(), visibility, display_name, status, reply: reply.trim() },
+          body: {
+            rating,
+            body: body.trim(),
+            visibility,
+            display_name,
+            status,
+            reply: reply.trim(),
+            // Дату шлём только если её поменяли: лишняя запись сдвинула бы время публикации.
+            ...(date && date !== initialDate ? { published_at: date } : {}),
+          },
         })
       } else {
-        await create.mutateAsync({ customer_id: custNum, rating, body: body.trim(), visibility, display_name, status })
+        await create.mutateAsync({
+          customer_id: custNum,
+          rating,
+          body: body.trim(),
+          visibility,
+          display_name,
+          status,
+          ...(date ? { published_at: date } : {}),
+        })
       }
       onSaved?.(t('admin.reviews.saved'))
       onClose()
@@ -116,17 +170,49 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
     >
       <div className="space-y-4">
         {!editing && (
-          <label className="block space-y-1.5">
+          <div className="relative space-y-1.5">
             <span className="text-sm font-medium">{t('admin.reviews.modal.customerId')}</span>
             <input
-              inputMode="numeric"
-              value={custId}
+              value={custQuery}
               disabled={pending}
-              onChange={(e) => setCustId(e.target.value.replace(/\D/g, ''))}
+              autoComplete="off"
+              onChange={(e) => {
+                setCustQuery(e.target.value)
+                setCustPicked(null)
+                setListOpen(true)
+              }}
+              onFocus={() => setListOpen(true)}
+              onBlur={() => setTimeout(() => setListOpen(false), 150)}
               placeholder={t('admin.reviews.modal.customerPlaceholder')}
               className={fieldClass}
             />
-          </label>
+            {listOpen && custDebounced.length >= 1 && custPicked == null && (
+              <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
+                {search.isLoading ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{t('admin.reviews.modal.customerSearching')}</p>
+                ) : suggestions.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{t('admin.reviews.modal.customerNone')}</p>
+                ) : (
+                  suggestions.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      // mousedown, а не click: иначе blur поля закроет список раньше выбора.
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        setCustPicked(c.id)
+                        setCustQuery(customerLabel(c))
+                        setListOpen(false)
+                      }}
+                      className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                    >
+                      <span className="truncate">{customerLabel(c)}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="space-y-1.5">
@@ -179,6 +265,22 @@ export function AdminReviewModal({ open, onClose, review, customerId, focusReply
               {review.original_body}
             </p>
           ) : null}
+        </label>
+
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">{t('admin.reviews.modal.dateLabel')}</span>
+          <input
+            type="date"
+            value={date}
+            max={today}
+            min="2015-01-01"
+            disabled={pending}
+            onChange={(e) => setDate(e.target.value)}
+            className={cn(fieldClass, 'sm:max-w-[14rem]')}
+          />
+          <p className="text-xs text-muted-foreground">
+            {editing ? t('admin.reviews.modal.dateHintEdit') : t('admin.reviews.modal.dateHintCreate')}
+          </p>
         </label>
 
         {editing && (

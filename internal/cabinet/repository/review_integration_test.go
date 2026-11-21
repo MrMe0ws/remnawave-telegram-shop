@@ -193,3 +193,46 @@ func TestReviews_clientSaveKeepsAdminOriginalWhenBodyUnchanged(t *testing.T) {
 		t.Fatalf("после переписывания: %v %q", err, rev.OriginalBody)
 	}
 }
+
+// Админ переносит старые отзывы (например из канала) и задаёт им настоящие даты:
+// и при создании, и при правке; будущая дата отклоняется.
+func TestReviews_adminCanSetPublishDate(t *testing.T) {
+	pool := pgPoolIntegration(t)
+	ctx := context.Background()
+	accounts := NewAccountRepo(pool)
+	repo := NewReviewRepo(pool)
+	acc := reviewTestAccount(t, ctx, accounts)
+	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM cabinet_account WHERE id = $1`, acc) })
+
+	old := time.Date(2025, 3, 10, 12, 0, 0, 0, time.UTC)
+	in := validReviewInput(acc, "Отзыв из старого канала")
+	in.PublishedAt = &old
+	rev, err := repo.UpsertByAdmin(ctx, in, ReviewStatusPublished)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rev.PublishedAt == nil || !rev.PublishedAt.Equal(old) || !rev.CreatedAt.Equal(old) {
+		t.Fatalf("дата при создании: published=%v created=%v", rev.PublishedAt, rev.CreatedAt)
+	}
+
+	newer := time.Date(2025, 6, 1, 12, 0, 0, 0, time.UTC)
+	rev, _, err = repo.AdminUpdate(ctx, rev.ID, ReviewAdminUpdate{PublishedAt: &newer})
+	if err != nil || rev.PublishedAt == nil || !rev.PublishedAt.Equal(newer) || !rev.CreatedAt.Equal(newer) {
+		t.Fatalf("дата при правке: %v %+v", err, rev)
+	}
+
+	future := time.Now().Add(72 * time.Hour)
+	if _, _, err = repo.AdminUpdate(ctx, rev.ID, ReviewAdminUpdate{PublishedAt: &future}); !errors.Is(err, ErrReviewValidation) {
+		t.Fatalf("будущая дата должна отклоняться: %v", err)
+	}
+	in2 := validReviewInput(acc, "Отзыв из будущего")
+	in2.PublishedAt = &future
+	if _, err = repo.UpsertByAdmin(ctx, in2, ReviewStatusPublished); !errors.Is(err, ErrReviewValidation) {
+		t.Fatalf("будущая дата при создании: %v", err)
+	}
+
+	// Публичный порядок — по дате публикации: свежие выше старых.
+	if list, _ := repo.ListPublished(ctx, 50, 0); len(list) == 0 || !list[len(list)-1].PublishedAt.Before(time.Now()) {
+		t.Fatalf("список: %d", len(list))
+	}
+}

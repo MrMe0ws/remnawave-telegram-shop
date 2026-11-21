@@ -61,6 +61,8 @@ export interface AdminReview extends ReviewItem {
   customer_id: number | null
   telegram_id: number | null
   updated_at: string
+  /** Дата публикации (RFC3339); null — не опубликован. */
+  published_at: string | null
 }
 
 export interface AdminReviewCounts {
@@ -84,6 +86,8 @@ export interface AdminReviewUpdateInput {
   display_name?: string
   status?: ReviewStatus
   reply?: string
+  /** «ГГГГ-ММ-ДД»; пусто — не менять. */
+  published_at?: string
 }
 
 export interface AdminReviewCreateInput {
@@ -93,6 +97,8 @@ export interface AdminReviewCreateInput {
   visibility: ReviewVisibility
   display_name: string
   status: ReviewStatus
+  /** «ГГГГ-ММ-ДД»; пусто — сегодня. */
+  published_at?: string
 }
 
 export interface AdminReviewByCustomerResponse {

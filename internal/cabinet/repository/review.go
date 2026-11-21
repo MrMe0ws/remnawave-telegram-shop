@@ -80,6 +80,8 @@ type ReviewInput struct {
 	TelegramID  *int64
 	ClientSince *time.Time
 	TariffLabel string
+	// PublishedAt — дата отзыва, которую задал админ (старые отзывы из канала); nil — сейчас.
+	PublishedAt *time.Time
 }
 
 // ReviewAdminUpdate — правка админом; nil — поле не трогаем.
@@ -90,6 +92,8 @@ type ReviewAdminUpdate struct {
 	DisplayName *string
 	Status      *string
 	ReplyBody   *string
+	// PublishedAt — поправить дату отзыва (и публикации, если он опубликован).
+	PublishedAt *time.Time
 }
 
 // ReviewAdminFilter — фильтр списка в админке.
@@ -233,7 +237,7 @@ func (r *ReviewRepo) UpsertClient(ctx context.Context, in ReviewInput, moderated
 
 // UpsertByAdmin — отзыв «от имени клиента»: статус задаёт админ, пометка by_admin.
 func (r *ReviewRepo) UpsertByAdmin(ctx context.Context, in ReviewInput, status string) (*Review, error) {
-	if err := in.validate(); err != nil || !validReviewStatus(status) {
+	if err := in.validate(); err != nil || !validReviewStatus(status) || (in.PublishedAt != nil && !validReviewDate(*in.PublishedAt)) {
 		return nil, ErrReviewValidation
 	}
 	var account any // nil — клиент без аккаунта кабинета
@@ -244,8 +248,8 @@ func (r *ReviewRepo) UpsertByAdmin(ctx context.Context, in ReviewInput, status s
 	row := r.pool.QueryRow(ctx, `
 		INSERT INTO cabinet_review (
 			account_id, customer_id, rating, body, status, visibility, display_name,
-			avatar_kind, avatar_url, telegram_id, client_since, tariff_label, by_admin, published_at
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, TRUE, $13)
+			avatar_kind, avatar_url, telegram_id, client_since, tariff_label, by_admin, published_at, created_at
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, TRUE, $13, COALESCE($14::timestamptz, NOW()))
 		`+target+` DO UPDATE SET
 			rating        = EXCLUDED.rating,
 			body          = EXCLUDED.body,
@@ -255,12 +259,32 @@ func (r *ReviewRepo) UpsertByAdmin(ctx context.Context, in ReviewInput, status s
 			avatar_kind   = EXCLUDED.avatar_kind,
 			avatar_url    = EXCLUDED.avatar_url,
 			telegram_id   = EXCLUDED.telegram_id,
-			published_at  = CASE WHEN EXCLUDED.status = 'published' THEN COALESCE(cabinet_review.published_at, NOW()) ELSE cabinet_review.published_at END,
+			published_at  = CASE
+				WHEN EXCLUDED.status = 'published' AND $14::timestamptz IS NOT NULL THEN $14::timestamptz
+				WHEN EXCLUDED.status = 'published' THEN COALESCE(cabinet_review.published_at, NOW())
+				ELSE cabinet_review.published_at END,
+			created_at    = COALESCE($14::timestamptz, cabinet_review.created_at),
 			updated_at    = NOW()
 		RETURNING `+reviewCols,
 		account, in.CustomerID, in.Rating, in.Body, status, in.Visibility, in.DisplayName,
-		in.AvatarKind, in.AvatarURL, in.TelegramID, in.ClientSince, in.TariffLabel, publishedAt(status))
+		in.AvatarKind, in.AvatarURL, in.TelegramID, in.ClientSince, in.TariffLabel, adminPublishedAt(status, in.PublishedAt), in.PublishedAt)
 	return scanReview(row)
+}
+
+// adminPublishedAt — метка публикации у отзыва от имени клиента: заданная админом дата или сейчас.
+func adminPublishedAt(status string, when *time.Time) *time.Time {
+	if status != ReviewStatusPublished {
+		return nil
+	}
+	if when != nil {
+		return when
+	}
+	return publishedAt(status)
+}
+
+// validReviewDate — дата отзыва не в будущем и не древнее 2015 года.
+func validReviewDate(t time.Time) bool {
+	return t.Before(time.Now().Add(24*time.Hour)) && t.After(time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC))
 }
 
 // publishedAt — метка публикации для новой записи: только у опубликованной.
@@ -337,6 +361,16 @@ func (r *ReviewRepo) AdminUpdate(ctx context.Context, id int64, u ReviewAdminUpd
 		}
 		cur.Status = *u.Status
 	}
+	if u.PublishedAt != nil {
+		if !validReviewDate(*u.PublishedAt) {
+			return nil, false, ErrReviewValidation
+		}
+		cur.CreatedAt = *u.PublishedAt
+		if cur.Status == ReviewStatusPublished {
+			d := *u.PublishedAt
+			cur.PublishedAt = &d
+		}
+	}
 	if u.ReplyBody != nil {
 		reply := strings.TrimSpace(*u.ReplyBody)
 		if utf8.RuneCountInString(reply) > ReviewReplyMax {
@@ -356,10 +390,10 @@ func (r *ReviewRepo) AdminUpdate(ctx context.Context, id int64, u ReviewAdminUpd
 
 	row := tx.QueryRow(ctx, `
 		UPDATE cabinet_review SET rating=$2, body=$3, original_body=$4, status=$5, visibility=$6,
-			display_name=$7, reply_body=$8, reply_at=$9, published_at=$10, updated_at=NOW()
+			display_name=$7, reply_body=$8, reply_at=$9, published_at=$10, created_at=$11, updated_at=NOW()
 		WHERE id=$1 RETURNING `+reviewCols,
 		id, cur.Rating, cur.Body, cur.OriginalBody, cur.Status, cur.Visibility, cur.DisplayName,
-		cur.ReplyBody, cur.ReplyAt, cur.PublishedAt)
+		cur.ReplyBody, cur.ReplyAt, cur.PublishedAt, cur.CreatedAt)
 	rev, err = scanReview(row)
 	if err != nil {
 		return nil, false, err

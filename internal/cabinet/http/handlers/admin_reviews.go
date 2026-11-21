@@ -42,6 +42,8 @@ type adminReviewDTO struct {
 	CustomerID   *int64 `json:"customer_id"`
 	TelegramID   *int64 `json:"telegram_id"`
 	UpdatedAt    string `json:"updated_at"`
+	// PublishedAt — дата публикации (RFC3339) или пусто, если не опубликован.
+	PublishedAt *string `json:"published_at"`
 }
 
 type adminReviewCounts struct {
@@ -58,6 +60,8 @@ type adminReviewUpdateReq struct {
 	DisplayName *string `json:"display_name"`
 	Status      *string `json:"status"`
 	Reply       *string `json:"reply"`
+	// PublishedAt — дата отзыва «ГГГГ-ММ-ДД»; пусто — не менять.
+	PublishedAt *string `json:"published_at"`
 }
 
 type adminReviewCreateReq struct {
@@ -67,17 +71,38 @@ type adminReviewCreateReq struct {
 	Visibility  string `json:"visibility"`
 	DisplayName string `json:"display_name"`
 	Status      string `json:"status"`
+	// PublishedAt — дата отзыва «ГГГГ-ММ-ДД» (старые отзывы из канала); пусто — сегодня.
+	PublishedAt string `json:"published_at"`
 }
 
 func toAdminReview(rev *repository.Review) adminReviewDTO {
 	pub := toPublicReview(rev)
 	// В админке дата — всегда создания: у «на проверке» нет даты публикации.
 	pub.CreatedAt = rev.CreatedAt.UTC().Format(time.RFC3339)
-	return adminReviewDTO{
+	dto := adminReviewDTO{
 		reviewPublicDTO: pub, Status: rev.Status, Visibility: rev.Visibility, DisplayName: rev.DisplayName,
 		OriginalBody: rev.OriginalBody, ByAdmin: rev.ByAdmin, CustomerID: rev.CustomerID, TelegramID: rev.TelegramID,
 		UpdatedAt: rev.UpdatedAt.UTC().Format(time.RFC3339),
 	}
+	if rev.PublishedAt != nil {
+		p := rev.PublishedAt.UTC().Format(time.RFC3339)
+		dto.PublishedAt = &p
+	}
+	return dto
+}
+
+// parseReviewDate — «ГГГГ-ММ-ДД» → полдень UTC: так день не «съезжает» от часового пояса.
+func parseReviewDate(raw string) (*time.Time, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, true
+	}
+	d, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return nil, false
+	}
+	d = time.Date(d.Year(), d.Month(), d.Day(), 12, 0, 0, 0, time.UTC)
+	return &d, true
 }
 
 // List — GET /cabinet/api/admin/reviews?status=&q=&limit=&offset=
@@ -133,6 +158,11 @@ func (h *AdminReviewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if status == "" {
 		status = repository.ReviewStatusPublished
 	}
+	when, dateOK := parseReviewDate(req.PublishedAt)
+	if !dateOK {
+		http.Error(w, "invalid published_at", http.StatusBadRequest)
+		return
+	}
 	cust, cerr := h.customers.FindById(r.Context(), req.CustomerID)
 	if cerr != nil || cust == nil {
 		http.Error(w, "customer not found", http.StatusNotFound)
@@ -148,7 +178,7 @@ func (h *AdminReviewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		// Отзыв уже есть: правим его через AdminUpdate, чтобы не потерять оригинал текста.
 		vis, dn := strings.TrimSpace(req.Visibility), strings.TrimSpace(req.DisplayName)
 		rev, _, uerr := h.reviews.AdminUpdate(r.Context(), existing.ID, repository.ReviewAdminUpdate{
-			Rating: &req.Rating, Body: &req.Body, Visibility: &vis, DisplayName: &dn, Status: &status,
+			Rating: &req.Rating, Body: &req.Body, Visibility: &vis, DisplayName: &dn, Status: &status, PublishedAt: when,
 		})
 		if uerr != nil {
 			http.Error(w, "invalid request", http.StatusBadRequest)
@@ -167,6 +197,7 @@ func (h *AdminReviewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if accountID == 0 {
 		h.user.fillBotAuthor(r.Context(), &in, cust)
 	}
+	in.PublishedAt = when
 	rev, err := h.reviews.UpsertByAdmin(r.Context(), in, status)
 	if err != nil {
 		if errors.Is(err, repository.ErrReviewValidation) {
@@ -246,9 +277,17 @@ func (h *AdminReviewsHandler) update(w http.ResponseWriter, r *http.Request, id 
 	if !decodeJSON(w, r, &req) {
 		return
 	}
+	var when *time.Time
+	if req.PublishedAt != nil {
+		var ok bool
+		if when, ok = parseReviewDate(*req.PublishedAt); !ok {
+			http.Error(w, "invalid published_at", http.StatusBadRequest)
+			return
+		}
+	}
 	rev, replyChanged, err := h.reviews.AdminUpdate(r.Context(), id, repository.ReviewAdminUpdate{
 		Rating: req.Rating, Body: req.Body, Visibility: req.Visibility, DisplayName: req.DisplayName,
-		Status: req.Status, ReplyBody: req.Reply,
+		Status: req.Status, ReplyBody: req.Reply, PublishedAt: when,
 	})
 	switch {
 	case errors.Is(err, repository.ErrNotFound):

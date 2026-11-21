@@ -386,6 +386,7 @@
         "torrent": "Restriction",
         "traffic": "Traffic"
       },
+      "publishedOn": "Published {{date}}",
       "showMore": "Show more",
       "showLess": "Show less"
     },
@@ -1426,7 +1427,12 @@
           "subtitleEdit": "Text edits are not shown to the customer. The original is kept and visible only here.",
           "subtitleCreate": "The review appears under the customer’s name. The customer may have no cabinet account — being in the Users list is enough.",
           "customerId": "Customer ID",
-          "customerPlaceholder": "ID from the Users table, e.g. 395",
+          "customerPlaceholder": "Start typing an ID, @username or Telegram ID",
+      "customerSearching": "Searching…",
+      "customerNone": "Nobody found",
+      "dateLabel": "Review date",
+      "dateHintCreate": "Empty — today. Set it when moving an old review, e.g. from a channel.",
+      "dateHintEdit": "Changes the date customers see on the card.",
           "status": "Status",
           "rating": "Rating",
           "body": "Review text",

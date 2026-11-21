@@ -122,7 +122,7 @@ export function ReviewCard({ review, variant = 'cabinet', className }: ReviewCar
         </div>
       )}
 
-      <p className="mt-auto pt-1 text-xs text-muted-foreground">{dayLabel(review.created_at)}</p>
+      <p className="mt-auto pt-1 text-xs text-muted-foreground">{t('reviews.publishedOn', { date: dayLabel(review.created_at) })}</p>
     </article>
   )
 }
