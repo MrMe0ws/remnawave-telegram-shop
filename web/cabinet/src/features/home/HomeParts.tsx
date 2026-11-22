@@ -791,7 +791,7 @@ export function trafficSheetSubtitle(data: HomeData, lang: string, t: TFunction)
 
 function UsageTile({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/60 px-3.5 py-3">
+    <div className="rounded-2xl border border-border/70 bg-background/40 px-3.5 py-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-lg font-extrabold leading-tight">
         {value} <span className="text-xs font-semibold text-muted-foreground">{unit}</span>
