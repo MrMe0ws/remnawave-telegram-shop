@@ -11,6 +11,7 @@ export const DECOR_COLOR_ONLY_THEMES = [
   'violet',
   'slate',
   'carbon',
+  'meows',
 ] as const
 
 export type DecorColorOnlyThemeId = (typeof DECOR_COLOR_ONLY_THEMES)[number]
@@ -28,6 +29,7 @@ export const DECOR_THEME_ADMIN_LABEL_COLOR: Partial<Record<DecorThemeId, string>
   violet: 'hsl(262 70% 52%)',
   slate: 'hsl(215 16% 46%)',
   carbon: 'hsl(217 80% 55%)',
+  meows: 'hsl(96 62% 40%)',
   neon: 'hsl(186 100% 42%)',
   new_year: 'hsl(198 85% 52%)',
   new_year_2: 'hsl(198 85% 52%)',

@@ -5,6 +5,7 @@ export const DECOR_THEME_IDS = [
   'green',
   'spring',
   'cyber',
+  'meows',
   // cyan / blue
   'neon',
   'ocean',
@@ -58,6 +59,7 @@ export const DECOR_THEMES: Record<DecorThemeId, DecorThemeDef> = {
   green: { id: 'green', effect: null },
   spring: { id: 'spring', effect: 'petals' },
   cyber: { id: 'cyber', effect: 'matrix' },
+  meows: { id: 'meows', effect: null },
   neon: { id: 'neon', effect: null },
   ocean: { id: 'ocean', effect: 'bubbles' },
   new_year: { id: 'new_year', effect: 'snow' },

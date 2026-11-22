@@ -15,6 +15,7 @@ var ValidDecorThemeIDs = []string{
 	"green",
 	"spring",
 	"cyber",
+	"meows",
 	"neon",
 	"ocean",
 	"new_year",
