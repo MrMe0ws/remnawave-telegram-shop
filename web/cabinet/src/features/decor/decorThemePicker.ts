@@ -8,7 +8,7 @@ export const DECOR_PICKER_GROUPS: { id: 'base' | 'color' | 'seasonal'; themes: D
   { id: 'base', themes: ['green', 'slate', 'carbon', 'violet', 'pink', 'orange', 'yellow'] },
   {
     id: 'color',
-    themes: ['meows', 'cyber', 'neon', 'ocean', 'aurora', 'nebula', 'lavender', 'wine', 'sunset'],
+    themes: ['lime', 'emerald', 'cyber', 'neon', 'ocean', 'aurora', 'nebula', 'lavender', 'wine', 'sunset'],
   },
   {
     id: 'seasonal',
@@ -31,7 +31,8 @@ export const DECOR_PICKER_ACCENT: Record<DecorThemeId, string> = {
   green: 'hsl(142 55% 46%)',
   spring: 'hsl(142 55% 46%)',
   cyber: 'hsl(140 90% 46%)',
-  meows: 'hsl(96 68% 52%)',
+  lime: 'hsl(96 68% 52%)',
+  emerald: 'hsl(158 57% 51%)',
   neon: 'hsl(186 100% 50%)',
   ocean: 'hsl(205 85% 52%)',
   new_year: 'hsl(198 85% 52%)',

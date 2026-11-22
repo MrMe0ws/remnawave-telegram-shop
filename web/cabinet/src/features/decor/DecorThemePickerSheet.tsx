@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   BadgePercent,
   Cat,
+  Gem,
   Check,
   Flame,
   Flower2,
@@ -167,7 +168,8 @@ const THEME_ICON: Partial<Record<DecorThemeId, LucideIcon>> = {
   spring: Leaf,
   valentine: Heart,
   black_friday: BadgePercent,
-  meows: Cat,
+  lime: Cat,
+  emerald: Gem,
   ocean: Waves,
   aurora: Sparkles,
   nebula: Star,
