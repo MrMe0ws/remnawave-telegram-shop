@@ -48,6 +48,20 @@ export function daysUntil(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
 }
 
+export type TimeLeft = { unit: 'days' | 'hours' | 'minutes'; value: number }
+
+/**
+ * Остаток срока для подписей: от суток — полные дни (вниз, как в приложении VPN),
+ * меньше суток — часы, меньше часа — минуты. Расчёт по моменту, часовой пояс не важен.
+ */
+export function timeLeft(iso: string): TimeLeft {
+  const ms = Math.max(0, new Date(iso).getTime() - Date.now())
+  // Запас в час: только что купленные 30 дней (29 д 23 ч 59 м) не должны показываться как «29».
+  if (ms >= 86_400_000) return { unit: 'days', value: Math.floor((ms + 3_600_000) / 86_400_000) }
+  if (ms >= 3_600_000) return { unit: 'hours', value: Math.floor(ms / 3_600_000) }
+  return { unit: 'minutes', value: Math.max(1, Math.ceil(ms / 60_000)) }
+}
+
 /** Подпись над полосой трафика: «148.0 / 500 ГБ» или «Безлимит». */
 export function formatTrafficUsageLabel(
   usedGb: number | null | undefined,
