@@ -517,7 +517,7 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       id: 'decor',
       titleKey: 'admin.settings.subsections.cabinet.decor',
       icon: Sparkles,
-      keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME'],
+      keys: ['CABINET_LIGHT_THEME_ENABLED', 'CABINET_DECOR_THEME', 'CABINET_USER_THEME_PICKER_ENABLED'],
     },
     {
       id: 'sections',

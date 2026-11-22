@@ -378,6 +378,7 @@ Squads — [squads.md](./squads.md): `SQUAD_UUIDS`, `EXTERNAL_SQUAD_UUID`, `TRIA
 | `CABINET_BRAND_LOGO_URL` / `CABINET_BRAND_LOGO_FILE` | Логотип: URL или файл на диске процесса бота (относительный путь ищется рядом с бинарником, затем в рабочем каталоге). URL важнее файла |
 | `CABINET_PWA_ENABLED` / `CABINET_PWA_APP_NAME` / `CABINET_PWA_SHORT_NAME` | PWA |
 | `CABINET_LIGHT_THEME_ENABLED` | Светлая тема (`true` по умолчанию) |
+| `CABINET_USER_THEME_PICKER_ENABLED` | Выбор оформления пользователем в профиле (`false` по умолчанию; выбор хранится в браузере) |
 | `CABINET_DECOR_THEME` | Декор кабинета: `off` (по умолчанию), `green`, `spring`, `cyber`, `meows`, `neon`, `ocean`, `new_year`, `new_year_2`, `slate`, `carbon`, `aurora`, `nebula`, `violet`, `lavender`, `pink`, `valentine`, `wine`, `sunset`, `orange`, `halloween`, `halloween_2`, `yellow`, `summer`, `black_friday`. `new_year_2` и `halloween_2` — ночные сцены на весь экран, в том числе на лендинге; светлой темы у них нет, переключатель темы на это время скрыт. Меняется в админке без рестарта |
 | `CABINET_DECOR_AUTO_ENABLED` | Авто-смена декор-темы по календарю (`false` по умолчанию). В праздничном окне тема окна перекрывает `CABINET_DECOR_THEME`, вне окон возвращается она же |
 | `CABINET_DECOR_SCHEDULE` | Окна авто-смены: JSON `[{"theme":"new_year","from":"12-01","to":"01-31","enabled":true}]`. Пусто — встроенный пресет праздников. Побеждает первое совпавшее окно; `from > to` — окно через 31 декабря. Редактируется в админке |

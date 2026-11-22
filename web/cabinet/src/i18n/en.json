@@ -188,6 +188,18 @@
       "settingsHaptics": "Vibration",
       "settingsHapticsOn": "On",
       "settingsHapticsOff": "Off",
+      "settingsDecor": "Appearance",
+      "decorPicker": {
+        "title": "Appearance",
+        "subtitleUser": "Applies to you only. \u201cService default\u201d is the theme set by the administrator, including seasonal ones.",
+        "subtitleAdmin": "Default theme for all users. Anyone who picked their own will see theirs.",
+        "auto": "Service default",
+        "apply": "Apply",
+        "change": "Change",
+        "darkOnly": "dark only",
+        "darkOnlyHint": "This theme has no light variant \u2014 while it is selected, the cabinet stays dark.",
+        "groups": { "base": "Basic", "color": "Colorful", "seasonal": "Seasonal" }
+      },
       "qaServers": "Server status"
     },
     "dashboard": {
@@ -3468,6 +3480,7 @@
           "green": "Green",
           "spring": "Spring",
           "cyber": "Cyber",
+          "meows": "Meows",
           "neon": "Neon",
           "ocean": "Ocean",
           "new_year": "New Year",
@@ -3725,6 +3738,10 @@
           "CABINET_LIGHT_THEME_ENABLED": {
             "label": "Light theme",
             "hint": "Turn off to force dark theme for all users"
+          },
+          "CABINET_USER_THEME_PICKER_ENABLED": {
+            "label": "User theme picker",
+            "hint": "Show the \u201cAppearance\u201d row in the profile. The choice is stored in the user browser and overrides the seasonal schedule"
           },
           "CABINET_DECOR_THEME": {
             "label": "Decor theme",

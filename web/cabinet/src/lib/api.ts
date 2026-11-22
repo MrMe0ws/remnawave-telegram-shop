@@ -243,6 +243,8 @@ export interface AuthBootstrapResponse {
   subscription_loyalty_visible?: boolean
   /** Кнопки на местах 3 и 4 быстрых действий главной (CABINET_HOME_QUICK_ACTIONS), id из features/home/homeQuickActions.ts. */
   home_quick_actions?: string[]
+  /** false — строка «Оформление» в профиле скрыта, личный выбор игнорируется (CABINET_USER_THEME_PICKER_ENABLED). */
+  user_theme_picker_enabled?: boolean
   /** Декоративная тема кабинета (CABINET_DECOR_THEME) */
   decor_theme?:
     | 'off'
@@ -266,6 +268,7 @@ export interface AuthBootstrapResponse {
     | 'nebula'
     | 'ocean'
     | 'cyber'
+    | 'meows'
     | 'sunset'
     | 'lavender'
     | 'wine'

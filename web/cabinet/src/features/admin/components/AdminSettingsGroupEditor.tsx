@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { AdminToggleRow } from './AdminToggleSwitch'
 import { AdminSelect } from './AdminSelect'
 import { AdminDecorScheduleEditor } from './AdminDecorScheduleEditor'
+import { AdminDecorThemeField } from './AdminDecorThemeField'
 import { AdminHomeQuickActionsEditor } from './AdminHomeQuickActionsEditor'
 import {
   AdminCheckoutDefaultMethodEditor,
@@ -241,6 +242,21 @@ export function AdminSettingsGroupEditor({
             onChange={(next) => onDraftChange(field.key, next)}
           />
         </div>
+      )
+    }
+
+    if (field.key === 'CABINET_DECOR_THEME') {
+      return (
+        <AdminDecorThemeField
+          key={field.key}
+          id={`setting-${field.key}`}
+          label={label}
+          hint={hint}
+          value={value}
+          disabled={saving}
+          busy={togglingKey === field.key}
+          onChange={(next) => onInstantEnum(field.key, next)}
+        />
       )
     }
 
