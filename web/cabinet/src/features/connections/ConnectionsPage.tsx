@@ -587,7 +587,9 @@ export default function ConnectionsPage() {
         onCopy={g.subscriptionLink ? copyLink : null}
         copied={copied}
         onSupport={g.supportChat || g.supportUrl ? openSupport : null}
-        className={isDesktop ? 'mt-4' : 'bg-card dark:bg-[linear-gradient(180deg,#0e1b34d6,#0a1428d1)]'}
+        className={
+          isDesktop ? 'mt-4' : 'cabinet-card bg-card dark:bg-[linear-gradient(180deg,#0e1b34d6,#0a1428d1)]'
+        }
       />
     ) : null
 
