@@ -606,6 +606,8 @@
       "paidSpinsLeftHint": "Paid spins remaining today (UTC day; free daily spin does not count)",
       "subscriptionDaysHint": "Subscription buffer in days (from remaining time)",
       "daysShortSuffix": " d",
+      "hoursShortSuffix": " h",
+      "minutesShortSuffix": " min",
       "nextFreeIn": "Free spin in",
       "countdownHms": "{{h}}h {{m}}m {{s}}s",
       "hubSpin": "Spin",

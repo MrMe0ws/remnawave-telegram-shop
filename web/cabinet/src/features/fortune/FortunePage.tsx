@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, timeLeftMs } from '@/lib/utils'
 import { api, ApiError, type FortuneStatusResponse } from '@/lib/api'
 import { hapticImpact, hapticSelection, hapticSuccess, useErrorHaptic } from '@/lib/haptic'
 import {
@@ -315,13 +315,10 @@ export default function FortunePage() {
     return t('fortune.spinButtonPaid', { count: spinCostDays })
   }, [spinning, spinMut.isPending, status?.daily_free_available, status?.bonus_spins, spinCostDays, t])
 
-  const rawRemainDays = status?.subscription_remain_days
-  const subscriptionDaysLeft =
-    status == null
-      ? 0
-      : typeof rawRemainDays === 'number' && rawRemainDays > 0
-        ? rawRemainDays
-        : Math.max(0, Math.ceil((status.subscription_remain_hours ?? 0) / 24))
+  // Остаток — по той же шкале, что на главной: дни вниз, меньше суток — часы, меньше часа — минуты.
+  const subscriptionLeft = timeLeftMs((status?.subscription_remain_hours ?? 0) * 3_600_000)
+  const hasLeft = (status?.subscription_remain_hours ?? 0) > 0
+  const subscriptionLeftSuffix = t(`fortune.${hasLeft ? subscriptionLeft.unit : 'days'}ShortSuffix`)
 
   const paidSpinsLeft = useMemo(() => {
     if (!status?.enabled || !status.panel_ready) return 0
@@ -546,8 +543,8 @@ export default function FortunePage() {
                       >
                         <CalendarDays className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
                         <span className="font-semibold">
-                          {subscriptionDaysLeft}
-                          {t('fortune.daysShortSuffix')}
+                          {hasLeft ? subscriptionLeft.value : 0}
+                          {subscriptionLeftSuffix}
                         </span>
                       </button>
                     </div>

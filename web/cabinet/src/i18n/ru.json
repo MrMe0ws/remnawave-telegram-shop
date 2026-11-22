@@ -864,6 +864,8 @@
       "paidSpinsLeftHint": "Осталось платных круток",
       "subscriptionDaysHint": "Запас подписки в днях ",
       "daysShortSuffix": " дн.",
+      "hoursShortSuffix": " ч",
+      "minutesShortSuffix": " мин",
       "nextFreeIn": "Бесплатная попытка",
       "countdownHms": "{{h}}ч {{m}}м {{s}}с",
       "hubSpin": "Крутить",
