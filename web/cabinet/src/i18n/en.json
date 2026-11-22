@@ -612,6 +612,11 @@
       "countdownHms": "{{h}}h {{m}}m {{s}}s",
       "hubSpin": "Spin",
       "hubFree": "free",
+      "hubReason": {
+        "no_paid": "Paid plan needed",
+        "insufficient_days": "Not enough days",
+        "daily_limit": "Daily limit reached"
+      },
       "spinCostPill": "−{{count}} d",
       "youCanWinTitle": "You can win:",
       "prizeCard": {

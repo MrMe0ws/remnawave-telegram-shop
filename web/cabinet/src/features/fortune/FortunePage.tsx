@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, useAnimation } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, CalendarMinus, Ticket, Volume2, VolumeX } from 'lucide-react'
+import { CalendarDays, CalendarMinus, Lock, Ticket, Volume2, VolumeX } from 'lucide-react'
 
 import { AppLayout } from '@/components/AppLayout'
 import { PageReveal, RevealItem } from '@/components/PageReveal'
@@ -349,6 +349,14 @@ export default function FortunePage() {
   )
   const nextFreeCountdownMs = useUtcMidnightCountdown(showNextFreeTimer)
 
+  // Если крутить нельзя из-за подписки (триал без оплат, мало дней, лимит), в центре колеса пишем именно это —
+  // иначе таймер бесплатной попытки выглядит как причина. Таймер при этом уходит в боковую колонку / шапку.
+  const hubReasonCode =
+    status?.enabled && status?.panel_ready && !status.can_spin &&
+    ['no_paid', 'insufficient_days', 'daily_limit'].includes(status.reason_code ?? '')
+      ? status.reason_code
+      : null
+
   const bonusSpins = status?.bonus_spins ?? 0
   const hasFreeSpin = Boolean(status?.daily_free_available) || bonusSpins > 0
 
@@ -427,6 +435,11 @@ export default function FortunePage() {
           )}
           {spinPill}
         </>
+      ) : hubReasonCode ? (
+        <>
+          <Lock className="size-4 sm:size-5" aria-hidden />
+          <span className="px-3 font-semibold text-foreground">{t(`fortune.hubReason.${hubReasonCode}`)}</span>
+        </>
       ) : showNextFreeTimer ? (
         <>
           <span className="px-3">{t('fortune.nextFreeIn')}</span>
@@ -491,7 +504,7 @@ export default function FortunePage() {
         t={t}
         highlightType={highlightSlot != null ? (lastResult?.type ?? null) : null}
       />
-      {showNextFreeTimer && canPress && (
+      {showNextFreeTimer && (canPress || hubReasonCode) && (
         <p className="text-sm text-muted-foreground">
           <span className="mr-1.5">{t('fortune.nextFreeIn')}</span>
           <span className="font-semibold tabular-nums text-foreground">{formatCountdownHms(nextFreeCountdownMs, t)}</span>
@@ -580,7 +593,7 @@ export default function FortunePage() {
                     {soundMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
                   </Button>
                 </div>
-                {showNextFreeTimer && status?.can_spin && (
+                {showNextFreeTimer && (status?.can_spin || hubReasonCode) && (
                   <p className="max-w-[11rem] text-right text-[11px] leading-snug text-muted-foreground sm:max-w-none sm:text-xs md:hidden">
                     <span className="mr-1.5 align-middle">{t('fortune.nextFreeIn')}</span>
                     <span className="inline-block align-middle font-semibold tabular-nums text-foreground">

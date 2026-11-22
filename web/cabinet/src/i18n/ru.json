@@ -870,6 +870,11 @@
       "countdownHms": "{{h}}ч {{m}}м {{s}}с",
       "hubSpin": "Крутить",
       "hubFree": "бесплатно",
+      "hubReason": {
+        "no_paid": "Нужна оплата подписки",
+        "insufficient_days": "Мало дней подписки",
+        "daily_limit": "Лимит на сегодня"
+      },
       "spinCostPill": "−{{count}} д",
       "youCanWinTitle": "Вы можете получить:",
       "prizeCard": {
