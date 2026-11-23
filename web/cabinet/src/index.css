@@ -2926,10 +2926,49 @@ html:not(.dark)[data-cabinet-decor="green"] .cabinet-shell-gradient {
     radial-gradient(ellipse 85% 50% at 100% 90%, hsl(160 45% 42% / 0.09), transparent 50%);
 }
 
+/* --- pink / orange / yellow / violet: «целостные» темы по лесенке wine -------
+ *
+ * Как у wine и green: в тёмной теме фон, карточки, muted/secondary, рамки и
+ * градиент фона подкрашены в оттенок акцента, а не остаются сине-серыми.
+ * Насыщенность поверхностей вдвое ниже акцента — цвет виден рядом с белым
+ * текстом, карточка остаётся почти нейтральной. У оранжевой и жёлтой подпись
+ * на кнопках тёмная: белая на тёплом акценте не читается.
+ */
 html[data-cabinet-decor="pink"] {
   --primary: 338 78% 52%;
   --accent: 338 78% 52%;
   --ring: 338 78% 52%;
+}
+
+html.dark[data-cabinet-decor="pink"] {
+  --primary: 332 82% 60%;
+  --accent: 332 82% 60%;
+  --ring: 332 82% 60%;
+
+  --background: 332 30% 7%;
+  --foreground: 335 22% 96%;
+  --card: 332 18% 13.5%;
+  --card-foreground: 335 22% 96%;
+  --muted: 332 22% 10.5%;
+  --muted-foreground: 332 13% 67%;
+  --secondary: 332 16% 18.5%;
+  --secondary-foreground: 335 22% 96%;
+  --border: 332 14% 25%;
+  --input: 332 14% 23%;
+  --connect-device-inner-bg: 332 16% 18.5%;
+  --connect-device-inner-bg-hover: 332 16% 21.5%;
+
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 130% 88% at 28% -16%, hsl(332 80% 46% / 0.26) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 100% 100%, hsl(290 55% 38% / 0.16) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(332 32% 11%) 0%, hsl(var(--background)) 45%, hsl(335 38% 5.5%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="pink"] body,
+html:not(.dark)[data-cabinet-decor="pink"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 24% -15%, hsl(338 75% 55% / 0.17), transparent 56%),
+    radial-gradient(ellipse 85% 50% at 100% 90%, hsl(300 50% 58% / 0.1), transparent 50%);
 }
 
 html[data-cabinet-decor="orange"] {
@@ -2938,10 +2977,74 @@ html[data-cabinet-decor="orange"] {
   --ring: 28 95% 48%;
 }
 
+html.dark[data-cabinet-decor="orange"] {
+  --primary: 27 95% 55%;
+  --primary-foreground: 24 40% 7%;
+  --accent: 27 95% 55%;
+  --ring: 27 95% 55%;
+
+  --background: 24 28% 6.5%;
+  --foreground: 30 22% 96%;
+  --card: 24 16% 12.5%;
+  --card-foreground: 30 22% 96%;
+  --muted: 24 20% 9.5%;
+  --muted-foreground: 26 11% 66%;
+  --secondary: 24 14% 17.5%;
+  --secondary-foreground: 30 22% 96%;
+  --border: 24 12% 23.5%;
+  --input: 24 12% 21.5%;
+  --connect-device-inner-bg: 24 14% 17.5%;
+  --connect-device-inner-bg-hover: 24 14% 20.5%;
+
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 130% 88% at 28% -16%, hsl(27 90% 46% / 0.24) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 100% 100%, hsl(8 70% 38% / 0.15) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(24 30% 10%) 0%, hsl(var(--background)) 45%, hsl(22 36% 4.5%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="orange"] body,
+html:not(.dark)[data-cabinet-decor="orange"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 24% -15%, hsl(28 92% 52% / 0.17), transparent 56%),
+    radial-gradient(ellipse 85% 50% at 100% 90%, hsl(10 80% 58% / 0.09), transparent 50%);
+}
+
 html[data-cabinet-decor="yellow"] {
   --primary: 38 92% 46%;
   --accent: 38 92% 46%;
   --ring: 38 92% 46%;
+}
+
+html.dark[data-cabinet-decor="yellow"] {
+  --primary: 45 96% 54%;
+  --primary-foreground: 42 40% 7%;
+  --accent: 45 96% 54%;
+  --ring: 45 96% 54%;
+
+  --background: 42 26% 6%;
+  --foreground: 45 22% 96%;
+  --card: 42 13% 12%;
+  --card-foreground: 45 22% 96%;
+  --muted: 42 18% 9%;
+  --muted-foreground: 44 10% 66%;
+  --secondary: 42 12% 16.5%;
+  --secondary-foreground: 45 22% 96%;
+  --border: 42 10% 22.5%;
+  --input: 42 10% 20.5%;
+  --connect-device-inner-bg: 42 12% 16.5%;
+  --connect-device-inner-bg-hover: 42 12% 19.5%;
+
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 130% 88% at 28% -16%, hsl(45 90% 44% / 0.22) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 100% 100%, hsl(28 80% 38% / 0.14) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(42 28% 9.5%) 0%, hsl(var(--background)) 45%, hsl(40 34% 4.5%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="yellow"] body,
+html:not(.dark)[data-cabinet-decor="yellow"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 24% -15%, hsl(42 92% 50% / 0.18), transparent 56%),
+    radial-gradient(ellipse 85% 50% at 100% 90%, hsl(28 85% 55% / 0.09), transparent 50%);
 }
 
 html[data-cabinet-decor="violet"] {
@@ -2954,6 +3057,31 @@ html.dark[data-cabinet-decor="violet"] {
   --primary: 262 72% 62%;
   --accent: 262 72% 62%;
   --ring: 262 72% 62%;
+
+  --background: 262 28% 7%;
+  --foreground: 265 22% 96%;
+  --card: 262 17% 13.5%;
+  --card-foreground: 265 22% 96%;
+  --muted: 262 20% 10.5%;
+  --muted-foreground: 262 12% 67%;
+  --secondary: 262 15% 18.5%;
+  --secondary-foreground: 265 22% 96%;
+  --border: 262 13% 25%;
+  --input: 262 13% 23%;
+  --connect-device-inner-bg: 262 15% 18.5%;
+  --connect-device-inner-bg-hover: 262 15% 21.5%;
+
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 130% 88% at 28% -16%, hsl(262 70% 48% / 0.26) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 100% 100%, hsl(300 55% 38% / 0.16) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(262 30% 11%) 0%, hsl(var(--background)) 45%, hsl(265 36% 5.5%) 100%);
+}
+
+html:not(.dark)[data-cabinet-decor="violet"] body,
+html:not(.dark)[data-cabinet-decor="violet"] .cabinet-shell-gradient {
+  background-image:
+    radial-gradient(ellipse 115% 78% at 24% -15%, hsl(262 65% 55% / 0.17), transparent 56%),
+    radial-gradient(ellipse 85% 50% at 100% 90%, hsl(300 50% 58% / 0.09), transparent 50%);
 }
 
 html[data-cabinet-decor="slate"] {
