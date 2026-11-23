@@ -4398,21 +4398,32 @@ html[data-cabinet-decor="lavender"] {
 
 html.dark[data-cabinet-decor="lavender"] {
   --primary: 270 48% 68%;
+  --primary-foreground: 268 35% 8%;
   --accent: 270 48% 68%;
   --ring: 270 48% 68%;
-}
 
-html.dark[data-cabinet-decor="lavender"] body {
-  background-image:
-    radial-gradient(ellipse 120% 80% at 30% -15%, hsl(270 50% 62% / 0.24), transparent 55%),
-    radial-gradient(ellipse 90% 55% at 100% 80%, hsl(290 40% 50% / 0.14), transparent 52%),
-    linear-gradient(168deg, hsl(260 30% 11%) 0%, hsl(var(--background)) 45%, hsl(270 28% 9%) 100%);
-}
+  /*
+   * Поверхности — пыльно-сиреневые, а не сине-серые: тон 270 как у акцента,
+   * насыщенность ниже и светлота чуть выше, чем у фиолетовой, — лаванда
+   * мягче и «пастельнее». Синевы (hue 215–250) в поверхностях быть не должно.
+   */
+  --background: 270 20% 8%;
+  --foreground: 272 25% 96%;
+  --card: 270 14% 14.5%;
+  --card-foreground: 272 25% 96%;
+  --muted: 270 16% 11%;
+  --muted-foreground: 270 12% 68%;
+  --secondary: 270 13% 19.5%;
+  --secondary-foreground: 272 25% 96%;
+  --border: 270 11% 26%;
+  --input: 270 11% 24%;
+  --connect-device-inner-bg: 270 13% 19.5%;
+  --connect-device-inner-bg-hover: 270 13% 22.5%;
 
-html.dark[data-cabinet-decor="lavender"] .cabinet-shell-gradient {
-  background-image:
-    radial-gradient(ellipse 120% 80% at 30% -15%, hsl(270 50% 62% / 0.24), transparent 55%),
-    radial-gradient(ellipse 90% 55% at 100% 80%, hsl(290 40% 50% / 0.14), transparent 52%);
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 130% 88% at 28% -16%, hsl(270 50% 55% / 0.24) 0%, transparent 58%),
+    radial-gradient(ellipse 75% 55% at 100% 100%, hsl(292 40% 45% / 0.15) 0%, transparent 58%),
+    linear-gradient(168deg, hsl(270 22% 11.5%) 0%, hsl(var(--background)) 45%, hsl(272 26% 6%) 100%);
 }
 
 html:not(.dark)[data-cabinet-decor="lavender"] body,
