@@ -134,13 +134,20 @@ function appGlyph(app: Pick<AppGuide, 'id' | 'name'>): ReactNode | null {
     return (
       <svg className="size-full" viewBox="0 0 340 340" aria-hidden>
         <defs>
+          <linearGradient id="dodo-bg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#0E9AA7" />
+            <stop offset="1" stopColor="#7ED957" />
+          </linearGradient>
           <clipPath id="dodo-clip">
-            <circle cx="170" cy="170" r="146" />
+            <circle cx="340" cy="200" r="146" />
           </clipPath>
         </defs>
+        <rect width="340" height="340" rx="76" fill="url(#dodo-bg)" />
+        <g transform="translate(170 170) scale(0.8) translate(-170 -170)">
         <circle cx="170" cy="170" r="166" fill="#ffffff" />
         <circle cx="170" cy="170" r="154" fill="#111111" />
-        <g clipPath="url(#dodo-clip)" transform="translate(-170 -30)">
+        <g transform="translate(-170 -30)">
+          <g clipPath="url(#dodo-clip)">
           <path d="M 256 66 Q 346 40 352 118 L 352 166 Q 352 178 340 178 L 292 178 Q 232 172 228 128 Q 228 82 256 66 Z" fill="#ffffff" />
           <circle cx="286" cy="108" r="16" fill="#111111" />
           <path d="M 186 168 Q 192 122 250 122 Q 262 142 258 170 Z" fill="#F5B33A" />
@@ -152,6 +159,8 @@ function appGlyph(app: Pick<AppGuide, 'id' | 'name'>): ReactNode | null {
           <rect x="278" y="252" width="86" height="40" rx="8" fill="#1F7A55" />
           <rect x="278" y="302" width="86" height="46" rx="8" fill="#6B5BD2" />
           <path d="M 376 266 L 474 266 L 474 300 Q 440 340 376 346 Z" fill="#F5B33A" />
+          </g>
+        </g>
         </g>
       </svg>
     )

@@ -13,7 +13,7 @@
     "ios": [
       {
         "id": "dodo",
-        "name": "DoDo",
+        "name": "DoDo App",
         "isFeatured": true,
         "urlScheme": "dodoapp://add/",
         "installationStep": {
@@ -299,7 +299,7 @@
     "macos": [
       {
         "id": "dodo",
-        "name": "DoDo",
+        "name": "DoDo App",
         "isFeatured": true,
         "urlScheme": "dodoapp://add/",
         "installationStep": {
