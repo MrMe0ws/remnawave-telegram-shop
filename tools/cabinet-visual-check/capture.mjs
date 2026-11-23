@@ -86,6 +86,7 @@ function parseArgs(argv) {
     timezone: 'Europe/Moscow',
     port: 5599,
     settle: 1800,
+    decor: null,
   }
   for (let i = 2; i < argv.length; i++) {
     const key = argv[i]
@@ -100,6 +101,7 @@ function parseArgs(argv) {
       case '--element': out.element = val; i++; break
       case '--scroll': out.scroll = Number(val); i++; break
       case '--scroll-times': out.scrollTimes = Number(val); i++; break
+      case '--decor': out.decor = val; i++; break
       case '--theme': out.themes = val.split(','); i++; break
       case '--locale': out.locale = val; i++; break
       case '--timezone': out.timezone = val; i++; break
@@ -193,7 +195,7 @@ async function main() {
   const server = createServer(distDir)
   await new Promise((resolve) => server.listen(args.port, resolve))
 
-  const browser = await chromium.launch()
+  const browser = await chromium.launch(process.env.CAB_CHROME ? { executablePath: process.env.CAB_CHROME } : {})
   const written = []
 
   try {
@@ -253,8 +255,13 @@ async function main() {
           waitUntil: 'networkidle',
         })
         await page.waitForTimeout(args.settle)
+        // Декор-тема приходит из конфига; для проверки палитры подменяем атрибут на <html>.
+        if (args.decor) {
+          await page.evaluate((d) => { document.documentElement.dataset.cabinetDecor = d }, args.decor)
+          await page.waitForTimeout(400)
+        }
 
-        const tag = `${theme}-${width}`
+        const tag = args.decor ? `${args.decor}-${theme}-${width}` : `${theme}-${width}`
         const shots = [{ name: 'main', run: async () => {} }]
         for (const step of args.steps) {
           shots.push({
