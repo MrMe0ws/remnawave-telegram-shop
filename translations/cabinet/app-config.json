@@ -15,7 +15,7 @@
         "id": "dodo",
         "name": "DoDo App",
         "isFeatured": true,
-        "urlScheme": "dodoapp://add/",
+        "urlScheme": "dodoapp://import?url=",
         "installationStep": {
           "buttons": [
             {
@@ -301,7 +301,7 @@
         "id": "dodo",
         "name": "DoDo App",
         "isFeatured": true,
-        "urlScheme": "dodoapp://add/",
+        "urlScheme": "dodoapp://import?url=",
         "installationStep": {
           "buttons": [
             {
