@@ -20,7 +20,7 @@ import {
  * Слой частиц между фоном (cabinet-shell-gradient) и контентом.
  * Монтировать внутри layout сразу после градиента.
  */
-export function CabinetDecorLayer() {
+export function CabinetDecorLayer({ compact = false }: { compact?: boolean }) {
   const theme = useCabinetDecorTheme()
   const effect = decorEffectForTheme(theme)
 
@@ -69,7 +69,7 @@ export function CabinetDecorLayer() {
 
   return (
     <div className="cabinet-decor-layer" aria-hidden>
-      <CabinetDecorScene />
+      <CabinetDecorScene compact={compact} />
       {fx}
     </div>
   )

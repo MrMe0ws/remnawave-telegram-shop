@@ -93,7 +93,11 @@ export function normalizeDecorTheme(value: string | undefined | null): DecorThem
 }
 
 /** Темы, у которых нет светлого варианта: пока они включены, кабинет только тёмный. */
-const DARK_ONLY_DECOR_THEMES: ReadonlySet<DecorThemeId> = new Set(['halloween_2', 'new_year_2'])
+const DARK_ONLY_DECOR_THEMES: ReadonlySet<DecorThemeId> = new Set([
+  'halloween_2',
+  'new_year_2',
+  'black_friday',
+])
 
 export function isDarkOnlyDecorTheme(theme: DecorThemeId): boolean {
   return DARK_ONLY_DECOR_THEMES.has(theme)

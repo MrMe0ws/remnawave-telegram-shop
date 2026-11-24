@@ -87,6 +87,7 @@ function parseArgs(argv) {
     port: 5599,
     settle: 1800,
     decor: null,
+    css: null,
   }
   for (let i = 2; i < argv.length; i++) {
     const key = argv[i]
@@ -102,6 +103,7 @@ function parseArgs(argv) {
       case '--scroll': out.scroll = Number(val); i++; break
       case '--scroll-times': out.scrollTimes = Number(val); i++; break
       case '--decor': out.decor = val; i++; break
+      case '--css': out.css = val; i++; break
       case '--theme': out.themes = val.split(','); i++; break
       case '--locale': out.locale = val; i++; break
       case '--timezone': out.timezone = val; i++; break
@@ -256,6 +258,7 @@ async function main() {
         })
         await page.waitForTimeout(args.settle)
         // Декор-тема приходит из конфига; для проверки палитры подменяем атрибут на <html>.
+        if (args.css) await page.addStyleTag({ content: fs.readFileSync(args.css, 'utf8') })
         if (args.decor) {
           await page.evaluate((d) => { document.documentElement.dataset.cabinetDecor = d }, args.decor)
           await page.waitForTimeout(400)

@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 
+import { BlackFridayScene } from './BlackFridayScene'
 import { JackOLanternShape, SpiderSvg } from './DecorEffects'
 import type { DecorThemeId } from './decorThemes'
 import { HolidayAtmosphere } from './HolidayAtmosphere'
@@ -282,7 +283,7 @@ function NebulaGlow() {
   )
 }
 
-function SceneContent({ theme }: { theme: DecorThemeId }) {
+function SceneContent({ theme, compact }: { theme: DecorThemeId; compact: boolean }) {
   switch (theme) {
     case 'new_year':
       return <NewYearScene />
@@ -306,12 +307,7 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
         </>
       )
     case 'black_friday':
-      return (
-        <>
-          <div className="cabinet-decor-scene__bf-corner cabinet-decor-scene__bf-corner--tl" aria-hidden />
-          <div className="cabinet-decor-scene__bf-corner cabinet-decor-scene__bf-corner--br" aria-hidden />
-        </>
-      )
+      return <BlackFridayScene compact={compact} />
     case 'aurora':
       return <AuroraBands />
     case 'nebula':
@@ -332,7 +328,8 @@ function SceneContent({ theme }: { theme: DecorThemeId }) {
 }
 
 /** Фоновые силуэты и сцены декор-тем (фиксированный слой, не перекрывает клики). */
-export function CabinetDecorScene() {
+/** compact — админка: контент во всю ширину, крупные декорации по краям не рисуем. */
+export function CabinetDecorScene({ compact = false }: { compact?: boolean }) {
   const theme = useCabinetDecorTheme()
   if (theme === 'off') return null
 
@@ -342,7 +339,7 @@ export function CabinetDecorScene() {
       data-cabinet-decor-scene={theme}
       aria-hidden
     >
-      <SceneContent theme={theme} />
+      <SceneContent theme={theme} compact={compact} />
     </div>
   )
 }
