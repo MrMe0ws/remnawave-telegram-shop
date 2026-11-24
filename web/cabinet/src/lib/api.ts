@@ -282,6 +282,7 @@ export interface AuthBootstrapResponse {
     platega?: boolean
     platega_sbp?: boolean
     platega_acquiring?: boolean
+    platega_cards?: boolean
     platega_worldwide?: boolean
     platega_crypto?: boolean
     heleket?: boolean
