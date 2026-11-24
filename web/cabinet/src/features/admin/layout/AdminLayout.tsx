@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import { useAdminPartnerPending } from '../hooks/useAdminPartners'
 import { useAdminReviewsPending } from '../hooks/useAdminReviews'
+import { incidentEntries, isIncidentId, useAttentionDismissals } from '../monitoring/attention'
 import { useAdminAttention } from '../monitoring/useMonitoring'
 import { AdminChrome } from './AdminChrome'
 import { AdminBreadcrumbs } from './AdminBreadcrumbs'
@@ -139,7 +140,9 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   const reviewsPending = useAdminReviewsPending()
   // Инциденты «Мониторинга» видно с любой страницы админки.
   const attention = useAdminAttention()
-  const incidentCount = attention.data?.items?.length ?? 0
+  const incidentEntriesList = useMemo(() => incidentEntries(attention.data?.items, t), [attention.data, t])
+  // Прочитанные и скрытые инциденты в бейдж меню не попадают.
+  const incidentCount = useAttentionDismissals(incidentEntriesList, !!attention.data, isIncidentId).visible.length
 
   const navAsideRef = useRef<HTMLElement>(null)
   const navScrollRef = useRef<HTMLDivElement>(null)

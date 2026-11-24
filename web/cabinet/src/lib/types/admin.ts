@@ -107,6 +107,16 @@ export interface AdminAttentionItemDTO {
   params?: Record<string, string | number>
 }
 
+/** Что админ уже прочитал и скрыл в «Требует внимания»: хранится на сервере по аккаунту. */
+export interface AdminAttentionDismissedDTO {
+  key: string
+  /** Сколько было, когда скрыли: выросло — пункт возвращается. */
+  count: number
+  severity: 'crit' | 'warn'
+  /** С какого момента горело: новее — событие случилось заново. */
+  since?: string
+}
+
 /** Строка ленты «Мониторинга» и истории клиента. */
 export interface AdminEventDTO {
   id: number

@@ -1,5 +1,10 @@
 {
   "translation": {
+    "decorBlackFriday": {
+      "tagSale": "BLACK FRIDAY",
+      "tagDeal": "DEAL",
+      "tagHit": "HOT"
+    },
     "common": {
       "loading": "Loading…",
       "error": "Error",
@@ -4417,6 +4422,17 @@
         "addressIsNode": "This is the address of the panel node itself. For a bypass enter the whitelisted host, otherwise operators will not reach it.",
         "drag": "Drag to reorder (or use the up and down arrows)",
         "neverMeasured": "Not checked yet"
+      },
+      "attention": {
+        "title": "Needs attention",
+        "allRead": "All read",
+        "empty": "All read — anything new will show up here",
+        "groupCrit": "Urgent",
+        "groupWarn": "Soon",
+        "dismiss": "Hide until it changes",
+        "dismissAll": "Hide all",
+        "showHidden_one": "Show hidden ({{count}})",
+        "showHidden_other": "Show hidden ({{count}})"
       },
       "monitoring": {
         "title": "Monitoring",

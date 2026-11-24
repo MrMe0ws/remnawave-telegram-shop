@@ -23,6 +23,7 @@ import type {
 
 import { getCookie } from './utils'
 import type {
+  AdminAttentionDismissedDTO,
   AdminAttentionItemDTO,
   AdminEventsDTO,
   AdminMonitoringPeriod,
@@ -2201,6 +2202,12 @@ export const api = {
   adminMonitoringSummary: (period: AdminMonitoringPeriod) =>
     request<AdminMonitoringSummaryDTO>('GET', `/admin/monitoring/summary?period=${period}`),
   adminAttention: () => request<{ items: AdminAttentionItemDTO[] }>('GET', '/admin/attention'),
+  adminAttentionDismissed: () =>
+    request<{ items: AdminAttentionDismissedDTO[] }>('GET', '/admin/attention/dismissed'),
+  adminAttentionDismiss: (items: AdminAttentionDismissedDTO[]) =>
+    request<{ ok: boolean }>('POST', '/admin/attention/dismissed', { items }),
+  adminAttentionRestore: (key?: string) =>
+    request<{ ok: boolean }>('DELETE', `/admin/attention/dismissed${key ? `?key=${encodeURIComponent(key)}` : ''}`),
   adminInfraNodes: () => request<AdminInfraNodesDTO>('GET', '/admin/infra/nodes'),
   adminInfraCreateNode: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
     request<AdminInfraNodesDTO>('POST', '/admin/infra/nodes', body),
