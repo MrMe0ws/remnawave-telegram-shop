@@ -4815,9 +4815,9 @@ html[data-cabinet-decor="neon"] .renew-subscription-cta-static span.inline-flex.
 }
 
 /* black_friday: золотая диагональ на карточках тарифов */
+/* Без overflow: hidden — он резал нашивку «Популярный», выступающую над рамкой. Уголок скругляется сам. */
 html[data-cabinet-decor="black_friday"] [data-tariff-card] {
   position: relative;
-  overflow: hidden;
 }
 
 html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
@@ -4827,6 +4827,7 @@ html[data-cabinet-decor="black_friday"] [data-tariff-card]::before {
   right: 0;
   width: 72px;
   height: 72px;
+  border-top-right-radius: inherit;
   background: linear-gradient(135deg, transparent 48%, hsl(var(--primary) / 0.55) 48%, hsl(var(--primary) / 0.35) 100%);
   pointer-events: none;
 }
