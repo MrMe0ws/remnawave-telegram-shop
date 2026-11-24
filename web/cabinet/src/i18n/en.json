@@ -3464,7 +3464,51 @@
           "basic": "Rules & limits",
           "ticker": "Winner feed",
           "weights": "Sector probability",
-          "rewards": "Prize amounts"
+          "rewards": "Prize amounts",
+          "chances": {
+            "name": {
+              "micro": "Small XP bonus",
+              "xp": "Big XP bonus",
+              "discount": "{{n}}% discount",
+              "days": "+{{n}} days of subscription",
+              "free_spin": "Free spin"
+            },
+            "lockFixed": "This prize can never drop: the “+180 days” sector is for show only",
+            "reset": "Reset to defaults",
+            "never": "Never drops",
+            "half": "every 2nd spin or more often",
+            "oneIn": "1 in {{n}} spins",
+            "lock": "Pin this chance",
+            "unlock": "Unpin",
+            "prize": "Prize:",
+            "from": "from",
+            "to": "to",
+            "unit": {
+              "xp": "XP",
+              "discount": "% off",
+              "days": "days",
+              "spin": "spin"
+            },
+            "profit": {
+              "title": "Is it profitable for you?",
+              "intro": "A player pays {{cost}} day(s) of subscription per spin. Below is how many days they win back on average. Discounts and XP give no days, so they are not counted.",
+              "badge": { "ok": "You profit", "warn": "Generous", "bad": "Losing" },
+              "spend": "Player pays per spin",
+              "back": "Wins back per spin",
+              "chance": "Chance to win days or a spin",
+              "returns": "Player gets back {{pct}}% of what they spend",
+              "returnsInf": "Free spins drop too often — the wheel would spin forever",
+              "breakEven": "The line is 100%: player breaks even",
+              "sim": "Test on 1000 spins",
+              "simSpins": "Spins played",
+              "simFree": "free ones: {{n}}",
+              "simWon": "Days won",
+              "simPaid": "paid: {{n}} d.",
+              "simNet": "Result for you",
+              "simNetGood": "days ahead",
+              "simNetBad": "days behind"
+            }
+          }
         },
         "enum": {
           "crypt5": "crypt5 — current (Happ 5.x)",

@@ -6003,3 +6003,32 @@ html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link:hover {
     animation: none;
   }
 }
+
+/* Ползунок шанса приза в админке колеса: заливка до значения цветом приза */
+.fortune-chance-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--chance-color) var(--p), hsl(var(--border)) var(--p));
+}
+.fortune-chance-range:disabled { cursor: default; opacity: 0.6; }
+.fortune-chance-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid var(--chance-color);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+.fortune-chance-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid var(--chance-color);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
