@@ -37,37 +37,47 @@ export interface NodeChecks {
 }
 
 /**
- * Сплошная подложка карточки. Класс bg-card тут не годится: cn (tailwind-merge) выкидывает его рядом
- * с bg-gradient-to-r, и карточка остаётся прозрачной — сквозь неё видно фон страницы. Градиент состояния
- * ложится поверх этого цвета.
+ * Подложка карточки: сплошной цвет карточки, поверх — ровная заливка цветом состояния (без перехода слева направо).
+ * Классы bg-card/bg-<цвет> тут не годятся: tailwind-merge оставил бы один из них, и карточка осталась бы
+ * прозрачной — сквозь неё видно фон страницы. Поэтому цвет — inline, заливка — слоем backgroundImage.
  */
-const SOLID_BG = { backgroundColor: 'hsl(var(--card))' } as const
+function cardBg(tint?: string) {
+  return {
+    backgroundColor: 'hsl(var(--card))',
+    ...(tint ? { backgroundImage: `linear-gradient(${tint}, ${tint})` } : null),
+  }
+}
 
 interface StateStyle {
   wrap: string
   icon: LucideIcon
   badge: string
+  /** Цвет ровной заливки карточки; у отключённой ноды заливки нет. */
+  tint?: string
 }
 
 /** Цвета состояния — как в панели Remna: зелёная рамка, красная, жёлтая, серая. */
 const STATE_STYLE: Record<AdminNodeState, StateStyle> = {
   online: {
-    wrap: 'border-emerald-500/45 bg-card bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent',
+    wrap: 'border-emerald-500/45',
+    tint: 'rgb(16 185 129 / 0.10)',
     icon: Activity,
     badge: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
   },
   offline: {
-    wrap: 'border-red-500/45 bg-card bg-gradient-to-r from-red-500/[0.12] via-transparent to-transparent',
+    wrap: 'border-red-500/45',
+    tint: 'rgb(239 68 68 / 0.10)',
     icon: CircleAlert,
     badge: 'border-red-500/50 bg-red-500/10 text-red-400',
   },
   connecting: {
-    wrap: 'border-amber-500/45 bg-card bg-gradient-to-r from-amber-500/10 via-transparent to-transparent',
+    wrap: 'border-amber-500/45',
+    tint: 'rgb(245 158 11 / 0.10)',
     icon: CloudUpload,
     badge: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
   },
   disabled: {
-    wrap: 'border-border bg-card',
+    wrap: 'border-border',
     icon: Ban,
     badge: 'border-border bg-muted/40 text-muted-foreground',
   },
@@ -381,7 +391,7 @@ function NodeCardImpl({
           reserveHandle ? 'pr-10' : 'pr-4',
           style.wrap,
         )}
-        style={SOLID_BG}
+        style={cardBg(style.tint)}
       >
         <div className="min-w-0 space-y-2">
           <Title node={node} />
@@ -408,7 +418,7 @@ function NodeCardImpl({
   return (
     <div
       className={cn('flex flex-col gap-2.5 rounded-[14px] border py-3 pl-3', reserveHandle ? 'pr-10' : 'pr-3', style.wrap)}
-      style={SOLID_BG}
+      style={cardBg(style.tint)}
     >
       <Title node={node} />
       <div className="flex items-center justify-between gap-2.5">
