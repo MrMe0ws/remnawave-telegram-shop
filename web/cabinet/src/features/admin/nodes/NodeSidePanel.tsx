@@ -107,7 +107,8 @@ export function NodeSidePanel({
       <aside
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'absolute inset-y-0 right-0 flex w-full flex-col overflow-hidden rounded-none border-l border-border bg-card shadow-2xl shadow-black/40',
+          // В мини-аппе Telegram (полный экран) сверху его полоса с ✕/⋯ и часами — панель начинается под ней, иначе свой ✕ не нажать. В браузере отступ 0.
+          'absolute bottom-0 right-0 top-[var(--cabinet-tg-safe-top)] flex w-full flex-col overflow-hidden rounded-none border-l border-border bg-card shadow-2xl shadow-black/40',
           depth === 2 ? 'sm:w-[800px]' : 'sm:w-[690px]',
           'transition-transform duration-[220ms] ease-out motion-reduce:transition-none',
           visible ? 'translate-x-0' : 'translate-x-full',
@@ -130,8 +131,10 @@ export function NodeSidePanel({
             <X className="size-5" aria-hidden />
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">{view.children}</div>
-        {view.footer && <div className="shrink-0 border-t border-border/70 px-4 py-3">{view.footer}</div>}
+        <div className={cn('min-h-0 flex-1 overflow-y-auto p-4', !view.footer && 'pb-[max(1rem,var(--cabinet-sheet-safe-bottom))]')}>{view.children}</div>
+        {view.footer && (
+          <div className="shrink-0 border-t border-border/70 px-4 pt-3 pb-[max(0.75rem,var(--cabinet-sheet-safe-bottom))]">{view.footer}</div>
+        )}
       </aside>
     </div>,
     document.body,

@@ -151,7 +151,8 @@ export function AdminModal({
           ref={sheetRef}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'cabinet-elevated-card admin-modal-panel flex max-h-[min(92dvh,100%)] w-full flex-col overflow-hidden',
+            // Верх шторки не заходит под полосу Telegram с ✕/⋯ в полноэкранном мини-аппе (в браузере отступ 0).
+            'cabinet-elevated-card admin-modal-panel flex max-h-[min(92dvh,calc(100dvh-var(--cabinet-tg-safe-top)-0.5rem))] w-full flex-col overflow-hidden',
             // Ниже sm любое окно — шторка снизу: на телефоне так до кнопок
             // ближе, чем до центра экрана.
             'rounded-b-none rounded-t-2xl sm:rounded-xl',
