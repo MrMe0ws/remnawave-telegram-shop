@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Activity,
@@ -375,13 +375,37 @@ function NodeCardImpl({
   layout,
   checks,
   reserveHandle = false,
+  onOpen,
 }: {
   node: AdminNodeDTO
   layout: NodeLayout
   checks?: NodeChecks
   reserveHandle?: boolean
+  /** Клик по карточке (не по кнопке внутри неё) открывает окно ноды. */
+  onOpen?: () => void
 }) {
   const style = STATE_STYLE[node.state]
+  const open = onOpen
+    ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onClick: (e: MouseEvent<HTMLElement>) => {
+          if ((e.target as HTMLElement).closest('button, a')) return
+          onOpen()
+        },
+        onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            onOpen()
+          }
+        },
+      }
+    : null
+  // Без filter/transform: они создают контекст наложения, и подсказки значков проверок (z-30) оказались бы
+  // под соседней карточкой — на телефоне «залипший» hover после касания обрезал их по краю карточки.
+  const openCls =
+    open &&
+    'cursor-pointer transition-shadow [@media(hover:hover)]:hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
   if (layout === 'row') {
     return (
@@ -390,8 +414,10 @@ function NodeCardImpl({
           'grid grid-cols-[minmax(0,1fr)_158px_164px_160px] items-center gap-4 rounded-[14px] border py-2.5 pl-3',
           reserveHandle ? 'pr-10' : 'pr-4',
           style.wrap,
+          openCls,
         )}
         style={cardBg(style.tint)}
+        {...open}
       >
         <div className="min-w-0 space-y-2">
           <Title node={node} />
@@ -417,8 +443,9 @@ function NodeCardImpl({
 
   return (
     <div
-      className={cn('flex flex-col gap-2.5 rounded-[14px] border py-3 pl-3', reserveHandle ? 'pr-10' : 'pr-3', style.wrap)}
+      className={cn('flex flex-col gap-2.5 rounded-[14px] border py-3 pl-3', reserveHandle ? 'pr-10' : 'pr-3', style.wrap, openCls)}
       style={cardBg(style.tint)}
+      {...open}
     >
       <Title node={node} />
       <div className="flex items-center justify-between gap-2.5">
@@ -430,7 +457,7 @@ function NodeCardImpl({
         {/* Значки лежат поверх пустого места слева от аптайма: высота строки от них не зависит, карточка не растёт */}
         <span className="relative min-h-4">
           {checks && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2">
+            <span className="absolute inset-y-0 left-0 flex items-center">
               <NodeCheckBadges info={checks} layout="card" />
             </span>
           )}

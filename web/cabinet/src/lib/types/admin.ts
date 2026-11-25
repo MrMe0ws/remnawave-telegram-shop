@@ -1134,6 +1134,178 @@ export interface AdminNodeDTO {
   node_version?: string
 }
 
+export interface AdminNodeDetailDTO {
+  uuid: string
+  name: string
+  country_code: string
+  address: string
+  port: number
+  state: AdminNodeState
+  proxy_url: string
+  /** Последняя ошибка статуса (у ноды не в сети или в подключении). */
+  last_status_message?: string
+  last_status_change?: string
+  traffic_tracking: boolean
+  traffic_limit_bytes: number
+  traffic_used_bytes: number
+  traffic_reset_day: number
+  notify_percent: number
+  consumption_multiplier: number
+  node_consumption_multiplier: number
+  tags: string[]
+  note: string
+  provider_uuid?: string
+  provider?: { name: string; favicon_link?: string }
+  plugin_uuid?: string
+  config_profile_uuid?: string
+  config_profile_name?: string
+  inbounds: { uuid: string; tag: string; type: string; port: number }[]
+  ips: { ip: string; status: string }[]
+  users_online: number
+  xray_uptime_sec: number
+  xray_version?: string
+  node_version?: string
+  system: {
+    arch: string
+    platform: string
+    cpu_model: string
+    cpus: number
+    kernel: string
+    hostname: string
+    memory_total_bytes: number
+    memory_used_bytes: number
+    uptime_sec: number
+    interface: string
+    rx_bytes_per_sec: number
+    tx_bytes_per_sec: number
+    rx_total_bytes: number
+    tx_total_bytes: number
+  } | null
+}
+
+export type AdminNodeAction = 'enable' | 'disable' | 'restart' | 'reset-traffic'
+
+// ---- Окно ноды: правка и панели (контракт — .cursor/work-in-progress/nodes/API-CONTRACT.md) ----
+
+export interface AdminNodePatchBody {
+  name?: string
+  country_code?: string
+  address?: string
+  port?: number
+  /** Пустая строка — сбросить. */
+  proxy_url?: string
+  consumption_multiplier?: number
+  node_consumption_multiplier?: number
+  traffic_tracking?: boolean
+  traffic_limit_bytes?: number
+  traffic_reset_day?: number
+  notify_percent?: number
+  /** Пустая строка — снять провайдера / плагин. */
+  provider_uuid?: string
+  plugin_uuid?: string
+  tags?: string[]
+  note?: string
+  config_profile?: { uuid: string; inbound_uuids: string[] }
+}
+
+export interface AdminNodeOptionsDTO {
+  plugins: { uuid: string; name: string }[]
+  providers: { uuid: string; name: string; favicon_link?: string }[]
+  tags: string[]
+}
+
+export interface AdminConfigProfileDTO {
+  uuid: string
+  name: string
+  /** На скольких нодах профиль выбран. */
+  node_count: number
+  inbounds: { uuid: string; tag: string; type: string; port: number; /** Полный конфиг инбаунда (только чтение). */ raw: unknown }[]
+}
+
+export type AdminHostFeature =
+  | 'xray_template'
+  | 'mux'
+  | 'sockopt'
+  | 'final_mask'
+  | 'xhttp_extra'
+  | 'shuffle_host'
+  | 'mihomo_x25519'
+  | 'override_sni'
+  | 'keep_sni_blank'
+  | 'vless_route'
+  | 'pinned_cert'
+  | 'verify_cert_name'
+
+export interface AdminHostDTO {
+  uuid: string
+  remark: string
+  address: string
+  port: number
+  is_hidden: boolean
+  is_disabled: boolean
+  tags: string[]
+  inbound: { config_profile_uuid: string; inbound_uuid: string; profile_name?: string; inbound_tag?: string }
+  node_uuids: string[]
+  security_layer: 'DEFAULT' | 'TLS' | 'NONE'
+  sni: string | null
+  host: string | null
+  path: string | null
+  fingerprint: string | null
+  alpn: string | null
+  xray_json_template_uuid: string | null
+  /** Произвольный JSON панели или null. */
+  mux_params: unknown
+  sockopt_params: unknown
+  final_mask: unknown
+  xhttp_extra_params: unknown
+  override_sni_from_address: boolean
+  keep_sni_blank: boolean
+  shuffle_host: boolean
+  mihomo_x25519: boolean
+  mihomo_ip_version: string | null
+  vless_route_id: number | null
+  server_description: string | null
+  pinned_peer_cert_sha256: string[]
+  verify_peer_cert_by_name: string[]
+  /** Типы подписок, из которых хост исключён: XRAY_JSON, XRAY_BASE64, MIHOMO, STASH, CLASH, SINGBOX. */
+  exclude_from_subscription_types: string[]
+  /** Произвольный JSON правил переписывания outbound по клиентам или null. */
+  mapper: unknown
+  /** Ограничение хоста внутренними сквадами: EXCLUDE — все кроме этих, ALLOW_ONLY — только эти. */
+  internal_squads: { mode: 'EXCLUDE' | 'ALLOW_ONLY'; squads: string[] }
+  features: AdminHostFeature[]
+}
+
+/** Частичная правка хоста: те же поля, без uuid и features. */
+export type AdminHostPatchBody = Partial<
+  Omit<AdminHostDTO, 'uuid' | 'features' | 'inbound'> & { inbound: { config_profile_uuid: string; inbound_uuid: string } }
+>
+
+export interface AdminNodeInboundTreeDTO {
+  node: { uuid: string; name: string; country_code: string; address: string }
+  profile: { uuid: string; name: string } | null
+  inbounds: {
+    uuid: string
+    tag: string
+    type: string
+    port: number
+    hosts: { uuid: string; remark: string; address: string; port: number; linked: boolean; is_disabled: boolean }[]
+  }[]
+}
+
+export interface AdminNodeUsageDTO {
+  total_bytes: number
+  avg_per_day_bytes: number
+  peak_bytes: number
+  /** Байты по дням. */
+  sparkline: number[]
+  top_users: { username: string; color: string; total_bytes: number }[]
+}
+
+export interface AdminNodeSessionsDTO {
+  users: { user_id: number; username?: string; ips: { ip: string; last_seen: string }[] }[]
+}
+
 export interface AdminNodesDTO {
   nodes: AdminNodeDTO[]
 }

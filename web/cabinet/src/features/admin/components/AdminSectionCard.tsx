@@ -35,6 +35,8 @@ interface AdminSectionCardProps {
   flushHeader?: boolean
   /** Правый слот шапки прячется ниже sm: на телефоне он уходил на свою строку. */
   headerRightDesktopOnly?: boolean
+  /** Правый слот остаётся в одной строке с заголовком и на телефоне (чипы и кнопка питания в окне ноды). */
+  headerRightInline?: boolean
   /**
    * Уровень поверхности. По умолчанию `card` — карточка на странице, с
    * привычной пластикой `cabinet-elevated-card`. Внутри модалки нужен
@@ -57,6 +59,7 @@ export function AdminSectionCard({
   fillHeight = false,
   flushHeader = false,
   headerRightDesktopOnly = false,
+  headerRightInline = false,
   level = 'card',
 }: AdminSectionCardProps) {
   /*
@@ -92,7 +95,8 @@ export function AdminSectionCard({
     >
       <div
         className={cn(
-          'flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5',
+          'flex gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-5',
+          headerRightInline ? 'items-center justify-between' : 'flex-col',
           flushHeader ? 'pb-2' : 'border-b border-border/70 pb-4',
         )}
       >
@@ -132,7 +136,8 @@ export function AdminSectionCard({
         {headerRight && (
           <div
             className={cn(
-              'shrink-0 self-start sm:self-center',
+              'shrink-0 sm:self-center',
+              headerRightInline ? 'self-center' : 'self-start',
               headerRightDesktopOnly && 'hidden sm:block',
             )}
           >

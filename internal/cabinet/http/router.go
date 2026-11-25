@@ -1840,6 +1840,54 @@ func registerAPIRoutes(
 		),
 	)
 
+	// Окно ноды: детали, действия, удаление. Точный путь .../nodes/reorder выше длиннее префикса и выигрывает.
+	api.Handle("/cabinet/api/admin/nodes/",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.Item),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_node_item")),
+		),
+	)
+
+	api.Handle("/cabinet/api/admin/node-options",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.NodeOptions),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_node_options")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/config-profiles",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.ConfigProfiles),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_config_profiles")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/xray-templates",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.XrayTemplates),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_xray_templates")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/hosts/",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.HostItem),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_host_item")),
+		),
+	)
+
 	// Admin Infra
 	api.Handle("/cabinet/api/admin/infra/nodes",
 		middleware.Chain(

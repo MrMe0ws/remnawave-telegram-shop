@@ -18,13 +18,16 @@ const nodesCacheTTL = 5 * time.Second
 type AdminNodesHandler struct {
 	rw *remnawave.Client
 
+	// demo — ADMIN_NODES_DEMO=1: на тестовом стенде поверх ответа панели накладываются выдуманные показатели (admin_node_demo.go).
+	demo bool
+
 	mu      sync.Mutex
 	cached  []remnawave.NodeOverview
 	cacheAt time.Time
 }
 
 func NewAdminNodes(rw *remnawave.Client) *AdminNodesHandler {
-	return &AdminNodesHandler{rw: rw}
+	return &AdminNodesHandler{rw: rw, demo: demoEnabled()}
 }
 
 type adminNodeProviderDTO struct {
@@ -101,6 +104,11 @@ func (h *AdminNodesHandler) load(r *http.Request) ([]remnawave.NodeOverview, err
 	nodes, err := h.rw.ListNodesOverview(r.Context())
 	if err != nil {
 		return nil, err
+	}
+	if h.demo {
+		for i := range nodes {
+			nodes[i] = demoOverview(nodes[i])
+		}
 	}
 	h.cached, h.cacheAt = nodes, time.Now()
 	return nodes, nil

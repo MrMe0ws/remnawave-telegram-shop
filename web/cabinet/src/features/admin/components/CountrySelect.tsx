@@ -39,6 +39,8 @@ export function CountrySelect({
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const listRef = useRef<HTMLUListElement>(null)
+  // Нажатие по открытому полю закрывает список: фокус у поля уже есть, своего события «focus» не будет.
+  const closedByPress = useRef(false)
 
   const options = useMemo<CountryOption[]>(() => {
     const locale = i18n.language || 'ru'
@@ -87,6 +89,26 @@ export function CountrySelect({
           spellCheck={false}
           placeholder={placeholder}
           value={open ? query : (selected?.name ?? value)}
+          onMouseDown={(e) => {
+            if (open) {
+              e.preventDefault()
+              closedByPress.current = true
+              setOpen(false)
+              ;(e.currentTarget as HTMLInputElement).blur()
+            }
+          }}
+          onClick={() => {
+            if (closedByPress.current) {
+              closedByPress.current = false
+              return
+            }
+            // Поле уже в фокусе (после выбора), но список закрыт — открываем снова.
+            if (!open) {
+              setOpen(true)
+              setQuery('')
+              setCursor(0)
+            }
+          }}
           onFocus={() => {
             setOpen(true)
             setQuery('')

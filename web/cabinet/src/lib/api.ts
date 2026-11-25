@@ -73,6 +73,16 @@ import type {
   AdminUsersListDTO,
   AdminDeviceDTO,
   AdminNodesDTO,
+  AdminNodeDetailDTO,
+  AdminNodePatchBody,
+  AdminNodeOptionsDTO,
+  AdminConfigProfileDTO,
+  AdminHostDTO,
+  AdminHostPatchBody,
+  AdminNodeInboundTreeDTO,
+  AdminNodeUsageDTO,
+  AdminNodeSessionsDTO,
+  AdminNodeAction,
   AdminInfraNodesDTO,
   AdminInfraProvidersDTO,
   AdminInfraHistoryDTO,
@@ -2200,6 +2210,25 @@ export const api = {
     request<AdminBroadcastHistoryItemDTO>('GET', `/admin/broadcast/history/${id}`),
 
   adminNodes: () => request<AdminNodesDTO>('GET', '/admin/nodes'),
+  adminNode: (uuid: string) => request<AdminNodeDetailDTO>('GET', `/admin/nodes/${uuid}`),
+  adminNodeAction: (uuid: string, action: AdminNodeAction) =>
+    request<{ ok: boolean }>('POST', `/admin/nodes/${uuid}/actions/${action}`),
+  adminNodeDelete: (uuid: string) => request<{ ok: boolean }>('DELETE', `/admin/nodes/${uuid}`),
+  adminNodePatch: (uuid: string, body: AdminNodePatchBody) =>
+    request<AdminNodeDetailDTO>('PATCH', `/admin/nodes/${uuid}`, body),
+  adminNodeSecretKey: (uuid: string) => request<{ secret_key: string }>('GET', `/admin/nodes/${uuid}/secret-key`),
+  adminNodeMetadata: (uuid: string) => request<{ metadata: unknown }>('GET', `/admin/nodes/${uuid}/metadata`),
+  adminNodeOptions: () => request<AdminNodeOptionsDTO>('GET', '/admin/node-options'),
+  adminConfigProfiles: () => request<{ profiles: AdminConfigProfileDTO[] }>('GET', '/admin/config-profiles'),
+  adminNodeHosts: (uuid: string) => request<{ hosts: AdminHostDTO[] }>('GET', `/admin/nodes/${uuid}/hosts`),
+  adminNodeInboundTree: (uuid: string) => request<AdminNodeInboundTreeDTO>('GET', `/admin/nodes/${uuid}/inbound-tree`),
+  adminNodeUsage: (uuid: string, p: { start: string; end: string; top: number }) =>
+    request<AdminNodeUsageDTO>('GET', `/admin/nodes/${uuid}/usage?start=${p.start}&end=${p.end}&top=${p.top}`),
+  adminNodeSessions: (uuid: string) => request<AdminNodeSessionsDTO>('GET', `/admin/nodes/${uuid}/sessions`),
+  adminHost: (uuid: string) => request<AdminHostDTO>('GET', `/admin/hosts/${uuid}`),
+  adminHostPatch: (uuid: string, body: AdminHostPatchBody) => request<AdminHostDTO>('PATCH', `/admin/hosts/${uuid}`, body),
+  adminHostDelete: (uuid: string) => request<{ ok: boolean }>('DELETE', `/admin/hosts/${uuid}`),
+  adminXrayTemplates: () => request<{ templates: { uuid: string; name: string }[] }>('GET', '/admin/xray-templates'),
   /** Порядок нод пишется в панель Remnawave (viewPosition): список должен быть полным. */
   adminNodesReorder: (uuids: string[]) => request<{ ok: boolean }>('POST', '/admin/nodes/reorder', { uuids }),
   adminMonitoringEvents: (params: {

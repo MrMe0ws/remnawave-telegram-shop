@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 
@@ -14,6 +14,8 @@ export interface AdminSelectOption<T extends string | number = string> {
   value: T
   label: string
   labelStyle?: CSSProperties
+  /** Значок слева от подписи (в списке и в закрытом селекте): например favicon провайдера. */
+  icon?: ReactNode
 }
 
 interface DropdownPosition {
@@ -175,8 +177,11 @@ export function AdminSelect<T extends string | number = string>({
                 selected && 'bg-primary/10 text-primary',
               )}
             >
-              <span className="truncate" style={opt.labelStyle}>
-                {opt.label}
+              <span className="flex min-w-0 items-center gap-2.5">
+                {opt.icon}
+                <span className="truncate" style={opt.labelStyle}>
+                  {opt.label}
+                </span>
               </span>
               {selected && <Check className="size-4 shrink-0" />}
             </button>
@@ -213,8 +218,11 @@ export function AdminSelect<T extends string | number = string>({
           busy && 'cursor-wait !opacity-100',
         )}
       >
-        <span className="truncate text-left" style={selectedOption?.labelStyle}>
-          {selectedLabel}
+        <span className="flex min-w-0 items-center gap-2.5 text-left">
+          {value != null && value !== '' && selectedOption?.icon}
+          <span className="truncate" style={selectedOption?.labelStyle}>
+            {selectedLabel}
+          </span>
         </span>
         {busy ? (
           <Spinner className="text-muted-foreground" />

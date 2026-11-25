@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import {
   Activity,
   ArrowDown,
@@ -28,6 +29,7 @@ import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { useSortableList } from '../hooks/useSortableList'
 import { NodeCard, type NodeChecks, type NodeLayout } from '../nodes/NodeCard'
+import { NodeDetailModal } from '../nodes/NodeDetailModal'
 import { splitBitrate } from '../nodes/format'
 import {
   NODE_FILTER_KEYS,
@@ -144,6 +146,19 @@ export default function AdminNodesPage() {
   const qc = useQueryClient()
   const q = useAdminNodes()
   const checksByNode = useNodeChecks()
+  // Открытая нода живёт в адресе (?node=uuid): ссылку из окна можно отправить другому админу.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const openUuid = searchParams.get('node')
+  const openNode = (id: string | null) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (id) next.set('node', id)
+        else next.delete('node')
+        return next
+      },
+      { replace: !!openUuid },
+    )
   const [prefs, setPrefs] = useState<NodePrefs>(loadNodePrefs)
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -427,7 +442,13 @@ export default function AdminNodesPage() {
                   sortable.dragId === n.uuid && 'z-20 shadow-2xl shadow-black/40',
                 )}
               >
-                <NodeCard node={n} layout={layout} checks={checksByNode.get(n.uuid)} reserveHandle={canReorder} />
+                <NodeCard
+                  node={n}
+                  layout={layout}
+                  checks={checksByNode.get(n.uuid)}
+                  reserveHandle={canReorder}
+                  onOpen={() => openNode(n.uuid)}
+                />
                 {canReorder && (
                   <button
                     type="button"
@@ -448,6 +469,7 @@ export default function AdminNodesPage() {
           </ul>
         </div>
       </div>
+      <NodeDetailModal uuid={openUuid} onClose={() => openNode(null)} />
     </AdminLayout>
   )
 }

@@ -35,3 +35,9 @@ export function formatUptime(sec: number): string {
   if (sec >= 60) return `${Math.floor(sec / 60)}m`
   return '<1m'
 }
+
+/** 652.59 GiB — всегда гибибайты, как в панели («0.00 GiB» вместо «0 B»). */
+export function formatGiB(bytes: number): string {
+  const v = Number.isFinite(bytes) && bytes > 0 ? bytes / 1024 ** 3 : 0
+  return `${v.toFixed(2)} GiB`
+}
