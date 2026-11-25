@@ -3135,7 +3135,7 @@
         "resetTitle": "Node traffic resets on day {{day}} of the month",
         "uptimeTitle": "Xray uptime",
         "pluginTitle": "Node plugin",
-        "xrayTitle": "Xray version",
+        "xrayTitle": "Xray Core version",
         "nodeTitle": "Remnawave node version",
         "empty": "The panel has no nodes yet",
         "noMatch": "Nothing found",
@@ -3376,7 +3376,7 @@
           "copy": "Copy",
           "copied": "Copied",
           "details": "Details",
-          "metadata": "Metadata",
+          "metadata": "Metadata (JSON)",
           "hosts": "Assigned hosts",
           "inbounds": "Inbounds and hosts",
           "usage": "Usage statistics",
@@ -3518,6 +3518,11 @@
           "notifications": "Notifications"
         },
         "subsections": {
+          "landing": {
+            "hero": "First screen",
+            "headings": "Section headings",
+            "blocks": "Sections and layout"
+          },
           "trial": {
             "period": "Issuing & duration",
             "traffic": "Traffic & device limits",
@@ -3582,6 +3587,7 @@
           }
         },
         "groups": {
+          "landing": "Landing page",
           "reviews": "Reviews",
           "loyalty": "Loyalty",
           "stars": "Telegram Stars",
@@ -3608,6 +3614,7 @@
           "monitoring": "Monitoring"
         },
         "groupIntros": {
+          "landing": "The public /landing page. Leave a field empty to keep the default text, shown greyed out in the field. Your own text replaces the phrase entirely and is shown in every language. Questions, steps and feature cards aren't edited here.",
           "admin_alerts": "Where the bot tells you about problems and events: cabinet mail is not sending, a server is down, a server bill is due, a payment came in, a partner asks for a payout. Easiest: one group with topics set above, and a topic per kind.",
           "notifications": "This doesn't turn cabinet notifications on or off: they always appear under the bell for everyone. These toggles decide what is also sent as a system notification to the browser or phone of those who tapped \"Turn on\" in the notification feed. People who didn't subscribe get nothing."
         },
@@ -3839,6 +3846,9 @@
           }
         },
         "enum": {
+          "hero-side": "Plans next to the first screen",
+          "after-hero": "Plans right below the first screen",
+          "after-steps": "Plans after the setup steps",
           "crypt5": "crypt5 — current (Happ 5.x)",
           "crypt4": "crypt4 — compatible with Happ 4.x",
           "day": "Day",
@@ -3881,6 +3891,25 @@
           "old_price": "Struck-through full price"
         },
         "fields": {
+          "LANDING_HERO_TITLE_BEFORE": { "label": "Headline: before the name", "hint": "Text before the brand name. Empty by default" },
+          "LANDING_HERO_TITLE_AFTER": { "label": "Headline: after the name", "hint": "The brand name comes from the cabinet settings" },
+          "LANDING_HERO_SUBTITLE": { "label": "Subheadline", "hint": "The line under the headline" },
+          "LANDING_PANEL_TRAFFIC_VALUE": { "label": "Traffic in the subscription card", "hint": "Value of the Traffic row in the decorative card under the headline. The card shows only when plans aren't placed on the side" },
+          "LANDING_STEPS_TITLE": { "label": "How to connect: heading", "hint": "" },
+          "LANDING_STEPS_SUBTITLE": { "label": "How to connect: subheading", "hint": "" },
+          "LANDING_TARIFFS_TITLE": { "label": "Plans: heading", "hint": "" },
+          "LANDING_TARIFFS_SUBTITLE": { "label": "Plans: subheading", "hint": "" },
+          "LANDING_FEATURES_TITLE": { "label": "Features: heading", "hint": "" },
+          "LANDING_FAQ_TITLE": { "label": "Questions: heading", "hint": "" },
+          "LANDING_FAQ_SUBTITLE": { "label": "Questions: subheading", "hint": "" },
+          "LANDING_CTA_TITLE": { "label": "Final call to action: heading", "hint": "The block at the bottom of the page" },
+          "LANDING_CTA_SUBTITLE": { "label": "Final call to action: subheading", "hint": "Use {{brand}} to insert the brand name" },
+          "LANDING_LAYOUT": { "label": "Where plans go", "hint": "With the plans section off, the first screen is always centered" },
+          "LANDING_SHOW_TARIFFS": { "label": "Plans section", "hint": "Prices come from your plans, this only shows or hides them" },
+          "LANDING_SHOW_STEPS": { "label": "How to connect section", "hint": "" },
+          "LANDING_SHOW_FEATURES": { "label": "Features section", "hint": "" },
+          "LANDING_SHOW_FAQ": { "label": "Questions section", "hint": "" },
+          "LANDING_SHOW_CTA": { "label": "Final call to action", "hint": "The block above the footer. Reviews are turned off in the Reviews group" },
           "CHANNEL_GATE_ENABLED": {
             "label": "Require channel subscription",
             "hint": "Until a person subscribes, they see the subscription screen. What exactly is closed is chosen below. Admins are not affected"

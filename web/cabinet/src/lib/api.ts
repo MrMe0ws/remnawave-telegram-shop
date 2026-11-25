@@ -206,6 +206,34 @@ export interface AuthTokenResponse {
   csrf_token: string
 }
 
+/** Настройки лендинга из bootstrap (internal/config/landing.go). */
+export interface LandingPublicSettings {
+  layout?: 'hero-side' | 'after-hero' | 'after-steps'
+  texts?: Partial<
+    Record<
+      | 'hero_title_before'
+      | 'hero_title_after'
+      | 'hero_subtitle'
+      | 'panel_traffic_value'
+      | 'steps_title'
+      | 'steps_subtitle'
+      | 'tariffs_title'
+      | 'tariffs_subtitle'
+      | 'features_title'
+      | 'faq_title'
+      | 'faq_subtitle'
+      | 'cta_title'
+      | 'cta_subtitle',
+      string
+    >
+  >
+  show_tariffs?: boolean
+  show_steps?: boolean
+  show_features?: boolean
+  show_faq?: boolean
+  show_cta?: boolean
+}
+
 /** Ответ GET /auth/bootstrap — до JWT, для экрана логина. */
 export interface AuthBootstrapResponse {
   google_oauth_enabled: boolean
@@ -254,6 +282,8 @@ export interface AuthBootstrapResponse {
   subscription_loyalty_visible?: boolean
   /** Кнопки на местах 3 и 4 быстрых действий главной (CABINET_HOME_QUICK_ACTIONS), id из features/home/homeQuickActions.ts. */
   home_quick_actions?: string[]
+  /** Группа «Лендинг» в настройках бота. Пустые тексты не приходят — тогда берётся перевод. */
+  landing?: LandingPublicSettings
   /** false — строка «Оформление» в профиле скрыта, личный выбор игнорируется (CABINET_USER_THEME_PICKER_ENABLED). */
   user_theme_picker_enabled?: boolean
   /** Декоративная тема кабинета (CABINET_DECOR_THEME) */

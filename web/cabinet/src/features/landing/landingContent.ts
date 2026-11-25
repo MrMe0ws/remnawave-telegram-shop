@@ -65,3 +65,11 @@ export const LANDING_FAQ_IDS = [
 
 /** Пункты меню в шапке: id секции = якорь на странице. */
 export const LANDING_NAV_SECTIONS = ['tariffs', 'how', 'features', 'faq'] as const
+
+/** Какой блок стоит за пунктом меню: выключенный в админке блок прячет и пункт. */
+export const LANDING_NAV_SECTION_BLOCK = {
+  tariffs: 'tariffs',
+  how: 'steps',
+  features: 'features',
+  faq: 'faq',
+} as const satisfies Record<(typeof LANDING_NAV_SECTIONS)[number], string>

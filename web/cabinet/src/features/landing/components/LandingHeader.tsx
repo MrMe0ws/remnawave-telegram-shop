@@ -6,7 +6,8 @@ import { Menu, Shield, X } from 'lucide-react'
 
 import { LangToggle } from '@/components/LangToggle'
 import { HolidayTrim, useHolidayTheme } from '@/features/decor/HolidayAtmosphere'
-import { LANDING_NAV_SECTIONS } from '../landingContent'
+import { LANDING_NAV_SECTION_BLOCK, LANDING_NAV_SECTIONS } from '../landingContent'
+import { useLandingSettings } from '../useLandingSettings'
 import type { LandingBrand } from '../useLandingBrand'
 import { Rise } from './LandingMotion'
 
@@ -36,6 +37,8 @@ export function LandingHeader({ brand }: { brand: LandingBrand }) {
   }, [menuOpen])
 
   const holiday = useHolidayTheme()
+  const { show } = useLandingSettings()
+  const navSections = LANDING_NAV_SECTIONS.filter((section) => show[LANDING_NAV_SECTION_BLOCK[section]])
   const cabinetLabel = brand.authenticated
     ? t('landing.nav.cabinet')
     : t('landing.nav.login')
@@ -65,7 +68,7 @@ export function LandingHeader({ brand }: { brand: LandingBrand }) {
           </Link>
 
           <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
-            {LANDING_NAV_SECTIONS.map((section) => (
+            {navSections.map((section) => (
               <a key={section} href={`#${section}`} className="landing-nav-link">
                 {t(`landing.nav.${section}`)}
               </a>
@@ -104,7 +107,7 @@ export function LandingHeader({ brand }: { brand: LandingBrand }) {
             className="overflow-hidden border-t border-border/60 bg-background/95 backdrop-blur-xl md:hidden"
           >
             <nav className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-4 sm:px-6">
-              {LANDING_NAV_SECTIONS.map((section, i) => (
+              {navSections.map((section, i) => (
                 <motion.a
                   key={section}
                   href={`#${section}`}

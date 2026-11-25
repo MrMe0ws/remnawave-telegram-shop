@@ -8,7 +8,8 @@
  *   after-hero  — hero целиком, тарифы отдельной секцией сразу под ним;
  *   after-steps — hero, затем три шага, и уже потом тарифы.
  *
- * Выбранный вариант задаётся константой LANDING_LAYOUT. В dev-сборке его можно
+ * Боевой вариант выбирается в админке: «Настройки бота» → «Лендинг»
+ * (LANDING_LAYOUT, приходит в bootstrap). Константа ниже — умолчание. В dev-сборке его можно
  * переключать на лету — ?layout=… или виджет в углу страницы (см.
  * LandingLayoutSwitcher); в проде читается только константа.
  */
@@ -17,7 +18,7 @@ export const LANDING_LAYOUTS = ['hero-side', 'after-hero', 'after-steps'] as con
 
 export type LandingLayout = (typeof LANDING_LAYOUTS)[number]
 
-/** Боевая раскладка. Меняется здесь — одной строкой. */
+/** Раскладка по умолчанию, пока в админке не выбрана другая. */
 export const LANDING_LAYOUT: LandingLayout = 'hero-side'
 
 export const LANDING_LAYOUT_STORAGE_KEY = 'landing_layout'
@@ -28,16 +29,17 @@ export const LANDING_LAYOUT_LABELS: Record<LandingLayout, string> = {
   'after-steps': 'C · Тарифы после шагов',
 }
 
-function isLandingLayout(value: unknown): value is LandingLayout {
+export function isLandingLayout(value: unknown): value is LandingLayout {
   return LANDING_LAYOUTS.includes(value as LandingLayout)
 }
 
 /**
- * Приоритет: ?layout= в адресе → сохранённый выбор → константа.
+ * Раскладка, выбранная вручную в dev: ?layout= в адресе → сохранённый выбор.
+ * null — переключатель не трогали, действует настройка из админки.
  * Значение из адреса запоминается, чтобы переживать переходы внутри лендинга.
  */
-export function resolveLandingLayout(): LandingLayout {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return LANDING_LAYOUT
+export function resolveDevLandingLayout(): LandingLayout | null {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return null
 
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('layout')
@@ -48,9 +50,9 @@ export function resolveLandingLayout(): LandingLayout {
     const saved = window.localStorage.getItem(LANDING_LAYOUT_STORAGE_KEY)
     if (isLandingLayout(saved)) return saved
   } catch {
-    // приватный режим / отключённое хранилище — просто берём константу
+    // приватный режим / отключённое хранилище — берём настройку из админки
   }
-  return LANDING_LAYOUT
+  return null
 }
 
 export function saveLandingLayout(layout: LandingLayout): void {

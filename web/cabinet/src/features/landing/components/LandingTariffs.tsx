@@ -10,6 +10,7 @@ import { logLandingMockHint, readLandingTariffsMock } from '../landingTariffsMoc
 import type { LandingBrand } from '../useLandingBrand'
 import { Reveal, useCardSpotlight } from './LandingMotion'
 import { SectionHeading } from './LandingPrimitives'
+import { useLandingSettings } from '../useLandingSettings'
 
 /**
  * Витрина тарифов.
@@ -204,6 +205,7 @@ export function LandingTariffs({
   variant?: LandingTariffsVariant
 }) {
   const { t } = useTranslation()
+  const { text } = useLandingSettings()
   const onMouseMove = useCardSpotlight()
   const { cards, isPeriods, loading } = useLandingTariffs()
 
@@ -264,8 +266,8 @@ export function LandingTariffs({
       <div className="mx-auto max-w-6xl">
         <SectionHeading
           eyebrow={t('landing.tariffs.eyebrow')}
-          title={t('landing.tariffs.title')}
-          description={t('landing.tariffs.subtitle')}
+          title={text('tariffs_title', t('landing.tariffs.title'))}
+          description={text('tariffs_subtitle', t('landing.tariffs.subtitle'))}
         />
 
         <div className={cn('mt-10 grid gap-3 sm:mt-14 sm:gap-4', columns)}>

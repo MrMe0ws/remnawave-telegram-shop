@@ -4,6 +4,7 @@ import { accentVar, LANDING_STEPS } from '../landingContent'
 import type { LandingBrand } from '../useLandingBrand'
 import { Reveal, useCardSpotlight } from './LandingMotion'
 import { LandingCabinetCta, SectionHeading } from './LandingPrimitives'
+import { useLandingSettings } from '../useLandingSettings'
 
 /**
  * «Как подключиться»: три шага в ряд, соединённые пунктирной линией на десктопе.
@@ -12,6 +13,7 @@ import { LandingCabinetCta, SectionHeading } from './LandingPrimitives'
  */
 export function LandingSteps({ brand }: { brand: LandingBrand }) {
   const { t } = useTranslation()
+  const { text } = useLandingSettings()
   const onMouseMove = useCardSpotlight()
 
   return (
@@ -19,8 +21,8 @@ export function LandingSteps({ brand }: { brand: LandingBrand }) {
       <div className="mx-auto max-w-6xl">
         <SectionHeading
           eyebrow={t('landing.steps.eyebrow')}
-          title={t('landing.steps.title')}
-          description={t('landing.steps.subtitle')}
+          title={text('steps_title', t('landing.steps.title'))}
+          description={text('steps_subtitle', t('landing.steps.subtitle'))}
         />
 
         <div className="relative mt-10 sm:mt-14">

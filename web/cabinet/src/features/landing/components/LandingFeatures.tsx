@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { accentVar, LANDING_FEATURES } from '../landingContent'
 import { Reveal, useCardSpotlight } from './LandingMotion'
 import { SectionHeading } from './LandingPrimitives'
+import { useLandingSettings } from '../useLandingSettings'
 
 /** Сетка преимуществ: 6 карточек с акцентными иконками и подсветкой под курсором. */
 export function LandingFeatures() {
   const { t } = useTranslation()
+  const { text } = useLandingSettings()
   const onMouseMove = useCardSpotlight()
 
   return (
@@ -14,7 +16,7 @@ export function LandingFeatures() {
       <div className="mx-auto max-w-6xl">
         <SectionHeading
           eyebrow={t('landing.features.eyebrow')}
-          title={t('landing.features.title')}
+          title={text('features_title', t('landing.features.title'))}
         />
 
         <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-14 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">

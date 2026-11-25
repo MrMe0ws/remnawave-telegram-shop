@@ -8,6 +8,7 @@ import type { LandingBrand } from '../useLandingBrand'
 import { Rise, WordsReveal } from './LandingMotion'
 import { LandingPlatformRow } from './LandingPlatforms'
 import { LandingCabinetCta } from './LandingPrimitives'
+import { useLandingSettings } from '../useLandingSettings'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -33,14 +34,16 @@ export function LandingHero({
   showPanel?: boolean
 }) {
   const { t } = useTranslation()
+  const { text } = useLandingSettings()
   const split = Boolean(aside)
+  const subtitle = text('hero_subtitle', t('landing.hero.subtitle'))
 
   const titleSegments = [
-    ...t('landing.hero.titleBefore').split(' ').filter(Boolean),
+    ...text('hero_title_before', t('landing.hero.titleBefore')).split(' ').filter(Boolean),
     <span key="brand" className="landing-title-gradient">
       {brand.name}
     </span>,
-    ...t('landing.hero.titleAfter').split(' ').filter(Boolean),
+    ...text('hero_title_after', t('landing.hero.titleAfter')).split(' ').filter(Boolean),
   ]
 
   const copy = (
@@ -61,12 +64,12 @@ export function LandingHero({
       <Rise delay={0.5} y={28}>
         <div className={cn('mt-5 max-w-xl sm:mt-6', split ? 'mx-auto lg:mx-0' : 'mx-auto')}>
           <p className="text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-            {t('landing.hero.subtitle')}
+            {subtitle}
           </p>
           {/* Логотипы платформ вместо перечисления словами — читается с одного взгляда. */}
           <LandingPlatformRow
             className={cn('mt-4', split ? 'justify-center lg:justify-start' : 'justify-center')}
-            label={t('landing.hero.subtitle')}
+            label={subtitle}
           />
         </div>
       </Rise>
@@ -162,6 +165,7 @@ function HeroBrandMark({ brand }: { brand: LandingBrand }) {
  */
 function HeroPanel() {
   const { t } = useTranslation()
+  const { text } = useLandingSettings()
   const reduce = useReducedMotion()
 
   const stats = [
@@ -197,7 +201,7 @@ function HeroPanel() {
           <div className="flex items-baseline justify-between text-sm">
             <span className="text-muted-foreground">{t('landing.panel.trafficLabel')}</span>
             <span className="landing-price font-semibold">
-              {t('landing.panel.trafficValue')}
+              {text('panel_traffic_value', t('landing.panel.trafficValue'))}
             </span>
           </div>
           <div className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-secondary/80">

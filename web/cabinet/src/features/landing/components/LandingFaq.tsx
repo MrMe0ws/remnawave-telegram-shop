@@ -6,6 +6,7 @@ import { ChevronDown } from 'lucide-react'
 import { LANDING_FAQ_IDS } from '../landingContent'
 import { Reveal } from './LandingMotion'
 import { SectionHeading } from './LandingPrimitives'
+import { useLandingSettings } from '../useLandingSettings'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -15,6 +16,7 @@ const EASE = [0.22, 1, 0.36, 1] as const
  */
 export function LandingFaq() {
   const { t } = useTranslation()
+  const { text } = useLandingSettings()
   const [openId, setOpenId] = useState<string | null>(null)
   const baseId = useId()
 
@@ -23,8 +25,8 @@ export function LandingFaq() {
       <div className="mx-auto max-w-3xl">
         <SectionHeading
           eyebrow={t('landing.faq.eyebrow')}
-          title={t('landing.faq.title')}
-          description={t('landing.faq.subtitle')}
+          title={text('faq_title', t('landing.faq.title'))}
+          description={text('faq_subtitle', t('landing.faq.subtitle'))}
         />
 
         <div className="mt-9 flex flex-col gap-3 sm:mt-12">

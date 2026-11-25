@@ -16,6 +16,7 @@ import {
   ListFilter,
   Megaphone,
   MessageSquare,
+  PanelTop,
   Percent,
   Radar,
   Receipt,
@@ -40,6 +41,7 @@ import {
 /** Порядок и иконки секций (синхрон с backend buildAdminSettingsResponse). */
 export const ADMIN_SETTINGS_GROUP_ORDER = [
   'cabinet',
+  'landing',
   'status',
   'cabinet_connect',
   'tariffs',
@@ -88,6 +90,7 @@ export const ADMIN_SETTINGS_GROUP_ICONS: Record<AdminSettingsGroupId, LucideIcon
   fortune: CircleDot,
   reviews: Star,
   cabinet: Sparkles,
+  landing: PanelTop,
   status: Activity,
   cabinet_connect: Settings2,
 }
@@ -119,6 +122,7 @@ export const ADMIN_SETTINGS_GROUP_ICON_STYLES: Record<AdminSettingsGroupId, Admi
   fortune: { box: 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20', icon: 'text-fuchsia-500' },
   reviews: { box: 'bg-amber-500/10 dark:bg-amber-500/20', icon: 'text-amber-500' },
   cabinet: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
+  landing: { box: 'bg-indigo-500/10 dark:bg-indigo-500/20', icon: 'text-indigo-500' },
   status: { box: 'bg-cyan-500/10 dark:bg-cyan-500/20', icon: 'text-cyan-500' },
   cabinet_connect: { box: 'bg-sky-500/10 dark:bg-sky-500/20', icon: 'text-sky-500' },
 }
@@ -169,7 +173,7 @@ export const ADMIN_SETTINGS_CATEGORIES: AdminSettingsCategoryDef[] = [
     id: 'design',
     titleKey: 'admin.settings.categories.design',
     icon: Sparkles,
-    groups: ['cabinet', 'cabinet_connect', 'reviews'],
+    groups: ['cabinet', 'landing', 'cabinet_connect', 'reviews'],
     iconStyle: { box: 'bg-pink-500/10 dark:bg-pink-500/20', icon: 'text-pink-500' },
   },
   {
@@ -536,6 +540,48 @@ export const ADMIN_SETTINGS_SUBSECTIONS: Partial<Record<AdminSettingsGroupId, Ad
       titleKey: 'admin.settings.subsections.cabinet.schedule',
       icon: CalendarDays,
       keys: ['CABINET_DECOR_AUTO_ENABLED', 'CABINET_DECOR_SCHEDULE'],
+    },
+  ],
+  landing: [
+    {
+      id: 'hero',
+      titleKey: 'admin.settings.subsections.landing.hero',
+      icon: PanelTop,
+      keys: [
+        'LANDING_HERO_TITLE_BEFORE',
+        'LANDING_HERO_TITLE_AFTER',
+        'LANDING_HERO_SUBTITLE',
+        'LANDING_PANEL_TRAFFIC_VALUE',
+      ],
+    },
+    {
+      id: 'headings',
+      titleKey: 'admin.settings.subsections.landing.headings',
+      icon: ScrollText,
+      keys: [
+        'LANDING_STEPS_TITLE',
+        'LANDING_STEPS_SUBTITLE',
+        'LANDING_TARIFFS_TITLE',
+        'LANDING_TARIFFS_SUBTITLE',
+        'LANDING_FEATURES_TITLE',
+        'LANDING_FAQ_TITLE',
+        'LANDING_FAQ_SUBTITLE',
+        'LANDING_CTA_TITLE',
+        'LANDING_CTA_SUBTITLE',
+      ],
+    },
+    {
+      id: 'blocks',
+      titleKey: 'admin.settings.subsections.landing.blocks',
+      icon: LayoutList,
+      keys: [
+        'LANDING_LAYOUT',
+        'LANDING_SHOW_TARIFFS',
+        'LANDING_SHOW_STEPS',
+        'LANDING_SHOW_FEATURES',
+        'LANDING_SHOW_FAQ',
+        'LANDING_SHOW_CTA',
+      ],
     },
   ],
   cabinet_connect: [

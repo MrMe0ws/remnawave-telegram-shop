@@ -200,6 +200,8 @@ func (h *AuthHandler) AuthBootstrap(w http.ResponseWriter, r *http.Request) {
 		// CABINET_CHECKOUT_DEFAULT_METHOD: способ, выбранный заранее для тех,
 		// кто ещё не платил. Пусто — ничего не выбрано.
 		"checkout_default_method": botcfg.CheckoutDefaultMethod(),
+		// Группа «Лендинг» в настройках бота: свои тексты, видимые блоки, раскладка.
+		"landing": botcfg.LandingPublic(),
 	}
 	if cabcfg.TurnstileEnabled() && strings.TrimSpace(cabcfg.TurnstileSiteKey()) != "" {
 		body["turnstile_site_key"] = cabcfg.TurnstileSiteKey()

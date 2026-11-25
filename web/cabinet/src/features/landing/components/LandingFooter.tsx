@@ -4,6 +4,7 @@ import { Shield } from 'lucide-react'
 import type { LandingBrand } from '../useLandingBrand'
 import { Reveal } from './LandingMotion'
 import { TelegramGlyph } from './LandingPrimitives'
+import { useLandingSettings } from '../useLandingSettings'
 
 /**
  * Футер. Внешние ссылки берутся из site_links (env бота) — пункт появляется
@@ -12,6 +13,7 @@ import { TelegramGlyph } from './LandingPrimitives'
  */
 export function LandingFooter({ brand }: { brand: LandingBrand }) {
   const { t } = useTranslation()
+  const { show } = useLandingSettings()
 
   const productLinks: Array<{ key: string; href: string }> = [
     brand.channelUrl ? { key: 'channel', href: brand.channelUrl } : null,
@@ -62,15 +64,21 @@ export function LandingFooter({ brand }: { brand: LandingBrand }) {
                 <a href={brand.cabinetHref} className="landing-footer-link text-sm">
                   {brand.authenticated ? t('landing.nav.cabinet') : t('landing.nav.login')}
                 </a>
-                <a href="#features" className="landing-footer-link text-sm">
-                  {t('landing.nav.features')}
-                </a>
-                <a href="#tariffs" className="landing-footer-link text-sm">
-                  {t('landing.nav.tariffs')}
-                </a>
-                <a href="#faq" className="landing-footer-link text-sm">
-                  {t('landing.nav.faq')}
-                </a>
+                {show.features && (
+                  <a href="#features" className="landing-footer-link text-sm">
+                    {t('landing.nav.features')}
+                  </a>
+                )}
+                {show.tariffs && (
+                  <a href="#tariffs" className="landing-footer-link text-sm">
+                    {t('landing.nav.tariffs')}
+                  </a>
+                )}
+                {show.faq && (
+                  <a href="#faq" className="landing-footer-link text-sm">
+                    {t('landing.nav.faq')}
+                  </a>
+                )}
                 {!brand.statusUrl && brand.statusVisible && (
                   <a href="/status" className="landing-footer-link text-sm">
                     {t('landing.nav.status')}

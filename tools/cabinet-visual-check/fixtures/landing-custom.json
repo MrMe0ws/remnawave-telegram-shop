@@ -1,0 +1,105 @@
+{
+  "/auth/bootstrap": {
+    "google_oauth_enabled": false,
+    "brand_name": "Meows VPN",
+    "light_theme_enabled": true,
+    "landing": {
+      "layout": "after-steps",
+      "texts": {
+        "hero_title_before": "Интернет без границ с",
+        "hero_title_after": "",
+        "hero_subtitle": "Работает в Telegram, на телефоне и ТВ",
+        "panel_traffic_value": "100 ГБ в месяц",
+        "steps_title": "Подключение за минуту",
+        "tariffs_title": "Тарифы на любой срок",
+        "cta_title": "Попробуйте бесплатно",
+        "cta_subtitle": "{{brand}} — 3 дня без оплаты и без карты"
+      },
+      "show_tariffs": true,
+      "show_steps": true,
+      "show_features": false,
+      "show_faq": false,
+      "show_cta": true
+    }
+  },
+  "/tariffs": {
+    "sales_mode": "tariffs",
+    "currency": "RUB",
+    "price_display": "monthly",
+    "tariffs": [
+      {
+        "id": 1,
+        "slug": "base",
+        "name": "Стандарт",
+        "description": "2 устройства\nЛимит до 200 ГБ/мес",
+        "device_limit": 1,
+        "traffic_limit_bytes": 214748364800,
+        "prices": [
+          {
+            "months": 1,
+            "amount_rub": 150
+          },
+          {
+            "months": 3,
+            "amount_rub": 400
+          },
+          {
+            "months": 6,
+            "amount_rub": 750
+          },
+          {
+            "months": 12,
+            "amount_rub": 1320
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "slug": "default-plus",
+        "name": "дефолт+++",
+        "description": "64654",
+        "device_limit": 4,
+        "traffic_limit_bytes": 0,
+        "prices": [
+          {
+            "months": 1,
+            "amount_rub": 200
+          },
+          {
+            "months": 6,
+            "amount_rub": 1000
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "slug": "premium",
+        "name": "🔥Премиум",
+        "description": "Обход Белых списков🔥\nБезлимитный трафик для 3 устройств",
+        "device_limit": 3,
+        "traffic_limit_bytes": 0,
+        "prices": [
+          {
+            "months": 1,
+            "amount_rub": 400
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "slug": "extended",
+        "name": "❤️Расширенный",
+        "description": "низкие цены\n- все четко\n- порвет по скорости\n- офигенный тариф",
+        "device_limit": 5,
+        "traffic_limit_bytes": 107374182400,
+        "prices": [
+          {
+            "months": 1,
+            "amount_rub": 1000
+          }
+        ]
+      }
+    ],
+    "savings_badge": "corner"
+  }
+}

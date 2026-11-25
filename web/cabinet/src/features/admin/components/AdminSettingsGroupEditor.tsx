@@ -32,6 +32,7 @@ import { AdminChannelGateEditor } from './AdminChannelGateEditor'
 import { AdminReviewsSettings } from './AdminReviewsSettings'
 import { AdminTrialExternalSquadEditor, AdminTrialInternalSquadsEditor } from './AdminTrialSquadsEditors'
 import type { AdminSettingFieldDTO, AdminSettingGroupDTO } from '@/lib/types/admin'
+import { landingSettingPlaceholder } from '../utils/landingSettingPlaceholders'
 
 export function parseBool(v: string): boolean {
   return v.trim().toLowerCase() === 'true'
@@ -330,6 +331,7 @@ export function AdminSettingsGroupEditor({
             max={field.max_int}
             className="admin-input w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
             value={value}
+            placeholder={landingSettingPlaceholder(field.key, t)}
             onChange={(e) => onDraftChange(field.key, e.target.value)}
           />
         )}

@@ -81,6 +81,7 @@ func RuntimeSettingsRegistry() []SettingField {
 	out := append(append(baseRuntimeSettings(), cabinetPushRegistry()...), adminAlertsRegistry()...)
 	out = append(out, monitoringRegistry()...)
 	out = append(out, channelGateRegistry()...)
+	out = append(out, landingRegistry()...)
 	return append(out, reviewsRegistry()...)
 }
 

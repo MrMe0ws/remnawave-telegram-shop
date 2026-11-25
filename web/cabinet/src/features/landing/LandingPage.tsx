@@ -2,8 +2,9 @@ import { useLayoutEffect, useState } from 'react'
 
 import './landing.css'
 import { HolidayAtmosphere, HolidayWeather, useHolidayTheme } from '@/features/decor/HolidayAtmosphere'
-import { resolveLandingLayout } from './landingLayout'
+import { resolveDevLandingLayout } from './landingLayout'
 import { useLandingBrand } from './useLandingBrand'
+import { useLandingSettings } from './useLandingSettings'
 import { LandingHeader } from './components/LandingHeader'
 import { LandingHero } from './components/LandingHero'
 import { LandingFeatures } from './components/LandingFeatures'
@@ -51,8 +52,13 @@ export default function LandingPage() {
   const brand = useLandingBrand()
   // halloween_2 / new_year_2: вместо сетки и пятен — сцена праздника.
   const holiday = useHolidayTheme()
-  // Раскладка фиксируется на монтировании: смена варианта идёт через перезагрузку.
-  const [layout] = useState(resolveLandingLayout)
+  const settings = useLandingSettings()
+  // Ручной выбор в dev фиксируется на монтировании: смена идёт через перезагрузку.
+  const [devLayout] = useState(resolveDevLandingLayout)
+  const layout = devLayout ?? settings.layout
+  const { show } = settings
+  // Без тарифов колонки справа нет — первый экран по центру.
+  const tariffsSide = show.tariffs && layout === 'hero-side'
 
   return (
     <div className="dark landing-root" data-holiday={holiday ?? undefined}>
@@ -72,29 +78,31 @@ export default function LandingPage() {
 
       <div className="relative z-10">
         <LandingHeader brand={brand} />
-        <main>
-          <LandingHero
-            brand={brand}
-            aside={
-              layout === 'hero-side' ? (
-                <LandingTariffs brand={brand} variant="panel" />
-              ) : undefined
-            }
-            /* Тарифы идут сразу следом — декоративная карточка подписки только мешала бы. */
-            showPanel={layout !== 'after-hero'}
-          />
+        {/*
+          Пока bootstrap не пришёл, основную часть не рисуем: иначе на глазах
+          подменялись бы тексты из админки и могла прыгнуть раскладка.
+        */}
+        {settings.ready && (
+          <main>
+            <LandingHero
+              brand={brand}
+              aside={tariffsSide ? <LandingTariffs brand={brand} variant="panel" /> : undefined}
+              /* Тарифы идут сразу следом — декоративная карточка подписки только мешала бы. */
+              showPanel={!(show.tariffs && layout === 'after-hero')}
+            />
 
-          {layout === 'after-hero' && <LandingTariffs brand={brand} />}
+            {show.tariffs && layout === 'after-hero' && <LandingTariffs brand={brand} />}
 
-          <LandingSteps brand={brand} />
+            {show.steps && <LandingSteps brand={brand} />}
 
-          {layout === 'after-steps' && <LandingTariffs brand={brand} />}
+            {show.tariffs && layout === 'after-steps' && <LandingTariffs brand={brand} />}
 
-          <LandingFeatures />
-          <LandingReviews />
-          <LandingFaq />
-          <LandingCtaBand brand={brand} />
-        </main>
+            {show.features && <LandingFeatures />}
+            <LandingReviews />
+            {show.faq && <LandingFaq />}
+            {show.cta && <LandingCtaBand brand={brand} />}
+          </main>
+        )}
         <LandingFooter brand={brand} />
       </div>
 
