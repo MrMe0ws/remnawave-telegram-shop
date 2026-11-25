@@ -53,12 +53,13 @@ import { AdminSelect } from '../components/AdminSelect'
 import { AdminToggleSwitch } from '../components/AdminToggleSwitch'
 import { CountryFlag } from '../components/CountryFlag'
 import { CountrySelect } from '../components/CountrySelect'
-import { formatBytes, formatBitrate, formatUptime } from './format'
+import { formatBytes, formatBitrate, formatUptime, daysUntilReset } from './format'
 import { FaviconImg, FormField, IconInput, MultiplierStepper, TagsInput, TEXTAREA_CLASS } from './NodeFormControls'
 import { faviconSrcFromUrl } from '../utils/normalizeUrl'
 import { NodeProfilesPanel } from './NodeProfilesPanel'
 import { NodeSidePanels, type NodeSidePanelKind } from './NodeSidePanels'
 import { buildPatch, sameDraft, toDraft, validateDraft, type NodeDraft } from './nodeForm'
+import { useHoverTip } from './HoverTip'
 
 /** Тон состояния: цвет значка «Подробностей» и кнопки питания. */
 const STATE_TONE: Record<AdminNodeState, { icon: LucideIcon; box: string }> = {
@@ -79,14 +80,18 @@ function Bar({ pct, tone = 'ok' }: { pct: number; tone?: 'ok' | 'warn' | 'bad' }
   )
 }
 
-function StatTile({ icon: Icon, value, className, title }: { icon: LucideIcon; value: ReactNode; className: string; title: string }) {
+/** Плашка с числом под трафиком. hint — подсказка при наведении (у числа юзеров её нет: там и так понятно). */
+function StatTile({ icon: Icon, value, className, hint }: { icon: LucideIcon; value: ReactNode; className: string; hint?: string }) {
+  const { handlers, tip } = useHoverTip(hint ?? '')
   return (
     <div
-      title={title}
+      aria-label={hint}
+      {...(hint ? handlers : {})}
       className={cn('flex h-11 items-center justify-center gap-2 rounded-[10px] border font-mono text-[13px] font-extrabold', className)}
     >
       <Icon className="size-4" aria-hidden />
       {value}
+      {hint && tip}
     </div>
   )
 }
@@ -124,16 +129,35 @@ function PanelButton({
   title: string
   onOpen: (k: NodeSidePanelKind) => void
 }) {
+  const { handlers, tip } = useHoverTip(title)
   return (
     <button
       type="button"
-      title={title}
       aria-label={title}
+      {...handlers}
       onClick={() => onOpen(kind)}
       className={cn('flex size-9 items-center justify-center rounded-[9px] border transition-colors', PANEL_TONE[tone])}
     >
       <Icon className="size-4" aria-hidden />
+      {tip}
     </button>
+  )
+}
+
+/** Плашка «JSON» в «Подробностях»: пока только подпись, без действия. */
+function MetadataBadge({ label }: { label: string }) {
+  const { handlers, tip } = useHoverTip(label)
+  return (
+    <span
+      role="img"
+      tabIndex={0}
+      aria-label={label}
+      {...handlers}
+      className="flex size-9 cursor-default select-none items-center justify-center rounded-[9px] bg-muted/50 font-mono text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"
+    >
+      JSON
+      {tip}
+    </span>
   )
 }
 
@@ -510,15 +534,7 @@ export function NodeDetailModal({ uuid, onClose }: { uuid: string | null; onClos
                 }
               >
                 <div className="mb-4 flex items-center justify-end gap-2">
-                  <span
-                    role="img"
-                    tabIndex={0}
-                    title={t('admin.nodes.detail.metadata')}
-                    aria-label={t('admin.nodes.detail.metadata')}
-                    className="flex size-9 cursor-default select-none items-center justify-center rounded-[9px] bg-muted/50 font-mono text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"
-                  >
-                    JSON
-                  </span>
+                  <MetadataBadge label={t('admin.nodes.detail.metadata')} />
                   <span className="mx-0.5 h-5 w-px bg-border" />
                   <PanelButton kind="hosts" icon={ServerCog} tone="cyan" title={t('admin.nodes.detail.hosts')} onOpen={setPanel} />
                   <PanelButton kind="tree" icon={Network} tone="emerald" title={t('admin.nodes.detail.inbounds')} onOpen={setPanel} />
@@ -537,7 +553,7 @@ export function NodeDetailModal({ uuid, onClose }: { uuid: string | null; onClos
                 {node.traffic_reset_day > 0 && (
                   <div className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                     <RotateCw className="size-3" aria-hidden />
-                    {t('admin.nodes.detail.resetIn', { days: node.traffic_reset_day })}
+                    {t('admin.nodes.detail.resetIn', { days: daysUntilReset(node.traffic_reset_day) })}
                   </div>
                 )}
 
@@ -546,19 +562,18 @@ export function NodeDetailModal({ uuid, onClose }: { uuid: string | null; onClos
                     <StatTile
                       icon={Users}
                       value={node.users_online}
-                      title={t('admin.nodes.usersTitle')}
                       className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                     />
                     <StatTile
                       icon={Sparkle}
                       value={node.xray_version ?? '—'}
-                      title={t('admin.nodes.xrayTitle')}
+                      hint={t('admin.nodes.xrayTitle')}
                       className="border-violet-500/35 bg-violet-500/10 text-violet-700 dark:text-violet-300"
                     />
                     <StatTile
                       icon={Server}
                       value={node.node_version ?? '—'}
-                      title={t('admin.nodes.nodeTitle')}
+                      hint={t('admin.nodes.nodeTitle')}
                       className="border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300"
                     />
                   </div>

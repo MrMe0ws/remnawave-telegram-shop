@@ -168,7 +168,10 @@ export const MIHOMO_IPS = ['dual', 'ipv4', 'ipv6', 'ipv4-prefer', 'ipv6-prefer']
 export const TAG_RE = /^[A-Z0-9_:]{1,36}$/
 export const TAGS_MAX = 10
 
-const jsonText = (v: unknown): string => (v === null || v === undefined ? '' : JSON.stringify(v, null, 2))
+// Панель отдаёт «пустое» значение как null или как {} / [] (маппер у нового хоста — {}): это «не задано».
+const isEmptyJson = (v: unknown): boolean =>
+  v === null || v === undefined || (Array.isArray(v) && v.length === 0) || (typeof v === 'object' && Object.keys(v as object).length === 0)
+const jsonText = (v: unknown): string => (isEmptyJson(v) ? '' : JSON.stringify(v, null, 2))
 
 // В панели 3.4.0 sni/host/path/fingerprint — одна строка (или null), а не список.
 export const listToText = (a: string | null | undefined): string => a ?? ''

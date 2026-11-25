@@ -445,7 +445,7 @@ func rawOrNull(r json.RawMessage) json.RawMessage {
 
 func hasRaw(r json.RawMessage) bool {
 	t := strings.TrimSpace(string(r))
-	return t != "" && t != "null" && t != "{}"
+	return t != "" && t != "null" && t != "{}" && t != "[]"
 }
 
 // hostFeatures — ключи значков хоста в порядке показа (см. API-CONTRACT.md).

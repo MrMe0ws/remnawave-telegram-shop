@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -43,17 +44,36 @@ const FEATURE_ICON: Record<AdminHostFeature, LucideIcon> = {
   verify_cert_name: ShieldCheck,
 }
 
+/** Подсказка над значком: рисуется в body, чтобы её не обрезала прокрутка панели; только для мыши. */
 function FeatureBadge({ feature }: { feature: AdminHostFeature }) {
   const { t } = useTranslation()
   const Icon = FEATURE_ICON[feature] ?? Braces
   const label = t(`admin.nodes.panels.hosts.features.${feature}`, { defaultValue: feature })
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const show = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (e.pointerType !== 'mouse') return
+    const r = e.currentTarget.getBoundingClientRect()
+    setPos({ x: r.left + r.width / 2, y: r.top })
+  }
   return (
     <span
-      title={label}
       aria-label={label}
+      onPointerEnter={show}
+      onPointerLeave={() => setPos(null)}
       className="flex size-6 items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
     >
       <Icon className="size-3" aria-hidden />
+      {pos &&
+        createPortal(
+          <span
+            role="tooltip"
+            style={{ left: pos.x, top: pos.y - 8 }}
+            className="pointer-events-none fixed z-[260] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-lg"
+          >
+            {label}
+          </span>,
+          document.body,
+        )}
     </span>
   )
 }

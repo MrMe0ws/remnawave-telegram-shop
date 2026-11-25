@@ -41,3 +41,19 @@ export function formatGiB(bytes: number): string {
   const v = Number.isFinite(bytes) && bytes > 0 ? bytes / 1024 ** 3 : 0
   return `${v.toFixed(2)} GiB`
 }
+
+/**
+ * Через сколько дней очередной сброс трафика, если он идёт в `day`-е число месяца.
+ * Число больше длины месяца (31 в апреле) — сброс в последний день месяца; сегодняшнее число уже прошло, считаем следующее.
+ */
+export function daysUntilReset(day: number, now: Date = new Date()): number {
+  const clamp = (y: number, m: number) => Math.min(day, new Date(y, m + 1, 0).getDate())
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  let next = new Date(now.getFullYear(), now.getMonth(), clamp(now.getFullYear(), now.getMonth()))
+  if (next <= today) {
+    const y = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear()
+    const m = (now.getMonth() + 1) % 12
+    next = new Date(y, m, clamp(y, m))
+  }
+  return Math.round((next.getTime() - today.getTime()) / 86_400_000)
+}
