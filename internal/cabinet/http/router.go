@@ -1330,6 +1330,17 @@ func registerAPIRoutes(
 				),
 			}),
 		)
+		api.Handle("/cabinet/api/promocodes/history",
+			methodRouter(map[string]http.Handler{
+				http.MethodGet: middleware.Chain(
+					http.HandlerFunc(promocodes.GetHistory),
+					middleware.RequireAuth(jwtIssuer),
+					channelGate.Require(),
+					middleware.RequireVerifiedEmail(),
+					middleware.RateLimit(subscriptionAcctLim, accountKey("promocodes_history")),
+				),
+			}),
+		)
 		api.Handle("/cabinet/api/promocodes/apply",
 			onlyPOST(middleware.Chain(
 				http.HandlerFunc(promocodes.Apply),

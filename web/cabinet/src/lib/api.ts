@@ -1249,6 +1249,20 @@ export interface PromoStateResponse {
   } | null
 }
 
+export interface PromoHistoryItem {
+  used_at: string
+  code: string
+  type: 'subscription_days' | 'trial' | 'extra_hwid' | 'discount'
+  subscription_days?: number
+  trial_days?: number
+  extra_hwid_delta?: number
+  discount_percent?: number
+}
+
+export interface PromoHistoryResponse {
+  items: PromoHistoryItem[]
+}
+
 export interface PromoApplyResponse {
   applied: boolean
   type: 'subscription_days' | 'trial' | 'extra_hwid' | 'discount'
@@ -1680,6 +1694,13 @@ export const api = {
   fortuneSpin: () => request<FortuneSpinResponse>('POST', '/fortune/spin', {}),
 
   promoState: () => request<PromoStateResponse>('GET', '/promocodes/state'),
+  promoHistory: (params?: { limit?: number; offset?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.offset != null) q.set('offset', String(params.offset))
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    return request<PromoHistoryResponse>('GET', `/promocodes/history${suffix}`)
+  },
   applyPromoCode: (code: string) =>
     request<PromoApplyResponse>('POST', '/promocodes/apply', { code }),
 
