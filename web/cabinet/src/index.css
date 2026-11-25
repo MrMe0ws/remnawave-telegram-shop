@@ -49,9 +49,9 @@
     --input: 214 32% 89%;
     --primary: 198 85% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 18% 93%;
+    --secondary: 214 18% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 214 18% 93%;
+    --muted: 214 18% 88%;
     --muted-foreground: 215 16% 47%;
     --accent: 198 85% 40%;
     --accent-foreground: 0 0% 100%;
@@ -1033,7 +1033,7 @@
 
   /* Admin form fields — в тёмной теме не bg-background (темнее модалки), а --input. */
   .admin-input {
-    @apply rounded-btn border border-input bg-background text-sm text-foreground transition-colors;
+    @apply rounded-btn border border-input bg-card text-sm text-foreground transition-colors;
     @apply placeholder:text-muted-foreground;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }

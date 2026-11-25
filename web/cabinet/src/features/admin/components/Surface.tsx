@@ -55,7 +55,7 @@ export type SurfaceLevel = 'well' | 'card' | 'raised'
  * В тёмной теме всё прямо: `--muted` вниз, `--secondary` вверх.
  */
 const BG: Record<SurfaceLevel, string> = {
-  well: 'bg-background dark:bg-muted',
+  well: 'bg-muted',
   card: 'bg-card',
   raised: 'bg-secondary shadow-sm dark:shadow-none',
 }

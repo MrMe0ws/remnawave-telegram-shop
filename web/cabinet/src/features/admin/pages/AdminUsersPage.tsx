@@ -417,7 +417,7 @@ export default function AdminUsersPage() {
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={t('admin.users.searchPlaceholder')}
-              className="h-10 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-9 md:rounded-md"
+              className="h-10 w-full rounded-xl border border-input bg-card dark:bg-background pl-9 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-9 md:rounded-md"
             />
           </div>
           <button

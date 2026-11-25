@@ -182,7 +182,7 @@ export default function AdminPaymentsPage() {
               type="button"
               onClick={() => void handleExport()}
               disabled={exporting}
-              className={cn('inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-60', exporting && '!opacity-100')}
+              className={cn('inline-flex items-center gap-1.5 rounded-md border border-input bg-card dark:bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-60', exporting && '!opacity-100')}
             >
               {exporting ? <Spinner /> : <Download className="size-4" />}
               CSV
@@ -203,7 +203,7 @@ export default function AdminPaymentsPage() {
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t('admin.payments.searchPlaceholder')}
-            className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 w-full rounded-md border border-input bg-card dark:bg-background pl-9 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
