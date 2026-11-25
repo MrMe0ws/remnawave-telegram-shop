@@ -419,7 +419,8 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   return (
     <AdminPageMetaContext.Provider value={metaContextValue}>
       <AdminChrome hideMobileHeader={effectiveMeta.mobileBareHeader}>
-        <div className="admin-shell relative z-[1] mx-auto w-full max-w-7xl px-3 pb-8 pt-2 sm:px-4 sm:pt-4">
+        {/* Без потолка ширины: в админке таблицам и карточкам нод нужен весь экран, поля по бокам минимальные. */}
+        <div className="admin-shell relative z-[1] w-full px-3 pb-8 pt-2 lg:px-4 lg:pt-4">
           <div
             className={cn(
               'fixed inset-0 z-[210] lg:hidden',

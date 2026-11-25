@@ -33,7 +33,7 @@ export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
       <div className="cabinet-edge-top" aria-hidden />
       <header
         className={cn(
-          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-sm cabinet-app-header cabinet-edge-header',
+          'relative sticky top-0 z-50 shrink-0 border-b border-border/80 bg-card/92 backdrop-blur-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] cabinet-app-header cabinet-edge-header',
           'dark:border-primary/12 dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]',
           // Safe-area top остаётся; прячется только ряд chrome.
           !mobileHeaderVisible && 'max-md:border-b-0 max-md:shadow-none',
@@ -42,7 +42,7 @@ export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
       >
         <div className={cn(!mobileHeaderVisible && 'max-md:hidden', hideMobileHeader && 'max-lg:hidden')}>
           <CabinetDecorHeader />
-          <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
+          <div className="flex items-center gap-2 px-3 py-2 sm:gap-3 lg:px-4">
           <button
             type="button"
             data-admin-nav-toggle
