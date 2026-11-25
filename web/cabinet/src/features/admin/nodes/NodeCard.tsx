@@ -359,14 +359,26 @@ function Title({ node }: { node: AdminNodeDTO }) {
   )
 }
 
-function NodeCardImpl({ node, layout, checks }: { node: AdminNodeDTO; layout: NodeLayout; checks?: NodeChecks }) {
+/** reserveHandle — справа оставлено место под ручку перетаскивания, она лежит поверх карточки. */
+function NodeCardImpl({
+  node,
+  layout,
+  checks,
+  reserveHandle = false,
+}: {
+  node: AdminNodeDTO
+  layout: NodeLayout
+  checks?: NodeChecks
+  reserveHandle?: boolean
+}) {
   const style = STATE_STYLE[node.state]
 
   if (layout === 'row') {
     return (
       <div
         className={cn(
-          'grid grid-cols-[minmax(0,1fr)_158px_164px_160px] items-center gap-4 rounded-[14px] border py-2.5 pl-3 pr-4',
+          'grid grid-cols-[minmax(0,1fr)_158px_164px_160px] items-center gap-4 rounded-[14px] border py-2.5 pl-3',
+          reserveHandle ? 'pr-10' : 'pr-4',
           style.wrap,
         )}
         style={SOLID_BG}
@@ -394,7 +406,10 @@ function NodeCardImpl({ node, layout, checks }: { node: AdminNodeDTO; layout: No
   }
 
   return (
-    <div className={cn('flex flex-col gap-2.5 rounded-[14px] border px-3 py-3', style.wrap)} style={SOLID_BG}>
+    <div
+      className={cn('flex flex-col gap-2.5 rounded-[14px] border py-3 pl-3', reserveHandle ? 'pr-10' : 'pr-3', style.wrap)}
+      style={SOLID_BG}
+    >
       <Title node={node} />
       <div className="flex items-center justify-between gap-2.5">
         <ProviderBadge node={node} />

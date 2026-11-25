@@ -3097,6 +3097,7 @@
         "sortTitle": "Sort by",
         "showTitle": "Show",
         "sort": {
+          "panel": "Panel order",
           "users_desc": "Most users",
           "users_asc": "Fewest users",
           "name": "By name",
@@ -3138,6 +3139,8 @@
         "nodeTitle": "Remnawave node version",
         "empty": "The panel has no nodes yet",
         "noMatch": "Nothing found",
+        "drag": "Drag to reorder (↑ ↓ arrows from the keyboard)",
+        "reorderError": "Couldn't save the node order in the panel",
         "error": "Could not load nodes from the Remnawave panel"
       },
       "infra": {

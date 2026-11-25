@@ -2200,6 +2200,8 @@ export const api = {
     request<AdminBroadcastHistoryItemDTO>('GET', `/admin/broadcast/history/${id}`),
 
   adminNodes: () => request<AdminNodesDTO>('GET', '/admin/nodes'),
+  /** Порядок нод пишется в панель Remnawave (viewPosition): список должен быть полным. */
+  adminNodesReorder: (uuids: string[]) => request<{ ok: boolean }>('POST', '/admin/nodes/reorder', { uuids }),
   adminMonitoringEvents: (params: {
     afterId?: number
     beforeId?: number

@@ -1830,6 +1830,15 @@ func registerAPIRoutes(
 			middleware.RateLimit(adminAcctLim, accountKey("admin_nodes")),
 		),
 	)
+	api.Handle("/cabinet/api/admin/nodes/reorder",
+		middleware.Chain(
+			http.HandlerFunc(adminNodes.Reorder),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_nodes_reorder")),
+		),
+	)
 
 	// Admin Infra
 	api.Handle("/cabinet/api/admin/infra/nodes",

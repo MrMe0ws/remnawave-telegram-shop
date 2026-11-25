@@ -1111,6 +1111,8 @@ export interface AdminNodeDTO {
   country_code: string
   address: string
   state: AdminNodeState
+  /** Место в списке панели Remnawave, с 1. */
+  view_position: number
   users_online: number
   provider?: { name: string; favicon_link?: string }
   /** Есть только у нод с назначенным плагином. */

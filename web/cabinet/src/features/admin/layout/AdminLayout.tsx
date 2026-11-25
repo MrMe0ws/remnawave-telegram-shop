@@ -494,7 +494,7 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
             </aside>
             {navTip.node}
 
-            <main className="relative z-[1] min-w-0 overflow-x-clip lg:col-start-2 lg:row-start-2">
+            <main className="relative z-[1] min-w-0 -mx-3 overflow-x-clip px-3 lg:-mx-4 lg:col-start-2 lg:row-start-2 lg:px-4">
               {children}
             </main>
           </div>
