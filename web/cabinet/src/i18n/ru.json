@@ -3246,6 +3246,9 @@
           "connecting": "подключается…",
           "disabled": "отключена"
         },
+        "addressCopied": "Адрес скопирован",
+        "addressCopyFailed": "Не удалось скопировать адрес",
+        "addressCopyAria": "Скопировать адрес {{value}}",
         "usersTitle": "Людей на ноде сейчас",
         "memoryTitle": "Занято памяти",
         "loadTitle": "Load average за 1 / 5 / 15 минут",

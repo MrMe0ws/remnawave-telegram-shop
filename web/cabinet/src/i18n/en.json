@@ -3122,6 +3122,9 @@
           "connecting": "connecting…",
           "disabled": "disabled"
         },
+        "addressCopied": "Address copied",
+        "addressCopyFailed": "Couldn't copy the address",
+        "addressCopyAria": "Copy address {{value}}",
         "usersTitle": "Users on this node right now",
         "memoryTitle": "Memory in use",
         "loadTitle": "Load average over 1 / 5 / 15 minutes",

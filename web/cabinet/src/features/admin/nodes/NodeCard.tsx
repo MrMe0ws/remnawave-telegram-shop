@@ -17,13 +17,24 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+import { useToast } from '@/components/ui/toast'
+import { copyToClipboard } from '@/lib/clipboard'
+import { hapticTap } from '@/lib/haptic'
 import { cn } from '@/lib/utils'
+import type { AdminRowChecksDTO } from '@/lib/api'
 import type { AdminNodeDTO, AdminNodeState } from '@/lib/types/admin'
+import { AdminStatusRowChecks } from '../components/AdminStatusRowChecks'
 import { CountryFlag } from '../components/CountryFlag'
 import { faviconSrcFromUrl } from '../utils/normalizeUrl'
 import { formatBitrate, formatBytes, formatUptime } from './format'
 
 export type NodeLayout = 'row' | 'card'
+
+/** Проверки «мир / РФ / РКН» цели из «Статусов серверов», привязанной к ноде. bypass — цель обхода, у неё нет «РКН». */
+export interface NodeChecks {
+  checks: AdminRowChecksDTO
+  bypass: boolean
+}
 
 /**
  * Сплошная подложка карточки. Класс bg-card тут не годится: cn (tailwind-merge) выкидывает его рядом
@@ -135,14 +146,47 @@ function ProviderBadge({ node }: { node: AdminNodeDTO }) {
   )
 }
 
+/** Клик по адресу копирует его: отдельной иконки нет, подсказка — только подсветка при наведении. */
 function Address({ value, className }: { value: string; className?: string }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const copy = async () => {
+    if (await copyToClipboard(value)) {
+      hapticTap()
+      toast.success(t('admin.nodes.addressCopied'))
+    } else {
+      toast.error(t('admin.nodes.addressCopyFailed'))
+    }
+  }
   return (
-    <span className={cn('flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground', className)}>
+    <button
+      type="button"
+      onClick={copy}
+      aria-label={t('admin.nodes.addressCopyAria', { value })}
+      className={cn(
+        'flex min-w-0 cursor-pointer items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        className,
+      )}
+    >
       <Globe className="size-3 shrink-0" aria-hidden />
       <span className="truncate" title={value}>
         {value}
       </span>
-    </span>
+    </button>
+  )
+}
+
+/** Три значка проверок. Подсказка: в строке на ПК значки у правого края — она открывается влево, в карточке — вправо. */
+function NodeCheckBadges({ info, layout, className }: { info: NodeChecks; layout: NodeLayout; className?: string }) {
+  return (
+    <AdminStatusRowChecks
+      checks={info.checks}
+      enabled
+      showRegistry={!info.bypass}
+      size="sm"
+      tooltipAlign={layout === 'card' ? 'left' : 'right'}
+      className={className}
+    />
   )
 }
 
@@ -315,7 +359,7 @@ function Title({ node }: { node: AdminNodeDTO }) {
   )
 }
 
-function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout }) {
+function NodeCardImpl({ node, layout, checks }: { node: AdminNodeDTO; layout: NodeLayout; checks?: NodeChecks }) {
   const style = STATE_STYLE[node.state]
 
   if (layout === 'row') {
@@ -339,7 +383,10 @@ function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout
         </div>
         <TrafficBlock node={node} />
         <div className="flex flex-col items-end gap-1.5">
-          <Uptime node={node} />
+          <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+            {checks && <NodeCheckBadges info={checks} layout="row" className="-my-0.5" />}
+            <Uptime node={node} />
+          </div>
           <Versions node={node} className="justify-end" />
         </div>
       </div>
@@ -355,7 +402,14 @@ function NodeCardImpl({ node, layout }: { node: AdminNodeDTO; layout: NodeLayout
       </div>
       <TrafficBlock node={node} />
       <div className="flex items-center justify-between">
-        <span className="min-h-4" />
+        {/* Значки лежат поверх пустого места слева от аптайма: высота строки от них не зависит, карточка не растёт */}
+        <span className="relative min-h-4">
+          {checks && (
+            <span className="absolute left-0 top-1/2 -translate-y-1/2">
+              <NodeCheckBadges info={checks} layout="card" />
+            </span>
+          )}
+        </span>
         <Uptime node={node} />
       </div>
       <LoadLine node={node} showLoad={false} />

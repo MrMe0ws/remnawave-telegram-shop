@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { AdminNodesDTO } from '@/lib/types/admin'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
-import { NodeCard, type NodeLayout } from '../nodes/NodeCard'
+import { NodeCard, type NodeChecks, type NodeLayout } from '../nodes/NodeCard'
 import { splitBitrate } from '../nodes/format'
 import {
   NODE_FILTER_KEYS,
@@ -34,6 +34,35 @@ import {
 const REFRESH_MS = 10_000
 /** Уже этой ширины список не помещается в строку: переходим на карточки, как на телефоне. */
 const ROW_MIN_WIDTH_PX = 900
+
+/**
+ * Проверки «мир / РФ / РКН» из «Статусов серверов». Нода связана с целью по node_uuid: берём включённую
+ * обычную цель, а если такой нет — включённую цель обхода. Нет цели или замера — у ноды нет значков.
+ */
+function useNodeChecks(): Map<string, NodeChecks> {
+  const q = useQuery({
+    queryKey: ['admin-status-targets'],
+    queryFn: () => api.adminStatusTargets(),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: 0,
+  })
+  const { targets, checks } = q.data ?? {}
+  return useMemo(() => {
+    const out = new Map<string, NodeChecks>()
+    for (const row of targets ?? []) {
+      const c = checks?.[row.id]
+      if (!row.enabled || !row.node_uuid || !c) continue
+      const bypass = row.kind === 'bypass'
+      const measured = c.world.state !== 'none' || c.russia.state !== 'none' || (!bypass && !!c.registry && c.registry.state !== 'none')
+      if (!measured) continue
+      const cur = out.get(row.node_uuid)
+      if (cur && (!cur.bypass || bypass)) continue
+      out.set(row.node_uuid, { checks: c, bypass })
+    }
+    return out
+  }, [targets, checks])
+}
 
 function useAdminNodes() {
   return useQuery<AdminNodesDTO>({
@@ -97,6 +126,7 @@ function Unit({ children }: { children: ReactNode }) {
 export default function AdminNodesPage() {
   const { t } = useTranslation()
   const q = useAdminNodes()
+  const checksByNode = useNodeChecks()
   const [prefs, setPrefs] = useState<NodePrefs>(loadNodePrefs)
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -322,7 +352,7 @@ export default function AdminNodesPage() {
           )}
 
           {visible.map((n) => (
-            <NodeCard key={n.uuid} node={n} layout={layout} />
+            <NodeCard key={n.uuid} node={n} layout={layout} checks={checksByNode.get(n.uuid)} />
           ))}
         </div>
       </div>
