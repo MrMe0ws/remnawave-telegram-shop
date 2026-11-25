@@ -465,7 +465,7 @@ function PartnersTab({
               {items.map((row) => (
                 <tr
                   key={row.id}
-                  className="cursor-pointer border-t border-border hover:bg-accent/40"
+                  className="cursor-pointer border-t border-border transition-colors hover:bg-primary/5"
                   onClick={() => onOpen(row.id)}
                 >
                   <td className="px-3 py-2.5">

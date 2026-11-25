@@ -82,7 +82,7 @@ export function AdminChrome({ children, hideMobileHeader }: AdminChromeProps) {
               <ChevronLeft className="size-4" />
               {t('admin.backToCabinet')}
             </Link>
-            <LangToggle className="h-9 px-3" />
+            <LangToggle flag className="h-9 px-3" />
             <ThemeToggle className="size-9 [&_svg]:size-[18px]" />
           </div>
           </div>

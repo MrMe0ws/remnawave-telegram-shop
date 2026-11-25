@@ -355,7 +355,7 @@ export function BroadcastHistoryList({
               <button
                 type="button"
                 onClick={() => onOpen(item)}
-                className="grid w-full gap-1.5 px-4 py-3 text-left transition-colors hover:bg-accent/40"
+                className="grid w-full gap-1.5 px-4 py-3 text-left transition-colors hover:bg-primary/5"
               >
                 <span className="flex items-center gap-2 text-xs text-muted-foreground">
                   {when.date}, {when.time}
@@ -405,7 +405,7 @@ export function BroadcastHistoryList({
                     onOpen(item)
                   }
                 }}
-                className="cursor-pointer transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none"
+                className="cursor-pointer transition-colors hover:bg-primary/5 focus-visible:bg-primary/5 focus-visible:outline-none"
               >
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className="block font-semibold">{when.date}</span>

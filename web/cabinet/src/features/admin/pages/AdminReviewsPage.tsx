@@ -264,7 +264,7 @@ export default function AdminReviewsPage() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && e.target === e.currentTarget) openEdit(r, false)
                     }}
-                    className={cn('cursor-pointer space-y-2 p-3 transition-colors hover:bg-accent/40 active:bg-accent/60', r.status === 'pending' && 'bg-amber-500/[0.05]')}
+                    className={cn('cursor-pointer space-y-2 p-3 transition-colors hover:bg-primary/5 active:bg-primary/10', r.status === 'pending' && 'bg-amber-500/[0.05]')}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-semibold">{authorLine(r, anonymous)}</p>
@@ -296,7 +296,7 @@ export default function AdminReviewsPage() {
                       <tr
                         key={r.id}
                         onClick={() => openEdit(r, false)}
-                        className={cn('cursor-pointer border-b border-border/40 align-top transition-colors last:border-0 hover:bg-accent/50', r.status === 'pending' && 'bg-amber-500/[0.05]')}
+                        className={cn('cursor-pointer border-b border-border/40 align-top transition-colors last:border-0 hover:bg-primary/5', r.status === 'pending' && 'bg-amber-500/[0.05]')}
                       >
                         <td className="min-w-[8rem] px-3 py-3">
                           <p className="truncate text-sm font-semibold">{authorLine(r, anonymous)}</p>

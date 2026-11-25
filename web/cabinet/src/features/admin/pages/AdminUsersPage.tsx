@@ -147,7 +147,7 @@ function UserRow({
   return (
     <tr
       onClick={onClick}
-      className="cursor-pointer border-b border-border/40 transition-colors hover:bg-accent/50 last:border-0"
+      className="cursor-pointer border-b border-border/40 transition-colors hover:bg-primary/5 last:border-0"
     >
       <td className="w-[1%] py-2 pl-4 pr-2">
         <AdminUserAvatar url={user.avatar_url} name={userLabel(user)} tone={avatarTone(view.status)} size="sm" />
@@ -204,7 +204,7 @@ function UserMobileCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-[14px] border border-border/60 bg-card px-3 py-2.5 text-left transition-colors hover:bg-accent/40 active:bg-accent/60"
+      className="flex w-full items-center gap-3 rounded-[14px] border border-border/60 bg-card px-3 py-2.5 text-left transition-colors hover:bg-primary/5 active:bg-primary/10"
     >
       <AdminUserAvatar
         url={user.avatar_url}

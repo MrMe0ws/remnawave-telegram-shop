@@ -405,7 +405,7 @@ export function AdminSettingsGroupEditor({
       <button
         type="button"
         onClick={onToggleExpand}
-        className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/40 sm:px-5"
+        className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-primary/5 sm:px-5"
         aria-expanded={expanded}
       >
         <div className="flex min-w-0 items-center gap-3">

@@ -8,8 +8,7 @@ import {
   RefreshCw,
   Save,
   Loader2,
-  ChevronDown,
-  ChevronUp,
+  ChevronRight,
   Layers,
   ListOrdered,
   Sparkles,
@@ -74,6 +73,10 @@ function LoyaltyTierForm({
   )
 }
 
+/**
+ * Уровень на телефоне: вся карточка открывает редактирование, удаление — отдельной кнопкой справа.
+ * Базовый уровень (sort_order 0) удалить нельзя, поэтому кнопки у него нет.
+ */
 function LoyaltyTierMobileCard({
   tier,
   onEdit,
@@ -84,84 +87,45 @@ function LoyaltyTierMobileCard({
   onDelete: () => void
 }) {
   const { t } = useTranslation()
-  const [expanded, setExpanded] = useState(false)
 
   return (
     <div
-      className={cn(
-        'overflow-hidden rounded-lg border border-border/60 bg-card transition-colors',
-        expanded && 'ring-1 ring-primary/20',
-      )}
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit()
+        }
+      }}
+      className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-card px-4 py-3 transition-colors hover:bg-primary/5 focus-visible:bg-primary/5 focus-visible:outline-none active:bg-primary/10"
     >
-      <button
-        type="button"
-        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/40 active:bg-accent/60"
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
-      >
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">
-              {t('loyaltyPage.levelNumber', { n: tier.sort_order })}
-            </span>
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-              {tier.discount_percent}%
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t('admin.loyalty.xpMin')}: {tier.xp_min.toLocaleString()}
-          </p>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">{t('loyaltyPage.levelNumber', { n: tier.sort_order })}</span>
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+            {tier.discount_percent}%
+          </span>
         </div>
-        <span className="mt-0.5 shrink-0 text-muted-foreground">
-          {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="space-y-3 border-t border-border/50 bg-accent/20 px-4 py-4">
-          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">{t('admin.loyalty.sortOrder')}</dt>
-              <dd className="font-medium">{tier.sort_order}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t('admin.loyalty.xpMin')}</dt>
-              <dd className="font-medium tabular-nums">{tier.xp_min.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t('admin.loyalty.discountPercent')}</dt>
-              <dd className="font-medium tabular-nums">{tier.discount_percent}%</dd>
-            </div>
-          </dl>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
-            >
-              <Edit className="size-3.5" />
-              {t('admin.edit')}
-            </button>
-            {tier.sort_order !== 0 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10"
-              >
-                <Trash2 className="size-3.5" />
-                {t('admin.delete')}
-              </button>
-            )}
-          </div>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          {t('admin.loyalty.xpMin')}: {tier.xp_min.toLocaleString()}
+        </p>
+      </div>
+      {tier.sort_order !== 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          aria-label={t('admin.delete')}
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
+          <Trash2 className="size-4" />
+        </button>
       )}
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
     </div>
   )
 }
@@ -352,7 +316,11 @@ export default function AdminLoyaltyPage() {
                   </thead>
                   <tbody>
                     {tiers.map((tier) => (
-                      <tr key={tier.id} className="border-b border-border/30 last:border-b-0">
+                      <tr
+                        key={tier.id}
+                        onClick={() => openEdit(tier)}
+                        className="cursor-pointer border-b border-border/30 transition-colors last:border-b-0 hover:bg-primary/5"
+                      >
                         <td className="px-4 py-2.5">{tier.sort_order}</td>
                         <td className="px-4 py-2.5">{tier.xp_min.toLocaleString()}</td>
                         <td className="px-4 py-2.5">{tier.discount_percent}%</td>
@@ -360,7 +328,11 @@ export default function AdminLoyaltyPage() {
                           <div className="inline-flex gap-1">
                             <button
                               type="button"
-                              onClick={() => openEdit(tier)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEdit(tier)
+                              }}
+                              aria-label={t('admin.edit')}
                               className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                             >
                               <Edit className="size-4" />
@@ -368,7 +340,11 @@ export default function AdminLoyaltyPage() {
                             {tier.sort_order !== 0 && (
                               <button
                                 type="button"
-                                onClick={() => setDeleteTier(tier)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteTier(tier)
+                                }}
+                                aria-label={t('admin.delete')}
                                 className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 className="size-4" />

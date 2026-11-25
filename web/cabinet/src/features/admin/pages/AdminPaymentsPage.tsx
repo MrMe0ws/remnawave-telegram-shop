@@ -47,7 +47,7 @@ function PaymentRow({
   return (
     <tr
       onClick={onClick}
-      className="cursor-pointer border-b border-border/40 transition-colors hover:bg-accent/50 last:border-0"
+      className="cursor-pointer border-b border-border/40 transition-colors hover:bg-primary/5 last:border-0"
     >
       <td className="w-[1%] whitespace-nowrap px-3 py-2.5 text-sm font-mono tabular-nums">#{item.id}</td>
       <td className="max-w-[9rem] truncate px-3 py-2.5 text-sm" title={username}>{username}</td>
@@ -85,7 +85,7 @@ function PaymentMobileCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-4 py-3 text-left transition-colors hover:bg-accent/40 active:bg-accent/60"
+      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-4 py-3 text-left transition-colors hover:bg-primary/5 active:bg-primary/10"
     >
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{username}</p>
