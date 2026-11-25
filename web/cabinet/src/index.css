@@ -3904,10 +3904,14 @@ html[data-cabinet-decor="cyber"] {
   --primary: 140 85% 36%;
   --accent: 140 85% 36%;
   --ring: 140 85% 36%;
+
+  /* Тёмный текст на зелёных кнопках (в т.ч. админка): белый на неоне не читается. */
+  --primary-foreground: 150 40% 4%;
 }
 
 html.dark[data-cabinet-decor="cyber"] {
   --primary: 142 100% 48%;
+  --primary-foreground: 150 40% 4%;
   --accent: 142 100% 48%;
   --ring: 142 100% 48%;
 
