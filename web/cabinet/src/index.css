@@ -3907,22 +3907,49 @@ html[data-cabinet-decor="cyber"] {
 }
 
 html.dark[data-cabinet-decor="cyber"] {
-  --primary: 140 90% 46%;
-  --accent: 140 90% 46%;
-  --ring: 140 90% 46%;
+  --primary: 142 100% 48%;
+  --accent: 142 100% 48%;
+  --ring: 142 100% 48%;
+
+  /* «Матрица»: поверхности чёрно-зелёные (hue 150), а не сине-графитовые. */
+  --background: 150 32% 4.5%;
+  --foreground: 140 28% 94%;
+  --card: 150 20% 9%;
+  --card-foreground: 140 28% 94%;
+  --muted: 150 24% 6.5%;
+  --muted-foreground: 145 13% 60%;
+  --secondary: 150 18% 13%;
+  --secondary-foreground: 140 28% 94%;
+  --border: 150 22% 17%;
+  --input: 150 22% 15%;
+  --connect-device-inner-bg: 150 18% 13%;
+  --connect-device-inner-bg-hover: 150 18% 16%;
+
+  --cabinet-dark-bg-image:
+    radial-gradient(ellipse 120% 70% at 50% -18%, hsl(142 100% 42% / 0.17), transparent 58%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, hsl(160 90% 30% / 0.1), transparent 55%),
+    linear-gradient(170deg, hsl(150 40% 6.5%) 0%, hsl(var(--background)) 50%, hsl(155 40% 3.5%) 100%);
 }
 
-html.dark[data-cabinet-decor="cyber"] body {
-  background-image:
-    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.14), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 80%, hsl(140 70% 30% / 0.08), transparent 50%),
-    linear-gradient(168deg, hsl(140 25% 6%) 0%, hsl(var(--background)) 45%, hsl(150 30% 5%) 100%);
+/* Карточки: тёмная чёрно-зелёная плашка с тихой неоновой рамкой. */
+html.dark[data-cabinet-decor="cyber"] .cabinet-card,
+html.dark[data-cabinet-decor="cyber"] .cabinet-elevated-card,
+html.dark[data-cabinet-decor="cyber"] .subscription-feature-card,
+html.dark[data-cabinet-decor="cyber"] .admin-modal-panel {
+  border-color: hsl(142 100% 48% / 0.2) !important;
+  background-color: hsl(var(--card));
+  background-image: linear-gradient(165deg, hsl(150 20% 10.5%) 0%, hsl(150 22% 8%) 100%) !important;
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 hsl(142 100% 70% / 0.06) !important;
 }
 
-html.dark[data-cabinet-decor="cyber"] .cabinet-shell-gradient {
-  background-image:
-    radial-gradient(ellipse 120% 85% at 50% -20%, hsl(140 90% 40% / 0.14), transparent 55%),
-    linear-gradient(168deg, hsl(140 25% 6%) 0%, hsl(var(--background)) 45%, hsl(150 30% 5%) 100%);
+html.dark[data-cabinet-decor="cyber"] .cabinet-stat-tile {
+  background-color: hsl(150 22% 8%);
+}
+
+html.dark[data-cabinet-decor="cyber"] .admin-dash-card-inner {
+  background-color: hsl(150 20% 10.5%);
 }
 
 html:not(.dark)[data-cabinet-decor="cyber"] body,
@@ -3938,11 +3965,6 @@ html[data-cabinet-decor="cyber"] .cabinet-elevated-card,
 html[data-cabinet-decor="cyber"] .subscription-feature-card,
 html[data-cabinet-decor="cyber"] .admin-modal-panel {
   border-color: hsl(var(--primary) / 0.2) !important;
-}
-
-html.dark[data-cabinet-decor="cyber"] .cabinet-elevated-card,
-html.dark[data-cabinet-decor="cyber"] .subscription-feature-card {
-  border-color: hsl(var(--primary) / 0.15) !important;
 }
 
 html[data-cabinet-decor="cyber"] .cabinet-shell .cabinet-elevated-card:hover,
@@ -3969,6 +3991,22 @@ html[data-cabinet-decor="cyber"] .cabinet-btn-primary {
   box-shadow:
     0 10px 30px -12px hsl(140 90% 46% / 0.7),
     inset 0 1px 0 rgb(255 255 255 / 0.22);
+}
+
+/* Цвет кнопки как в варианте C: чистый неон без бирюзы. Свечение — те же параметры,
+ * что у кнопок темы «Туманность» (в покое и на наведении). */
+html.dark[data-cabinet-decor="cyber"] .cabinet-btn-primary {
+  background-image: linear-gradient(135deg, hsl(138 100% 50%) 0%, hsl(150 100% 52%) 100%);
+  box-shadow:
+    0 10px 26px -12px hsl(138 100% 50% / 0.7),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+/* Кольцо по контуру при наведении: середина не фиолетовая (общий --cabinet-ring-mid
+ * 262 83% 68%), а мятно-зелёная — остаётся в гамме темы. */
+html[data-cabinet-decor="cyber"] .cabinet-shell,
+html[data-cabinet-decor="cyber"] .stats-ring {
+  --cabinet-ring-mid: 150 90% 55%;
 }
 
 /* Блик пробегает по кнопке слева направо при наведении — как в теме «Туманность». */
@@ -4005,6 +4043,13 @@ html[data-cabinet-decor="cyber"] .cabinet-btn-primary:focus-visible {
   box-shadow:
     0 16px 42px -12px hsl(140 90% 46% / 0.8),
     inset 0 1px 0 rgb(255 255 255 / 0.28);
+}
+
+html.dark[data-cabinet-decor="cyber"] .cabinet-btn-primary:hover,
+html.dark[data-cabinet-decor="cyber"] .cabinet-btn-primary:focus-visible {
+  box-shadow:
+    0 14px 34px -12px hsl(138 100% 50% / 0.8),
+    inset 0 1px 0 rgb(255 255 255 / 0.26);
 }
 
 /* --- lime («Лайм»): графит капюшона + лайм глаз кота ----------------------
