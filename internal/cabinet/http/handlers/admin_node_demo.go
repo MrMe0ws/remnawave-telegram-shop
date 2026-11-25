@@ -49,7 +49,7 @@ type demoNode struct {
 func demoRand(uuid string, salt string) *rand.Rand {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(strings.ToLower(uuid) + salt))
-	return rand.New(rand.NewSource(int64(h.Sum64())))
+	return rand.New(rand.NewSource(int64(h.Sum64()))) //nolint:gosec // детерминированные демо-данные, не криптография
 }
 
 const gib = int64(1) << 30

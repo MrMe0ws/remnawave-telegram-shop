@@ -1,6 +1,7 @@
 package remnawave
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 )
@@ -25,7 +26,7 @@ func TestNodeDetailFromWire_offlineWithError(t *testing.T) {
 
 func TestNodeAction_rejectsUnknown(t *testing.T) {
 	var c Client
-	if err := c.NodeAction(nil, "u", "drop-database"); err == nil {
+	if err := c.NodeAction(context.Background(), "u", "drop-database"); err == nil {
 		t.Fatal("expected error for unknown action")
 	}
 }
