@@ -50,7 +50,7 @@ export function useProviderEnabled(): Record<Provider, boolean> {
 }
 
 const disabledPayButtonClass =
-  'disabled:opacity-100 disabled:bg-[hsl(174_31.2%_76.18%)] disabled:text-[hsl(0_0%_100%_/_57%)] disabled:brightness-100 dark:disabled:bg-primary dark:disabled:text-primary-foreground dark:disabled:brightness-[.45]'
+  'disabled:opacity-100 disabled:bg-[hsl(198_38%_72%)] disabled:text-[hsl(0_0%_100%_/_57%)] disabled:brightness-100 dark:disabled:bg-primary dark:disabled:text-primary-foreground dark:disabled:brightness-[.45]'
 
 export type PayButtonProps = {
   label: string
