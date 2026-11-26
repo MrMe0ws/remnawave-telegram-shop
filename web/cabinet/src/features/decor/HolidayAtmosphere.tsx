@@ -8,6 +8,7 @@
  */
 import type { CSSProperties } from 'react'
 
+import { NewYearHeaderDecor } from './NewYearScene'
 import { Bat, HalloweenFrieze, NewYearFrieze, PumpkinMoon, SpiderCorner, Witch } from './holidayArt'
 import type { DecorThemeId } from './decorThemes'
 import { useCabinetDecorTheme } from './useCabinetDecorTheme'
@@ -125,11 +126,9 @@ export function HolidayTrim({ theme }: { theme: HolidayId }) {
       </div>
     )
   }
-  return (
-    <div className="holiday-trim" aria-hidden>
-      <Icicles />
-    </div>
-  )
+  // Новый год: та же гирлянда, что в теме new_year (решение владельца 26.11.2026 —
+  // она приятнее прежних сосулек с точками-огоньками), одна на обе темы и лендинг.
+  return <NewYearHeaderDecor />
 }
 
 function HalloweenNight() {
@@ -212,27 +211,3 @@ function Bunting() {
   )
 }
 
-function Icicles() {
-  const drops = Array.from({ length: 28 }, (_, i) => {
-    const x = 12 + i * 43
-    const h = 10 + ((i * 17) % 14)
-    return `M${x} 0 L${x + 5} 0 L${x + 2.5} ${h} Z`
-  }).join(' ')
-  return (
-    <svg className="holiday-icicles" viewBox="0 0 1200 28" preserveAspectRatio="none" aria-hidden>
-      <rect width="1200" height="3" fill="hsl(198 40% 92%)" />
-      <path d={drops} fill="hsl(198 50% 96% / 0.9)" />
-      {Array.from({ length: 18 }, (_, i) => (
-        <circle
-          key={i}
-          className="holiday-bulb"
-          cx={30 + i * 66}
-          cy={8}
-          r={3.2}
-          fill={['#e23b4a', '#3ecf8e', '#f2d36b', '#59b7ff', '#c084fc'][i % 5]}
-          style={{ animationDelay: `${(i % 5) * 0.35}s` } as CSSProperties}
-        />
-      ))}
-    </svg>
-  )
-}

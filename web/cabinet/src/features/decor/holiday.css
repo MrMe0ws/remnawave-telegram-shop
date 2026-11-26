@@ -228,8 +228,7 @@
   pointer-events: none;
 }
 
-.holiday-bunting,
-.holiday-icicles {
+.holiday-bunting {
   display: block;
   width: 100%;
   height: 22px;
