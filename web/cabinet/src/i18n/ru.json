@@ -2995,6 +2995,7 @@
         "discountPercent": "Скидка %",
         "displayName": "Название",
         "addTier": "Добавить уровень",
+        "addTierShort": "Уровень",
         "editTier": "Редактировать",
         "deleteTier": "Удалить уровень",
         "confirmDelete": "Удалить уровень «{{name}}»?",

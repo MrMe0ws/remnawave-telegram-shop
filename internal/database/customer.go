@@ -647,6 +647,38 @@ func (cr *CustomerRepository) FindByTelegramIds(ctx context.Context, telegramIDs
 	return customers, nil
 }
 
+// FindByIds — клиенты по списку id одним запросом (например, авторы страницы отзывов).
+func (cr *CustomerRepository) FindByIds(ctx context.Context, ids []int64) ([]Customer, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	sqlStr, args, err := sq.Select(customerSelectColumns).
+		From("customer").
+		Where(sq.Eq{"id": ids}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build select query: %w", err)
+	}
+	rows, err := cr.pool.Query(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query customers: %w", err)
+	}
+	defer rows.Close()
+	var customers []Customer
+	for rows.Next() {
+		var customer Customer
+		if err := scanCustomer(rows, &customer); err != nil {
+			return nil, fmt.Errorf("failed to scan customer row: %w", err)
+		}
+		customers = append(customers, customer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over customer rows: %w", err)
+	}
+	return customers, nil
+}
+
 // customerBatchRows — строк в одном запросе CreateBatch/UpdateBatch. У PostgreSQL
 // предел 65535 параметров на запрос, и без разбиения синхронизация падала бы
 // примерно на 16 тыс. новых клиентов (4 параметра на строку).

@@ -459,6 +459,7 @@ export default function AdminLoyaltyPage() {
           title={t('admin.loyalty.title')}
           subtitle={t('admin.loyalty.subtitle')}
           accent="rose"
+          actionsEnd
           actions={
             <button
               type="button"
@@ -466,7 +467,9 @@ export default function AdminLoyaltyPage() {
               className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Plus className="size-4" />
-              {t('admin.loyalty.addTier')}
+              {/* На телефоне кнопка стоит справа от заголовка, полная подпись туда не влезает. */}
+              <span className="sm:hidden">{t('admin.loyalty.addTierShort')}</span>
+              <span className="hidden sm:inline">{t('admin.loyalty.addTier')}</span>
             </button>
           }
         />

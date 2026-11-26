@@ -4,10 +4,12 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"remnawave-tg-shop-bot/internal/cabinet/avatartoken"
 	"remnawave-tg-shop-bot/internal/cabinet/repository"
 	"remnawave-tg-shop-bot/internal/config"
 	"remnawave-tg-shop-bot/internal/database"
@@ -22,6 +24,9 @@ type AdminReviewsHandler struct {
 	customers *database.CustomerRepository
 	user      *ReviewsHandler // сборка отзыва тем же кодом, что у клиента
 	notifier  *reviewNotifier
+	// avatarSecret — тот же секрет, что у «Пользователей»: им подписываются
+	// ссылки на фото авторов в списке отзывов.
+	avatarSecret []byte
 }
 
 func NewAdminReviews(
@@ -29,8 +34,9 @@ func NewAdminReviews(
 	links *repository.AccountCustomerLinkRepo,
 	customers *database.CustomerRepository,
 	user *ReviewsHandler,
+	avatarSecret []byte,
 ) *AdminReviewsHandler {
-	return &AdminReviewsHandler{reviews: reviews, links: links, customers: customers, user: user, notifier: newReviewNotifier()}
+	return &AdminReviewsHandler{reviews: reviews, links: links, customers: customers, user: user, notifier: newReviewNotifier(), avatarSecret: avatarSecret}
 }
 
 type adminReviewDTO struct {
@@ -45,6 +51,9 @@ type adminReviewDTO struct {
 	UpdatedAt    string `json:"updated_at"`
 	// PublishedAt — дата публикации (RFC3339) или пусто, если не опубликован.
 	PublishedAt *string `json:"published_at"`
+	// AvatarURL — подписанная ссылка на фото автора из Telegram (только в списке),
+	// независимо от того, показывает ли отзыв аватар публично; пусто — заглушка.
+	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
 type adminReviewCounts struct {
@@ -133,9 +142,14 @@ func (h *AdminReviewsHandler) List(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	avatars := h.authorAvatars(r, items)
 	out := make([]adminReviewDTO, 0, len(items))
 	for i := range items {
-		out = append(out, toAdminReview(&items[i]))
+		dto := toAdminReview(&items[i])
+		if items[i].CustomerID != nil {
+			dto.AvatarURL = avatars[*items[i].CustomerID]
+		}
+		out = append(out, dto)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"enabled": config.ReviewsEnabled(),
@@ -143,6 +157,38 @@ func (h *AdminReviewsHandler) List(w http.ResponseWriter, r *http.Request) {
 		"total":   total,
 		"counts":  adminReviewCounts{All: counts.All, Pending: counts.Pending, Published: counts.Published, Hidden: counts.Hidden},
 	})
+}
+
+// authorAvatars — ссылки на фото авторов страницы отзывов по customer_id, одним
+// запросом к клиентам. Ошибка не мешает списку: без фото будут заглушки.
+func (h *AdminReviewsHandler) authorAvatars(r *http.Request, items []repository.Review) map[int64]string {
+	out := map[int64]string{}
+	if len(h.avatarSecret) == 0 || h.customers == nil {
+		return out
+	}
+	ids := make([]int64, 0, len(items))
+	for i := range items {
+		if items[i].CustomerID != nil {
+			ids = append(ids, *items[i].CustomerID)
+		}
+	}
+	custs, err := h.customers.FindByIds(r.Context(), ids)
+	if err != nil {
+		slog.Warn("admin reviews avatars", "error", err.Error())
+		return out
+	}
+	now := time.Now()
+	for _, c := range custs {
+		if c.IsWebOnly || utils.IsSyntheticTelegramID(c.TelegramID) {
+			continue
+		}
+		token, err := avatartoken.IssueTelegram(h.avatarSecret, c.TelegramID, adminAvatarTTL, now)
+		if err != nil {
+			continue
+		}
+		out[c.ID] = "/cabinet/api/avatar?t=" + url.QueryEscape(token)
+	}
+	return out
 }
 
 // Create — POST /cabinet/api/admin/reviews: отзыв от имени клиента.

@@ -2873,6 +2873,7 @@
         "discountPercent": "Discount %",
         "displayName": "Name",
         "addTier": "Add tier",
+        "addTierShort": "Tier",
         "editTier": "Edit",
         "deleteTier": "Delete tier",
         "confirmDelete": "Delete tier \"{{name}}\"?",

@@ -63,6 +63,8 @@ export interface AdminReview extends ReviewItem {
   updated_at: string
   /** Дата публикации (RFC3339); null — не опубликован. */
   published_at: string | null
+  /** Подписанная ссылка на фото автора из Telegram (только в списке); нет — заглушка. */
+  avatar_url?: string
 }
 
 export interface AdminReviewCounts {

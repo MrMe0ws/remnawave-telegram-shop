@@ -12,6 +12,8 @@ import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminTabIndicator } from '../components/AdminTabIndicator'
 import { AdminTablePagination } from '../components/AdminTablePagination'
 import { AdminReviewModal } from '../components/AdminReviewModal'
+import { AdminUserAvatar } from '../components/overview/AdminUserAvatar'
+import type { RwIconTone } from '../utils/rwStatusStyles'
 import { useAdminToast, useAdminUndoRemove } from '../hooks/useAdminToast'
 import { useAdminReviewsList, useAdminReviewsPending, useDeleteAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
 import { formatAdminDateTime } from '../utils/datetime'
@@ -30,6 +32,13 @@ const STATUS_STYLE: Record<ReviewStatus, string> = {
   pending: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
   published: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
   hidden: 'bg-muted text-muted-foreground',
+}
+
+// Кольцо аватарки — статус отзыва: опубликован, на проверке, скрыт.
+const AVATAR_TONE: Record<ReviewStatus, RwIconTone> = {
+  published: 'success',
+  pending: 'warning',
+  hidden: 'default',
 }
 
 function authorLine(r: AdminReview, anonymous: string): string {
@@ -157,6 +166,21 @@ export default function AdminReviewsPage() {
     </div>
   )
 
+  // Фото из Telegram; нет фото — заглушка, как в «Пользователях». Значок «глаз» — имя на сайте скрыто.
+  const authorAvatar = (r: AdminReview) => (
+    <span className="relative shrink-0">
+      <AdminUserAvatar url={r.avatar_url} name={authorLine(r, anonymous)} tone={AVATAR_TONE[r.status]} size="sm" />
+      {r.visibility === 'anonymous' && (
+        <span
+          title={t('reviews.anonymous')}
+          className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full border-2 border-card bg-muted text-muted-foreground"
+        >
+          <EyeOff className="size-2.5" />
+        </span>
+      )}
+    </span>
+  )
+
   const statusChip = (r: AdminReview) => (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_STYLE[r.status])}>
       {t(`admin.reviews.status.${r.status}`)}
@@ -272,14 +296,15 @@ export default function AdminReviewsPage() {
                     }}
                     className={cn('cursor-pointer space-y-2 p-3 transition-colors hover:bg-primary/5 active:bg-primary/10', r.status === 'pending' && 'bg-amber-500/[0.05]')}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold">{authorLine(r, anonymous)}</p>
+                    <div className="flex items-center gap-2.5">
+                      {authorAvatar(r)}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{authorLine(r, anonymous)}</p>
+                        <p className="text-xs text-muted-foreground">{formatAdminDateTime(r.created_at)}</p>
+                      </div>
                       {statusChip(r)}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Stars value={r.rating} />
-                      <span className="text-xs text-muted-foreground">{formatAdminDateTime(r.created_at)}</span>
-                    </div>
+                    <Stars value={r.rating} />
                     <div>{bodyCell(r)}</div>
                     {renderActions(r)}
                   </div>
@@ -304,9 +329,14 @@ export default function AdminReviewsPage() {
                         onClick={() => openEdit(r, false)}
                         className={cn('cursor-pointer border-b border-border/40 align-top transition-colors last:border-0 hover:bg-primary/5', r.status === 'pending' && 'bg-amber-500/[0.05]')}
                       >
-                        <td className="min-w-[8rem] px-3 py-3">
-                          <p className="truncate text-sm font-semibold">{authorLine(r, anonymous)}</p>
-                          <p className="text-xs text-muted-foreground">{formatAdminDateTime(r.created_at)}</p>
+                        <td className="min-w-[11rem] px-3 py-3">
+                          <div className="flex items-center gap-2.5">
+                            {authorAvatar(r)}
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{authorLine(r, anonymous)}</p>
+                              <p className="text-xs text-muted-foreground">{formatAdminDateTime(r.created_at)}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-3 py-3">
                           <Stars value={r.rating} />
