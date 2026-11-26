@@ -360,7 +360,7 @@ func pendingDiscountActive(pd *database.PendingDiscount, now time.Time) bool {
 	if pd == nil {
 		return false
 	}
-	return pd.UntilFirstPurchase || pd.ExpiresAt == nil || !now.After(*pd.ExpiresAt)
+	return !pd.Expired(now)
 }
 
 // pickRewardType — выбор сектора по весам. noFreeSpin исключает приз «бесплатный спин»: спин, сыгранный

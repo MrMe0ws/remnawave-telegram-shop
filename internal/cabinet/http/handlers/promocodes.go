@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"remnawave-tg-shop-bot/internal/adminevents"
 	"remnawave-tg-shop-bot/internal/cabinet/bootstrap"
@@ -118,7 +119,7 @@ func (h *PromoCodesHandler) GetState(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		if d != nil {
+		if d != nil && !d.Expired(time.Now()) {
 			resp.HasPendingDiscount = true
 			dto := &pendingDiscountDTO{
 				PromoCodeID:                   int(d.PromoCodeID),

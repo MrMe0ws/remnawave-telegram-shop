@@ -112,6 +112,14 @@ type PendingDiscount struct {
 	SubscriptionPaymentsRemaining int        `db:"subscription_payments_remaining"`
 }
 
+// Expired — у скидки есть срок и он прошёл. Срок действует и для скидок
+// «до первой оплаты»: сами такие скидки пишутся без срока (промокод с TTL 0,
+// колесо), а срок у них был только у старой win-back, которая из-за этого не
+// сгорала и копилась от письма к письму.
+func (d *PendingDiscount) Expired(now time.Time) bool {
+	return d != nil && d.ExpiresAt != nil && now.After(*d.ExpiresAt)
+}
+
 // openInvoiceWindow — сколько неоплаченный счёт со скидкой держит её за собой.
 // Кассы закрывают счёт за минуты–часы, но статус в базе не всегда доходит до
 // cancel: счёт Platega месячной давности так и остаётся new и иначе занимал

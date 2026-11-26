@@ -52,9 +52,9 @@ func TestLifecycleRepository_Dedup(t *testing.T) {
 	t.Skip("Integration test — requires PostgreSQL")
 }
 
-// TestWinbackStacking проверяет, что складывание скидок работает правильно (15% + 10% = 25%)
-func TestWinbackStacking(t *testing.T) {
-	// Этот тест для promo.Service.GrantStackedPendingDiscount
+// TestWinbackNoStacking: win-back не складывается с действующей скидкой (остаётся большая).
+func TestWinbackNoStacking(t *testing.T) {
+	// Этот тест для promo.Service.GrantWinbackPendingDiscount
 	// Требует PostgreSQL и реальный promo service
 	t.Skip("Integration test — requires PostgreSQL and promo service")
 }

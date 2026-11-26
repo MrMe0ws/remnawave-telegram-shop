@@ -376,7 +376,7 @@ func (s *Service) getActivePendingDiscount(ctx context.Context, customerID int64
 	if err != nil || d == nil {
 		return nil, err
 	}
-	if !d.UntilFirstPurchase && d.ExpiresAt != nil && time.Now().After(*d.ExpiresAt) {
+	if d.Expired(time.Now()) {
 		if delErr := s.PromoRepo.DeletePendingDiscount(ctx, customerID); delErr != nil {
 			slog.Error("clear expired discount", "error", delErr)
 		}
@@ -490,12 +490,22 @@ func IsPromoValidationErr(err error) bool {
 	return err != nil && errors.Is(err, database.ErrPromoValidation)
 }
 
-// GrantStackedPendingDiscount создаёт или складывает системную pending discount (lifecycle win-back).
-// Если у customer уже есть pending discount — складывает проценты (cap 100%), продлевает TTL.
-// promoCodeID — FK на системный promo_code (например __lifecycle_winback__).
-func (s *Service) GrantStackedPendingDiscount(ctx context.Context, customerID, promoCodeID int64, percentAdd int, ttlHours int) error {
+// GrantWinbackPendingDiscount выдаёт скидку «возвращайся» (lifecycle win-back) на одну оплату.
+// Скидки не складываются: если у клиента уже есть действующая скидка не меньше percent,
+// она остаётся как есть; иначе её заменяет win-back. Раньше проценты суммировались
+// от письма к письму (20+20+… до 100%), а win-back перенимала «бессрочные оплаты»
+// скидки с колеса и не гасилась после оплаты.
+// ttlHours > 0 — скидка сгорает через столько часов; 0 — до первой оплаты без срока.
+// promoCodeID — FK на системный promo_code __LIFECYCLE_WINBACK__.
+func (s *Service) GrantWinbackPendingDiscount(ctx context.Context, customerID, promoCodeID int64, percent int, ttlHours int) error {
 	if s == nil || s.PromoRepo == nil {
 		return fmt.Errorf("promo service not initialized")
+	}
+	if percent <= 0 {
+		return nil
+	}
+	if percent > 100 {
+		percent = 100
 	}
 
 	tx, err := s.PromoRepo.Pool().Begin(ctx)
@@ -509,44 +519,20 @@ func (s *Service) GrantStackedPendingDiscount(ctx context.Context, customerID, p
 		return err
 	}
 
-	newPercent := percentAdd
-	var newExpiry *time.Time
-	untilFirst := true // системные скидки — одноразовые (до первой оплаты)
-	remaining := 1
-
-	if existing != nil {
-		// Складываем проценты, cap 100
-		newPercent = existing.Percent + percentAdd
-		if newPercent > 100 {
-			newPercent = 100
-		}
-
-		// TTL: max из существующей и новой
-		now := time.Now().UTC()
-		newDeadline := now.Add(time.Duration(ttlHours) * time.Hour)
-		if existing.ExpiresAt != nil && existing.ExpiresAt.After(newDeadline) {
-			newExpiry = existing.ExpiresAt
-		} else {
-			newExpiry = &newDeadline
-		}
-
-		// Если existing была многоразовой или без дедлайна — сохраняем её настройки
-		if existing.SubscriptionPaymentsRemaining != 1 {
-			remaining = existing.SubscriptionPaymentsRemaining
-		}
-		if !existing.UntilFirstPurchase {
-			untilFirst = false
-		}
-	} else {
-		// Новая скидка с TTL
-		if ttlHours > 0 {
-			exp := time.Now().UTC().Add(time.Duration(ttlHours) * time.Hour)
-			newExpiry = &exp
-		}
+	now := time.Now().UTC()
+	if existing != nil && !existing.Expired(now) && existing.Percent >= percent {
+		return tx.Commit(ctx)
 	}
 
-	err = s.PromoRepo.UpsertPendingDiscount(ctx, tx, customerID, promoCodeID, newPercent, newExpiry, untilFirst, remaining)
-	if err != nil {
+	var expiry *time.Time
+	untilFirst := true
+	if ttlHours > 0 {
+		exp := now.Add(time.Duration(ttlHours) * time.Hour)
+		expiry = &exp
+		untilFirst = false
+	}
+
+	if err := s.PromoRepo.UpsertPendingDiscount(ctx, tx, customerID, promoCodeID, percent, expiry, untilFirst, 1); err != nil {
 		return err
 	}
 

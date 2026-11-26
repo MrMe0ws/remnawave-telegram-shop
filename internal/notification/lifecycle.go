@@ -227,8 +227,8 @@ func (s *LifecycleService) sendWinbackNotify(ctx context.Context, candidate Winb
 	percent := config.LifecycleWinbackDiscountPercent()
 	ttlHours := config.LifecycleWinbackDiscountTTLHours()
 
-	// Стакуем скидку
-	if err := s.promoService.GrantStackedPendingDiscount(ctx, candidate.CustomerID, lifecyclePromo.ID, percent, ttlHours); err != nil {
+	// Скидки не складываются: остаётся большая из действующей и win-back.
+	if err := s.promoService.GrantWinbackPendingDiscount(ctx, candidate.CustomerID, lifecyclePromo.ID, percent, ttlHours); err != nil {
 		return fmt.Errorf("grant stacked discount: %w", err)
 	}
 

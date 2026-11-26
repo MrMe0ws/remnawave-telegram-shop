@@ -88,7 +88,7 @@ func TestPendingDiscountActive(t *testing.T) {
 	}{
 		{"нет строки", nil, false},
 		{"до первой оплаты", &database.PendingDiscount{UntilFirstPurchase: true}, true},
-		{"до первой оплаты, срок в прошлом не важен", &database.PendingDiscount{UntilFirstPurchase: true, ExpiresAt: &past}, true},
+		{"до первой оплаты, срок вышел (старая win-back)", &database.PendingDiscount{UntilFirstPurchase: true, ExpiresAt: &past}, false},
 		{"без срока", &database.PendingDiscount{}, true},
 		{"срок впереди", &database.PendingDiscount{ExpiresAt: &future}, true},
 		{"срок вышел", &database.PendingDiscount{ExpiresAt: &past}, false},
