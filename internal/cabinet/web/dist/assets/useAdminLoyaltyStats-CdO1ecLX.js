@@ -1,0 +1,1 @@
+import{u as t}from"./query-D6ZsvjX7.js";import{h as a}from"./index-CCdnbvTv.js";function s(){return t({queryKey:["admin-loyalty-stats"],queryFn:()=>a.adminLoyaltyStats(),staleTime:3e4})}export{s as u};
