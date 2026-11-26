@@ -20,7 +20,7 @@
   background:
     radial-gradient(ellipse 70% 40% at 50% 0%, hsl(168 70% 48% / 0.22), transparent 62%),
     radial-gradient(ellipse 40% 30% at 12% 18%, hsl(280 70% 60% / 0.16), transparent 70%),
-    linear-gradient(180deg, #07111c 0%, #0c1c2e 48%, #16324a 100%);
+    linear-gradient(180deg, #07111c 0%, #0b1a2b 48%, #10243a 100%);
 }
 
 .holiday-moon {
@@ -137,7 +137,20 @@
 }
 
 .holiday-hill--hw { color: #140810; }
-.holiday-hill--ny { color: #e7f4ff; }
+.holiday-hill--ny { color: hsl(205 34% 68%); }
+
+/*
+ * new_year_2 приглушён (решение владельца 26.11.2026): белый сугроб и яркие
+ * фигурки внизу перетягивали внимание с карточек. Сцена остаётся, но фоном.
+ */
+.holiday-sky--new-year .holiday-frieze {
+  opacity: 0.82;
+  filter: saturate(0.85) brightness(0.92);
+}
+
+.holiday-sky--new-year .holiday-aurora {
+  opacity: 0.4;
+}
 
 .holiday-prop {
   position: absolute;
