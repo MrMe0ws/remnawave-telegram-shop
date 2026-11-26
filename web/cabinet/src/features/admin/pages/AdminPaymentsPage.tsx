@@ -242,7 +242,7 @@ export default function AdminPaymentsPage() {
             </div>
           ) : (
             <>
-              <div className="space-y-2 p-3 md:hidden">
+              <div className="admin-stagger space-y-2 p-3 md:hidden">
                 {items.map((it) => (
                   <PaymentMobileCard key={it.id} item={it} t={t} onClick={() => setSelectedId(it.id)} />
                 ))}
@@ -274,7 +274,7 @@ export default function AdminPaymentsPage() {
                       <SortableTh sortKey="created_at" sort={sort} onSort={onSort} className="hidden lg:table-cell">{t('admin.payments.createdAt')}</SortableTh>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="admin-stagger">
                     {items.map((it) => (
                       <PaymentRow key={it.id} item={it} t={t} onClick={() => setSelectedId(it.id)} />
                     ))}

@@ -149,7 +149,7 @@ function CheckBadge({
       <div
         role="tooltip"
         className={cn(
-          'absolute z-30 w-60 max-w-[75vw] rounded-xl border border-border bg-card p-3 text-left text-xs shadow-xl',
+          'admin-pop absolute z-30 w-60 max-w-[75vw] rounded-xl border border-border bg-card p-3 text-left text-xs shadow-xl',
           tooltipAlign === 'left' ? 'left-0' : 'right-0',
           size === 'sm' ? 'top-[30px]' : 'top-9',
           open ? 'block' : 'hidden group-hover:block',

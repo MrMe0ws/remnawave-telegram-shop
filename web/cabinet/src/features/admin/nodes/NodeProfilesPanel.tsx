@@ -226,7 +226,7 @@ export function NodeProfilesPanel({
                 )}
               </div>
               {isOpen && (
-                <div className="border-t border-border/60 px-3 pb-3 pt-2">
+                <div className="admin-expand border-t border-border/60 px-3 pb-3 pt-2">
                   {inbounds.length === 0 ? (
                     <div className="py-2 text-xs text-muted-foreground">{t('admin.nodes.edit.profiles.noInbounds')}</div>
                   ) : (

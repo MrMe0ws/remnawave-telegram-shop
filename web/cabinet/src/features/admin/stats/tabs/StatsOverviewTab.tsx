@@ -114,7 +114,7 @@ export function StatsOverviewTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="admin-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsPanel>
           <StatsPanelHead
             icon={Users}
@@ -201,7 +201,7 @@ export function StatsOverviewTab({
 
       <StatsMainChart timeseries={timeseries} period={period} customRange={customRange} />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="admin-stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatsMiniCard
           icon={CreditCard}
           color={STATS_ACCENT.blue}

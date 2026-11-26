@@ -2,6 +2,8 @@ import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
+import { AdminTabIndicator } from '../../components/AdminTabIndicator'
+
 export interface StatsTabItem<K extends string> {
   key: K
   label: string
@@ -34,7 +36,8 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
         className,
       )}
     >
-      <div role="tablist" className="flex w-max min-w-full">
+      <div role="tablist" className="relative flex w-max min-w-full">
+        <AdminTabIndicator className="rounded-none border-b-2 border-primary bg-primary/10" />
         {items.map((item) => {
           const Icon = item.icon
           const active = item.key === value
@@ -46,9 +49,9 @@ export function StatsTabs<K extends string>({ items, value, onChange, className 
               aria-selected={active}
               onClick={() => onChange(item.key)}
               className={cn(
-                'flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 pb-2.5 pt-3 text-[15px] font-medium transition-colors',
+                'relative flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-4 pb-2.5 pt-3 text-[15px] font-medium transition-colors',
                 active
-                  ? 'border-primary bg-primary/10 text-foreground'
+                  ? 'text-foreground'
                   : 'border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground',
               )}
             >

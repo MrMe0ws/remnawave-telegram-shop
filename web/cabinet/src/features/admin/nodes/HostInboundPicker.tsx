@@ -243,7 +243,7 @@ export function HostInboundPicker({
                 </span>
               </div>
               {isOpen && (
-                <div className="border-t border-border/60 px-3 pb-3 pt-2">
+                <div className="admin-expand border-t border-border/60 px-3 pb-3 pt-2">
                   <div className={cn(PANEL_CAP, "mb-1")}>
                     {t("admin.nodes.panels.picker.inbounds")}
                   </div>

@@ -216,7 +216,7 @@ function AdminDashboardContent() {
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="admin-stagger grid gap-4 lg:grid-cols-3">
             {panel?.available && (
               <DetailCard
                 title={t('admin.overview.trafficTitle')}
@@ -390,7 +390,7 @@ function HeroBlock({
             </span>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="admin-stagger mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <HeroStat
               icon={Gauge}
               color={STATS_ACCENT.amber}

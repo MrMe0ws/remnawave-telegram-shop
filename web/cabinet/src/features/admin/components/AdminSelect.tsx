@@ -148,7 +148,7 @@ export function AdminSelect<T extends string | number = string>({
          * просвечивал насквозь. Селектор у него специфичнее утилиты, так
          * что bg-card его не перебивал.
          */
-        className="max-h-60 overflow-auto rounded-lg border border-border/60 bg-card py-1 shadow-xl"
+        className="admin-pop max-h-60 overflow-auto rounded-lg border border-border/60 bg-card py-1 shadow-xl"
     >
       {allowEmpty && (
         <li role="option" aria-selected={value == null || value === ''}>

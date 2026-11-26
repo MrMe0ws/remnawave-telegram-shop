@@ -36,7 +36,7 @@ export function InfoTip({ text, label, align = 'right', className }: { text: str
         <Info className="size-3.5" aria-hidden />
       </button>
       {open && (
-        <span role="tooltip" className={cn('absolute top-full z-30 w-60 max-w-[70vw] pt-1.5', align === 'right' ? 'right-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0')}>
+        <span role="tooltip" className={cn('admin-fade absolute top-full z-30 w-60 max-w-[70vw] pt-1.5', align === 'right' ? 'right-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0')}>
           <span className="block rounded-lg border border-border bg-card px-3 py-2 text-left text-xs font-normal leading-snug text-foreground shadow-lg">{text}</span>
         </span>
       )}

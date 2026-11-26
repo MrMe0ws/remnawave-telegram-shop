@@ -213,7 +213,7 @@ function ActionsMenu({
         <ChevronUp className={cn('size-4 transition-transform', !open && 'rotate-180')} aria-hidden />
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-xl border border-border bg-card p-1.5 shadow-xl shadow-black/30 max-sm:w-full">
+        <div className="admin-pop absolute bottom-full left-0 z-10 mb-2 w-56 origin-bottom-left rounded-xl border border-border bg-card p-1.5 shadow-xl shadow-black/30 max-sm:w-full">
           <button type="button" className={cn(item, 'text-red-600 dark:text-red-400')} onClick={pick(() => onPick('delete'))}>
             <Trash2 className="size-4" aria-hidden />
             {t('admin.nodes.detail.delete')}

@@ -433,7 +433,8 @@ export function AdminSettingsGroupEditor({
 
       {expanded && (
         <div className="admin-reveal">
-          <CardContent className="space-y-1 border-t border-border/60 pt-4">
+          {/* Раскрытие: блоки настроек проявляются сверху вниз (как списки админки). */}
+          <CardContent className="admin-stagger space-y-1 border-t border-border/60 pt-4">
             {groupIntro && (
               <div className="mb-4 flex gap-2.5 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2.5 text-[13px] leading-relaxed text-foreground/90">
                 <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />

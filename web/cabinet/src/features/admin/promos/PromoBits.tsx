@@ -202,7 +202,7 @@ export function PromoPopover({
       aria-label={label}
       onClick={(e) => e.stopPropagation()}
       style={{ position: 'fixed', left: pos?.left ?? -9999, top: pos?.top ?? -9999, width, zIndex: 9999 }}
-      className="rounded-[14px] border border-border bg-card p-1.5 text-sm text-foreground shadow-xl"
+      className="admin-pop rounded-[14px] border border-border bg-card p-1.5 text-sm text-foreground shadow-xl"
     >
       {children}
     </div>,

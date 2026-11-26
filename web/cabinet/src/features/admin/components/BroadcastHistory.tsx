@@ -347,7 +347,7 @@ export function BroadcastHistoryList({
   return (
     <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
       {/* Телефон: карточки — в таблице на 390 px не помещается ни одна колонка целиком. */}
-      <ul className="divide-y divide-border/50 md:hidden">
+      <ul className="admin-stagger divide-y divide-border/50 md:hidden">
         {items.map((item) => {
           const when = formatWhen(item.started_at, i18n.language)
           return (
@@ -391,7 +391,7 @@ export function BroadcastHistoryList({
             <th className="px-4 py-2.5 font-semibold">{t('admin.broadcast.history.colStatus')}</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/50">
+        <tbody className="admin-stagger divide-y divide-border/50">
           {items.map((item) => {
             const when = formatWhen(item.started_at, i18n.language)
             return (
@@ -529,7 +529,7 @@ export function BroadcastHistoryDetail({
 
         {/* Только в кабинет — счётчики Telegram нулевые, их цифры в блоке ниже. */}
         {!cabinetOnly(item) && (
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <dl className="admin-stagger grid grid-cols-2 gap-2 sm:grid-cols-4">
             {stats.map((s) => (
               <div key={s.label} className="rounded-lg bg-muted/60 px-3 py-2">
                 <dt className="text-[11px] text-muted-foreground">{s.label}</dt>

@@ -145,7 +145,7 @@ export function CountrySelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-border bg-background p-1 shadow-lg"
+          className="admin-pop absolute z-50 mt-1 max-h-60 w-full origin-top overflow-auto rounded-xl border border-border bg-background p-1 shadow-lg"
         >
           {filtered.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">—</li>

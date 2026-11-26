@@ -225,7 +225,7 @@ export function MultiPick({
         <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
       {open && (
-        <div className="mt-1.5 overflow-hidden rounded-[10px] border border-border bg-card">
+        <div className="admin-expand mt-1.5 overflow-hidden rounded-[10px] border border-border bg-card">
           {searchable && (
             <div className="relative border-b border-border/70 p-1.5">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -329,7 +329,7 @@ export function AddMenu({ available, onPick }: { available: HostOptKey[]; onPick
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1.5 w-[min(18rem,calc(100vw-3rem))] overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/30"
+          className="admin-pop absolute right-0 top-full z-20 mt-1.5 w-[min(18rem,calc(100vw-3rem))] origin-top-right overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/30"
         >
           <div className="relative border-b border-border/70 p-2">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />

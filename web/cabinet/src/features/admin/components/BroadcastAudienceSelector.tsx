@@ -163,7 +163,7 @@ export function BroadcastAudienceSelector({
       </button>
 
       {open && (
-        <div className="border-t border-border/50">
+        <div className="admin-expand border-t border-border/50">
           {isLoading ? (
             <div className="flex justify-center py-5">
               <span className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />

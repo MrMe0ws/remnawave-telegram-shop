@@ -188,7 +188,7 @@ function Group({
       </button>
 
       {open && (
-        <div className="space-y-2.5 border-t border-border/50 p-3">
+        <div className="admin-expand space-y-2.5 border-t border-border/50 p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
           {selected > 0 && (
             <button

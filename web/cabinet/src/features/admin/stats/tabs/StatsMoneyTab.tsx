@@ -89,7 +89,7 @@ export function StatsMoneyTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="admin-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsKpiCard
           icon={RussianRuble}
           color={STATS_ACCENT.cyan}
@@ -130,7 +130,7 @@ export function StatsMoneyTab({
 
       <StatsMainChart timeseries={timeseries} period={period} customRange={customRange} />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="admin-stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatsMiniCard
           icon={Receipt}
           color={STATS_ACCENT.cyan}

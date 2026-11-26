@@ -6,6 +6,7 @@ import { Handshake, Check, X, UserPlus, Loader2, AlertTriangle, FileText, Users,
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
 import { AdminModal } from '../components/AdminModal'
+import { AdminTabIndicator } from '../components/AdminTabIndicator'
 import { AdminPartnerModal, PayoutStatusChip, CopyValue } from '../components/AdminPartnerModal'
 import {
   PartnerStatusFilter,
@@ -114,7 +115,8 @@ export default function AdminPartnersPage() {
           </div>
         ) : null}
 
-        <div role="tablist" className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+        <div role="tablist" className="relative flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+          <AdminTabIndicator className="rounded-lg bg-card shadow-sm" />
           {tabs.map((item) => (
             <TabButton
               key={item.id}
@@ -178,8 +180,8 @@ function TabButton({
       aria-selected={active}
       onClick={onClick}
       className={cn(
-        'flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-        active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+        'relative flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+        active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
       )}
     >
       <Icon size={14} className={cn('shrink-0', active && 'text-primary')} />
@@ -213,7 +215,7 @@ function ApplicationsTab({
   if (items.length === 0) return <EmptyBlock text={t('admin.partners.applications.empty')} />
 
   return (
-    <div className="space-y-3">
+    <div className="admin-stagger space-y-3">
       {items.map((row) => (
         <ApplicationCard key={row.id} partner={row} />
       ))}
@@ -386,7 +388,7 @@ function PartnersTab({
           помещаются, а горизонтальная прокрутка прячет за краем ровно те
           числа, ради которых в список и заходят. */}
       {items.length > 0 ? (
-        <div className="space-y-2 sm:hidden">
+        <div className="admin-stagger space-y-2 sm:hidden">
           {items.map((row) => (
             <RecordCard
               key={`m-${row.id}`}
@@ -461,7 +463,7 @@ function PartnersTab({
                 <th className="px-3 pb-2 pt-3 text-right font-medium">{t('admin.partners.list.payouts')}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="admin-stagger">
               {items.map((row) => (
                 <tr
                   key={row.id}
@@ -628,7 +630,7 @@ function PayoutsTab({ onOpenPartner }: { onOpenPartner: (id: number) => void }) 
       {open.length > 0 ? (
         <>
           {closed.length > 0 ? <SectionLabel text={t('admin.partners.payouts.sectionOpen')} /> : null}
-          <div className="space-y-3">
+          <div className="admin-stagger space-y-3">
             {open.map((row) => (
               <PayoutCard key={row.id} payout={row} onOpenPartner={onOpenPartner} />
             ))}
@@ -675,7 +677,7 @@ function ProcessedPayoutsTable({
       {/* На телефоне запись разворачивается вертикально, а статус занимает всю
           ширину: именно он отвечает на вопрос «чем кончилось», и в узкой
           колонке таблицы его приходилось искать прокруткой. */}
-      <div className="space-y-2 sm:hidden">
+      <div className="admin-stagger space-y-2 sm:hidden">
         {items.map((row) => (
           <RecordCard
             key={`m-${row.id}`}
@@ -750,7 +752,7 @@ function ProcessedPayoutsTable({
             <th className="px-3 pb-2 pt-3 font-medium">{t('admin.partners.payouts.colResult')}</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="admin-stagger">
           {items.map((row) => (
             <tr key={row.id} className="border-t border-border align-top">
               {/* Дата подачи, а не обработки: колонка та же, что и в очереди,

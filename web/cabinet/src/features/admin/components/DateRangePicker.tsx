@@ -50,6 +50,8 @@ export function DateRangePicker({
   presets,
   ariaLabel,
   className,
+  variant = 'field',
+  active,
 }: {
   value: DateRange
   onChange: (range: DateRange) => void
@@ -58,6 +60,10 @@ export function DateRangePicker({
   presets?: DateRangePreset[]
   ariaLabel?: string
   className?: string
+  /** `icon` — квадратная кнопка с календарём (шапка «Статистики»), `field` — поле с датами. */
+  variant?: 'field' | 'icon'
+  /** Для `icon`: период из календаря сейчас выбран — значок подсвечен. */
+  active?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language?.startsWith('en') ? 'en-GB' : 'ru-RU'
@@ -245,16 +251,22 @@ export function DateRangePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={ariaLabel}
+        title={variant === 'icon' ? ariaLabel : undefined}
         className={cn(
-          'flex h-10 min-w-0 items-center gap-2 rounded-[10px] border border-input bg-card dark:bg-background/60 px-2.5 text-left text-[13px] outline-none transition-colors hover:border-primary/50 focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/20',
+          variant === 'icon'
+            ? 'inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/20'
+            : 'flex h-10 min-w-0 items-center gap-2 rounded-[10px] border border-input bg-card dark:bg-background/60 px-2.5 text-left text-[13px] outline-none transition-colors hover:border-primary/50 focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/20',
           open && 'border-primary/60 ring-2 ring-primary/20',
+          variant === 'icon' && active && 'border-primary/40 bg-primary/10',
           className,
         )}
       >
-        <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="min-w-0 flex-1 truncate tabular-nums">
-          {fmt(value.start)} – {fmt(value.end)}
-        </span>
+        <CalendarDays className={cn('size-4 shrink-0', variant === 'icon' && active ? 'text-primary' : 'text-muted-foreground')} aria-hidden />
+        {variant === 'field' && (
+          <span className="min-w-0 flex-1 truncate tabular-nums">
+            {fmt(value.start)} – {fmt(value.end)}
+          </span>
+        )}
       </button>
 
       {open &&
@@ -264,7 +276,7 @@ export function DateRangePicker({
             role="dialog"
             aria-label={ariaLabel}
             style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, width: pos?.width ?? POPOVER_W, visibility: pos ? 'visible' : 'hidden' }}
-            className="fixed z-[260] flex overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-2xl"
+            className="admin-pop fixed z-[260] flex origin-top-right overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-2xl"
           >
             {presets && presets.length > 0 && (
               <div className="flex w-[8.5rem] shrink-0 flex-col gap-0.5 border-r border-border/70 bg-muted/30 p-1.5">

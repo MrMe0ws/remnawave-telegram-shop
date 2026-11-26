@@ -68,7 +68,7 @@ function FeatureBadge({ feature }: { feature: AdminHostFeature }) {
           <span
             role="tooltip"
             style={{ left: pos.x, top: pos.y - 8 }}
-            className="pointer-events-none fixed z-[260] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-lg"
+            className="admin-fade pointer-events-none fixed z-[260] -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-lg"
           >
             {label}
           </span>,

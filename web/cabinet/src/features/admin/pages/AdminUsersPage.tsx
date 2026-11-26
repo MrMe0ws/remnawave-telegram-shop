@@ -527,7 +527,7 @@ export default function AdminUsersPage() {
             </div>
           ) : (
             <>
-              <div className="space-y-2 p-3 md:hidden">
+              <div className="admin-stagger space-y-2 p-3 md:hidden">
                 {items.map((u) => (
                   <UserMobileCard
                     key={u.id}
@@ -574,7 +574,7 @@ export default function AdminUsersPage() {
                       </SortableTh>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="admin-stagger">
                     {items.map((u) => (
                       <UserRow
                         key={u.id}

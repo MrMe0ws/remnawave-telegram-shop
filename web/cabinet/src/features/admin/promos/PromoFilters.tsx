@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Spinner } from '@/components/ui/spinner'
 import type { AdminPromoListDTO, AdminPromoStatusFilter, AdminPromoTypeFilter } from '@/lib/types/admin'
 import { AdminFilterMenuDivider, AdminFilterMenuItem, AdminFilterMenuTitle } from '../components/AdminFilterMenu'
+import { AdminTabIndicator } from '../components/AdminTabIndicator'
 import type { SortState } from '../components/SortableTh'
 import { PROMO_TYPES } from './promoPresentation'
 
@@ -42,7 +43,8 @@ export function PromoStatusTabs({
   const { t } = useTranslation()
   return (
     <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div role="tablist" className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 md:min-w-0">
+      <div role="tablist" className="relative inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 md:min-w-0">
+        <AdminTabIndicator className="bg-primary/10 dark:bg-primary/20" />
         {STATUS_TABS.map((s) => {
           const active = value === s
           return (
@@ -54,8 +56,8 @@ export function PromoStatusTabs({
               tabIndex={active ? 0 : -1}
               onClick={() => onChange(s)}
               className={cn(
-                'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium transition-colors sm:px-4',
-                active ? 'bg-primary/10 text-primary dark:bg-primary/20' : 'text-foreground/80 hover:bg-accent hover:text-foreground',
+                'relative inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium transition-colors sm:px-4',
+                active ? 'text-primary' : 'text-foreground/80 hover:bg-accent hover:text-foreground',
               )}
             >
               {t(`admin.promos.tabs.${s}`)}
@@ -188,7 +190,7 @@ export function PromoFilterMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-12 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-2 shadow-[0_18px_50px_rgba(0,0,0,0.5)]"
+          className="admin-pop absolute right-0 top-12 z-30 w-72 max-w-[calc(100vw-2rem)] origin-top-right rounded-2xl border border-border bg-card p-2 shadow-[0_18px_50px_rgba(0,0,0,0.5)]"
         >
           <AdminFilterMenuTitle>{t('admin.promos.filters.sortSection')}</AdminFilterMenuTitle>
           {PROMO_SORT_PRESETS.map((p) => (

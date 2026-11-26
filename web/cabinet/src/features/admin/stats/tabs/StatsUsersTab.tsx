@@ -50,7 +50,7 @@ export function StatsUsersTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="admin-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatsKpiCard
           icon={Users}
           color={STATS_ACCENT.blue}

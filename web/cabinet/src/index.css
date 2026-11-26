@@ -6000,3 +6000,101 @@ html:not([data-cabinet-decor="nebula"]) .cabinet-nav-link:hover {
   border: 4px solid var(--chance-color);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
 }
+
+/*
+ * Каскадное появление в админке (образец — «Инфраструктура»): контейнер списка
+ * получает `admin-stagger`, его дети проявляются и чуть подъезжают по очереди.
+ * Анимация срабатывает при монтировании строки — смена вкладки, фильтра, страницы
+ * даёт новые строки и новый каскад; правка строки на месте его не повторяет.
+ * Волна идёт по всей странице списка (50 строк, шаг 25 мс) сверху вниз. Строки
+ * сверх 50 — догрузка «Показать ещё»: проявляются сразу, без ожидания.
+ */
+.admin-stagger > * {
+  animation: admin-stagger-in 0.3s ease-out backwards;
+}
+@keyframes admin-stagger-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.admin-stagger > :nth-child(1) { animation-delay: 0ms; }
+.admin-stagger > :nth-child(2) { animation-delay: 25ms; }
+.admin-stagger > :nth-child(3) { animation-delay: 50ms; }
+.admin-stagger > :nth-child(4) { animation-delay: 75ms; }
+.admin-stagger > :nth-child(5) { animation-delay: 100ms; }
+.admin-stagger > :nth-child(6) { animation-delay: 125ms; }
+.admin-stagger > :nth-child(7) { animation-delay: 150ms; }
+.admin-stagger > :nth-child(8) { animation-delay: 175ms; }
+.admin-stagger > :nth-child(9) { animation-delay: 200ms; }
+.admin-stagger > :nth-child(10) { animation-delay: 225ms; }
+.admin-stagger > :nth-child(11) { animation-delay: 250ms; }
+.admin-stagger > :nth-child(12) { animation-delay: 275ms; }
+.admin-stagger > :nth-child(13) { animation-delay: 300ms; }
+.admin-stagger > :nth-child(14) { animation-delay: 325ms; }
+.admin-stagger > :nth-child(15) { animation-delay: 350ms; }
+.admin-stagger > :nth-child(16) { animation-delay: 375ms; }
+.admin-stagger > :nth-child(17) { animation-delay: 400ms; }
+.admin-stagger > :nth-child(18) { animation-delay: 425ms; }
+.admin-stagger > :nth-child(19) { animation-delay: 450ms; }
+.admin-stagger > :nth-child(20) { animation-delay: 475ms; }
+.admin-stagger > :nth-child(21) { animation-delay: 500ms; }
+.admin-stagger > :nth-child(22) { animation-delay: 525ms; }
+.admin-stagger > :nth-child(23) { animation-delay: 550ms; }
+.admin-stagger > :nth-child(24) { animation-delay: 575ms; }
+.admin-stagger > :nth-child(25) { animation-delay: 600ms; }
+.admin-stagger > :nth-child(26) { animation-delay: 625ms; }
+.admin-stagger > :nth-child(27) { animation-delay: 650ms; }
+.admin-stagger > :nth-child(28) { animation-delay: 675ms; }
+.admin-stagger > :nth-child(29) { animation-delay: 700ms; }
+.admin-stagger > :nth-child(30) { animation-delay: 725ms; }
+.admin-stagger > :nth-child(31) { animation-delay: 750ms; }
+.admin-stagger > :nth-child(32) { animation-delay: 775ms; }
+.admin-stagger > :nth-child(33) { animation-delay: 800ms; }
+.admin-stagger > :nth-child(34) { animation-delay: 825ms; }
+.admin-stagger > :nth-child(35) { animation-delay: 850ms; }
+.admin-stagger > :nth-child(36) { animation-delay: 875ms; }
+.admin-stagger > :nth-child(37) { animation-delay: 900ms; }
+.admin-stagger > :nth-child(38) { animation-delay: 925ms; }
+.admin-stagger > :nth-child(39) { animation-delay: 950ms; }
+.admin-stagger > :nth-child(40) { animation-delay: 975ms; }
+.admin-stagger > :nth-child(41) { animation-delay: 1000ms; }
+.admin-stagger > :nth-child(42) { animation-delay: 1025ms; }
+.admin-stagger > :nth-child(43) { animation-delay: 1050ms; }
+.admin-stagger > :nth-child(44) { animation-delay: 1075ms; }
+.admin-stagger > :nth-child(45) { animation-delay: 1100ms; }
+.admin-stagger > :nth-child(46) { animation-delay: 1125ms; }
+.admin-stagger > :nth-child(47) { animation-delay: 1150ms; }
+.admin-stagger > :nth-child(48) { animation-delay: 1175ms; }
+.admin-stagger > :nth-child(49) { animation-delay: 1200ms; }
+.admin-stagger > :nth-child(50) { animation-delay: 1225ms; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-stagger > * { animation: none; }
+}
+
+/* Всплывающие окна и меню админки (календарь, период, фильтр, поиск): мягкое появление. */
+.admin-pop {
+  animation: admin-pop-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes admin-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+/* Раскрывающиеся блоки внутри карточек: проявление с небольшим сдвигом сверху. */
+.admin-expand {
+  animation: admin-expand-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes admin-expand-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* То же для подсказок, которые позиционируются через translate: только прозрачность. */
+.admin-fade {
+  animation: admin-fade-in 0.15s ease-out backwards;
+}
+@keyframes admin-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-pop, .admin-fade, .admin-expand { animation: none; }
+}

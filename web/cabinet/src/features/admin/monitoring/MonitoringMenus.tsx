@@ -82,8 +82,8 @@ function Popover({ children, align = 'left' }: { children: ReactNode; align?: 'l
     <div
       role="menu"
       className={cn(
-        'absolute top-12 z-30 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.5)]',
-        align === 'right' ? 'right-0' : 'left-0',
+        'admin-pop absolute top-12 z-30 w-64 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.5)]',
+        align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left',
       )}
     >
       {children}

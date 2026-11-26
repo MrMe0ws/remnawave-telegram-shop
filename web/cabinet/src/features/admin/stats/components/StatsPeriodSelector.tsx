@@ -65,7 +65,7 @@ export function StatsPeriodSelector({ value, onChange, customRange, className }:
         <ul
           role="listbox"
           aria-label={t('admin.stats.period.label')}
-          className="cabinet-elevated-card absolute right-0 z-50 mt-1.5 min-w-full overflow-hidden rounded-lg border border-border/60 bg-card py-1 shadow-lg"
+          className="admin-pop cabinet-elevated-card absolute right-0 z-50 mt-1.5 min-w-full origin-top-right overflow-hidden rounded-lg border border-border/60 bg-card py-1 shadow-lg"
         >
           {STATS_PERIOD_OPTIONS.map((period) => {
             const selected = period === value

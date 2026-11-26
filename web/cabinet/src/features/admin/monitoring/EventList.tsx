@@ -55,7 +55,7 @@ export function EventList({ items, fresh, withCustomer, hasMore, loadingMore, on
   }, [canAuto, loadingMore, onLoadMore, scrollRoot, items.length])
 
   return (
-    <div>
+    <div className="admin-stagger">
       {items.map((e, i) => {
         const v = buildEventView(e, t, locale)
         const newDay = i === 0 || dayKey(items[i - 1].at) !== dayKey(e.at)

@@ -108,7 +108,7 @@ export function HeaderFilter<T extends string>({
             role="listbox"
             aria-label={ariaLabel}
             style={{ position: 'fixed', left: pos.left, top: pos.top, minWidth: LIST_MIN_WIDTH_PX, zIndex: 9999 }}
-            className="overflow-auto rounded-lg border border-border/60 bg-card py-1 text-sm font-medium normal-case tracking-normal text-foreground shadow-xl"
+            className="admin-pop overflow-auto rounded-lg border border-border/60 bg-card py-1 text-sm font-medium normal-case tracking-normal text-foreground shadow-xl"
           >
             {options.map((opt) => {
               const isSel = opt.value === value

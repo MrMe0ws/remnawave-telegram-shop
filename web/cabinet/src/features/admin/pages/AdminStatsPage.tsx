@@ -14,7 +14,9 @@ import { useAdminStatsInsights } from '../hooks/useAdminStatsInsights'
 import { useAdminFortuneStats } from '../hooks/useAdminFortuneStats'
 import { useAdminLoyaltyStats } from '../hooks/useAdminLoyaltyStats'
 import { useAdminPromoStats } from '../hooks/useAdminPromoStats'
-import { StatsCustomRangePicker } from '../stats/components/StatsCustomRangePicker'
+import { DateRangePicker, toYmd } from '../components/DateRangePicker'
+import { useAdminToast } from '../hooks/useAdminToast'
+import { useMinBusy } from '../hooks/useMinBusy'
 import { StatsPeriodSelector } from '../stats/components/StatsPeriodSelector'
 import { StatsTabs, type StatsTabItem } from '../stats/components/StatsTabs'
 import { StatsMechanicsTab } from '../stats/tabs/StatsMechanicsTab'
@@ -112,6 +114,15 @@ function AdminStatsPageContent() {
     setPeriod('custom')
   }
 
+  const refreshSpin = useMinBusy(refreshing, 800)
+  const { showError } = useAdminToast()
+  const defaultCustomRange = useMemo(() => {
+    const end = new Date()
+    const start = new Date(end)
+    start.setDate(start.getDate() - 30)
+    return { start: toYmd(start), end: toYmd(end) }
+  }, [])
+
   const handleRefresh = async () => {
     setRefreshDone(false)
     const results = await Promise.all([
@@ -166,7 +177,7 @@ function AdminStatsPageContent() {
       {refreshDone ? (
         <Check className="size-4 animate-fade-in text-emerald-500 dark:text-emerald-400" />
       ) : (
-        <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+        <RefreshCw className={cn('size-4', refreshSpin && 'animate-spin')} />
       )}
     </button>
   )
@@ -179,10 +190,21 @@ function AdminStatsPageContent() {
         customRange={customRange}
         className={compact ? 'min-w-0 flex-1' : undefined}
       />
-      <StatsCustomRangePicker
+      <DateRangePicker
+        variant="icon"
         active={period === 'custom'}
-        value={customRange}
-        onApply={handleCustomRange}
+        value={customRange ? { start: customRange.from, end: customRange.to } : defaultCustomRange}
+        onChange={(r) => {
+          // Статистика хранит не больше ~3 лет помесячно — дальше сервер не считает.
+          const limit = new Date()
+          limit.setMonth(limit.getMonth() - 35, 1)
+          if (r.start < toYmd(limit)) {
+            showError(t('admin.stats.customRange.tooLong'))
+            return
+          }
+          handleCustomRange({ from: r.start, to: r.end })
+        }}
+        ariaLabel={t('admin.stats.customRange.open')}
       />
     </div>
   )

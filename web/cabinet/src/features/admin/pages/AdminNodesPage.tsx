@@ -27,6 +27,7 @@ import { useToast } from '@/components/ui/toast'
 import type { AdminNodesDTO } from '@/lib/types/admin'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
+import { useMinBusy } from '../hooks/useMinBusy'
 import { useSortableList } from '../hooks/useSortableList'
 import { NodeCard, type NodeChecks, type NodeLayout } from '../nodes/NodeCard'
 import { NodeDetailModal } from '../nodes/NodeDetailModal'
@@ -146,6 +147,9 @@ export default function AdminNodesPage() {
   const qc = useQueryClient()
   const q = useAdminNodes()
   const checksByNode = useNodeChecks()
+  // «Обновить» крутится только по нажатию (фоновый опрос раз в 5 с её не трогает) и не меньше 0,8 с.
+  const [manualRefresh, setManualRefresh] = useState(false)
+  const refreshSpin = useMinBusy(manualRefresh, 800)
   // Открытая нода живёт в адресе (?node=uuid): ссылку из окна можно отправить другому админу.
   const [searchParams, setSearchParams] = useSearchParams()
   const openUuid = searchParams.get('node')
@@ -264,7 +268,7 @@ export default function AdminNodesPage() {
 
   const actions = searchOpen ? (
     <div className="flex items-center gap-2">
-      <div className="flex h-10 w-full min-w-0 items-center gap-2 rounded-xl border border-primary/50 bg-muted/60 pl-3 pr-1 ring-2 ring-primary/15 sm:w-80">
+      <div className="admin-pop flex h-10 w-full min-w-0 origin-right items-center gap-2 rounded-xl border border-primary/50 bg-muted/60 pl-3 pr-1 ring-2 ring-primary/15 sm:w-80">
         <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <input
           ref={searchRef}
@@ -286,7 +290,7 @@ export default function AdminNodesPage() {
       </div>
     </div>
   ) : (
-    <div className="flex items-center gap-2">
+    <div className="admin-pop flex origin-right items-center gap-2">
       <Button
         type="button"
         variant="outline"
@@ -323,7 +327,7 @@ export default function AdminNodesPage() {
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-12 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-2 shadow-[0_18px_50px_rgba(0,0,0,0.5)]"
+            className="admin-pop absolute right-0 top-12 z-30 w-72 max-w-[calc(100vw-2rem)] origin-top-right rounded-2xl border border-border bg-card p-2 shadow-[0_18px_50px_rgba(0,0,0,0.5)]"
           >
             <AdminFilterMenuTitle>{t('admin.nodes.sortTitle')}</AdminFilterMenuTitle>
             {NODE_SORT_KEYS.map((k: NodeSortKey) => (
@@ -355,8 +359,11 @@ export default function AdminNodesPage() {
         size="icon"
         className="size-10 rounded-xl bg-card dark:bg-card"
         aria-label={t('admin.nodes.refresh')}
-        loading={q.isFetching}
-        onClick={() => void q.refetch()}
+        loading={refreshSpin}
+        onClick={() => {
+          setManualRefresh(true)
+          void q.refetch().finally(() => setManualRefresh(false))
+        }}
       >
         <RefreshCw />
       </Button>
@@ -373,7 +380,7 @@ export default function AdminNodesPage() {
           actions={actions}
         />
 
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-4 xl:gap-3">
+        <div className="admin-stagger grid grid-cols-2 gap-2 xl:grid-cols-4 xl:gap-3">
           <SummaryCard
             icon={Users}
             tone="border-cyan-500/40 bg-cyan-500/10 text-cyan-400"
@@ -432,7 +439,7 @@ export default function AdminNodesPage() {
             <Card className="rounded-2xl p-8 text-center text-sm text-muted-foreground">{t('admin.nodes.noMatch')}</Card>
           )}
 
-          <ul className="relative flex flex-col gap-2" {...(canReorder ? sortable.listProps : {})}>
+          <ul className="admin-stagger relative flex flex-col gap-2" {...(canReorder ? sortable.listProps : {})}>
             {visible.map((n) => (
               <li
                 key={n.uuid}
