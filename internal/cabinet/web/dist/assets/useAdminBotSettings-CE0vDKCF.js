@@ -1,0 +1,6 @@
+import{k as E,h as e}from"./index-B44dmw4F.js";import{u as _,a as o,c as A}from"./query-D6ZsvjX7.js";/**
+ * @license lucide-react v0.475.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const u=[["path",{d:"M20 7h-9",key:"3s1dr2"}],["path",{d:"M14 17H5",key:"gfn3mx"}],["circle",{cx:"17",cy:"17",r:"3",key:"18b49y"}],["circle",{cx:"7",cy:"7",r:"3",key:"dfmy0x"}]],I=E("Settings2",u);function c(){return _({queryKey:["admin-bot-settings"],queryFn:()=>e.adminBotSettings(),staleTime:3e4})}function d(){const n=o();return A({mutationFn:i=>e.adminBotSettingsPatch({settings:i}),onSuccess:(i,t)=>{n.invalidateQueries({queryKey:["admin-bot-settings"]}),n.invalidateQueries({queryKey:["admin-bootstrap"]}),("CABINET_LIGHT_THEME_ENABLED"in t||"CABINET_DECOR_THEME"in t||"CABINET_DEEPLINK_HAPP_ENCRYPT"in t||"CABINET_DEEPLINK_INCY_ENCRYPT"in t||"CABINET_SUBSCRIPTION_SHOW_LOYALTY"in t||"CABINET_HOME_QUICK_ACTIONS"in t||"YOOKASA_PAYMENT_METHODS"in t||"PLATEGA_PAYMENT_METHODS"in t||"PLATEGA_ENABLED"in t||"CABINET_CHECKOUT_DEFAULT_METHOD"in t)&&n.invalidateQueries({queryKey:["auth-bootstrap"]}),("CABINET_TARIFF_PRICE_DISPLAY"in t||"CABINET_TARIFF_SAVINGS_BADGE"in t)&&n.invalidateQueries({queryKey:["tariffs"]})}})}export{I as S,d as a,c as u};
