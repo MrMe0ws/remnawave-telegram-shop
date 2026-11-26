@@ -133,6 +133,16 @@ export function AdminSettingsGroupEditor({
     return m
   }, [group.fields])
 
+  // Сколько полей секции изменено и не сохранено — для подсказки у закреплённой кнопки.
+  const dirtyCount = useMemo(
+    () =>
+      nonInstantKeys.filter((k) => {
+        const saved = fieldByKey.get(k)?.value ?? ''
+        return (draft[k] ?? saved) !== saved
+      }).length,
+    [nonInstantKeys, fieldByKey, draft],
+  )
+
   const subsectionBlocks = useMemo(() => {
     const keys = visibleFields.map((f) => f.key)
     return splitGroupIntoSubsections(group.id, keys)
@@ -401,7 +411,7 @@ export function AdminSettingsGroupEditor({
     group.id === 'channel_gate' ? '' : t(`admin.settings.groupIntros.${group.id}`, { defaultValue: '' })
 
   return (
-    <Card id={adminSettingsGroupAnchor(group.id)} className={cn('cabinet-elevated-card scroll-mt-24 overflow-hidden', expanded && 'lg:col-span-2')}>
+    <Card id={adminSettingsGroupAnchor(group.id)} className={cn('cabinet-elevated-card scroll-mt-24 overflow-clip', expanded && 'lg:col-span-2')}>
       <button
         type="button"
         onClick={onToggleExpand}
@@ -470,15 +480,27 @@ export function AdminSettingsGroupEditor({
             )}
 
             {nonInstantKeys.length > 0 && (
-              <div className="flex justify-end pt-3">
+              /*
+               * Кнопка прилипает к низу экрана, пока раскрытая секция на виду:
+               * длинные группы не нужно проматывать до конца ради «Сохранить».
+               * Для sticky у карточки overflow-clip, а не overflow-hidden.
+               */
+              <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-3 flex items-center justify-end gap-3 border-t border-border/60 bg-card/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:-mx-6 sm:-mb-6 sm:px-6">
+                {dirtyCount > 0 && (
+                  <span className="mr-auto hidden items-center gap-2 text-[12.5px] text-muted-foreground sm:inline-flex">
+                    <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+                    {t('admin.settings.unsaved', { count: dirtyCount })}
+                  </span>
+                )}
                 <Button
                   type="button"
                   size="sm"
                   disabled={saving}
                   loading={sectionSaving ?? (saving && togglingKey === null)}
                   onClick={() => onSave(nonInstantKeys)}
-                  className="min-w-[140px]"
+                  className="min-w-[140px] max-sm:h-11 max-sm:flex-1"
                 >
+                  {dirtyCount > 0 && <span className="size-1.5 rounded-full bg-amber-400 sm:hidden" aria-hidden />}
                   {t('admin.settings.saveSection')}
                 </Button>
               </div>

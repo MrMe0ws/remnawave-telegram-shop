@@ -3675,6 +3675,8 @@
         "title": "Bot settings",
         "subtitle": "Changes apply without restart. Affect new actions only, except block lists.",
         "saveSection": "Save section",
+        "unsaved_one": "{{count}} unsaved change",
+        "unsaved_other": "{{count}} unsaved changes",
         "saving": "Saving…",
         "saved": "Saved",
         "error": "Could not save",
