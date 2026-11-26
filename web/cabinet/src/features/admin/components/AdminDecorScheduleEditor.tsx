@@ -1,13 +1,16 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, CalendarPlus, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarPlus, ChevronRight, RotateCcw, Trash2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { AdminSelect } from './AdminSelect'
+import { surface } from './Surface'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
-import { DECOR_THEME_IDS } from '@/features/decor/decorThemes'
+import { normalizeDecorTheme } from '@/features/decor/decorThemes'
+import { DecorThemePickerSheet } from '@/features/decor/DecorThemePickerSheet'
+import { DECOR_PICKER_ACCENT } from '@/features/decor/decorThemePicker'
 import { decorThemeOptionLabelStyle } from '@/features/decor/decorThemeAdmin'
 import {
   DECOR_SCHEDULE_DAYS_IN_MONTH,
@@ -61,15 +64,8 @@ export function AdminDecorScheduleEditor({
     })
   }, [i18n.language])
 
-  const themeOptions = useMemo(
-    () =>
-      DECOR_THEME_IDS.map((id) => ({
-        value: id,
-        label: t(`admin.settings.enum.${id}`, { defaultValue: id }),
-        labelStyle: decorThemeOptionLabelStyle(id),
-      })),
-    [t],
-  )
+  // Окно, для которого сейчас открыт выбор темы (то же окно с плитками, что у «Темы оформления»).
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null)
 
   const activeIndex = useMemo(
     () => (autoEnabled ? activeDecorRuleIndex(rules) : -1),
@@ -109,19 +105,27 @@ export function AdminDecorScheduleEditor({
     [commit, rules],
   )
 
-  const renderThemeSelect = (rule: DecorScheduleRule, index: number) => (
-    <AdminSelect
-      value={rule.theme}
-      options={themeOptions}
-      onChange={(next) => {
-        if (next == null) return
-        updateRule(index, { theme: next as DecorScheduleRule['theme'] })
-      }}
-      placeholder={t('admin.settings.decorSchedule.theme')}
-      ariaLabel={t('admin.settings.decorSchedule.theme')}
-      disabled={disabled}
-    />
-  )
+  const renderThemeSelect = (rule: DecorScheduleRule, index: number) => {
+    const theme = normalizeDecorTheme(rule.theme)
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setPickerIndex(index)}
+        aria-label={t('admin.settings.decorSchedule.theme')}
+        className={cn(
+          surface('raised'),
+          'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent/40 disabled:opacity-60',
+        )}
+      >
+        <span className="size-4 shrink-0 rounded-full border border-white/20" style={{ background: DECOR_PICKER_ACCENT[theme] }} aria-hidden />
+        <span className="min-w-0 flex-1 truncate" style={decorThemeOptionLabelStyle(theme)}>
+          {t(`admin.settings.enum.${theme}`, { defaultValue: theme })}
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      </button>
+    )
+  }
 
   const renderBoundary = (rule: DecorScheduleRule, index: number, field: 'from' | 'to') => {
     const parsed = parseMonthDay(rule[field]) ?? { month: 1, day: 1 }
@@ -272,6 +276,17 @@ export function AdminDecorScheduleEditor({
       </div>
 
       <p className="text-xs text-muted-foreground">{t('admin.settings.decorSchedule.priorityHint')}</p>
+
+      <DecorThemePickerSheet
+        open={pickerIndex != null}
+        onClose={() => setPickerIndex(null)}
+        value={normalizeDecorTheme(pickerIndex != null ? rules[pickerIndex]?.theme : undefined)}
+        includeAuto={false}
+        onApply={(next) => {
+          if (pickerIndex == null || next === 'auto') return
+          updateRule(pickerIndex, { theme: next as DecorScheduleRule['theme'] })
+        }}
+      />
     </div>
   )
 }
