@@ -9,11 +9,10 @@ import { Stars } from '@/features/reviews/StarRating'
 import type { AdminReview, ReviewStatus } from '@/features/reviews/reviewTypes'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
+import { AdminTabIndicator } from '../components/AdminTabIndicator'
 import { AdminTablePagination } from '../components/AdminTablePagination'
-import { AdminConfirmModal } from '../components/AdminConfirmModal'
-import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminReviewModal } from '../components/AdminReviewModal'
-import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
+import { useAdminToast, useAdminUndoRemove } from '../hooks/useAdminToast'
 import { useAdminReviewsList, useAdminReviewsPending, useDeleteAdminReview, useUpdateAdminReview } from '../hooks/useAdminReviews'
 import { formatAdminDateTime } from '../utils/datetime'
 
@@ -84,10 +83,10 @@ export default function AdminReviewsPage() {
   const [editing, setEditing] = useState<AdminReview | null>(null)
   const [focusReply, setFocusReply] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [deleting, setDeleting] = useState<AdminReview | null>(null)
   const debounce = useMemo(() => ({ timer: null as ReturnType<typeof setTimeout> | null }), [])
 
-  const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
+  const { showSuccess, showError } = useAdminToast()
+  const undoRemove = useAdminUndoRemove()
   const update = useUpdateAdminReview()
   const del = useDeleteAdminReview()
 
@@ -104,7 +103,8 @@ export default function AdminReviewsPage() {
   )
 
   const { data, isLoading, isError } = useAdminReviewsList({ status: tab === 'all' ? '' : tab, q: debounced, page, limit: PAGE_LIMIT })
-  const items = data?.items ?? []
+  // Удалённые «с отменой» прячем сразу, пока тост висит.
+  const items = (data?.items ?? []).filter((r) => !undoRemove.isHidden(String(r.id)))
   const counts = data?.counts
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_LIMIT))
   const countFor = (k: Tab) => (counts ? counts[k] : null)
@@ -113,8 +113,12 @@ export default function AdminReviewsPage() {
   const setStatus = (r: AdminReview, status: ReviewStatus) =>
     update.mutate(
       { id: r.id, body: { status } },
-      { onSuccess: () => showSuccess(t('admin.reviews.saved')), onError: () => showError(new Error(t('admin.reviews.modal.error'))) },
+      { onSuccess: () => showSuccess(t('admin.reviews.saved')), onError: (err) => showError(err) },
     )
+
+  // Без окна подтверждения: строка пропадает, в тосте «Отменить»; запрос — когда тост ушёл.
+  const removeReview = (r: AdminReview) =>
+    undoRemove.remove(String(r.id), () => del.mutateAsync(r.id), t('admin.reviews.deletedToast'), authorLine(r, anonymous))
 
   const openEdit = (r: AdminReview, reply: boolean) => {
     setFocusReply(reply)
@@ -147,7 +151,7 @@ export default function AdminReviewsPage() {
           <EyeOff className="size-4" />
         </IconAction>
       )}
-      <IconAction label={t('admin.reviews.actionDelete')} tone="bad" onClick={() => setDeleting(r)}>
+      <IconAction label={t('admin.reviews.actionDelete')} tone="bad" onClick={() => removeReview(r)}>
         <Trash2 className="size-4" />
       </IconAction>
     </div>
@@ -173,7 +177,6 @@ export default function AdminReviewsPage() {
 
   return (
     <AdminLayout>
-      <AdminFeedback feedback={feedback} onDismiss={clear} />
       <div className="space-y-4">
         <AdminPageHeader
           icon={Star}
@@ -210,20 +213,23 @@ export default function AdminReviewsPage() {
         </div>
 
         <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
-          <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1">
+          <div role="tablist" className="relative inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1">
+            <AdminTabIndicator className="bg-primary/10 dark:bg-primary/20" />
             {TABS.map((k) => {
               const n = countFor(k)
               return (
                 <button
                   key={k}
                   type="button"
+                  role="tab"
+                  aria-selected={tab === k}
                   onClick={() => {
                     setTab(k)
                     setPage(1)
                   }}
                   className={cn(
-                    'min-h-9 flex-1 shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-center text-sm font-medium transition-colors',
-                    tab === k ? 'bg-primary/10 text-primary dark:bg-primary/20' : 'text-foreground/80 hover:bg-accent hover:text-foreground',
+                    'relative min-h-9 flex-1 shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-center text-sm font-medium transition-colors',
+                    tab === k ? 'text-primary' : 'text-foreground/80 hover:bg-accent hover:text-foreground',
                   )}
                 >
                   {t(TAB_KEY[k])}
@@ -254,7 +260,7 @@ export default function AdminReviewsPage() {
             <div className="py-12 text-center text-sm text-muted-foreground">{t('admin.reviews.empty')}</div>
           ) : (
             <>
-              <div className="divide-y divide-border/50 md:hidden">
+              <div className="admin-stagger divide-y divide-border/50 md:hidden">
                 {items.map((r) => (
                   <div
                     key={r.id}
@@ -291,7 +297,7 @@ export default function AdminReviewsPage() {
                       <th className="px-3 py-2 text-right">{t('admin.reviews.colActions')}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="admin-stagger">
                     {items.map((r) => (
                       <tr
                         key={r.id}
@@ -334,26 +340,6 @@ export default function AdminReviewsPage() {
           setCreating(false)
         }}
         onSaved={showSuccess}
-      />
-
-      <AdminConfirmModal
-        open={deleting != null}
-        onClose={() => setDeleting(null)}
-        title={t('admin.reviews.deleteTitle')}
-        message={t('admin.reviews.deleteHint')}
-        confirmLabel={t('admin.reviews.actionDelete')}
-        variant="destructive"
-        loading={del.isPending}
-        onConfirm={() => {
-          if (!deleting) return
-          del.mutate(deleting.id, {
-            onSuccess: () => {
-              showSuccess(t('admin.reviews.saved'))
-              setDeleting(null)
-            },
-            onError: () => showError(new Error(t('admin.reviews.modal.error'))),
-          })
-        }}
       />
     </AdminLayout>
   )

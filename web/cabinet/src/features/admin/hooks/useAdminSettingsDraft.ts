@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useAdminBotSettings, useAdminBotSettingsPatch } from './useAdminBotSettings'
-import { useAdminMutationFeedback } from './useAdminMutationFeedback'
+import { useAdminToast } from './useAdminToast'
 
 /**
  * Черновик настроек бота + сохранение по секциям.
@@ -18,7 +18,7 @@ export function useAdminSettingsDraft() {
   const { t } = useTranslation()
   const { data, isLoading, isError } = useAdminBotSettings()
   const patchMutation = useAdminBotSettingsPatch()
-  const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
+  const { showSuccess, showError } = useAdminToast()
 
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
@@ -116,7 +116,5 @@ export function useAdminSettingsDraft() {
     handleToggle,
     handleInstantEnum,
     handleSaveSection,
-    feedback,
-    clearFeedback: clear,
   }
 }

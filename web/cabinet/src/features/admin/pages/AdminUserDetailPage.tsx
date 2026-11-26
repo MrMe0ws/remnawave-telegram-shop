@@ -19,7 +19,6 @@ import { AdminUserReviewModal } from '../components/user-modals/AdminUserReviewM
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminSectionCard } from '../components/AdminSectionCard'
 import { AdminSetExpireModal } from '../components/AdminSetExpireModal'
-import { AdminFeedback } from '../components/AdminFeedback'
 import { AdminUserEditModals } from '../components/user-modals/AdminUserEditModals'
 import { AdminUserActionsModal } from '../components/user-modals/AdminUserActionsModal'
 import type { UserEditModalKey } from '../components/user-modals/types'
@@ -33,7 +32,7 @@ import { AdminUserMobileTopBar } from '../components/overview/AdminUserMobileTop
 import { useCopySubscriptionLink } from '../components/overview/useCopySubscriptionLink'
 import { buildUserCardMetrics } from '../components/overview/userCardMetrics'
 import { resolveLoyaltyDiscountPercent } from '../components/overview/loyaltyDiscount'
-import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
+import { useAdminToast } from '../hooks/useAdminToast'
 import { formatAdminApiError } from '../utils/formatAdminApiError'
 import { formatInvoiceType } from '../utils/formatInvoiceType'
 import { formatPaymentAmount } from '../utils/formatPaymentAmount'
@@ -160,9 +159,8 @@ export default function AdminUserDetailPage() {
   const [referralsExpanded, setReferralsExpanded] = useState(false)
   const [expireError, setExpireError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [overviewFeedback, setOverviewFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-  const { feedback, clear, handlers, showSuccess } = useAdminMutationFeedback()
+  const { handlers, showSuccess, showError } = useAdminToast()
 
   const setExpireMut = useAdminUserSetExpire(userId)
   const disableMut = useAdminUserDisable(userId)
@@ -253,9 +251,6 @@ export default function AdminUserDetailPage() {
     bootstrap?.loyalty_enabled ?? false,
   )
 
-  const handleOverviewSuccess = (message: string) => setOverviewFeedback({ type: 'success', message })
-  const handleOverviewError = (message: string) => setOverviewFeedback({ type: 'error', message })
-
   const paymentItems = paymentsData?.items ?? []
   const visiblePayments = paymentsExpanded ? paymentItems : paymentItems.slice(0, PREVIEW_ROWS)
   const referees = referralsData?.referees ?? []
@@ -280,14 +275,6 @@ export default function AdminUserDetailPage() {
 
   return (
     <AdminLayout meta={{ breadcrumbTail, mobileBareHeader: true }}>
-      <AdminFeedback feedback={feedback} onDismiss={clear} />
-      {overviewFeedback && (
-        <AdminFeedback
-          feedback={overviewFeedback}
-          onDismiss={() => setOverviewFeedback(null)}
-        />
-      )}
-
       <AdminUserMobileTopBar label={`#${user.id}`} onOpenActions={() => setActionsModal(true)} />
 
       {/*
@@ -563,8 +550,8 @@ export default function AdminUserDetailPage() {
         tariffsEnabled={salesModeTariffs}
         activeModal={editModal}
         onClose={() => setEditModal(null)}
-        onSuccess={handleOverviewSuccess}
-        onError={handleOverviewError}
+        onSuccess={(message: string) => showSuccess(message)}
+        onError={(message: string) => showError(message)}
       />
 
       <AdminUserActionsModal
@@ -699,7 +686,10 @@ export default function AdminUserDetailPage() {
               onClick={() => {
                 setDeleteError(null)
                 deleteMut.mutate(undefined, {
-                  onSuccess: () => navigate('/admin/users'),
+                  onSuccess: () => {
+                    showSuccess(t('admin.feedback.deleteSuccess'))
+                    navigate('/admin/users')
+                  },
                   onError: (e) => setDeleteError(formatAdminApiError(e, t)),
                 })
               }}

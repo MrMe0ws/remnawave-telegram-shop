@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import {
   GripVertical,
   Zap,
@@ -15,12 +16,12 @@ import {
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
-import { AdminFeedback } from '../components/AdminFeedback'
+import { AdminTabIndicator } from '../components/AdminTabIndicator'
 import { AdminTariffEditor } from '../components/AdminTariffEditor'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminToggleSwitch } from '../components/AdminToggleSwitch'
 import { AdminProductSettingsPanel } from '../components/AdminProductSettingsPanel'
-import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
+import { useAdminToast } from '../hooks/useAdminToast'
 import { tariffTierAccent } from '../utils/tariffTierAccent'
 import { TariffDescription, preprocessTelegramMarkup } from '@/components/TariffDescription'
 import { Card } from '@/components/ui/card'
@@ -501,8 +502,9 @@ function TariffsTabs({ value, onChange }: { value: TariffsTab; onChange: (v: Tar
     <div
       role="tablist"
       aria-label={t('admin.tariffs.tabsAria')}
-      className="flex w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 md:inline-flex md:w-auto"
+      className="relative flex w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 md:inline-flex md:w-auto"
     >
+      <AdminTabIndicator className="bg-emerald-500/10 dark:bg-emerald-500/20" />
       {items.map((item) => {
         const active = value === item.id
         return (
@@ -514,9 +516,9 @@ function TariffsTabs({ value, onChange }: { value: TariffsTab; onChange: (v: Tar
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(item.id)}
             className={cn(
-              'inline-flex min-h-9 flex-1 items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-xs font-medium transition-colors md:flex-none',
+              'relative inline-flex min-h-9 flex-1 items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-xs font-medium transition-colors md:flex-none',
               active
-                ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+                ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-foreground/80 hover:bg-accent hover:text-foreground',
             )}
           >
@@ -535,7 +537,7 @@ export default function AdminTariffsPage() {
   const create = useAdminTariffCreate()
   const update = useAdminTariffUpdate()
   const applySquadsMutation = useAdminTariffSquadsApply()
-  const { feedback, clear, showSuccess, showError } = useAdminMutationFeedback()
+  const { showSuccess, showError } = useAdminToast()
   const queryClient = useQueryClient()
 
   // Порядок карточек = порядок у пользователей. Пока тянем и пока порядок сохраняется,
@@ -553,7 +555,10 @@ export default function AdminTariffsPage() {
   // Когда отпустили перетаскиваемую плитку: «клик» после броска не должен открывать редактор.
   const dragEndedAt = useRef(0)
   const isDesktop = useIsDesktop()
-  const [tab, setTab] = useState<TariffsTab>('list')
+  // `?tab=conditions&open=stars` — ссылка с других страниц сразу на нужную настройку.
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<TariffsTab>(() => (searchParams.get('tab') === 'conditions' ? 'conditions' : 'list'))
+  const openGroup = searchParams.get('open')
   // Смещение точки захвата относительно левого верхнего угла карточки.
   const grab = useRef({ x: 0, y: 0 })
 
@@ -766,7 +771,6 @@ export default function AdminTariffsPage() {
 
   return (
     <AdminLayout meta={{ breadcrumbTail }}>
-      <AdminFeedback feedback={feedback} onDismiss={clear} />
       <div className="space-y-6">
         <AdminPageHeader
           icon={Zap}
@@ -791,7 +795,7 @@ export default function AdminTariffsPage() {
         {!isDesktop && <TariffsTabs value={tab} onChange={setTab} />}
 
         {tab === 'conditions' ? (
-          <AdminProductSettingsPanel />
+          <AdminProductSettingsPanel initialOpen={openGroup} />
         ) : isLoading ? (
           <div className="py-12 text-center text-muted-foreground">{t('admin.loading')}</div>
         ) : !tariffs || tariffs.length === 0 ? (
@@ -807,7 +811,7 @@ export default function AdminTariffsPage() {
           <div
             ref={gridRef}
             className={cn(
-              'relative grid items-stretch',
+              'admin-stagger relative grid items-stretch',
               isDesktop ? 'grid-cols-2 gap-4' : 'grid-cols-2 gap-2 sm:gap-3',
               dragId != null && 'select-none',
             )}

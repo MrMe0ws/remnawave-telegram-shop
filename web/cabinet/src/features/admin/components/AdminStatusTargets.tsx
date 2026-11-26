@@ -15,14 +15,13 @@ import {
 
 import { api, type AdminRowChecksDTO, type AdminStatusNodeDTO, type AdminStatusTargetDTO } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { AdminFeedback, type AdminFeedbackState } from './AdminFeedback'
+import { useAdminToast } from '../hooks/useAdminToast'
 import { AdminModal } from './AdminModal'
 import { AdminToggleSwitch } from './AdminToggleSwitch'
 import { AdminStatusRowChecks } from './AdminStatusRowChecks'
 import { CountryFlag } from './CountryFlag'
 import { CountrySelect } from './CountrySelect'
 import { AdminSelect } from './AdminSelect'
-import { formatAdminApiError } from '../utils/formatAdminApiError'
 
 export interface StatusTargetDraft {
   id: string
@@ -118,7 +117,7 @@ export function AdminStatusTargets() {
   const [rows, setRows] = useState<StatusTargetDraft[]>([])
   const [saved, setSaved] = useState('[]')
   const [ready, setReady] = useState(false)
-  const [feedback, setFeedback] = useState<AdminFeedbackState | null>(null)
+  const { showSuccess, showError } = useAdminToast()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const listRef = useRef<HTMLUListElement>(null)
@@ -164,8 +163,8 @@ export function AdminStatusTargets() {
 
   const probe = useMutation({
     mutationFn: () => api.adminStatusProbe(),
-    onSuccess: () => setFeedback({ type: 'success', message: t('admin.statusPage.checkStarted') }),
-    onError: (err) => setFeedback({ type: 'error', message: formatAdminApiError(err, t) }),
+    onSuccess: () => showSuccess(t('admin.statusPage.checkStarted')),
+    onError: (err) => showError(err),
   })
 
   const save = useMutation({
@@ -174,14 +173,14 @@ export function AdminStatusTargets() {
       const next = (data.targets ?? []).map(fromDTO)
       setRows(next)
       setSaved(JSON.stringify(next))
-      setFeedback({ type: 'success', message: t('admin.statusPage.saved') })
+      showSuccess(t('admin.statusPage.saved'))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-status-targets'] }),
         queryClient.invalidateQueries({ queryKey: ['admin-status-quota'] }),
         queryClient.invalidateQueries({ queryKey: ['public-status'] }),
       ])
     },
-    onError: (err) => setFeedback({ type: 'error', message: formatAdminApiError(err, t) }),
+    onError: (err) => showError(err),
   })
 
   function patch(id: string, next: Partial<StatusTargetDraft>) {
@@ -325,8 +324,6 @@ export function AdminStatusTargets() {
           </button>
         </div>
       </div>
-
-      <AdminFeedback feedback={feedback} onDismiss={() => setFeedback(null)} autoDismissMs={4000} />
 
       <div className="mt-4">
         {query.isLoading ? (

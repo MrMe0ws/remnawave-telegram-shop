@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { ChevronDown, CircleHelp, Loader2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { AdminFeedback } from './AdminFeedback'
 import { AdminToggleRow } from './AdminToggleSwitch'
 import { useAdminSettingsDraft } from '../hooks/useAdminSettingsDraft'
 import { ADMIN_STATUS_SETTINGS_GROUP } from '../utils/adminSettingsGroups'
@@ -41,7 +40,7 @@ function InfoHint({ text }: { text: string }) {
 export function AdminStatusSettings() {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const { groups, isLoading, isError, draft, setDraftValue, togglingKey, isGroupSaving, handleToggle, handleSaveSection, feedback, clearFeedback } =
+  const { groups, isLoading, isError, draft, setDraftValue, togglingKey, isGroupSaving, handleToggle, handleSaveSection } =
     useAdminSettingsDraft()
 
   const group = (groups ?? []).find((g) => g.id === ADMIN_STATUS_SETTINGS_GROUP)
@@ -100,7 +99,7 @@ export function AdminStatusSettings() {
           <ChevronDown className={cn('size-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
         </button>
         {open && (
-          <div className="space-y-4 border-t border-border/60 p-3">
+          <div className="admin-expand space-y-4 border-t border-border/60 p-3">
             {TEXT_KEYS.map((key) => (
               <label key={key} className="block">
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium">
@@ -144,7 +143,6 @@ export function AdminStatusSettings() {
           </div>
         )}
       </div>
-      <AdminFeedback feedback={feedback} onDismiss={clearFeedback} autoDismissMs={4000} />
     </section>
   )
 }

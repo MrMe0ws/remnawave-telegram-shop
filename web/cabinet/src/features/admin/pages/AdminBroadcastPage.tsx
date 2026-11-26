@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
-  AlertCircle,
   AlertTriangle,
   Bell,
   Check,
@@ -28,7 +27,8 @@ import type { AdminBroadcastHistoryItemDTO, AdminBroadcastMediaKind } from '@/li
 
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
-import { AdminFeedback } from '../components/AdminFeedback'
+import { AdminTabIndicator } from '../components/AdminTabIndicator'
+import { useAdminToast } from '../hooks/useAdminToast'
 import { AdminConfirmModal } from '../components/AdminConfirmModal'
 import { AdminBroadcastMessagePreview } from '../components/AdminBroadcastMessagePreview'
 import { AdminSelect } from '../components/AdminSelect'
@@ -41,7 +41,6 @@ import {
 } from '../components/BroadcastButtonsPicker'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
 import { useAdminShell } from '../layout/AdminShellContext'
-import { formatAdminApiError } from '../utils/formatAdminApiError'
 import { BROADCAST_LINK_KEYS, broadcastLinkLabelKey } from '../utils/broadcastLinks'
 import { telegramTextLength } from '../utils/telegramHtml'
 import {
@@ -179,7 +178,7 @@ export default function AdminBroadcastPage() {
   )
   const [draftSaved, setDraftSaved] = useState(Boolean(draft))
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [sendSuccess, setSendSuccess] = useState<string | null>(null)
+  const { showSuccess, showError } = useAdminToast()
   const [view, setView] = useState<BroadcastView>('compose')
   const [resetKey, setResetKey] = useState(0)
   const [watchedId, setWatchedId] = useState<number | null>(null)
@@ -247,8 +246,8 @@ export default function AdminBroadcastPage() {
         if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
         return { file_id: res.file_id, kind: res.kind, previewUrl, name: file.name }
       })
-      setSendSuccess(null)
     },
+    onError: (err) => showError(err),
   })
 
   /*
@@ -295,14 +294,16 @@ export default function AdminBroadcastPage() {
       // Ход и итог покажет карточка; строка «запущена» — только если история не записалась.
       if (res.broadcast_id) {
         setWatchedId(res.broadcast_id)
-        setSendSuccess(null)
       } else {
-        setSendSuccess(t('admin.broadcast.started', { count: res.recipient_count }))
+        showSuccess(t('admin.broadcast.started', { count: res.recipient_count }))
       }
       queryClient.invalidateQueries({ queryKey: ['admin-broadcast-audiences'] })
       queryClient.invalidateQueries({ queryKey: HISTORY_KEY })
     },
-    onError: () => setConfirmOpen(false),
+    onError: (err) => {
+      setConfirmOpen(false)
+      showError(err)
+    },
   })
 
   const audienceLabels: Record<string, string> = {
@@ -344,7 +345,6 @@ export default function AdminBroadcastPage() {
         : null,
     )
     setDetailItem(null)
-    setSendSuccess(null)
     setView('compose')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -352,7 +352,6 @@ export default function AdminBroadcastPage() {
   function clearMedia() {
     if (media?.previewUrl) URL.revokeObjectURL(media.previewUrl)
     setMedia(null)
-    setSendSuccess(null)
   }
 
   const canSend =
@@ -471,7 +470,8 @@ export default function AdminBroadcastPage() {
           accent="indigo"
           actions={
             // На ПК история — отдельный режим страницы; на телефоне — третья вкладка.
-            <div className={surface('well', 'hidden gap-1 rounded-xl p-1 lg:flex')} role="tablist">
+            <div className={surface('well', 'relative hidden gap-1 rounded-xl p-1 lg:flex')} role="tablist">
+              <AdminTabIndicator className="rounded-lg bg-card shadow-sm" />
               {(
                 [
                   ['compose', t('admin.broadcast.history.newBroadcast')],
@@ -487,8 +487,8 @@ export default function AdminBroadcastPage() {
                     aria-selected={active}
                     onClick={() => setView(key)}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
-                      active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                      'relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
+                      active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
                     {key === 'history' && <History className="size-4" />}
@@ -502,10 +502,6 @@ export default function AdminBroadcastPage() {
             </div>
           }
         />
-
-        {sendSuccess && (
-          <AdminFeedback mode="inline" feedback={{ type: 'success', message: sendSuccess }} />
-        )}
 
         {/* На узком экране форма и предпросмотр — две вкладки: иначе за
             результатом приходится листать через весь экран и обратно. */}
@@ -571,7 +567,6 @@ export default function AdminBroadcastPage() {
               onChange={(next) => {
                 setSelectedAudiences(next)
                 if (!next.some((aud) => PAID_AUDIENCES.includes(aud))) setSelectedTariff(null)
-                setSendSuccess(null)
               }}
               audienceLabels={audienceLabels}
               recipientCount={countLoading ? null : recipientCount}
@@ -624,10 +619,7 @@ export default function AdminBroadcastPage() {
               <TelegramHtmlEditor
                 resetKey={resetKey}
                 initialHtml={editorSeed}
-                onChange={(next) => {
-                  setHtml(next)
-                  setSendSuccess(null)
-                }}
+                onChange={setHtml}
                 placeholder={t('admin.broadcast.placeholder')}
               />
 
@@ -666,13 +658,6 @@ export default function AdminBroadcastPage() {
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
                 <span>{t('admin.broadcast.mp4Hint')}</span>
               </p>
-
-              {uploadMutation.isError && (
-                <div className="mx-4 mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                  <span>{formatAdminApiError(uploadMutation.error, t)}</span>
-                </div>
-              )}
 
               {media && (
                 /*
@@ -774,13 +759,6 @@ export default function AdminBroadcastPage() {
                 )}
               </div>
             </div>
-
-            {sendMutation.isError && (
-              <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span>{formatAdminApiError(sendMutation.error, t)}</span>
-              </div>
-            )}
           </div>
 
           <div

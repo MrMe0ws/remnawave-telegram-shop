@@ -5,7 +5,7 @@ import { Loader2, Search, SlidersHorizontal, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
-import { AdminFeedback } from '../components/AdminFeedback'
+import { AdminTabIndicator } from '../components/AdminTabIndicator'
 import { AdminSettingsGroupEditor, fieldLabel } from '../components/AdminSettingsGroupEditor'
 import { useAdminSettingsDraft } from '../hooks/useAdminSettingsDraft'
 import {
@@ -42,7 +42,9 @@ function SettingsCategoryNav({ activeId, onSelect }: CategoryNavProps) {
       aria-label={t('admin.settings.categoryNav')}
       className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5 lg:overflow-visible"
     >
-      <div className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
+      <div className="relative inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
+        {/* Подложка переезжает к выбранному разделу и перекрашивается в его цвет. */}
+        <AdminTabIndicator className={ADMIN_SETTINGS_CATEGORIES.find((c) => c.id === activeId)?.iconStyle.box} />
         {ADMIN_SETTINGS_CATEGORIES.map((category) => {
           const Icon = category.icon
           const isActive = activeId === category.id
@@ -57,9 +59,9 @@ function SettingsCategoryNav({ activeId, onSelect }: CategoryNavProps) {
               tabIndex={isActive ? 0 : -1}
               onClick={() => onSelect(category.id)}
               className={cn(
-                'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-center text-xs font-medium transition-colors sm:flex-1',
+                'relative inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-center text-xs font-medium transition-colors sm:flex-1',
                 isActive
-                  ? cn(category.iconStyle.box, category.iconStyle.icon)
+                  ? category.iconStyle.icon
                   : 'text-foreground/80 hover:bg-accent hover:text-foreground',
               )}
             >
@@ -90,8 +92,6 @@ export default function AdminSettingsPage() {
     handleToggle,
     handleInstantEnum,
     handleSaveSection,
-    feedback,
-    clearFeedback,
   } = useAdminSettingsDraft()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<AdminSettingsCategoryId>(ADMIN_SETTINGS_DEFAULT_CATEGORY)
@@ -180,7 +180,6 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminLayout>
-      <AdminFeedback feedback={feedback} onDismiss={clearFeedback} autoDismissMs={4000} />
       {/* На ПК без потолка ширины, как у остальных страниц: при свёрнутом меню
           lg:max-w-5xl центрировал контент вместо того, чтобы растянуть его. */}
       <div className="mx-auto max-w-2xl space-y-4 lg:max-w-none">
@@ -240,7 +239,7 @@ export default function AdminSettingsPage() {
           id={ADMIN_SETTINGS_GROUPS_LIST_ANCHOR}
           role="tabpanel"
           aria-labelledby={settingsCategoryTabId(activeCategory)}
-          className="grid scroll-mt-24 grid-cols-1 items-start gap-3 lg:grid-cols-2"
+          className="admin-stagger grid scroll-mt-24 grid-cols-1 items-start gap-3 lg:grid-cols-2"
         >
           {visibleGroups.map((group) => (
             <AdminSettingsGroupEditor

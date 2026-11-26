@@ -9,8 +9,7 @@ import type { AdminPromoCodeDTO, AdminPromoStatusFilter, AdminPromoTypeFilter } 
 import { nextSort, type SortDir, type SortState } from '../components/SortableTh'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
-import { AdminFeedback } from '../components/AdminFeedback'
-import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
+import { useAdminToast } from '../hooks/useAdminToast'
 import { useAdminPromoList } from '../hooks/useAdminPromos'
 import { useAdminTariffList } from '../hooks/useAdminTariffs'
 import { useAdminBootstrap } from '../hooks/useAdminBootstrap'
@@ -97,7 +96,7 @@ type Dialog =
 export default function AdminPromosPage() {
   const { t, i18n } = useTranslation()
   const { status, type, sort, q, page, update } = usePromoUrlState()
-  const { feedback, clear, showError, showSuccess, showInfo } = useAdminMutationFeedback()
+  const { showError, showSuccess, showInfo } = useAdminToast()
   const { data: tariffList } = useAdminTariffList()
   const { data: bootstrap } = useAdminBootstrap()
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
@@ -202,7 +201,6 @@ export default function AdminPromosPage() {
 
   return (
     <AdminLayout>
-      <AdminFeedback feedback={feedback} onDismiss={clear} />
       <div className="space-y-4">
         <AdminPageHeader
           icon={TicketPercent}
@@ -272,7 +270,7 @@ export default function AdminPromosPage() {
               <EmptyState icon={<TicketPercent className="size-6" />} title={t('admin.promos.empty')} action={createButton} />
             )
           ) : layout === 'table' ? (
-            <div role="table" className={cn('overflow-hidden rounded-[18px] border border-border/60 bg-card transition-opacity', list.isPlaceholderData && 'opacity-60')}>
+            <div role="table" className={cn('admin-stagger overflow-hidden rounded-[18px] border border-border/60 bg-card transition-opacity', list.isPlaceholderData && 'opacity-60')}>
               <PromoTableHeader
                 sort={sort}
                 onSort={filtersSupported ? onHeaderSort : undefined}
@@ -292,7 +290,7 @@ export default function AdminPromosPage() {
             </div>
           ) : (
             <div className={cn('transition-opacity', list.isPlaceholderData && 'opacity-60')}>
-              <div className={cn('grid gap-3', twoColumns ? 'grid-cols-2' : 'grid-cols-1')}>
+              <div className={cn('admin-stagger grid gap-3', twoColumns ? 'grid-cols-2' : 'grid-cols-1')}>
                 {items.map((p) => (
                   <PromoCard key={p.id} promo={p} tariffName={tariffName(p)} actions={actions} />
                 ))}
