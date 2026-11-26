@@ -132,7 +132,6 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
   const navTip = useAdminNavTooltip(collapsed)
 
   const salesModeTariffs = bootstrap?.sales_mode === 'tariffs'
-  const loyaltyEnabled = bootstrap?.loyalty_enabled ?? false
   const partnerEnabled = bootstrap?.partner_enabled ?? false
   // Бейдж считает заявки вместе с выплатами: иначе выплаты висят
   // незамеченными по несколько дней.
@@ -206,13 +205,13 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
 
   /*
    * Прямой заход по ссылке или F5 на нижней странице: выбранный пункт должен
-   * быть виден. Повторяем, когда меняется состав пунктов — «Лояльность» и
-   * «Партнёры» появляются после загрузки bootstrap и сдвигают список вниз.
+   * быть виден. Повторяем, когда меняется состав пунктов — «Партнёры»
+   * появляются после загрузки bootstrap и сдвигают список вниз.
    */
   useLayoutEffect(() => {
     revealUntilRef.current = performance.now() + NAV_REVEAL_WINDOW_MS
     revealActiveNavItem()
-  }, [location.pathname, collapsed, loyaltyEnabled, partnerEnabled])
+  }, [location.pathname, collapsed, partnerEnabled])
 
   function onNavScroll(e: UIEvent<HTMLDivElement>) {
     savedNavScrollTop = e.currentTarget.scrollTop
@@ -248,7 +247,8 @@ function AdminLayoutInner({ children, meta }: AdminLayoutProps) {
       items: [
         { to: '/admin/promos', icon: TicketPercent, labelKey: 'admin.nav.promos' },
         { to: '/admin/broadcast', icon: Megaphone, labelKey: 'admin.nav.broadcast' },
-        { to: '/admin/loyalty', icon: Gem, labelKey: 'admin.nav.loyalty', condition: loyaltyEnabled },
+        // Пункт виден и при выключенной программе: включают её на этой же странице (решение владельца 26.11.2026).
+        { to: '/admin/loyalty', icon: Gem, labelKey: 'admin.nav.loyalty' },
         {
           to: '/admin/partners',
           icon: Handshake,
