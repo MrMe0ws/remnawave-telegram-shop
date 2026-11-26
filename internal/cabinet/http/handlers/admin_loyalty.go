@@ -247,7 +247,13 @@ func (h *AdminLoyaltyHandler) TriggerRecalc(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		sums := loyalty.BuildCustomerXPSumsFromPaidPurchases(allPurchases)
+		fortuneXP, err := h.customers.SumFortuneLoyaltyXPByCustomer(ctx)
+		if err != nil {
+			slog.Error("admin loyalty recalc: sum fortune xp", "error", err.Error())
+			return
+		}
+
+		sums := loyalty.BuildCustomerXPSums(allPurchases, fortuneXP)
 
 		if err := h.customers.ApplyLoyaltyXPFullRecalc(ctx, sums); err != nil {
 			slog.Error("admin loyalty recalc: apply xp", "error", err.Error())

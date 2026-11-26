@@ -37,7 +37,7 @@
   "admin_loyalty_bad_number": "Enter a valid integer.",
   "admin_loyalty_saved": "✅ Saved.",
   "admin_loyalty_recalc": "Recalculate XP from history",
-  "admin_loyalty_recalc_confirm": "<b>Recalculate points for all customers</b>\n\nCurrent points are reset and recalculated from all already paid purchases, using the same rules as a normal payment.\n\nUse this after changing the Stars rate or other accrual settings. If the purchase list doesn’t change, running it again gives the same result.",
+  "admin_loyalty_recalc_confirm": "<b>Recalculate points for all customers</b>\n\nCurrent points are reset and recalculated from all already paid purchases, using the same rules as a normal payment. Points won on the fortune wheel are kept.\n\nUse this after changing the Stars rate or other accrual settings. If the purchase list doesn’t change, running it again gives the same result.",
   "admin_loyalty_recalc_yes": "✅ Run backfill",
   "admin_loyalty_recalc_fail": "Backfill failed",
   "admin_loyalty_recalc_done": "✅ Done.\nPaid purchases scanned: <b>%d</b>\nCustomers with XP &gt; 0: <b>%d</b>",

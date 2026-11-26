@@ -15,3 +15,17 @@ func BuildCustomerXPSumsFromPaidPurchases(purchases []database.Purchase) map[int
 	}
 	return out
 }
+
+// BuildCustomerXPSums — итоговые суммы для полного пересчёта: XP за оплаты плюс
+// XP, выигранные в колесе фортуны (fortuneXP: customer_id → сумма наград xp/micro).
+// Колесо — единственный источник XP помимо оплат; без него пересчёт стирал бы призы.
+func BuildCustomerXPSums(purchases []database.Purchase, fortuneXP map[int64]int64) map[int64]int64 {
+	out := BuildCustomerXPSumsFromPaidPurchases(purchases)
+	for cid, xp := range fortuneXP {
+		if xp <= 0 {
+			continue
+		}
+		out[cid] += xp
+	}
+	return out
+}

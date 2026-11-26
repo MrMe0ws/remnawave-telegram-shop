@@ -492,7 +492,17 @@ func (h Handler) AdminLoyaltyRecalcRunHandler(ctx context.Context, b *bot.Bot, u
 		})
 		return
 	}
-	sums := loyalty.BuildCustomerXPSumsFromPaidPurchases(purchases)
+	fortuneXP, err := h.customerRepository.SumFortuneLoyaltyXPByCustomer(ctx)
+	if err != nil {
+		slog.Error("loyalty backfill sum fortune xp", "error", err)
+		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: cb.ID,
+			Text:            h.translation.GetText(lang, "admin_loyalty_recalc_fail"),
+			ShowAlert:       true,
+		})
+		return
+	}
+	sums := loyalty.BuildCustomerXPSums(purchases, fortuneXP)
 	if err := h.customerRepository.ApplyLoyaltyXPFullRecalc(ctx, sums); err != nil {
 		slog.Error("loyalty backfill apply", "error", err)
 		_, _ = b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{

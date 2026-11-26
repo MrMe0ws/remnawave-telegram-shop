@@ -490,7 +490,32 @@ func (cr *CustomerRepository) DevCabinetResetTelegramToSynthetic(ctx context.Con
 	return tag.RowsAffected() > 0, nil
 }
 
-// ApplyLoyaltyXPFullRecalc обнуляет loyalty_xp у всех клиентов и задаёт суммы из карты (полный пересчёт XP из истории оплат).
+// SumFortuneLoyaltyXPByCustomer — XP, выигранные в колесе фортуны (награды xp и micro
+// из журнала fortune_spins), по клиентам. Нужны полному пересчёту: он обнуляет
+// loyalty_xp, и без этой суммы призы колеса пропали бы. При слиянии аккаунтов
+// журнал переносится на выжившего клиента, поэтому сумма остаётся при нём.
+func (cr *CustomerRepository) SumFortuneLoyaltyXPByCustomer(ctx context.Context) (map[int64]int64, error) {
+	rows, err := cr.pool.Query(ctx, `
+SELECT customer_id, SUM(reward_value)::bigint
+FROM fortune_spins
+WHERE reward_type IN ('xp', 'micro') AND reward_value > 0
+GROUP BY customer_id`)
+	if err != nil {
+		return nil, fmt.Errorf("sum fortune loyalty xp: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[int64]int64)
+	for rows.Next() {
+		var cid, xp int64
+		if err := rows.Scan(&cid, &xp); err != nil {
+			return nil, fmt.Errorf("scan fortune loyalty xp: %w", err)
+		}
+		out[cid] = xp
+	}
+	return out, rows.Err()
+}
+
+// ApplyLoyaltyXPFullRecalc обнуляет loyalty_xp у всех клиентов и задаёт суммы из карты (полный пересчёт XP: оплаты + призы колеса).
 func (cr *CustomerRepository) ApplyLoyaltyXPFullRecalc(ctx context.Context, sums map[int64]int64) error {
 	tx, err := cr.pool.Begin(ctx)
 	if err != nil {
