@@ -66,9 +66,14 @@ type UpdateInfraBillingNodeRequest struct {
 }
 
 // CreateInfraBillingNodeRequest — POST /api/infra-billing/nodes.
+//
+// С панели 3.3 поля name и nextBillingAt обязательные: без name панель отвечает 400
+// («expected string, received undefined»). name допускает null — тогда подписью служит
+// имя самой ноды, поэтому поле шлём всегда (без omitempty).
 type CreateInfraBillingNodeRequest struct {
 	ProviderUUID  uuid.UUID  `json:"providerUuid"`
 	NodeUUID      uuid.UUID  `json:"nodeUuid"`
+	Name          *string    `json:"name"`
 	NextBillingAt *time.Time `json:"nextBillingAt,omitempty"`
 }
 
@@ -179,6 +184,11 @@ func (r *Client) PatchInfraBillingNodes(ctx context.Context, req UpdateInfraBill
 
 // CreateInfraBillingNode POST /api/infra-billing/nodes.
 func (r *Client) CreateInfraBillingNode(ctx context.Context, req CreateInfraBillingNodeRequest) (*InfraBillingNodesBody, error) {
+	if req.NextBillingAt == nil {
+		// Дата обязательна; не указали — через месяц, как первый расчётный период.
+		next := time.Now().AddDate(0, 1, 0)
+		req.NextBillingAt = &next
+	}
 	var resp apiResponse[InfraBillingNodesBody]
 	if err := r.doJSON(ctx, http.MethodPost, "/api/infra-billing/nodes", req, &resp); err != nil {
 		return nil, err

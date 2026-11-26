@@ -1,0 +1,1861 @@
+{
+ "/admin/infra/overview": {
+  "totalBillingNodes": 19,
+  "totalAvailableBillingNodes": 2,
+  "billingNodes": [
+   {
+    "uuid": "bbbb0001-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0001-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-01T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": "",
+     "loginUrl": "https://freakhosting.com/login"
+    },
+    "node": {
+     "uuid": "cccc0001-0000-4000-8000-000000000000",
+     "name": "TEST Remnawave",
+     "countryCode": "DE"
+    }
+   },
+   {
+    "uuid": "bbbb0002-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0002-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-02T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": "",
+     "loginUrl": "https://intezio.net/login"
+    },
+    "node": {
+     "uuid": "cccc0002-0000-4000-8000-000000000000",
+     "name": "Эстония",
+     "countryCode": "EE"
+    }
+   },
+   {
+    "uuid": "bbbb0003-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0003-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0003-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-04T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0003-0000-4000-8000-000000000000",
+     "name": "qwins.co",
+     "faviconLink": "",
+     "loginUrl": "https://qwins.co/login"
+    },
+    "node": {
+     "uuid": "cccc0003-0000-4000-8000-000000000000",
+     "name": "Финляндия 2",
+     "countryCode": "FI"
+    }
+   },
+   {
+    "uuid": "bbbb0004-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0004-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-06T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": "",
+     "loginUrl": "https://xorek.cloud/login"
+    },
+    "node": {
+     "uuid": "cccc0004-0000-4000-8000-000000000000",
+     "name": "Россия 2",
+     "countryCode": "RU"
+    }
+   },
+   {
+    "uuid": "bbbb0005-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0005-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-09T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": "",
+     "loginUrl": "https://xorek.cloud/login"
+    },
+    "node": {
+     "uuid": "cccc0005-0000-4000-8000-000000000000",
+     "name": "Германия 3",
+     "countryCode": "DE"
+    }
+   },
+   {
+    "uuid": "bbbb0006-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0006-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-13T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": "",
+     "loginUrl": "https://wcloud.pro/login"
+    },
+    "node": {
+     "uuid": "cccc0006-0000-4000-8000-000000000000",
+     "name": "Wcloud Обход",
+     "countryCode": "RU"
+    }
+   },
+   {
+    "uuid": "bbbb0007-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0007-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-20T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": "",
+     "loginUrl": "https://hiphosting.net/login"
+    },
+    "node": {
+     "uuid": "cccc0007-0000-4000-8000-000000000000",
+     "name": "Финляндия HipHosting",
+     "countryCode": "FI"
+    }
+   },
+   {
+    "uuid": "bbbb0008-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0008-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0007-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-20T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0007-0000-4000-8000-000000000000",
+     "name": "Hostup",
+     "faviconLink": "",
+     "loginUrl": "https://hostup.se/login"
+    },
+    "node": {
+     "uuid": "cccc0008-0000-4000-8000-000000000000",
+     "name": "Швеция",
+     "countryCode": "SE"
+    }
+   },
+   {
+    "uuid": "bbbb0009-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0009-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-22T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": "",
+     "loginUrl": "https://dasabo.com/login"
+    },
+    "node": {
+     "uuid": "cccc0009-0000-4000-8000-000000000000",
+     "name": "Германия Premium",
+     "countryCode": "DE"
+    }
+   },
+   {
+    "uuid": "bbbb0010-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0010-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-22T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": "",
+     "loginUrl": "https://upcloud.com/login"
+    },
+    "node": {
+     "uuid": "cccc0010-0000-4000-8000-000000000000",
+     "name": "Польша",
+     "countryCode": "PL"
+    }
+   },
+   {
+    "uuid": "bbbb0011-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0011-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-22T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": "",
+     "loginUrl": "https://wcloud.pro/login"
+    },
+    "node": {
+     "uuid": "cccc0011-0000-4000-8000-000000000000",
+     "name": "Нидерланды",
+     "countryCode": "NL"
+    }
+   },
+   {
+    "uuid": "bbbb0012-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0012-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-11-23T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": "",
+     "loginUrl": "https://intezio.net/login"
+    },
+    "node": {
+     "uuid": "cccc0012-0000-4000-8000-000000000000",
+     "name": "Латвия",
+     "countryCode": "LV"
+    }
+   },
+   {
+    "uuid": "bbbb0013-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0013-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-11-27T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": "",
+     "loginUrl": "https://xorek.cloud/login"
+    },
+    "node": {
+     "uuid": "cccc0013-0000-4000-8000-000000000000",
+     "name": "Россия Обход",
+     "countryCode": "RU"
+    }
+   },
+   {
+    "uuid": "bbbb0014-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0014-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0007-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-11-29T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0007-0000-4000-8000-000000000000",
+     "name": "Hostup",
+     "faviconLink": "",
+     "loginUrl": "https://hostup.se/login"
+    },
+    "node": {
+     "uuid": "cccc0014-0000-4000-8000-000000000000",
+     "name": "Франция",
+     "countryCode": "FR"
+    }
+   },
+   {
+    "uuid": "bbbb0015-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0015-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-11-30T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": "",
+     "loginUrl": "https://freakhosting.com/login"
+    },
+    "node": {
+     "uuid": "cccc0015-0000-4000-8000-000000000000",
+     "name": "Германия 4",
+     "countryCode": "DE"
+    }
+   },
+   {
+    "uuid": "bbbb0016-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0016-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "nextBillingAt": "2026-12-27T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": "",
+     "loginUrl": "https://upcloud.com/login"
+    },
+    "node": {
+     "uuid": "cccc0016-0000-4000-8000-000000000000",
+     "name": "Литва",
+     "countryCode": "LT"
+    }
+   },
+   {
+    "uuid": "bbbb0017-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0017-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "nextBillingAt": "2027-01-04T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": "",
+     "loginUrl": "https://wcloud.pro/login"
+    },
+    "node": {
+     "uuid": "cccc0017-0000-4000-8000-000000000000",
+     "name": "Нидерланды 2",
+     "countryCode": "NL"
+    }
+   },
+   {
+    "uuid": "bbbb0018-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0018-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "nextBillingAt": "2027-01-11T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": "",
+     "loginUrl": "https://hiphosting.net/login"
+    },
+    "node": {
+     "uuid": "cccc0018-0000-4000-8000-000000000000",
+     "name": "США",
+     "countryCode": "US"
+    }
+   },
+   {
+    "uuid": "bbbb0019-0000-4000-8000-000000000000",
+    "nodeUuid": "cccc0019-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "nextBillingAt": "2027-03-31T21:00:00.000Z",
+    "createdAt": "2026-05-09T21:00:00.000Z",
+    "updatedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": "",
+     "loginUrl": "https://dasabo.com/login"
+    },
+    "node": {
+     "uuid": "cccc0019-0000-4000-8000-000000000000",
+     "name": "Австрия",
+     "countryCode": "AT"
+    }
+   }
+  ],
+  "availableBillingNodes": [
+   {
+    "uuid": "eeee0001-0000-4000-8000-000000000000",
+    "name": "Казахстан",
+    "countryCode": "KZ"
+   },
+   {
+    "uuid": "eeee0002-0000-4000-8000-000000000000",
+    "name": "Турция",
+    "countryCode": "TR"
+   }
+  ],
+  "stats": {
+   "upcomingNodesCount": 4,
+   "currentMonthPayments": 66.4,
+   "totalSpent": 531.9
+  },
+  "meta": {
+   "cccc0001-0000-4000-8000-000000000000": {
+    "price": 5,
+    "periodMonths": 1,
+    "priceSource": "guess",
+    "lastPaidAt": "2026-11-01T21:00:00.000Z",
+    "lastPaidAmount": 5
+   },
+   "cccc0002-0000-4000-8000-000000000000": {
+    "price": 4.5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-02T21:00:00.000Z",
+    "lastPaidAmount": 4.5
+   },
+   "cccc0003-0000-4000-8000-000000000000": {
+    "price": 6,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-04T21:00:00.000Z",
+    "lastPaidAmount": 6
+   },
+   "cccc0004-0000-4000-8000-000000000000": {
+    "price": 3.5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-06T21:00:00.000Z",
+    "lastPaidAmount": 3.5
+   },
+   "cccc0005-0000-4000-8000-000000000000": {
+    "price": 3.5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-09T21:00:00.000Z",
+    "lastPaidAmount": 3.5
+   },
+   "cccc0006-0000-4000-8000-000000000000": {
+    "price": 4,
+    "periodMonths": 1,
+    "priceSource": "guess",
+    "lastPaidAt": "2026-11-13T21:00:00.000Z",
+    "lastPaidAmount": 4
+   },
+   "cccc0007-0000-4000-8000-000000000000": {
+    "price": 5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-20T21:00:00.000Z",
+    "lastPaidAmount": 5
+   },
+   "cccc0008-0000-4000-8000-000000000000": {
+    "price": 4.9,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-20T21:00:00.000Z",
+    "lastPaidAmount": 4.9
+   },
+   "cccc0009-0000-4000-8000-000000000000": {
+    "price": 9,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-22T21:00:00.000Z",
+    "lastPaidAmount": 9
+   },
+   "cccc0010-0000-4000-8000-000000000000": {
+    "price": 5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-11-22T21:00:00.000Z",
+    "lastPaidAmount": 5
+   },
+   "cccc0011-0000-4000-8000-000000000000": {
+    "price": 4,
+    "periodMonths": 1,
+    "priceSource": "guess",
+    "lastPaidAt": "2026-11-22T21:00:00.000Z",
+    "lastPaidAmount": 4
+   },
+   "cccc0012-0000-4000-8000-000000000000": {
+    "price": 4.5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-10-23T21:00:00.000Z",
+    "lastPaidAmount": 4.5
+   },
+   "cccc0013-0000-4000-8000-000000000000": {
+    "price": 3.5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-10-27T21:00:00.000Z",
+    "lastPaidAmount": 3.5
+   },
+   "cccc0014-0000-4000-8000-000000000000": {
+    "price": null,
+    "periodMonths": 1,
+    "priceSource": "none",
+    "lastPaidAt": "2026-10-29T21:00:00.000Z",
+    "lastPaidAmount": null
+   },
+   "cccc0015-0000-4000-8000-000000000000": {
+    "price": 5,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-10-31T21:00:00.000Z",
+    "lastPaidAmount": 5
+   },
+   "cccc0016-0000-4000-8000-000000000000": {
+    "price": 5,
+    "periodMonths": 1,
+    "priceSource": "guess",
+    "lastPaidAt": "2026-11-27T21:00:00.000Z",
+    "lastPaidAmount": 5
+   },
+   "cccc0017-0000-4000-8000-000000000000": {
+    "price": 12,
+    "periodMonths": 3,
+    "priceSource": "set",
+    "lastPaidAt": "2026-10-04T21:00:00.000Z",
+    "lastPaidAmount": 12
+   },
+   "cccc0018-0000-4000-8000-000000000000": {
+    "price": 7,
+    "periodMonths": 1,
+    "priceSource": "set",
+    "lastPaidAt": "2026-12-11T21:00:00.000Z",
+    "lastPaidAmount": 7
+   },
+   "cccc0019-0000-4000-8000-000000000000": {
+    "price": 48,
+    "periodMonths": 6,
+    "priceSource": "set",
+    "lastPaidAt": "2026-09-30T21:00:00.000Z",
+    "lastPaidAmount": 48
+   }
+  },
+  "months": [
+   {
+    "month": "2026-06",
+    "total": 72.4,
+    "count": 15
+   },
+   {
+    "month": "2026-07",
+    "total": 91.4,
+    "count": 17
+   },
+   {
+    "month": "2026-08",
+    "total": 79.4,
+    "count": 16
+   },
+   {
+    "month": "2026-09",
+    "total": 79.4,
+    "count": 16
+   },
+   {
+    "month": "2026-10",
+    "total": 139.4,
+    "count": 18
+   },
+   {
+    "month": "2026-11",
+    "total": 66.4,
+    "count": 13
+   }
+  ],
+  "recent": [
+   {
+    "uuid": "dddd0049-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "amount": 9,
+    "billedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0009-0000-4000-8000-000000000000",
+      "name": "Германия Premium",
+      "countryCode": "DE",
+      "amount": 9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0055-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0010-0000-4000-8000-000000000000",
+      "name": "Польша",
+      "countryCode": "PL",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0061-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0011-0000-4000-8000-000000000000",
+      "name": "Нидерланды",
+      "countryCode": "NL",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0037-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-11-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0007-0000-4000-8000-000000000000",
+      "name": "Финляндия HipHosting",
+      "countryCode": "FI",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0043-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0007-0000-4000-8000-000000000000",
+    "amount": 4.9,
+    "billedAt": "2026-11-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0007-0000-4000-8000-000000000000",
+     "name": "Hostup",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0008-0000-4000-8000-000000000000",
+      "name": "Швеция",
+      "countryCode": "SE",
+      "amount": 4.9
+     }
+    ]
+   }
+  ],
+  "historyTotal": 96
+ },
+ "/admin/infra/providers": {
+  "total": 10,
+  "providers": [
+   {
+    "uuid": "aaaa0001-0000-4000-8000-000000000000",
+    "name": "FreakHosting",
+    "faviconLink": "",
+    "loginUrl": "https://freakhosting.com/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 60,
+     "totalBills": 12
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0001-0000-4000-8000-000000000000",
+      "name": "TEST Remnawave",
+      "countryCode": "DE"
+     },
+     {
+      "nodeUuid": "cccc0015-0000-4000-8000-000000000000",
+      "name": "Германия 4",
+      "countryCode": "DE"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0002-0000-4000-8000-000000000000",
+    "name": "intezio",
+    "faviconLink": "",
+    "loginUrl": "https://intezio.net/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 49.5,
+     "totalBills": 11
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0002-0000-4000-8000-000000000000",
+      "name": "Эстония",
+      "countryCode": "EE"
+     },
+     {
+      "nodeUuid": "cccc0012-0000-4000-8000-000000000000",
+      "name": "Латвия",
+      "countryCode": "LV"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0003-0000-4000-8000-000000000000",
+    "name": "qwins.co",
+    "faviconLink": "",
+    "loginUrl": "https://qwins.co/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 36,
+     "totalBills": 6
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0003-0000-4000-8000-000000000000",
+      "name": "Финляндия 2",
+      "countryCode": "FI"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0004-0000-4000-8000-000000000000",
+    "name": "xorek",
+    "faviconLink": "",
+    "loginUrl": "https://xorek.cloud/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 63,
+     "totalBills": 18
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0004-0000-4000-8000-000000000000",
+      "name": "Россия 2",
+      "countryCode": "RU"
+     },
+     {
+      "nodeUuid": "cccc0005-0000-4000-8000-000000000000",
+      "name": "Германия 3",
+      "countryCode": "DE"
+     },
+     {
+      "nodeUuid": "cccc0013-0000-4000-8000-000000000000",
+      "name": "Россия Обход",
+      "countryCode": "RU"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0005-0000-4000-8000-000000000000",
+    "name": "Wcloud",
+    "faviconLink": "",
+    "loginUrl": "https://wcloud.pro/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 72,
+     "totalBills": 14
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0006-0000-4000-8000-000000000000",
+      "name": "Wcloud Обход",
+      "countryCode": "RU"
+     },
+     {
+      "nodeUuid": "cccc0011-0000-4000-8000-000000000000",
+      "name": "Нидерланды",
+      "countryCode": "NL"
+     },
+     {
+      "nodeUuid": "cccc0017-0000-4000-8000-000000000000",
+      "name": "Нидерланды 2",
+      "countryCode": "NL"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0006-0000-4000-8000-000000000000",
+    "name": "HipHosting",
+    "faviconLink": "",
+    "loginUrl": "https://hiphosting.net/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 65,
+     "totalBills": 11
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0007-0000-4000-8000-000000000000",
+      "name": "Финляндия HipHosting",
+      "countryCode": "FI"
+     },
+     {
+      "nodeUuid": "cccc0018-0000-4000-8000-000000000000",
+      "name": "США",
+      "countryCode": "US"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0007-0000-4000-8000-000000000000",
+    "name": "Hostup",
+    "faviconLink": "",
+    "loginUrl": "https://hostup.se/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 29.4,
+     "totalBills": 6
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0008-0000-4000-8000-000000000000",
+      "name": "Швеция",
+      "countryCode": "SE"
+     },
+     {
+      "nodeUuid": "cccc0014-0000-4000-8000-000000000000",
+      "name": "Франция",
+      "countryCode": "FR"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0008-0000-4000-8000-000000000000",
+    "name": "Dasabo",
+    "faviconLink": "",
+    "loginUrl": "https://dasabo.com/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 102,
+     "totalBills": 7
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0009-0000-4000-8000-000000000000",
+      "name": "Германия Premium",
+      "countryCode": "DE"
+     },
+     {
+      "nodeUuid": "cccc0019-0000-4000-8000-000000000000",
+      "name": "Австрия",
+      "countryCode": "AT"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0009-0000-4000-8000-000000000000",
+    "name": "UpCloud",
+    "faviconLink": "",
+    "loginUrl": "https://upcloud.com/login",
+    "createdAt": "2026-01-29T21:00:00.000Z",
+    "updatedAt": "2026-11-15T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 55,
+     "totalBills": 11
+    },
+    "billingNodes": [
+     {
+      "nodeUuid": "cccc0010-0000-4000-8000-000000000000",
+      "name": "Польша",
+      "countryCode": "PL"
+     },
+     {
+      "nodeUuid": "cccc0016-0000-4000-8000-000000000000",
+      "name": "Литва",
+      "countryCode": "LT"
+     }
+    ]
+   },
+   {
+    "uuid": "aaaa0099-0000-4000-8000-000000000000",
+    "name": "Aeza",
+    "faviconLink": "",
+    "loginUrl": "",
+    "createdAt": "2026-10-26T21:00:00.000Z",
+    "updatedAt": "2026-10-26T21:00:00.000Z",
+    "billingHistory": {
+     "totalAmount": 0,
+     "totalBills": 0
+    },
+    "billingNodes": []
+   }
+  ]
+ },
+ "/admin/infra/history": {
+  "records": [
+   {
+    "uuid": "dddd0049-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "amount": 9,
+    "billedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0009-0000-4000-8000-000000000000",
+      "name": "Германия Premium",
+      "countryCode": "DE",
+      "amount": 9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0055-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0010-0000-4000-8000-000000000000",
+      "name": "Польша",
+      "countryCode": "PL",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0061-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-11-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0011-0000-4000-8000-000000000000",
+      "name": "Нидерланды",
+      "countryCode": "NL",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0037-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-11-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0007-0000-4000-8000-000000000000",
+      "name": "Финляндия HipHosting",
+      "countryCode": "FI",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0043-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0007-0000-4000-8000-000000000000",
+    "amount": 4.9,
+    "billedAt": "2026-11-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0007-0000-4000-8000-000000000000",
+     "name": "Hostup",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0008-0000-4000-8000-000000000000",
+      "name": "Швеция",
+      "countryCode": "SE",
+      "amount": 4.9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0031-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-11-13T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0006-0000-4000-8000-000000000000",
+      "name": "Wcloud Обход",
+      "countryCode": "RU",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0091-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 7,
+    "billedAt": "2026-11-11T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0018-0000-4000-8000-000000000000",
+      "name": "США",
+      "countryCode": "US",
+      "amount": 7
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0025-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-11-09T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0005-0000-4000-8000-000000000000",
+      "name": "Германия 3",
+      "countryCode": "DE",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0019-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-11-06T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0004-0000-4000-8000-000000000000",
+      "name": "Россия 2",
+      "countryCode": "RU",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0013-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0003-0000-4000-8000-000000000000",
+    "amount": 6,
+    "billedAt": "2026-11-04T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0003-0000-4000-8000-000000000000",
+     "name": "qwins.co",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0003-0000-4000-8000-000000000000",
+      "name": "Финляндия 2",
+      "countryCode": "FI",
+      "amount": 6
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0007-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "amount": 4.5,
+    "billedAt": "2026-11-02T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0002-0000-4000-8000-000000000000",
+      "name": "Эстония",
+      "countryCode": "EE",
+      "amount": 4.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0001-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-11-01T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0001-0000-4000-8000-000000000000",
+      "name": "TEST Remnawave",
+      "countryCode": "DE",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0078-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-10-31T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0015-0000-4000-8000-000000000000",
+      "name": "Германия 4",
+      "countryCode": "DE",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0072-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-10-27T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0013-0000-4000-8000-000000000000",
+      "name": "Россия Обход",
+      "countryCode": "RU",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0084-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-10-27T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0016-0000-4000-8000-000000000000",
+      "name": "Литва",
+      "countryCode": "LT",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0067-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "amount": 4.5,
+    "billedAt": "2026-10-23T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0012-0000-4000-8000-000000000000",
+      "name": "Латвия",
+      "countryCode": "LV",
+      "amount": 4.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0050-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "amount": 9,
+    "billedAt": "2026-10-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0009-0000-4000-8000-000000000000",
+      "name": "Германия Premium",
+      "countryCode": "DE",
+      "amount": 9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0056-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-10-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0010-0000-4000-8000-000000000000",
+      "name": "Польша",
+      "countryCode": "PL",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0062-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-10-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0011-0000-4000-8000-000000000000",
+      "name": "Нидерланды",
+      "countryCode": "NL",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0038-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-10-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0007-0000-4000-8000-000000000000",
+      "name": "Финляндия HipHosting",
+      "countryCode": "FI",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0044-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0007-0000-4000-8000-000000000000",
+    "amount": 4.9,
+    "billedAt": "2026-10-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0007-0000-4000-8000-000000000000",
+     "name": "Hostup",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0008-0000-4000-8000-000000000000",
+      "name": "Швеция",
+      "countryCode": "SE",
+      "amount": 4.9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0032-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-10-13T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0006-0000-4000-8000-000000000000",
+      "name": "Wcloud Обход",
+      "countryCode": "RU",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0092-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 7,
+    "billedAt": "2026-10-11T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0018-0000-4000-8000-000000000000",
+      "name": "США",
+      "countryCode": "US",
+      "amount": 7
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0026-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-10-09T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0005-0000-4000-8000-000000000000",
+      "name": "Германия 3",
+      "countryCode": "DE",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0020-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-10-06T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0004-0000-4000-8000-000000000000",
+      "name": "Россия 2",
+      "countryCode": "RU",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0014-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0003-0000-4000-8000-000000000000",
+    "amount": 6,
+    "billedAt": "2026-10-04T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0003-0000-4000-8000-000000000000",
+     "name": "qwins.co",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0003-0000-4000-8000-000000000000",
+      "name": "Финляндия 2",
+      "countryCode": "FI",
+      "amount": 6
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0089-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 12,
+    "billedAt": "2026-10-04T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0017-0000-4000-8000-000000000000",
+      "name": "Нидерланды 2",
+      "countryCode": "NL",
+      "amount": 12
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0008-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "amount": 4.5,
+    "billedAt": "2026-10-02T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0002-0000-4000-8000-000000000000",
+      "name": "Эстония",
+      "countryCode": "EE",
+      "amount": 4.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0002-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-10-01T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0001-0000-4000-8000-000000000000",
+      "name": "TEST Remnawave",
+      "countryCode": "DE",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0079-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-09-30T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0015-0000-4000-8000-000000000000",
+      "name": "Германия 4",
+      "countryCode": "DE",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0096-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "amount": 48,
+    "billedAt": "2026-09-30T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0019-0000-4000-8000-000000000000",
+      "name": "Австрия",
+      "countryCode": "AT",
+      "amount": 48
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0073-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-09-27T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0013-0000-4000-8000-000000000000",
+      "name": "Россия Обход",
+      "countryCode": "RU",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0085-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-09-27T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0016-0000-4000-8000-000000000000",
+      "name": "Литва",
+      "countryCode": "LT",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0068-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "amount": 4.5,
+    "billedAt": "2026-09-23T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0012-0000-4000-8000-000000000000",
+      "name": "Латвия",
+      "countryCode": "LV",
+      "amount": 4.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0051-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0008-0000-4000-8000-000000000000",
+    "amount": 9,
+    "billedAt": "2026-09-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0008-0000-4000-8000-000000000000",
+     "name": "Dasabo",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0009-0000-4000-8000-000000000000",
+      "name": "Германия Premium",
+      "countryCode": "DE",
+      "amount": 9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0057-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-09-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0010-0000-4000-8000-000000000000",
+      "name": "Польша",
+      "countryCode": "PL",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0063-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-09-22T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0011-0000-4000-8000-000000000000",
+      "name": "Нидерланды",
+      "countryCode": "NL",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0039-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-09-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0007-0000-4000-8000-000000000000",
+      "name": "Финляндия HipHosting",
+      "countryCode": "FI",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0045-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0007-0000-4000-8000-000000000000",
+    "amount": 4.9,
+    "billedAt": "2026-09-20T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0007-0000-4000-8000-000000000000",
+     "name": "Hostup",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0008-0000-4000-8000-000000000000",
+      "name": "Швеция",
+      "countryCode": "SE",
+      "amount": 4.9
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0033-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0005-0000-4000-8000-000000000000",
+    "amount": 4,
+    "billedAt": "2026-09-13T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0005-0000-4000-8000-000000000000",
+     "name": "Wcloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0006-0000-4000-8000-000000000000",
+      "name": "Wcloud Обход",
+      "countryCode": "RU",
+      "amount": 4
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0093-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0006-0000-4000-8000-000000000000",
+    "amount": 7,
+    "billedAt": "2026-09-11T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0006-0000-4000-8000-000000000000",
+     "name": "HipHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0018-0000-4000-8000-000000000000",
+      "name": "США",
+      "countryCode": "US",
+      "amount": 7
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0027-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-09-09T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0005-0000-4000-8000-000000000000",
+      "name": "Германия 3",
+      "countryCode": "DE",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0021-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-09-06T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0004-0000-4000-8000-000000000000",
+      "name": "Россия 2",
+      "countryCode": "RU",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0015-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0003-0000-4000-8000-000000000000",
+    "amount": 6,
+    "billedAt": "2026-09-04T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0003-0000-4000-8000-000000000000",
+     "name": "qwins.co",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0003-0000-4000-8000-000000000000",
+      "name": "Финляндия 2",
+      "countryCode": "FI",
+      "amount": 6
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0009-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "amount": 4.5,
+    "billedAt": "2026-09-02T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0002-0000-4000-8000-000000000000",
+      "name": "Эстония",
+      "countryCode": "EE",
+      "amount": 4.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0003-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-09-01T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0001-0000-4000-8000-000000000000",
+      "name": "TEST Remnawave",
+      "countryCode": "DE",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0080-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0001-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-08-31T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0001-0000-4000-8000-000000000000",
+     "name": "FreakHosting",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0015-0000-4000-8000-000000000000",
+      "name": "Германия 4",
+      "countryCode": "DE",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0074-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0004-0000-4000-8000-000000000000",
+    "amount": 3.5,
+    "billedAt": "2026-08-27T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0004-0000-4000-8000-000000000000",
+     "name": "xorek",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0013-0000-4000-8000-000000000000",
+      "name": "Россия Обход",
+      "countryCode": "RU",
+      "amount": 3.5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0086-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0009-0000-4000-8000-000000000000",
+    "amount": 5,
+    "billedAt": "2026-08-27T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0009-0000-4000-8000-000000000000",
+     "name": "UpCloud",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0016-0000-4000-8000-000000000000",
+      "name": "Литва",
+      "countryCode": "LT",
+      "amount": 5
+     }
+    ]
+   },
+   {
+    "uuid": "dddd0069-0000-4000-8000-000000000000",
+    "providerUuid": "aaaa0002-0000-4000-8000-000000000000",
+    "amount": 4.5,
+    "billedAt": "2026-08-23T21:00:00.000Z",
+    "provider": {
+     "uuid": "aaaa0002-0000-4000-8000-000000000000",
+     "name": "intezio",
+     "faviconLink": ""
+    },
+    "nodes": [
+     {
+      "nodeUuid": "cccc0012-0000-4000-8000-000000000000",
+      "name": "Латвия",
+      "countryCode": "LV",
+      "amount": 4.5
+     }
+    ]
+   }
+  ],
+  "total": 96
+ },
+ "/admin/reviews": {
+  "items": [],
+  "total": 0,
+  "counts": {
+   "pending": 0,
+   "published": 0,
+   "hidden": 0,
+   "all": 0
+  }
+ },
+ "/admin/infra/settings": {
+  "notify_before_1": true,
+  "notify_before_3": true,
+  "notify_before_7": false,
+  "notify_before_14": false
+ }
+}

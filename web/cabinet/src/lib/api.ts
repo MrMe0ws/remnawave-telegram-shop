@@ -87,6 +87,8 @@ import type {
   AdminInfraProvidersDTO,
   AdminInfraHistoryDTO,
   AdminInfraSettingsDTO,
+  AdminInfraOverviewDTO,
+  AdminInfraPayResultDTO,
   AdminBotSettingsDTO,
   AdminBotSettingsPatchDTO,
 } from './types/admin'
@@ -2316,6 +2318,18 @@ export const api = {
   adminInfraDeleteHistory: (uuid: string) =>
     request<AdminInfraHistoryDTO>('DELETE', `/admin/infra/history/${uuid}`),
   adminInfraSettings: () => request<AdminInfraSettingsDTO>('GET', '/admin/infra/settings'),
+  adminInfraOverview: () => request<AdminInfraOverviewDTO>('GET', '/admin/infra/overview'),
+  adminInfraPay: (body: {
+    provider_uuid: string
+    amount: number
+    billed_at: string
+    period_months: number
+    nodes: { billing_uuid: string; price?: number }[]
+  }) => request<AdminInfraPayResultDTO>('POST', '/admin/infra/pay', body),
+  adminInfraPayUndo: (body: { history_uuid?: string; nodes: { billing_uuid: string; next_billing_at: string }[] }) =>
+    request<{ ok: boolean }>('POST', '/admin/infra/pay/undo', body),
+  adminInfraSetNodeMeta: (body: { node_uuid: string; price: number | null; period_months: number }) =>
+    request<{ ok: boolean }>('PUT', '/admin/infra/node-meta', body),
   adminStatusTargets: () =>
     request<{ targets: AdminStatusTargetDTO[]; checks?: Record<string, AdminRowChecksDTO> }>('GET', '/admin/status/targets'),
 

@@ -30,6 +30,7 @@ export function NodeSidePanel({
   children,
   footer,
   depth = 2,
+  widthClassName,
 }: {
   open: boolean
   onClose: () => void
@@ -42,6 +43,8 @@ export function NodeSidePanel({
   footer?: ReactNode
   /** Глубина: 2 — панели окна ноды (800 px на ПК), 3 и глубже — вложенные в них (690 px). */
   depth?: 2 | 3
+  /** Своя ширина на ПК вместо ступени по глубине (например, узкая панель оплаты в инфре). */
+  widthClassName?: string
 }) {
   const { t } = useTranslation()
   const [mounted, setMounted] = useState(open)
@@ -109,7 +112,7 @@ export function NodeSidePanel({
         className={cn(
           // В мини-аппе Telegram (полный экран) сверху его полоса с ✕/⋯ и часами — панель начинается под ней, иначе свой ✕ не нажать. В браузере отступ 0.
           'absolute bottom-0 right-0 top-[var(--cabinet-tg-safe-top)] flex w-full flex-col overflow-hidden rounded-none border-l border-border bg-card shadow-2xl shadow-black/40',
-          depth === 2 ? 'sm:w-[800px]' : 'sm:w-[690px]',
+          widthClassName ?? (depth === 2 ? 'sm:w-[800px]' : 'sm:w-[690px]'),
           'transition-transform duration-[220ms] ease-out motion-reduce:transition-none',
           visible ? 'translate-x-0' : 'translate-x-full',
         )}

@@ -17,10 +17,16 @@ import (
 type AdminInfraHandler struct {
 	rw      *remnawave.Client
 	billing *database.InfraBillingRepository
+	// meta — тот же репозиторий за интерфейсом (цены нод, привязки оплат), чтобы оплату можно было тестировать без БД.
+	meta infraMetaStore
 }
 
 func NewAdminInfra(rw *remnawave.Client, billing *database.InfraBillingRepository) *AdminInfraHandler {
-	return &AdminInfraHandler{rw: rw, billing: billing}
+	h := &AdminInfraHandler{rw: rw, billing: billing}
+	if billing != nil {
+		h.meta = billing
+	}
+	return h
 }
 
 func (h *AdminInfraHandler) requireRW(w http.ResponseWriter) bool {
@@ -342,7 +348,7 @@ func (h *AdminInfraHandler) History(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if s := r.URL.Query().Get("size"); s != "" {
-		if v, err := strconv.Atoi(s); err == nil && v > 0 && v <= 100 {
+		if v, err := strconv.Atoi(s); err == nil && v > 0 && v <= infraHistoryPage {
 			size = v
 		}
 	}
@@ -353,7 +359,18 @@ func (h *AdminInfraHandler) History(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to fetch history", http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, body)
+	// К каждой записи — ноды, которые она оплатила (если оплату записывали из кабинета).
+	var links map[uuid.UUID][]database.InfraPaymentNode
+	if h.meta != nil {
+		if links, err = h.meta.ListPaymentNodes(r.Context()); err != nil {
+			slog.Error("admin infra: history links", "error", err)
+		}
+	}
+	records := make([]infraHistoryItemDTO, 0, len(body.Records))
+	for _, rec := range body.Records {
+		records = append(records, infraHistoryItemDTO{InfraBillingHistoryRecord: rec, Nodes: linkDTOs(links[rec.UUID])})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"records": records, "total": body.Total})
 }
 
 type createHistoryReq struct {
@@ -425,6 +442,11 @@ func (h *AdminInfraHandler) DeleteHistory(w http.ResponseWriter, r *http.Request
 		slog.Error("admin infra: delete history", "error", err)
 		http.Error(w, "failed to delete history record", http.StatusInternalServerError)
 		return
+	}
+	if h.meta != nil {
+		if err := h.meta.DeletePaymentNodes(r.Context(), id); err != nil {
+			slog.Error("admin infra: delete history links (non-fatal)", "error", err)
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

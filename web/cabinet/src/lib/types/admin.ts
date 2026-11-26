@@ -908,12 +908,54 @@ export interface AdminInfraProvidersDTO {
   providers: AdminInfraProviderDTO[]
 }
 
+export interface AdminInfraPaymentNodeDTO {
+  nodeUuid: string
+  name: string
+  countryCode: string
+  /** Доля ноды в общем счёте; null — не знаем. */
+  amount: number | null
+}
+
 export interface AdminInfraHistoryRecordDTO {
   uuid: string
   providerUuid: string
   amount: number
   billedAt: string
   provider: AdminInfraProviderShortDTO
+  /** Какие ноды покрыла оплата (только для записанных из кабинета). */
+  nodes?: AdminInfraPaymentNodeDTO[]
+}
+
+/** Цена и период ноды — хранятся у нас, панель их не знает. */
+export interface AdminInfraNodeMetaDTO {
+  price: number | null
+  periodMonths: number
+  /** set — задана; guess — по последней оплате; none — неизвестна. */
+  priceSource: 'set' | 'guess' | 'none'
+  lastPaidAt: string | null
+  lastPaidAmount: number | null
+}
+
+export interface AdminInfraMonthDTO {
+  /** 2026-11 */
+  month: string
+  total: number
+  count: number
+}
+
+/** Сводка вкладки «Ноды»: тело панели + цены нод, расходы по месяцам и последние оплаты. */
+export interface AdminInfraOverviewDTO extends AdminInfraNodesDTO {
+  /** По nodeUuid. */
+  meta: Record<string, AdminInfraNodeMetaDTO>
+  months: AdminInfraMonthDTO[]
+  recent: AdminInfraHistoryRecordDTO[]
+  historyTotal: number
+}
+
+export interface AdminInfraPayResultDTO {
+  /** null — панель не вернула созданную запись, отменить её из кабинета нельзя. */
+  historyUuid: string | null
+  nodes: { billingUuid: string; nodeUuid: string; prevNextBillingAt: string; nextBillingAt: string }[]
 }
 
 export interface AdminInfraHistoryDTO {

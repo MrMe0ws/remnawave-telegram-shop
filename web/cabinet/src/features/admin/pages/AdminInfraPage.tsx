@@ -1,804 +1,310 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Server, Plus, Trash2, Edit, Globe, Bell, History } from 'lucide-react'
+import { CalendarDays, Check, DollarSign, ExternalLink, Globe, History, Plus, Search, Server, Trash2, X } from 'lucide-react'
+
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
-// Локальный Spinner ниже — загрузка вкладки; этот — спиннер кнопки.
-import { Spinner as ButtonSpinner } from '@/components/ui/spinner'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { Skeleton } from '@/components/ui/skeleton'
 import { AdminLayout } from '../layout/AdminLayout'
 import { AdminPageHeader } from '../components/AdminPageHeader'
-import { AdminModal } from '../components/AdminModal'
-import { AdminSelect } from '../components/AdminSelect'
-import { AdminCheckboxField } from '../components/AdminCheckbox'
-import { AdminFeedback } from '../components/AdminFeedback'
-import { useAdminMutationFeedback } from '../hooks/useAdminMutationFeedback'
-import { faviconSrcFromUrl, normalizeHttpUrl } from '../utils/normalizeUrl'
-import { CountryFlag } from '../components/CountryFlag'
-import { Card } from '@/components/ui/card'
+import { PromoPopover, PromoPopoverItem } from '../promos/PromoBits'
+import { normalizeHttpUrl } from '../utils/normalizeUrl'
+import { buildInfraNodes, formatMoney, infraStats, type InfraNode } from '../infra/infraModel'
+import { SlidingTabs } from '../infra/infraBits'
+import { InfraNodeList, type InlinePayValues } from '../infra/InfraNodeList'
+import { InfraAside, InfraKpis, InfraTimeline } from '../infra/InfraOverviewParts'
+import { InfraBillPay, InfraNodePaySheet } from '../infra/InfraPayDialogs'
+import { InfraAddNodeModal, InfraBell, InfraEditDateModal, InfraPriceModal, InfraProviderModal, type ProviderDraft } from '../infra/InfraModals'
+import { InfraHistoryTab, InfraProvidersTab } from '../infra/InfraTabs'
+import { INFRA_QUERY_KEYS, useDeferredRemove, useFlash, useInfraPay } from '../infra/useInfraActions'
 
-type TabKey = 'nodes' | 'providers' | 'history' | 'settings'
+type TabKey = 'nodes' | 'providers' | 'history'
 
-/** Отказ сервера во вкладке — общим уведомлением страницы: раньше ошибки тут не показывались вовсе. */
-type TabProps = { onError: (err: unknown) => void }
-
-function toDatetimeLocal(iso?: string | null): string {
-  if (!iso) return ''
-  try {
-    return new Date(iso).toISOString().slice(0, 16)
-  } catch {
-    return ''
-  }
-}
-
+/**
+ * Инфраструктура: биллинг нод и провайдеров (данные — в панели Remnawave,
+ * цены/периоды нод и связь «оплата → ноды» — у нас).
+ * Главное действие — «Оплачено»: запись в историю провайдера и сдвиг даты ноды одним шагом.
+ * На ПК одна нода оплачивается прямо в строке (вариант A), счёт провайдера — панелью справа (B).
+ */
 export default function AdminInfraPage() {
   const { t } = useTranslation()
+  const mobile = useIsMobile()
   const [tab, setTab] = useState<TabKey>('nodes')
-  const { feedback, clear, showError } = useAdminMutationFeedback()
+  const [q, setQ] = useState('')
 
-  const tabs: { key: TabKey; label: string; icon: typeof Server }[] = [
-    { key: 'nodes', label: t('admin.infra.tabs.nodes'), icon: Server },
-    { key: 'providers', label: t('admin.infra.tabs.providers'), icon: Globe },
-    { key: 'history', label: t('admin.infra.tabs.history'), icon: History },
-    { key: 'settings', label: t('admin.infra.tabs.settings'), icon: Bell },
+  const overview = useQuery({ queryKey: INFRA_QUERY_KEYS.overview, queryFn: () => api.adminInfraOverview() })
+  const providersQ = useQuery({ queryKey: INFRA_QUERY_KEYS.providers, queryFn: () => api.adminInfraProviders() })
+  const providers = useMemo(() => providersQ.data?.providers ?? [], [providersQ.data])
+
+  const nodeRemove = useDeferredRemove()
+  const provRemove = useDeferredRemove()
+  const histRemove = useDeferredRemove()
+
+  const allNodes = useMemo(() => (overview.data ? buildInfraNodes(overview.data) : []), [overview.data])
+  const nodes = useMemo(() => allNodes.filter((n) => !nodeRemove.hidden.has(n.billingUuid)), [allNodes, nodeRemove.hidden])
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    return needle ? nodes.filter((n) => `${n.name} ${n.providerName}`.toLowerCase().includes(needle)) : nodes
+  }, [nodes, q])
+  const stats = useMemo(() => infraStats(nodes), [nodes])
+
+  const { flash, trigger } = useFlash()
+  const { pay, paying } = useInfraPay(trigger)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [bill, setBill] = useState<{ key: number; provider?: string | null; node?: string | null } | null>(null)
+  const [billOpen, setBillOpen] = useState(false)
+  const [sheetNode, setSheetNode] = useState<InfraNode | null>(null)
+  const [menu, setMenu] = useState<{ node: InfraNode; anchor: HTMLElement } | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [dateNode, setDateNode] = useState<InfraNode | null>(null)
+  const [priceNode, setPriceNode] = useState<InfraNode | null>(null)
+  const [providerDraft, setProviderDraft] = useState<ProviderDraft | null>(null)
+
+  const openBill = (provider?: string | null, node?: string | null) => {
+    setBill({ key: Date.now(), provider, node })
+    setBillOpen(true)
+  }
+
+  const inlinePay = useCallback(
+    async (n: InfraNode, v: InlinePayValues) => {
+      const ok = await pay({ providerUuid: n.providerUuid, providerName: n.providerName, amount: v.amount, billedAt: v.billedAt, periodMonths: v.periodMonths, nodes: [n] })
+      if (ok) setExpanded(null)
+      return ok
+    },
+    [pay],
+  )
+  const swipePay = useCallback(
+    async (n: InfraNode) => {
+      if (n.price == null) return
+      await pay({ providerUuid: n.providerUuid, providerName: n.providerName, amount: n.price, billedAt: new Date(), periodMonths: n.periodMonths, nodes: [n] })
+    },
+    [pay],
+  )
+  const startPay = (n: InfraNode) => {
+    setMenu(null)
+    if (mobile) setSheetNode(n)
+    else {
+      setTab('nodes')
+      setExpanded(n.billingUuid)
+    }
+  }
+  const removeNode = (n: InfraNode) => {
+    setMenu(null)
+    if (expanded === n.billingUuid) setExpanded(null)
+    nodeRemove.remove(n.billingUuid, () => api.adminInfraDeleteNode(n.billingUuid), t('admin.infra.toast.nodeRemoved', { node: n.name }), t('admin.infra.toast.nodeRemovedHint'))
+  }
+  const goToNode = (n: InfraNode) => {
+    const el = document.querySelector(`[data-infra-row="${n.billingUuid}"]`) ?? document.getElementById(`infra-row-${n.billingUuid}`)
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    trigger([n.billingUuid])
+  }
+
+  const tabs = [
+    { key: 'nodes' as const, label: t('admin.infra.tabs.nodes'), icon: <Server className="size-4" aria-hidden />, count: mobile ? undefined : nodes.length },
+    { key: 'providers' as const, label: t('admin.infra.tabs.providers'), icon: <Globe className="size-4" aria-hidden />, count: mobile ? undefined : providers.length },
+    { key: 'history' as const, label: t('admin.infra.tabs.history'), icon: <History className="size-4" aria-hidden />, count: mobile ? undefined : overview.data?.historyTotal },
   ]
+
+  const loading = overview.isLoading
+  const failed = overview.isError
 
   return (
     <AdminLayout>
-      <AdminFeedback feedback={feedback} onDismiss={clear} />
-      <div className="space-y-6">
+      <div className={cn('space-y-4', mobile && 'pb-24')}>
         <AdminPageHeader
           icon={Server}
           title={t('admin.infra.title')}
-          subtitle={t('admin.infra.subtitle')}
+          subtitle={
+            overview.data
+              ? t('admin.infra.subtitleStats', { nodes: nodes.length, providers: providers.length, monthly: formatMoney(stats.monthlyTotal) })
+              : t('admin.infra.subtitle')
+          }
           accent="slate"
+          actionsEnd
+          actions={
+            <div className="flex items-center gap-2">
+              <InfraBell />
+              {!mobile && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setAddOpen(true)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-border/70 bg-secondary px-3.5 text-[13px] font-semibold transition-all hover:bg-secondary/70 active:scale-[0.97] disabled:opacity-50"
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    {t('admin.infra.addNodeShort')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openBill()}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-[0_6px_18px_-8px_hsl(var(--primary))] transition-all hover:bg-primary/90 active:scale-[0.97]"
+                  >
+                    {t('admin.infra.recordPayment')}
+                  </button>
+                </>
+              )}
+            </div>
+          }
         />
 
-        <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
-          <div role="tablist" className="inline-flex min-w-full gap-1 rounded-lg border border-border/50 bg-card/50 p-1 sm:min-w-0 sm:w-full">
-            {tabs.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                onClick={() => setTab(key)}
-                className={cn(
-                  'inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-1',
-                  tab === key
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-foreground/80 hover:bg-accent hover:text-foreground',
-                )}
-              >
-                <Icon className="size-4 shrink-0" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SlidingTabs tabs={tabs} value={tab} onChange={(k) => (setTab(k), setExpanded(null))} stretch={mobile} />
 
-        {tab === 'nodes' && <NodesTab onError={showError} />}
-        {tab === 'providers' && <ProvidersTab onError={showError} />}
-        {tab === 'history' && <HistoryTab onError={showError} />}
-        {tab === 'settings' && <SettingsTab onError={showError} />}
+        {failed ? (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-6 text-center text-sm text-muted-foreground">{t('admin.infra.loadError')}</div>
+        ) : loading ? (
+          <InfraSkeleton mobile={mobile} />
+        ) : tab === 'nodes' ? (
+          <>
+            <InfraKpis stats={stats} panelStats={overview.data!.stats} months={overview.data!.months} mobile={mobile} />
+            {!mobile && <InfraTimeline nodes={nodes} onPick={goToNode} />}
+            <div className={cn(!mobile && 'grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_330px]')}>
+              <div className={cn(!mobile && 'rounded-2xl border border-border/55 bg-card/75')}>
+                <div className={cn('flex items-center gap-2.5', mobile ? 'mt-1' : 'border-b border-border/45 px-4 py-3')}>
+                  {!mobile && <h3 className="text-[13.5px] font-semibold">{t('admin.infra.tabs.nodes')}</h3>}
+                  <label className="flex h-9 flex-1 items-center gap-2 rounded-[10px] border border-border/60 bg-background/50 px-2.5 text-muted-foreground sm:max-w-[260px]">
+                    <Search className="size-3.5 shrink-0" aria-hidden />
+                    <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.infra.searchPlaceholder')} className="w-full !bg-transparent text-[13px] text-foreground outline-none focus-visible:!shadow-none" />
+                    {q && (
+                      <button type="button" onClick={() => setQ('')} aria-label="✕">
+                        <X className="size-3.5" aria-hidden />
+                      </button>
+                    )}
+                  </label>
+                  {mobile && (
+                    <button
+                      type="button"
+                      aria-label={t('admin.infra.addNodeShort')}
+                      onClick={() => setAddOpen(true)}
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-border/70 bg-secondary disabled:opacity-50"
+                    >
+                      <Plus className="size-4" aria-hidden />
+                    </button>
+                  )}
+                </div>
+                {mobile && nodes.length > 0 && <p className="mx-1 mt-3 text-[11.5px] text-muted-foreground">{t('admin.infra.swipeHint')}</p>}
+                <div className={cn(!mobile && 'pt-1')}>
+                  {!shown.length ? (
+                    <p className="px-4 py-10 text-center text-sm text-muted-foreground">{nodes.length ? t('admin.infra.nothingFound') : t('admin.infra.noNodes')}</p>
+                  ) : (
+                    <InfraNodeList
+                      nodes={shown}
+                      mobile={mobile}
+                      flash={flash}
+                      expanded={expanded}
+                      onExpand={setExpanded}
+                      onInlinePay={inlinePay}
+                      paying={paying}
+                      onMenu={(node, anchor) => setMenu({ node, anchor })}
+                      onMobilePay={(n) => setSheetNode(n)}
+                      onSwipePay={swipePay}
+                    />
+                  )}
+                </div>
+              </div>
+              {!mobile && <InfraAside months={overview.data!.months} nodes={nodes} recent={overview.data!.recent} forecast={{ date: stats.nextMonthDate, value: stats.nextMonthSum }} onShowHistory={() => setTab('history')} />}
+            </div>
+          </>
+        ) : tab === 'providers' ? (
+          <InfraProvidersTab
+            providers={providers}
+            nodes={nodes}
+            hidden={provRemove.hidden}
+            mobile={mobile}
+            onPay={(p) => openBill(p)}
+            onEdit={setProviderDraft}
+            onDelete={(p) => provRemove.remove(p.uuid, () => api.adminInfraDeleteProvider(p.uuid), t('admin.infra.toast.providerRemoved', { provider: p.name }))}
+          />
+        ) : (
+          <InfraHistoryTab
+            providers={providers}
+            hidden={histRemove.hidden}
+            mobile={mobile}
+            onDelete={(r) =>
+              histRemove.remove(r.uuid, () => api.adminInfraDeleteHistory(r.uuid), t('admin.infra.toast.historyRemoved', { amount: formatMoney(r.amount) }), r.provider?.name)
+            }
+          />
+        )}
       </div>
+
+      {mobile && tab !== 'history' && !loading && !failed && (
+        <button
+          type="button"
+          onClick={() => openBill()}
+          className="fixed inset-x-3 bottom-[calc(1rem+var(--cabinet-sheet-safe-bottom))] z-[150] inline-flex h-[50px] items-center justify-center gap-2 rounded-[15px] bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_10px_30px_-10px_hsl(var(--primary))] transition-transform active:scale-[0.98]"
+        >
+          <Plus className="size-5" aria-hidden />
+          {t('admin.infra.recordPayment')}
+        </button>
+      )}
+
+      {menu && (
+        <PromoPopover anchorRef={{ current: menu.anchor }} open onClose={() => setMenu(null)} align="right" width={270} label={t('admin.infra.menu.title')}>
+          <PromoPopoverItem icon={<Check className="size-4" />} onClick={() => startPay(menu.node)}>
+            {t('admin.infra.menu.pay')}
+          </PromoPopoverItem>
+          <PromoPopoverItem icon={<CalendarDays className="size-4" />} onClick={() => (setDateNode(menu.node), setMenu(null))}>
+            {t('admin.infra.menu.date')}
+          </PromoPopoverItem>
+          <PromoPopoverItem icon={<DollarSign className="size-4" />} onClick={() => (setPriceNode(menu.node), setMenu(null))}>
+            {t('admin.infra.menu.price')}
+          </PromoPopoverItem>
+          {menu.node.providerLoginUrl && (
+            <PromoPopoverItem
+              icon={<ExternalLink className="size-4" />}
+              onClick={() => {
+                window.open(normalizeHttpUrl(menu.node.providerLoginUrl), '_blank', 'noopener,noreferrer')
+                setMenu(null)
+              }}
+            >
+              {t('admin.infra.menu.cabinet', { provider: menu.node.providerName })}
+            </PromoPopoverItem>
+          )}
+          <div className="my-1.5 border-t border-border/60" />
+          <PromoPopoverItem danger icon={<Trash2 className="size-4" />} onClick={() => removeNode(menu.node)}>
+            {t('admin.infra.menu.remove')}
+          </PromoPopoverItem>
+        </PromoPopover>
+      )}
+
+      {bill && (
+        <InfraBillPay
+          key={bill.key}
+          open={billOpen}
+          onClose={() => setBillOpen(false)}
+          nodes={nodes}
+          allProviders={providers}
+          initialProvider={bill.provider}
+          initialNode={bill.node}
+          mobile={mobile}
+          paying={paying}
+          onPay={pay}
+        />
+      )}
+      <InfraNodePaySheet node={sheetNode} onClose={() => setSheetNode(null)} paying={paying} onPay={pay} />
+      <InfraAddNodeModal open={addOpen} onClose={() => setAddOpen(false)} available={overview.data?.availableBillingNodes ?? []} providers={providers} />
+      <InfraEditDateModal node={dateNode} onClose={() => setDateNode(null)} />
+      <InfraPriceModal node={priceNode} onClose={() => setPriceNode(null)} />
+      <InfraProviderModal draft={providerDraft} onClose={() => setProviderDraft(null)} />
     </AdminLayout>
   )
 }
 
-function NodesTab({ onError }: TabProps) {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editNode, setEditNode] = useState<{ uuid: string; name: string; nextBillingAt: string } | null>(null)
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-infra-nodes'],
-    queryFn: () => api.adminInfraNodes(),
-  })
-
-  const { data: providersData } = useQuery({
-    queryKey: ['admin-infra-providers'],
-    queryFn: () => api.adminInfraProviders(),
-    enabled: createOpen,
-  })
-
-  const deleteMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (uuid: string) => api.adminInfraDeleteNode(uuid),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] }),
-  })
-
-  const createMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (body: { provider_uuid: string; node_uuid: string; next_billing_at?: string }) =>
-      api.adminInfraCreateNode(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] })
-      setCreateOpen(false)
-    },
-  })
-
-  const patchMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (body: { uuid: string; next_billing_at: string }) => api.adminInfraPatchNode(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-infra-nodes'] })
-      setEditNode(null)
-    },
-  })
-
-  const [form, setForm] = useState({ provider_uuid: '', node_uuid: '', next_billing_at: '' })
-
-  if (isLoading) return <Spinner />
-
-  const available = data?.availableBillingNodes ?? []
-
+function InfraSkeleton({ mobile }: { mobile: boolean }) {
   return (
     <div className="space-y-4">
-      {data?.stats && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard label={t('admin.infra.upcomingNodes')} value={data.stats.upcomingNodesCount} />
-          <StatCard label={t('admin.infra.monthPayments')} value={`$${data.stats.currentMonthPayments.toFixed(2)}`} />
-          <StatCard label={t('admin.infra.totalSpent')} value={`$${data.stats.totalSpent.toFixed(2)}`} />
-        </div>
-      )}
-
-      <div className="rounded-lg border border-border/50 bg-card">
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-          <h3 className="flex items-center gap-2 text-sm font-medium">
-            <Server className="size-4" />
-            {t('admin.infra.billingNodes')} ({data?.totalBillingNodes ?? 0})
-          </h3>
-          <button
-            type="button"
-            disabled={available.length === 0}
-            onClick={() => {
-              setForm({ provider_uuid: '', node_uuid: '', next_billing_at: '' })
-              setCreateOpen(true)
-            }}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            <Plus className="size-3.5" />
-            {t('admin.infra.addNode')}
-          </button>
-        </div>
-        {!data?.billingNodes?.length ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('admin.infra.noNodes')}</p>
-        ) : (
-          <div className="divide-y divide-border/50">
-            {data.billingNodes.map((node: any) => (
-              <div key={node.uuid} className="flex items-center justify-between px-4 py-3">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <CountryFlag code={node.node?.countryCode} />
-                  <div className="min-w-0">
-                  <div className="text-sm font-medium">{node.node?.name ?? node.nodeUuid}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {node.provider?.name} &middot;{' '}
-                    {t('admin.infra.nextBilling')}: {new Date(node.nextBillingAt).toLocaleDateString()}
-                  </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setEditNode({
-                      uuid: node.uuid,
-                      name: node.node?.name ?? node.nodeUuid,
-                      nextBillingAt: toDatetimeLocal(node.nextBillingAt),
-                    })}
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    title={t('admin.infra.editNode')}
-                  >
-                    <Edit className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={deleteMutation.isPending && deleteMutation.variables === node.uuid}
-                    onClick={() => {
-                      if (window.confirm(t('admin.infra.confirmDeleteNode'))) {
-                        deleteMutation.mutate(node.uuid)
-                      }
-                    }}
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    {deleteMutation.isPending && deleteMutation.variables === node.uuid ? <ButtonSpinner /> : <Trash2 className="size-4" />}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className={cn('grid gap-3', mobile ? 'grid-cols-1' : 'grid-cols-2 xl:grid-cols-4')}>
+        {Array.from({ length: mobile ? 1 : 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-[92px] rounded-2xl" />
+        ))}
       </div>
-
-      <AdminModal open={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.infra.createNode')} icon={Server} iconAccent="blue">
-        {available.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('admin.infra.noAvailableNodes')}</p>
-        ) : (
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t('admin.infra.pickProvider')}</label>
-              <AdminSelect
-                value={form.provider_uuid || null}
-                options={(providersData?.providers ?? []).map((p: any) => ({ value: p.uuid as string, label: p.name as string }))}
-                onChange={(next) => setForm((f) => ({ ...f, provider_uuid: next ?? '' }))}
-                allowEmpty
-                emptyLabel="—"
-                placeholder="—"
-                ariaLabel={t('admin.infra.pickProvider')}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t('admin.infra.pickNode')}</label>
-              <AdminSelect
-                value={form.node_uuid || null}
-                options={available.map((n: any) => ({ value: n.uuid as string, label: `${n.name}${n.countryCode ? ` (${n.countryCode})` : ''}` }))}
-                onChange={(next) => setForm((f) => ({ ...f, node_uuid: next ?? '' }))}
-                allowEmpty
-                emptyLabel="—"
-                placeholder="—"
-                ariaLabel={t('admin.infra.pickNode')}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t('admin.infra.nextBillingAt')}</label>
-              <input
-                type="datetime-local"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={form.next_billing_at}
-                onChange={(e) => setForm((f) => ({ ...f, next_billing_at: e.target.value }))}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" className="rounded-md border px-4 py-2 text-sm hover:bg-accent" onClick={() => setCreateOpen(false)}>
-                {t('admin.cancel')}
-              </button>
-              <button
-                type="button"
-                disabled={!form.provider_uuid || !form.node_uuid || createMutation.isPending}
-                className={cn('inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50', createMutation.isPending && '!opacity-100')}
-                onClick={() => createMutation.mutate({
-                  provider_uuid: form.provider_uuid,
-                  node_uuid: form.node_uuid,
-                  next_billing_at: form.next_billing_at ? new Date(form.next_billing_at).toISOString() : undefined,
-                })}
-              >
-                {createMutation.isPending && <ButtonSpinner />}
-                {t('admin.create')}
-              </button>
-            </div>
-          </div>
-        )}
-      </AdminModal>
-
-      <AdminModal open={editNode != null} onClose={() => setEditNode(null)} title={t('admin.infra.editNode')} icon={Edit} iconAccent="blue">
-        {editNode && (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">{editNode.name}</p>
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t('admin.infra.nextBillingAt')}</label>
-              <input
-                type="datetime-local"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={editNode.nextBillingAt}
-                onChange={(e) => setEditNode({ ...editNode, nextBillingAt: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" className="rounded-md border px-4 py-2 text-sm hover:bg-accent" onClick={() => setEditNode(null)}>
-                {t('admin.cancel')}
-              </button>
-              <button
-                type="button"
-                disabled={!editNode.nextBillingAt || patchMutation.isPending}
-                className={cn('inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50', patchMutation.isPending && '!opacity-100')}
-                onClick={() => patchMutation.mutate({
-                  uuid: editNode.uuid,
-                  next_billing_at: new Date(editNode.nextBillingAt).toISOString(),
-                })}
-              >
-                {patchMutation.isPending && <ButtonSpinner />}
-                {t('admin.save')}
-              </button>
-            </div>
-          </div>
-        )}
-      </AdminModal>
-    </div>
-  )
-}
-
-function ProvidersTab({ onError }: TabProps) {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editProv, setEditProv] = useState<{ uuid: string; name: string; favicon_link: string; login_url: string } | null>(null)
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-infra-providers'],
-    queryFn: () => api.adminInfraProviders(),
-  })
-
-  const deleteMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (uuid: string) => api.adminInfraDeleteProvider(uuid),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-providers'] }),
-  })
-
-  const createMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (body: { name: string; favicon_link?: string; login_url?: string }) =>
-      api.adminInfraCreateProvider(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-infra-providers'] })
-      setCreateOpen(false)
-    },
-  })
-
-  const patchMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (body: { uuid: string; name?: string; favicon_link?: string; login_url?: string }) =>
-      api.adminInfraPatchProvider(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-infra-providers'] })
-      setEditProv(null)
-    },
-  })
-
-  const [form, setForm] = useState({ name: '', favicon_link: '', login_url: '' })
-
-  if (isLoading) return <Spinner />
-
-  return (
-    <div className="rounded-lg border border-border/50 bg-card">
-      <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-        <h3 className="flex items-center gap-2 text-sm font-medium">
-          <Globe className="size-4" />
-          {t('admin.infra.providers')} ({data?.total ?? 0})
-        </h3>
-        <button
-          type="button"
-          onClick={() => {
-            setForm({ name: '', favicon_link: '', login_url: '' })
-            setCreateOpen(true)
-          }}
-          className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="size-3.5" />
-          {t('admin.infra.addProvider')}
-        </button>
-      </div>
-      {!data?.providers?.length ? (
-        <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('admin.infra.noProviders')}</p>
-      ) : (
-        <div className="divide-y divide-border/50">
-          {data.providers.map((prov: any) => (
-            <div key={prov.uuid} className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                {prov.faviconLink && (
-                  <img
-                    src={faviconSrcFromUrl(prov.faviconLink)}
-                    alt=""
-                    className="size-6 rounded object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                )}
-                <div>
-                  <div className="text-sm font-medium">{prov.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {prov.billingNodes?.length ?? 0} {t('admin.infra.nodes')} &middot; ${prov.billingHistory?.totalAmount?.toFixed(2) ?? '0.00'}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                {prov.loginUrl && (
-                  <a href={normalizeHttpUrl(prov.loginUrl)} target="_blank" rel="noopener noreferrer" className="rounded-md p-1.5 text-muted-foreground hover:text-foreground" title={t('admin.infra.openLogin')}>
-                    <Globe className="size-4" />
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setEditProv({
-                    uuid: prov.uuid,
-                    name: prov.name,
-                    favicon_link: normalizeHttpUrl(prov.faviconLink ?? ''),
-                    login_url: normalizeHttpUrl(prov.loginUrl ?? ''),
-                  })}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  <Edit className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  disabled={deleteMutation.isPending && deleteMutation.variables === prov.uuid}
-                  onClick={() => {
-                    if (window.confirm(t('admin.infra.confirmDeleteProvider'))) {
-                      deleteMutation.mutate(prov.uuid)
-                    }
-                  }}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                >
-                  {deleteMutation.isPending && deleteMutation.variables === prov.uuid ? <ButtonSpinner /> : <Trash2 className="size-4" />}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <AdminModal open={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.infra.createProvider')} icon={Globe} iconAccent="indigo">
-        <ProviderForm
-          form={form}
-          setForm={setForm}
-          onCancel={() => setCreateOpen(false)}
-          onSave={() => createMutation.mutate({
-            name: form.name.trim(),
-            favicon_link: form.favicon_link.trim() ? normalizeHttpUrl(form.favicon_link) : undefined,
-            login_url: form.login_url.trim() ? normalizeHttpUrl(form.login_url) : undefined,
-          })}
-          saving={createMutation.isPending}
-          saveLabel={t('admin.create')}
-        />
-      </AdminModal>
-
-      <AdminModal open={editProv != null} onClose={() => setEditProv(null)} title={t('admin.infra.editProvider')} icon={Edit} iconAccent="indigo">
-        {editProv && (
-          <ProviderForm
-            form={{ name: editProv.name, favicon_link: editProv.favicon_link, login_url: editProv.login_url }}
-            setForm={(f) => setEditProv({ ...editProv, ...f })}
-            onCancel={() => setEditProv(null)}
-            onSave={() => patchMutation.mutate({
-              uuid: editProv.uuid,
-              name: editProv.name.trim(),
-              favicon_link: editProv.favicon_link.trim() ? normalizeHttpUrl(editProv.favicon_link) : undefined,
-              login_url: editProv.login_url.trim() ? normalizeHttpUrl(editProv.login_url) : undefined,
-            })}
-            saving={patchMutation.isPending}
-            saveLabel={t('admin.save')}
-          />
-        )}
-      </AdminModal>
-    </div>
-  )
-}
-
-function ProviderForm({
-  form,
-  setForm,
-  onCancel,
-  onSave,
-  saving,
-  saveLabel,
-}: {
-  form: { name: string; favicon_link: string; login_url: string }
-  setForm: (f: { name: string; favicon_link: string; login_url: string }) => void
-  onCancel: () => void
-  onSave: () => void
-  saving: boolean
-  saveLabel: string
-}) {
-  const { t } = useTranslation()
-  return (
-    <div className="space-y-3">
-      <div>
-        <label className="mb-1 block text-sm font-medium">{t('admin.infra.providerName')}</label>
-        <input
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">{t('admin.infra.faviconLink')}</label>
-        <input
-          type="text"
-          inputMode="url"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-          value={form.favicon_link}
-          onChange={(e) => setForm({ ...form, favicon_link: e.target.value })}
-          onBlur={(e) => {
-            const v = e.target.value.trim()
-            if (v) setForm({ ...form, favicon_link: normalizeHttpUrl(v) })
-          }}
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm font-medium">{t('admin.infra.loginUrl')}</label>
-        <input
-          type="text"
-          inputMode="url"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-          value={form.login_url}
-          onChange={(e) => setForm({ ...form, login_url: e.target.value })}
-          onBlur={(e) => {
-            const v = e.target.value.trim()
-            if (v) setForm({ ...form, login_url: normalizeHttpUrl(v) })
-          }}
-        />
-      </div>
-      <div className="flex justify-end gap-2 pt-2">
-        <button type="button" className="rounded-md border px-4 py-2 text-sm hover:bg-accent" onClick={onCancel}>
-          {t('admin.cancel')}
-        </button>
-        <button
-          type="button"
-          disabled={form.name.trim().length < 2 || saving}
-          className={cn('inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50', saving && '!opacity-100')}
-          onClick={onSave}
-        >
-          {saving && <ButtonSpinner />}
-          {saveLabel}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function HistoryTab({ onError }: TabProps) {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
-  const [start, setStart] = useState(0)
-  const [createOpen, setCreateOpen] = useState(false)
-  const size = 20
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-infra-history', start],
-    queryFn: () => api.adminInfraHistory(start, size),
-  })
-
-  const { data: providersData } = useQuery({
-    queryKey: ['admin-infra-providers'],
-    queryFn: () => api.adminInfraProviders(),
-    enabled: createOpen,
-  })
-
-  const deleteMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (uuid: string) => api.adminInfraDeleteHistory(uuid),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-history'] }),
-  })
-
-  const createMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (body: { provider_uuid: string; amount: number; billed_at: string }) =>
-      api.adminInfraCreateHistory(body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-infra-history'] })
-      setCreateOpen(false)
-    },
-  })
-
-  const [form, setForm] = useState({ provider_uuid: '', amount: '', billed_at: '' })
-
-  if (isLoading) return <Spinner />
-
-  const records = data?.records ?? []
-  const total = data?.total ?? 0
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border/50 bg-card">
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
-          <h3 className="flex items-center gap-2 text-sm font-medium">
-            <History className="size-4" />
-            {t('admin.infra.billingHistory')} ({total})
-          </h3>
-          <button
-            type="button"
-            onClick={() => {
-              setForm({ provider_uuid: '', amount: '', billed_at: '' })
-              setCreateOpen(true)
-            }}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="size-3.5" />
-            {t('admin.infra.addHistory')}
-          </button>
-        </div>
-        {!records.length ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('admin.infra.noHistory')}</p>
-        ) : (
-          <div className="divide-y divide-border/50">
-            {records.map((rec: any) => (
-              <div key={rec.uuid} className="flex items-center justify-between px-4 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  {rec.provider?.faviconLink && (
-                    <img
-                      src={faviconSrcFromUrl(rec.provider.faviconLink)}
-                      alt=""
-                      loading="lazy"
-                      className="size-6 shrink-0 rounded object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  )}
-                  <div className="min-w-0">
-                  <div className="text-sm font-medium">${rec.amount.toFixed(2)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {rec.provider?.name ?? rec.providerUuid} &middot;{' '}
-                    {new Date(rec.billedAt).toLocaleDateString()}
-                  </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={deleteMutation.isPending && deleteMutation.variables === rec.uuid}
-                  onClick={() => {
-                    if (window.confirm(t('admin.infra.confirmDeleteHistory'))) {
-                      deleteMutation.mutate(rec.uuid)
-                    }
-                  }}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                >
-                  {deleteMutation.isPending && deleteMutation.variables === rec.uuid ? <ButtonSpinner /> : <Trash2 className="size-4" />}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {total > size && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setStart(Math.max(0, start - size))}
-            disabled={start === 0}
-            className="rounded-md px-3 py-1 text-sm disabled:opacity-50"
-          >
-            {t('admin.prev')}
-          </button>
-          <span className="text-sm text-muted-foreground">
-            {start + 1}–{Math.min(start + size, total)} / {total}
-          </span>
-          <button
-            type="button"
-            onClick={() => setStart(start + size)}
-            disabled={start + size >= total}
-            className="rounded-md px-3 py-1 text-sm disabled:opacity-50"
-          >
-            {t('admin.next')}
-          </button>
-        </div>
-      )}
-
-      <AdminModal open={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.infra.createHistory')} icon={History} iconAccent="amber">
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t('admin.infra.pickProvider')}</label>
-            <AdminSelect
-              value={form.provider_uuid || null}
-              options={(providersData?.providers ?? []).map((p: any) => ({ value: p.uuid as string, label: p.name as string }))}
-              onChange={(next) => setForm((f) => ({ ...f, provider_uuid: next ?? '' }))}
-              allowEmpty
-              emptyLabel="—"
-              placeholder="—"
-              ariaLabel={t('admin.infra.pickProvider')}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t('admin.infra.amount')}</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              value={form.amount}
-              onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t('admin.infra.billedAt')}</label>
-            <input
-              type="datetime-local"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              value={form.billed_at}
-              onChange={(e) => setForm((f) => ({ ...f, billed_at: e.target.value }))}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="rounded-md border px-4 py-2 text-sm hover:bg-accent" onClick={() => setCreateOpen(false)}>
-              {t('admin.cancel')}
-            </button>
-            <button
-              type="button"
-              disabled={!form.provider_uuid || !form.amount || !form.billed_at || createMutation.isPending}
-              className={cn('inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50', createMutation.isPending && '!opacity-100')}
-              onClick={() => createMutation.mutate({
-                provider_uuid: form.provider_uuid,
-                amount: Number(form.amount),
-                billed_at: new Date(form.billed_at).toISOString(),
-              })}
-            >
-              {createMutation.isPending && <ButtonSpinner />}
-              {t('admin.create')}
-            </button>
-          </div>
-        </div>
-      </AdminModal>
-    </div>
-  )
-}
-
-function SettingsTab({ onError }: TabProps) {
-  const { t } = useTranslation()
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-infra-settings'],
-    queryFn: () => api.adminInfraSettings(),
-  })
-  const queryClient = useQueryClient()
-  const toggleMutation = useMutation({
-    meta: { haptics: true },
-    onError,
-    mutationFn: (params: { days: number; enabled: boolean }) => api.adminInfraUpdateSettings(params),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-infra-settings'] }),
-  })
-
-  if (isLoading) return <Spinner />
-
-  const thresholds = [
-    { days: 1, key: 'notify_before_1' },
-    { days: 3, key: 'notify_before_3' },
-    { days: 7, key: 'notify_before_7' },
-    { days: 14, key: 'notify_before_14' },
-  ] as const
-
-  return (
-    <div className="rounded-lg border border-border/50 bg-card p-4">
-      <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
-        <Bell className="size-4" />
-        {t('admin.infra.notifySettings')}
-      </h3>
+      {!mobile && <Skeleton className="h-[110px] rounded-2xl" />}
       <div className="space-y-2">
-        {thresholds.map(({ days, key }) => {
-          const enabled = data?.[key] ?? false
-          const saving = toggleMutation.isPending && toggleMutation.variables?.days === days
-          return (
-            <AdminCheckboxField
-              key={days}
-              checked={enabled}
-              busy={saving}
-              onChange={() => toggleMutation.mutate({ days, enabled: !enabled })}
-              label={t('admin.infra.notifyBefore', { days })}
-              className="px-3 py-2"
-            />
-          )
-        })}
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 rounded-xl" />
+        ))}
       </div>
-    </div>
-  )
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-lg border border-border/50 bg-card p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-lg font-semibold">{value}</div>
-    </div>
-  )
-}
-
-function Spinner() {
-  return (
-    <div className="flex justify-center py-8">
-      <span className="size-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
     </div>
   )
 }

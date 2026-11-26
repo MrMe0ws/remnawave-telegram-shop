@@ -1943,6 +1943,42 @@ func registerAPIRoutes(
 			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_history_del")),
 		),
 	)
+	api.Handle("/cabinet/api/admin/infra/overview",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.Overview),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_overview")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/pay",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.Pay),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_pay")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/pay/undo",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.PayUndo),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_pay_undo")),
+		),
+	)
+	api.Handle("/cabinet/api/admin/infra/node-meta",
+		middleware.Chain(
+			http.HandlerFunc(adminInfra.NodeMeta),
+			middleware.RequireAuth(jwtIssuer),
+			middleware.RequireAdmin(adminChecker),
+			middleware.CSRF(),
+			middleware.RateLimit(adminAcctLim, accountKey("admin_infra_node_meta")),
+		),
+	)
 	api.Handle("/cabinet/api/admin/infra/settings",
 		middleware.Chain(
 			http.HandlerFunc(adminInfra.HandleSettings),
