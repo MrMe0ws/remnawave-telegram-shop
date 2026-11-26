@@ -73,10 +73,30 @@ const config: Config = {
           from: { transform: 'translateX(0)' },
           to: { transform: 'translateX(-50%)' },
         },
-        // Тост уходит за правый край экрана
+        // Тост: всплывает снизу с лёгким увеличением, уходит вниз и тает
+        'toast-in': {
+          from: { opacity: '0', transform: 'translateY(16px) scale(0.96)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
         'toast-out': {
-          from: { opacity: '1', transform: 'translateX(0)' },
-          to: { opacity: '0', transform: 'translateX(115%)' },
+          from: { opacity: '1', transform: 'translateY(0) scale(1)' },
+          to: { opacity: '0', transform: 'translateY(10px) scale(0.96)' },
+        },
+        // Иконка тоста «выпрыгивает»
+        'toast-icon': {
+          '0%': { transform: 'scale(0)' },
+          '60%': { transform: 'scale(1.2)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        // Строка ноды вспыхивает зелёным после оплаты
+        'infra-flash': {
+          '0%': { backgroundColor: 'rgb(16 185 129 / 0.32)', borderColor: 'rgb(16 185 129 / 0.9)' },
+          '100%': {},
+        },
+        // Полоска оставшегося времени
+        'toast-progress': {
+          from: { transform: 'scaleX(1)' },
+          to: { transform: 'scaleX(0)' },
         },
       },
       animation: {
@@ -84,7 +104,11 @@ const config: Config = {
         'nav-tip-in': 'nav-tip-in 0.15s ease-out both',
         'spin-slow': 'spin-slow 2s linear infinite',
         'fortune-winners-marquee': 'fortune-winners-marquee 250s linear infinite',
-        'toast-out': 'toast-out 0.3s ease-in forwards',
+        'toast-in': 'toast-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'toast-out': 'toast-out 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'toast-icon': 'toast-icon 0.5s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'toast-progress': 'toast-progress linear forwards',
+        'infra-flash': 'infra-flash 1.4s cubic-bezier(0.22, 1, 0.36, 1)',
       },
     },
   },
